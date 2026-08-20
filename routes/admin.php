@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Education\CourseController;
+use App\Http\Controllers\Admin\Education\ModuleController;
 use App\Http\Controllers\Admin\Users\UserController;
 use App\Http\Controllers\Admin\Users\UserDeviceController;
 use Illuminate\Support\Facades\Route;
@@ -160,5 +162,205 @@ Route::prefix('admin')
                 )
                     ->whereNumber('user')
                     ->name('users.sessions.revoke');
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | ADMIN-03 — Education / Course Management
+                |--------------------------------------------------------------------------
+                |
+                | All Education routes remain inside the existing admin.auth
+                | boundary. Exact education.* permissions are enforced again
+                | inside Form Requests and CourseController methods.
+                |
+                | Route model identifiers are numeric and constrained here for
+                | consistency with the frozen ADMIN-02E admin route contract.
+                |
+                */
+
+                Route::prefix('education')
+                    ->name('education.')
+                    ->group(function () {
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Course Collection
+                        |--------------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/courses',
+                            [CourseController::class, 'index']
+                        )->name('courses.index');
+
+
+                        Route::get(
+                            '/courses/create',
+                            [CourseController::class, 'create']
+                        )->name('courses.create');
+
+
+                        Route::post(
+                            '/courses',
+                            [CourseController::class, 'store']
+                        )->name('courses.store');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Course Publication
+                        |--------------------------------------------------------------------------
+                        |
+                        | Publication is intentionally a dedicated PATCH action.
+                        | It is NOT merged into the normal update endpoint.
+                        |
+                        | This preserves the separate education.publish security
+                        | boundary established by ADMIN-03.
+                        |
+                        */
+
+                        Route::patch(
+                            '/courses/{course}/publication',
+                            [CourseController::class, 'publication']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.publication');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | ADMIN-03 — Course Module Management
+                        |--------------------------------------------------------------------------
+                        |
+                        | Modules are always addressed inside their parent Course:
+                        |
+                        | /education/courses/{course}/modules/...
+                        |
+                        | Nested member routes use scopeBindings() so Laravel must
+                        | resolve {module} through Course::modules().
+                        |
+                        | ModuleController keeps an explicit ownership check as a
+                        | second IDOR defence boundary.
+                        |
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules',
+                            [ModuleController::class, 'index']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.modules.index');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/create',
+                            [ModuleController::class, 'create']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.modules.create');
+
+
+                        Route::post(
+                            '/courses/{course}/modules',
+                            [ModuleController::class, 'store']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.modules.store');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Module Publication
+                        |--------------------------------------------------------------------------
+                        |
+                        | Publication remains separate from normal metadata update
+                        | and is protected by education.publish in the request and
+                        | controller layers.
+                        |
+                        */
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/publication',
+                            [ModuleController::class, 'publication']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.publication');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Module Member Routes
+                        |--------------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/edit',
+                            [ModuleController::class, 'edit']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.edit');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}',
+                            [ModuleController::class, 'update']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.update');
+
+
+                        Route::delete(
+                            '/courses/{course}/modules/{module}',
+                            [ModuleController::class, 'destroy']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.destroy');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Course Member Routes
+                        |--------------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/courses/{course}/edit',
+                            [CourseController::class, 'edit']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.edit');
+
+
+                        Route::patch(
+                            '/courses/{course}',
+                            [CourseController::class, 'update']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.update');
+
+
+                        Route::delete(
+                            '/courses/{course}',
+                            [CourseController::class, 'destroy']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.destroy');
+
+
+                        Route::get(
+                            '/courses/{course}',
+                            [CourseController::class, 'show']
+                        )
+                            ->whereNumber('course')
+                            ->name('courses.show');
+                    });
             });
     });
