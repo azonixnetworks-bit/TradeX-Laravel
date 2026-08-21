@@ -1,1 +1,0 @@
-{{-- TradeX Admin skeleton --}} 

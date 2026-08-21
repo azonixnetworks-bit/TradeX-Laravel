@@ -1,0 +1,57 @@
+<?php
+
+use App\Http\Controllers\Admin\TradeIdeas\TradeIdeaController;
+use Illuminate\Support\Facades\Route;
+
+Route::prefix('admin')
+    ->name('admin.')
+    ->middleware('admin.auth')
+    ->group(function (): void {
+        Route::prefix('trade-ideas')
+            ->name('trade_ideas.')
+            ->group(function (): void {
+                Route::get('/', [TradeIdeaController::class, 'index'])
+                    ->name('index');
+
+                Route::get('/create', [TradeIdeaController::class, 'create'])
+                    ->name('create');
+
+                Route::post('/', [TradeIdeaController::class, 'store'])
+                    ->name('store');
+
+                Route::get(
+                    '/{tradeIdea}/chart-image',
+                    [TradeIdeaController::class, 'chartImage']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->name('chart_image');
+
+                Route::get('/{tradeIdea}', [TradeIdeaController::class, 'show'])
+                    ->whereNumber('tradeIdea')
+                    ->name('show');
+
+                Route::get('/{tradeIdea}/edit', [TradeIdeaController::class, 'edit'])
+                    ->whereNumber('tradeIdea')
+                    ->name('edit');
+
+                Route::patch('/{tradeIdea}', [TradeIdeaController::class, 'update'])
+                    ->whereNumber('tradeIdea')
+                    ->name('update');
+
+                Route::patch('/{tradeIdea}/publication', [TradeIdeaController::class, 'publication'])
+                    ->whereNumber('tradeIdea')
+                    ->name('publication');
+
+                Route::post('/{tradeIdea}/updates', [TradeIdeaController::class, 'addUpdate'])
+                    ->whereNumber('tradeIdea')
+                    ->name('updates.store');
+
+                Route::patch('/{tradeIdea}/close', [TradeIdeaController::class, 'close'])
+                    ->whereNumber('tradeIdea')
+                    ->name('close');
+
+                Route::delete('/{tradeIdea}', [TradeIdeaController::class, 'destroy'])
+                    ->whereNumber('tradeIdea')
+                    ->name('destroy');
+            });
+    });
