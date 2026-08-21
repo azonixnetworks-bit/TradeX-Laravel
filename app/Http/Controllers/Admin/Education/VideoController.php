@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Education\StoreVideoRequest;
 use App\Http\Requests\Admin\Education\UpdateVideoPublicationRequest;
 use App\Http\Requests\Admin\Education\UpdateVideoRequest;
+use App\Jobs\ProcessVideo;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Course;
@@ -14,8 +15,14 @@ use App\Models\Lesson;
 use App\Models\LessonVideo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class VideoController extends Controller
 {
@@ -80,64 +87,186 @@ class VideoController extends Controller
         $this->requireLessonOwnership($course, $module, $lesson);
 
         $validated = $request->validated();
+        $uploadedFile = $request->file('video_file');
 
-        DB::transaction(function () use (
-            $course,
-            $module,
-            $lesson,
-            $validated,
-            $request,
-            $admin
-        ): void {
-            $lockedLesson = Lesson::query()
-                ->where('course_module_id', $module->id)
-                ->whereHas('module', fn ($query) => $query->where('course_id', $course->id))
-                ->lockForUpdate()
-                ->findOrFail($lesson->id);
-
-            $video = LessonVideo::query()->create([
-                'lesson_id' => $lockedLesson->id,
-                'title' => $validated['title'],
-                'short_description' => $validated['short_description'] ?? null,
-                'description' => $validated['description'] ?? null,
-                'storage_disk' => $validated['storage_disk'] ?? 'private',
-                'source_path' => $validated['source_path'],
-                'hls_master_path' => $validated['hls_master_path'] ?? null,
-                'streaming_asset_key' => $validated['streaming_asset_key'] ?? null,
-                'thumbnail_path' => $validated['thumbnail_path'] ?? null,
-                'duration_seconds' => $validated['duration_seconds'] ?? null,
-                'file_size_bytes' => $validated['file_size_bytes'] ?? null,
-                'mime_type' => $validated['mime_type'] ?? null,
-                'processing_status' => LessonVideo::PROCESSING_PENDING,
-                'processing_error' => null,
-                'processed_at' => null,
-                'status' => LessonVideo::STATUS_DRAFT,
-                'published_at' => null,
-                'is_downloadable' => (bool) ($validated['is_downloadable'] ?? false),
-                'sort_order' => (int) ($validated['sort_order'] ?? 0),
-                'created_by_admin_id' => $admin->id,
-                'updated_by_admin_id' => $admin->id,
+        if (
+            $uploadedFile !== null
+            && ! $uploadedFile instanceof UploadedFile
+        ) {
+            throw ValidationException::withMessages([
+                'video_file' => 'The uploaded video could not be read.',
             ]);
+        }
 
-            AuditLog::record(
-                actorType: 'ADMIN',
-                actorId: $admin->id,
-                action: 'VIDEO_CREATED',
-                module: 'EDUCATION',
-                targetType: 'LESSON_VIDEO',
-                targetId: $video->id,
-                newValues: $this->auditSnapshot($video),
-                ipAddress: $request->ip(),
-                userAgent: $request->userAgent()
-            );
-        });
+        $storedUpload = null;
+        $videoUuid = null;
+
+        try {
+            if ($uploadedFile instanceof UploadedFile) {
+                $videoUuid = Str::uuid()->toString();
+
+                $storedUpload = $this->storeUploadedSource(
+                    $uploadedFile,
+                    (string) ($validated['storage_disk'] ?? 'private'),
+                    $videoUuid
+                );
+            }
+
+            $video = DB::transaction(function () use (
+                $course,
+                $module,
+                $lesson,
+                $validated,
+                $request,
+                $admin,
+                $uploadedFile,
+                $storedUpload,
+                $videoUuid
+            ): LessonVideo {
+                $lockedLesson = Lesson::query()
+                    ->where('course_module_id', $module->id)
+                    ->whereHas(
+                        'module',
+                        fn ($query) => $query->where(
+                            'course_id',
+                            $course->id
+                        )
+                    )
+                    ->lockForUpdate()
+                    ->findOrFail($lesson->id);
+
+                $isUploaded = $uploadedFile instanceof UploadedFile;
+
+                $video = LessonVideo::query()->create([
+                    'uuid' => $videoUuid,
+                    'lesson_id' => $lockedLesson->id,
+                    'title' => $validated['title'],
+                    'short_description' => $validated['short_description'] ?? null,
+                    'description' => $validated['description'] ?? null,
+                    'storage_disk' => $validated['storage_disk'] ?? 'private',
+                    'source_path' => $isUploaded
+                        ? $storedUpload['path']
+                        : $validated['source_path'],
+                    'hls_master_path' => $isUploaded
+                        ? null
+                        : ($validated['hls_master_path'] ?? null),
+                    'streaming_asset_key' => $isUploaded
+                        ? null
+                        : ($validated['streaming_asset_key'] ?? null),
+                    'thumbnail_path' => $isUploaded
+                        ? null
+                        : ($validated['thumbnail_path'] ?? null),
+                    'duration_seconds' => $isUploaded
+                        ? null
+                        : ($validated['duration_seconds'] ?? null),
+                    'file_size_bytes' => $isUploaded
+                        ? $storedUpload['size']
+                        : ($validated['file_size_bytes'] ?? null),
+                    'mime_type' => $isUploaded
+                        ? $storedUpload['mime_type']
+                        : ($validated['mime_type'] ?? null),
+                    'processing_status' => LessonVideo::PROCESSING_PENDING,
+                    'processing_error' => null,
+                    'processed_at' => null,
+                    'status' => LessonVideo::STATUS_DRAFT,
+                    'published_at' => null,
+                    'is_downloadable' => (bool) ($validated['is_downloadable'] ?? false),
+                    'sort_order' => (int) ($validated['sort_order'] ?? 0),
+                    'created_by_admin_id' => $admin->id,
+                    'updated_by_admin_id' => $admin->id,
+                ]);
+
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->id,
+                    action: 'VIDEO_CREATED',
+                    module: 'EDUCATION',
+                    targetType: 'LESSON_VIDEO',
+                    targetId: $video->id,
+                    newValues: $this->auditSnapshot($video),
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
+                );
+
+                return $video;
+            });
+
+            if ($uploadedFile instanceof UploadedFile) {
+                try {
+                    ProcessVideo::dispatch(
+                        $video->id
+                    );
+                } catch (Throwable $exception) {
+                    $video->forceFill([
+                        'processing_status' => LessonVideo::PROCESSING_FAILED,
+                        'processing_error' => Str::limit(
+                            'Queue dispatch failed: '.$exception->getMessage(),
+                            8000,
+                            ''
+                        ),
+                        'processed_at' => now(),
+                    ])->save();
+
+                    Log::error(
+                        'TradeX video upload was stored but HLS queue dispatch failed.',
+                        [
+                            'video_id' => $video->id,
+                            'video_uuid' => $video->uuid,
+                            'error' => Str::limit(
+                                $exception->getMessage(),
+                                2000
+                            ),
+                        ]
+                    );
+                }
+            }
+        } catch (Throwable $exception) {
+            if (
+                is_array($storedUpload)
+                && isset($storedUpload['disk'], $storedUpload['path'])
+            ) {
+                try {
+                    Storage::disk(
+                        $storedUpload['disk']
+                    )->delete(
+                        $storedUpload['path']
+                    );
+                } catch (Throwable $cleanupException) {
+                    Log::warning(
+                        'TradeX could not clean up a failed video upload.',
+                        [
+                            'disk' => $storedUpload['disk'],
+                            'path_sha256' => hash(
+                                'sha256',
+                                $storedUpload['path']
+                            ),
+                            'error' => Str::limit(
+                                $cleanupException->getMessage(),
+                                1000
+                            ),
+                        ]
+                    );
+                }
+            }
+
+            throw $exception;
+        }
 
         return redirect()
             ->route(
                 'admin.education.courses.modules.lessons.videos.index',
-                ['course' => $course, 'module' => $module, 'lesson' => $lesson]
+                [
+                    'course' => $course,
+                    'module' => $module,
+                    'lesson' => $lesson,
+                ]
             )
-            ->with('success', 'Video created successfully as draft and queued for processing.');
+            ->with(
+                'success',
+                $uploadedFile instanceof UploadedFile
+                    ? 'Video uploaded successfully as draft. HLS processing has been queued.'
+                    : 'Video created successfully as draft and queued for processing.'
+            );
     }
 
     public function edit(
@@ -205,11 +334,17 @@ class VideoController extends Controller
             }
 
             if (array_key_exists('is_downloadable', $updates)) {
-                $updates['is_downloadable'] = (bool) ($updates['is_downloadable'] ?? false);
+                $updates['is_downloadable'] = (bool) (
+                    $updates['is_downloadable']
+                    ?? false
+                );
             }
 
             if (array_key_exists('sort_order', $updates)) {
-                $updates['sort_order'] = (int) ($updates['sort_order'] ?? 0);
+                $updates['sort_order'] = (int) (
+                    $updates['sort_order']
+                    ?? 0
+                );
             }
 
             $updates['updated_by_admin_id'] = $admin->id;
@@ -413,6 +548,113 @@ class VideoController extends Controller
             ->with('success', 'Video deleted successfully.');
     }
 
+    private function storeUploadedSource(
+        UploadedFile $uploadedFile,
+        string $diskName,
+        string $videoUuid
+    ): array {
+        if (! in_array($diskName, ['private', 's3-private'], true)) {
+            throw ValidationException::withMessages([
+                'storage_disk' => 'Video storage must use an approved private disk.',
+            ]);
+        }
+
+        $mimeType = trim(
+            (string) (
+                $uploadedFile->getMimeType()
+                ?: $uploadedFile->getClientMimeType()
+                ?: 'application/octet-stream'
+            )
+        );
+
+        $extension = $this->safeVideoExtension(
+            $uploadedFile,
+            $mimeType
+        );
+
+        $path = 'education/videos/'
+            .$videoUuid
+            .'/source/source.'
+            .$extension;
+
+        $stream = fopen(
+            $uploadedFile->getRealPath(),
+            'rb'
+        );
+
+        if (! is_resource($stream)) {
+            throw ValidationException::withMessages([
+                'video_file' => 'The uploaded video could not be opened for protected storage.',
+            ]);
+        }
+
+        try {
+            $stored = Storage::disk(
+                $diskName
+            )->put(
+                $path,
+                $stream,
+                [
+                    'visibility' => 'private',
+                ]
+            );
+        } finally {
+            fclose($stream);
+        }
+
+        if (! $stored) {
+            throw ValidationException::withMessages([
+                'video_file' => 'The uploaded video could not be saved to protected storage.',
+            ]);
+        }
+
+        return [
+            'disk' => $diskName,
+            'path' => $path,
+            'size' => max(
+                0,
+                (int) ($uploadedFile->getSize() ?: 0)
+            ),
+            'mime_type' => Str::limit(
+                $mimeType,
+                120,
+                ''
+            ),
+        ];
+    }
+
+    private function safeVideoExtension(
+        UploadedFile $uploadedFile,
+        string $mimeType
+    ): string {
+        $byMime = match (strtolower($mimeType)) {
+            'video/mp4' => 'mp4',
+            'video/quicktime' => 'mov',
+            'video/x-m4v' => 'm4v',
+            'video/webm' => 'webm',
+            'video/x-matroska' => 'mkv',
+            default => null,
+        };
+
+        if ($byMime !== null) {
+            return $byMime;
+        }
+
+        $clientExtension = strtolower(
+            trim(
+                (string) $uploadedFile->getClientOriginalExtension()
+            )
+        );
+
+        return in_array(
+            $clientExtension,
+            ['mp4', 'mov', 'm4v', 'webm', 'mkv'],
+            true
+        )
+            ? $clientExtension
+            : 'video';
+    }
+
     private function requireVideoOwnership(
         Course $course,
         CourseModule $module,
@@ -510,11 +752,18 @@ class VideoController extends Controller
         ];
     }
 
-    private function auditChanges(array $before, array $after): array
-    {
+    private function auditChanges(
+        array $before,
+        array $after
+    ): array {
         $oldValues = [];
         $newValues = [];
-        $keys = array_unique(array_merge(array_keys($before), array_keys($after)));
+        $keys = array_unique(
+            array_merge(
+                array_keys($before),
+                array_keys($after)
+            )
+        );
 
         foreach ($keys as $key) {
             $oldValue = $before[$key] ?? null;
