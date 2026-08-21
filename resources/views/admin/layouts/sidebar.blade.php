@@ -76,12 +76,12 @@
         @if($admin->hasPermission('education.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.education.courses.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.education.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">▣</span>
                 <span>Education</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
