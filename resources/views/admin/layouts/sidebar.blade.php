@@ -104,12 +104,12 @@
         @if($admin->hasPermission('trade_ideas.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.trade_ideas.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.trade_ideas.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">◇</span>
                 <span>Trade Ideas</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
