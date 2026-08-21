@@ -1,0 +1,275 @@
+<?php
+
+namespace Tests\Feature\Admin\Education;
+
+use App\Models\AdminPermission;
+use App\Models\AdminRole;
+use App\Models\AdminUser;
+use App\Models\Course;
+use App\Models\CourseModule;
+use App\Models\Lesson;
+use App\Models\LessonVideo;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
+use Tests\TestCase;
+
+class VideoManagementCrudTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_authorized_admin_can_create_video_as_draft_pending_with_audit_log(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.create']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        $response = $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.videos.store', compact('course', 'module', 'lesson')),
+            [
+                'title' => 'Protected Lesson Video',
+                'short_description' => 'Video summary',
+                'description' => 'Video description',
+                'storage_disk' => 'private',
+                'source_path' => 'courses/test/lesson/video.mp4',
+                'mime_type' => 'video/mp4',
+                'is_downloadable' => 0,
+                'sort_order' => 1,
+            ]
+        );
+
+        $video = LessonVideo::query()->where('lesson_id', $lesson->id)->firstOrFail();
+
+        $response->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        );
+
+        $this->assertSame(LessonVideo::STATUS_DRAFT, $video->status);
+        $this->assertSame(LessonVideo::PROCESSING_PENDING, $video->processing_status);
+        $this->assertNull($video->published_at);
+        $this->assertFalse($video->is_downloadable);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $admin->id,
+            'action' => 'VIDEO_CREATED',
+            'target_type' => 'LESSON_VIDEO',
+            'target_id' => $video->id,
+        ]);
+    }
+
+    public function test_authorized_admin_can_update_video_metadata_without_processing_or_publication_change(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.update']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson);
+
+        $response = $this->actingAs($admin, 'admin')->patch(
+            route('admin.education.courses.modules.lessons.videos.update', compact('course', 'module', 'lesson', 'video')),
+            [
+                'title' => 'Updated Video',
+                'hls_master_path' => 'protected/hls/master.m3u8',
+                'streaming_asset_key' => 'asset-123',
+                'duration_seconds' => 540,
+                'sort_order' => 4,
+            ]
+        );
+
+        $response->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        );
+
+        $video->refresh();
+        $this->assertSame('Updated Video', $video->title);
+        $this->assertSame(LessonVideo::PROCESSING_PENDING, $video->processing_status);
+        $this->assertSame(LessonVideo::STATUS_DRAFT, $video->status);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'VIDEO_UPDATED',
+            'target_id' => $video->id,
+        ]);
+    }
+
+    public function test_video_cannot_publish_until_processing_ready_and_playback_reference_exists(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.publish']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson);
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.education.courses.modules.lessons.videos.publication', compact('course', 'module', 'lesson', 'video')),
+            ['action' => 'PUBLISH']
+        )->assertStatus(422);
+
+        $video->refresh();
+        $this->assertSame(LessonVideo::STATUS_DRAFT, $video->status);
+
+        $video->forceFill([
+            'processing_status' => LessonVideo::PROCESSING_READY,
+            'processed_at' => now(),
+        ])->save();
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.education.courses.modules.lessons.videos.publication', compact('course', 'module', 'lesson', 'video')),
+            ['action' => 'PUBLISH']
+        )->assertStatus(422);
+
+        $this->assertSame(LessonVideo::STATUS_DRAFT, $video->fresh()->status);
+    }
+
+    public function test_ready_video_with_protected_playback_reference_can_publish_and_unpublish(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.publish']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_READY,
+            'processed_at' => now(),
+            'hls_master_path' => 'protected/hls/master.m3u8',
+        ]);
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.education.courses.modules.lessons.videos.publication', compact('course', 'module', 'lesson', 'video')),
+            ['action' => 'PUBLISH', 'reason' => 'Processing verified']
+        )->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        );
+
+        $video->refresh();
+        $this->assertSame(LessonVideo::STATUS_PUBLISHED, $video->status);
+        $this->assertNotNull($video->published_at);
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.education.courses.modules.lessons.videos.publication', compact('course', 'module', 'lesson', 'video')),
+            ['action' => 'UNPUBLISH']
+        )->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        );
+
+        $video->refresh();
+        $this->assertSame(LessonVideo::STATUS_DRAFT, $video->status);
+        $this->assertNull($video->published_at);
+
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VIDEO_PUBLISHED', 'target_id' => $video->id]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'VIDEO_UNPUBLISHED', 'target_id' => $video->id]);
+    }
+
+    public function test_published_or_processing_video_cannot_be_deleted_but_safe_draft_can(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.delete']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        $published = $this->createVideo($lesson, [
+            'status' => LessonVideo::STATUS_PUBLISHED,
+            'published_at' => now(),
+            'processing_status' => LessonVideo::PROCESSING_READY,
+            'hls_master_path' => 'protected/a/master.m3u8',
+        ]);
+
+        $this->actingAs($admin, 'admin')->delete(
+            route('admin.education.courses.modules.lessons.videos.destroy', [
+                'course' => $course, 'module' => $module, 'lesson' => $lesson, 'video' => $published,
+            ])
+        )->assertStatus(422);
+
+        $processing = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_PROCESSING,
+        ]);
+
+        $this->actingAs($admin, 'admin')->delete(
+            route('admin.education.courses.modules.lessons.videos.destroy', [
+                'course' => $course, 'module' => $module, 'lesson' => $lesson, 'video' => $processing,
+            ])
+        )->assertStatus(422);
+
+        $safe = $this->createVideo($lesson);
+
+        $this->actingAs($admin, 'admin')->delete(
+            route('admin.education.courses.modules.lessons.videos.destroy', [
+                'course' => $course, 'module' => $module, 'lesson' => $lesson, 'video' => $safe,
+            ])
+        )->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        );
+
+        $this->assertSoftDeleted('lesson_videos', ['id' => $safe->id]);
+    }
+
+    private function createAdminWithPermissions(array $permissions): AdminUser
+    {
+        $admin = AdminUser::query()->create([
+            'uuid' => Str::uuid()->toString(),
+            'name' => 'Video CRUD Admin',
+            'email' => 'video-crud-'.Str::lower(Str::random(12)).'@tradex.test',
+            'email_verified_at' => now(),
+            'password' => 'TestingPassword123!',
+            'is_active' => true,
+            'failed_login_attempts' => 0,
+            'locked_until' => null,
+        ]);
+
+        $role = AdminRole::query()->create([
+            'code' => 'VIDEO_CRUD_'.strtoupper(Str::random(8)),
+            'name' => 'Video CRUD Role',
+            'is_system' => false,
+            'is_active' => true,
+        ]);
+        $admin->roles()->attach($role->id);
+
+        foreach ($permissions as $code) {
+            $permission = AdminPermission::query()->create([
+                'code' => $code,
+                'name' => $code,
+                'module' => 'EDUCATION',
+            ]);
+            $role->permissions()->attach($permission->id);
+        }
+
+        return $admin->fresh();
+    }
+
+    private function createHierarchy(): array
+    {
+        $course = Course::query()->create([
+            'code' => 'VIDEO-C-'.strtoupper(Str::random(5)),
+            'slug' => 'video-course-'.Str::lower(Str::random(7)),
+            'title' => 'Video Parent Course',
+            'language_code' => 'en',
+            'access_level' => Course::ACCESS_PREMIUM,
+            'status' => Course::STATUS_DRAFT,
+            'sort_order' => 1,
+            'is_featured' => false,
+        ]);
+
+        $module = CourseModule::query()->create([
+            'course_id' => $course->id,
+            'code' => 'VIDEO-M-'.strtoupper(Str::random(5)),
+            'slug' => 'video-module-'.Str::lower(Str::random(7)),
+            'title' => 'Video Parent Module',
+            'status' => CourseModule::STATUS_DRAFT,
+            'sort_order' => 1,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'course_module_id' => $module->id,
+            'code' => 'VIDEO-L-'.strtoupper(Str::random(5)),
+            'slug' => 'video-lesson-'.Str::lower(Str::random(7)),
+            'title' => 'Video Parent Lesson',
+            'is_preview' => false,
+            'status' => Lesson::STATUS_DRAFT,
+            'sort_order' => 1,
+        ]);
+
+        return [$course, $module, $lesson];
+    }
+
+    private function createVideo(Lesson $lesson, array $overrides = []): LessonVideo
+    {
+        return LessonVideo::query()->create(array_merge([
+            'lesson_id' => $lesson->id,
+            'title' => 'Video Fixture',
+            'storage_disk' => 'private',
+            'source_path' => 'protected/source/video.mp4',
+            'processing_status' => LessonVideo::PROCESSING_PENDING,
+            'status' => LessonVideo::STATUS_DRAFT,
+            'published_at' => null,
+            'is_downloadable' => false,
+            'sort_order' => 1,
+        ], $overrides));
+    }
+}

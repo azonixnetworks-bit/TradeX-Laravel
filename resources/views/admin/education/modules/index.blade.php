@@ -1,4 +1,4 @@
-{{-- TradeX Admin — ADMIN-03 Module Management --}}
+{{-- TradeX Admin ΓÇö ADMIN-03 Module Management --}}
 
 @extends('admin.layouts.app')
 
@@ -335,7 +335,7 @@
             ) }}"
             class="secondary-btn"
         >
-            ← Back to Course
+            ΓåÉ Back to Course
         </a>
 
     </div>
@@ -558,7 +558,7 @@
 
                         <code>
                             {{ $module->code }}
-                            ·
+                            ┬╖
                             {{ $module->slug }}
                         </code>
 
@@ -629,7 +629,7 @@
                             <strong>
                                 {{ $module->published_at
                                     ? $module->published_at->format('d M Y')
-                                    : '—'
+                                    : 'ΓÇö'
                                 }}
                             </strong>
 
@@ -639,6 +639,24 @@
 
 
                     <div class="module-actions">
+
+                        @if($permissions['view'] ?? false)
+
+                            <a
+                                href="{{ route(
+                                    'admin.education.courses.modules.lessons.index',
+                                    [
+                                        'course' => $course,
+                                        'module' => $module,
+                                    ]
+                                ) }}"
+                                class="module-action-link"
+                            >
+                                Manage Lessons
+                            </a>
+
+                        @endif
+
 
                         @if($permissions['update'] ?? false)
 
@@ -818,7 +836,7 @@
             <div class="module-empty">
 
                 <div class="empty-icon">
-                    ▣
+                    Γûú
                 </div>
 
                 <strong>

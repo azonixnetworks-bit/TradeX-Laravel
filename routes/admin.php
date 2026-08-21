@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\Education\AssignmentController;
 use App\Http\Controllers\Admin\Education\CourseController;
+use App\Http\Controllers\Admin\Education\LessonController;
 use App\Http\Controllers\Admin\Education\ModuleController;
+use App\Http\Controllers\Admin\Education\VideoController;
 use App\Http\Controllers\Admin\Users\UserController;
 use App\Http\Controllers\Admin\Users\UserDeviceController;
 use Illuminate\Support\Facades\Route;
@@ -171,7 +174,7 @@ Route::prefix('admin')
                 |
                 | All Education routes remain inside the existing admin.auth
                 | boundary. Exact education.* permissions are enforced again
-                | inside Form Requests and CourseController methods.
+                | inside Form Requests and Education controllers.
                 |
                 | Route model identifiers are numeric and constrained here for
                 | consistency with the frozen ADMIN-02E admin route contract.
@@ -266,6 +269,303 @@ Route::prefix('admin')
                         )
                             ->whereNumber('course')
                             ->name('courses.modules.store');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | ADMIN-03 — Lesson Management
+                        |--------------------------------------------------------------------------
+                        |
+                        | Lessons are always addressed inside both parent Course
+                        | and Course Module:
+                        |
+                        | /education/courses/{course}/modules/{module}/lessons/...
+                        |
+                        | Triple nested member routes use scopeBindings() so:
+                        |
+                        | {module} must belong to {course}
+                        | {lesson} must belong to {module}
+                        |
+                        | LessonController repeats both ownership checks as
+                        | defence-in-depth against future route regressions.
+                        |
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons',
+                            [LessonController::class, 'index']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.lessons.index');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/create',
+                            [LessonController::class, 'create']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.lessons.create');
+
+
+                        Route::post(
+                            '/courses/{course}/modules/{module}/lessons',
+                            [LessonController::class, 'store']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->name('courses.modules.lessons.store');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Lesson Publication
+                        |--------------------------------------------------------------------------
+                        |
+                        | Publication remains separate from normal lesson metadata
+                        | update and is protected by education.publish in both the
+                        | Form Request and LessonController.
+                        |
+                        */
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/publication',
+                            [LessonController::class, 'publication']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.publication');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Lesson Member Routes
+                        |--------------------------------------------------------------------------
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/edit',
+                            [LessonController::class, 'edit']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.edit');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}',
+                            [LessonController::class, 'update']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.update');
+
+
+                        Route::delete(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}',
+                            [LessonController::class, 'destroy']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.destroy');
+
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | ADMIN-03 — Protected Lesson Video Management
+                        |--------------------------------------------------------------------------
+                        |
+                        | Videos are nested through Course -> Module -> Lesson.
+                        | All routes use scoped bindings so a video cannot be
+                        | addressed through a lesson that does not own it.
+                        |
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos',
+                            [VideoController::class, 'index']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.videos.index');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/create',
+                            [VideoController::class, 'create']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.videos.create');
+
+
+                        Route::post(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos',
+                            [VideoController::class, 'store']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.videos.store');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}/publication',
+                            [VideoController::class, 'publication']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.publication');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}/edit',
+                            [VideoController::class, 'edit']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.edit');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}',
+                            [VideoController::class, 'update']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.update');
+
+
+                        Route::delete(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}',
+                            [VideoController::class, 'destroy']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.destroy');
+
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | ADMIN-03 — Assignment Management
+                        |--------------------------------------------------------------------------
+                        |
+                        | Assignment instructions belong to a Lesson. Learner
+                        | assignment files are not uploaded through TradeX.
+                        | Submission remains external through the approved
+                        | WhatsApp flow or NONE.
+                        |
+                        */
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments',
+                            [AssignmentController::class, 'index']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.assignments.index');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments/create',
+                            [AssignmentController::class, 'create']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.assignments.create');
+
+
+                        Route::post(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments',
+                            [AssignmentController::class, 'store']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->name('courses.modules.lessons.assignments.store');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments/{assignment}/publication',
+                            [AssignmentController::class, 'publication']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('assignment')
+                            ->name('courses.modules.lessons.assignments.publication');
+
+
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments/{assignment}/edit',
+                            [AssignmentController::class, 'edit']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('assignment')
+                            ->name('courses.modules.lessons.assignments.edit');
+
+
+                        Route::patch(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments/{assignment}',
+                            [AssignmentController::class, 'update']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('assignment')
+                            ->name('courses.modules.lessons.assignments.update');
+
+
+                        Route::delete(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/assignments/{assignment}',
+                            [AssignmentController::class, 'destroy']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('assignment')
+                            ->name('courses.modules.lessons.assignments.destroy');
 
 
                         /*
