@@ -90,12 +90,12 @@
         @if($admin->hasPermission('our_channel.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.our_channel.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.our_channel.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">▶</span>
                 <span>Our Channel</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
