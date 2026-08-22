@@ -432,11 +432,170 @@
             </div>
         @endif
 
+        <div class="action-box">
+            <h3>Share Card Preview</h3>
+
+            <p>
+                Generic SVG share card generated from the frozen Trade Idea.
+                Personalized user cards reuse this contract with referral code
+                and affiliate link later in the learner/mobile API.
+            </p>
+
+            <a
+                class="action-link"
+                href="{{ route('admin.trade_ideas.share_card', ['tradeIdea'=>$tradeIdea]) }}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Preview Generic Share Card ↗
+            </a>
+        </div>
+
+        @if(
+            (
+                $tradeIdea->isPublished()
+                || $tradeIdea->isClosed()
+            )
+            && ($permissions['distribute'] ?? false)
+        )
+            <div class="action-box">
+                <h3>Distribution</h3>
+
+                <p>
+                    Queue the current frozen Trade Idea to every configured
+                    Telegram / WhatsApp destination. Repeated clicks are
+                    idempotent for the same exact payload.
+                </p>
+
+                <div
+                    style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"
+                >
+                    <div class="metric">
+                        <span>Telegram</span>
+                        <strong>
+                            {{ ($distributionHealth['telegram']['ready'] ?? false) ? 'READY' : 'NOT READY' }}
+                            · {{ $distributionHealth['telegram']['destinations'] ?? 0 }}
+                        </strong>
+                    </div>
+
+                    <div class="metric">
+                        <span>WhatsApp</span>
+                        <strong>
+                            {{ ($distributionHealth['whatsapp']['ready'] ?? false) ? 'READY' : 'NOT READY' }}
+                            · {{ $distributionHealth['whatsapp']['destinations'] ?? 0 }}
+                        </strong>
+                    </div>
+                </div>
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.trade_ideas.distributions.store', ['tradeIdea'=>$tradeIdea]) }}"
+                    onsubmit="return confirm('Queue this Trade Idea to all ready external destinations?');"
+                >
+                    @csrf
+
+                    <button
+                        class="publish"
+                        type="submit"
+                    >
+                        Distribute Now
+                    </button>
+                </form>
+
+                <div
+                    class="integrity-note"
+                    style="margin-top:10px"
+                >
+                    Auto Publish:
+                    <strong>{{ ($distributionHealth['auto']['on_publish'] ?? false) ? 'ON' : 'OFF' }}</strong>
+                    · Auto Update:
+                    <strong>{{ ($distributionHealth['auto']['on_update'] ?? false) ? 'ON' : 'OFF' }}</strong>
+                    · Auto Close:
+                    <strong>{{ ($distributionHealth['auto']['on_close'] ?? false) ? 'ON' : 'OFF' }}</strong>
+                </div>
+            </div>
+        @endif
+
+        <div class="action-box">
+            <h3>Delivery History</h3>
+
+            <p>
+                Latest 30 external delivery records. Raw destination values are
+                encrypted in the database and masked here.
+            </p>
+
+            @forelse($distributions as $distribution)
+                <div
+                    style="padding:10px;border:1px solid rgba(255,255,255,.06);border-radius:9px;margin-bottom:8px"
+                >
+                    <div
+                        style="display:flex;justify-content:space-between;gap:8px;align-items:center"
+                    >
+                        <strong style="font-size:10px">
+                            {{ $distribution->channel }}
+                            · {{ $distribution->event_type }}
+                        </strong>
+
+                        <span
+                            style="font-size:9px;font-weight:800"
+                        >
+                            {{ $distribution->status }}
+                        </span>
+                    </div>
+
+                    <div
+                        style="margin-top:5px;font-size:9px;opacity:.58;line-height:1.5"
+                    >
+                        {{ $distribution->maskedDestination() }}
+                        · Attempts {{ $distribution->attempt_count }}
+
+                        @if($distribution->provider_message_id)
+                            · Provider ID {{ $distribution->provider_message_id }}
+                        @endif
+                    </div>
+
+                    @if($distribution->last_error_message)
+                        <div
+                            style="margin-top:6px;font-size:9px;color:#ff9d9d"
+                        >
+                            {{ $distribution->last_error_code }}
+                            · {{ $distribution->last_error_message }}
+                        </div>
+                    @endif
+
+                    @if(
+                        ($permissions['distribute'] ?? false)
+                        && $distribution->isFailed()
+                    )
+                        <form
+                            method="POST"
+                            action="{{ route('admin.trade_ideas.distributions.retry', ['tradeIdea'=>$tradeIdea, 'distribution'=>$distribution]) }}"
+                            style="margin-top:8px"
+                        >
+                            @csrf
+
+                            <button
+                                class="update"
+                                type="submit"
+                            >
+                                Retry Failed Delivery
+                            </button>
+                        </form>
+                    @endif
+                </div>
+            @empty
+                <div class="optional-empty">
+                    No Telegram / WhatsApp delivery has been queued yet.
+                </div>
+            @endforelse
+        </div>
+
         <div class="integrity-note">
-            <strong>Global distribution:</strong><br>
-            Language filtering and Valid Until are removed.
-            ADMIN-05A distribution will use this same published Trade Idea
-            for all eligible users.
+            <strong>ADMIN-05A boundary:</strong><br>
+            Global Telegram / WhatsApp transport is implemented here.
+            User-specific referral share cards are supported by the reusable
+            share-card service, but per-user Telegram DM is not invented because
+            the current User model has no Telegram recipient identifier.
         </div>
     </aside>
 </div>

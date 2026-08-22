@@ -26,6 +26,28 @@ Route::prefix('admin')
                     ->whereNumber('tradeIdea')
                     ->name('chart_image');
 
+                Route::get(
+                    '/{tradeIdea}/share-card.svg',
+                    [TradeIdeaController::class, 'shareCard']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->name('share_card');
+
+                Route::post(
+                    '/{tradeIdea}/distributions',
+                    [TradeIdeaController::class, 'distribute']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->name('distributions.store');
+
+                Route::post(
+                    '/{tradeIdea}/distributions/{distribution}/retry',
+                    [TradeIdeaController::class, 'retryDistribution']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->whereNumber('distribution')
+                    ->name('distributions.retry');
+
                 Route::get('/{tradeIdea}', [TradeIdeaController::class, 'show'])
                     ->whereNumber('tradeIdea')
                     ->name('show');

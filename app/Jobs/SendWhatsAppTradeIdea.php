@@ -2,26 +2,221 @@
 
 namespace App\Jobs;
 
+use App\Exceptions\TradeIdeaDistributionException;
+use App\Models\TradeIdeaDistribution;
+use App\Services\TradeIdeas\WhatsAppTradeIdeaClient;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Throwable;
 
-class SendWhatsAppTradeIdea implements ShouldQueue
+class SendWhatsAppTradeIdea implements ShouldQueue, ShouldBeUnique
 {
     use Queueable;
 
-    /**
-     * Create a new job instance.
-     */
-    public function __construct()
-    {
-        //
+    public int $tries;
+
+    public int $uniqueFor = 900;
+
+    public function __construct(
+        public readonly int $distributionId
+    ) {
+        $this->tries = max(
+            1,
+            (int) config(
+                'tradex_trade_ideas.jobs.tries',
+                3
+            )
+        );
     }
 
-    /**
-     * Execute the job.
-     */
-    public function handle(): void
+    public function uniqueId(): string
     {
-        //
+        return 'trade-idea-whatsapp:'
+            .$this->distributionId;
+    }
+
+    public function backoff(): array
+    {
+        return (array) config(
+            'tradex_trade_ideas.jobs.backoff_seconds',
+            [
+                15,
+                60,
+                180,
+            ]
+        );
+    }
+
+    public function handle(
+        WhatsAppTradeIdeaClient $client
+    ): void {
+        $distribution =
+            TradeIdeaDistribution::query()
+                ->findOrFail(
+                    $this->distributionId
+                );
+
+        if ($distribution->isSent()) {
+            return;
+        }
+
+        if (
+            $distribution->channel
+            !== TradeIdeaDistribution::CHANNEL_WHATSAPP
+        ) {
+            return;
+        }
+
+        $distribution->forceFill([
+            'status' =>
+                TradeIdeaDistribution::STATUS_PROCESSING,
+
+            'attempt_count' =>
+                $distribution->attempt_count
+                + 1,
+
+            'started_at' =>
+                now(),
+
+            'failed_at' =>
+                null,
+
+            'last_error_code' =>
+                null,
+
+            'last_error_message' =>
+                null,
+        ])->save();
+
+        try {
+            $result =
+                $client->send(
+                    $distribution
+                );
+
+            $distribution->forceFill([
+                'status' =>
+                    TradeIdeaDistribution::STATUS_SENT,
+
+                'provider_message_id' =>
+                    $result['provider_message_id']
+                    ?? null,
+
+                'response_meta' =>
+                    $result['response_meta']
+                    ?? null,
+
+                'sent_at' =>
+                    now(),
+
+                'failed_at' =>
+                    null,
+
+                'last_error_code' =>
+                    null,
+
+                'last_error_message' =>
+                    null,
+            ])->save();
+        } catch (
+            TradeIdeaDistributionException $exception
+        ) {
+            $this->markFailed(
+                $distribution,
+                $exception->providerCode,
+                $exception->getMessage()
+            );
+
+            throw $exception;
+        } catch (Throwable $exception) {
+            $safeException =
+                new TradeIdeaDistributionException(
+                    'WHATSAPP',
+                    'UNEXPECTED',
+                    'Unexpected WhatsApp distribution failure.'
+                );
+
+            $this->markFailed(
+                $distribution,
+                $safeException->providerCode,
+                $safeException->getMessage()
+            );
+
+            /*
+            | Raw provider/network exceptions are not rethrown so request
+            | metadata cannot accidentally leak credentials into failed_jobs.
+            */
+            throw $safeException;
+        }
+    }
+
+    private function markFailed(
+        TradeIdeaDistribution $distribution,
+        string $code,
+        string $safeMessage
+    ): void {
+        $finalAttempt =
+            $this->attempts()
+            >= $this->tries;
+
+        $distribution->forceFill([
+            'status' =>
+                $finalAttempt
+                    ? TradeIdeaDistribution::STATUS_FAILED
+                    : TradeIdeaDistribution::STATUS_PENDING,
+
+            'failed_at' =>
+                $finalAttempt
+                    ? now()
+                    : null,
+
+            'last_error_code' =>
+                mb_substr(
+                    $code,
+                    0,
+                    100
+                ),
+
+            'last_error_message' =>
+                mb_substr(
+                    $safeMessage,
+                    0,
+                    2000
+                ),
+        ])->save();
+    }
+
+    public function failed(
+        ?Throwable $exception
+    ): void {
+        $distribution =
+            TradeIdeaDistribution::query()
+                ->find(
+                    $this->distributionId
+                );
+
+        if (
+            $distribution === null
+            || $distribution->isSent()
+        ) {
+            return;
+        }
+
+        $distribution->forceFill([
+            'status' =>
+                TradeIdeaDistribution::STATUS_FAILED,
+
+            'failed_at' =>
+                now(),
+
+            'last_error_code' =>
+                $distribution->last_error_code
+                ?? 'JOB_FAILED',
+
+            'last_error_message' =>
+                $distribution->last_error_message
+                ?? 'WhatsApp distribution job failed after all retries.',
+        ])->save();
     }
 }
