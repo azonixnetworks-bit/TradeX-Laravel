@@ -11,8 +11,11 @@ use App\Http\Requests\Admin\TradeIdeas\UpdateTradeIdeaRequest;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\TradeIdea;
+use App\Models\TradeIdeaDistribution;
 use App\Models\TradeIdeaTarget;
 use App\Models\TradeIdeaUpdate;
+use App\Services\TradeIdeas\TradeIdeaDistributionManager;
+use App\Services\TradeIdeas\TradeIdeaShareCardService;
 use App\Services\TradeIdeas\TradeIdeaStructureValidator;
 use App\Support\TradingViewUrl;
 use Illuminate\Http\RedirectResponse;
@@ -288,11 +291,27 @@ class TradeIdeaController extends Controller
             $admin
         );
 
+        $distributions =
+            $tradeIdea->distributions()
+                ->with(
+                    'createdByAdmin'
+                )
+                ->limit(
+                    30
+                )
+                ->get();
+
+        $distributionHealth = app(
+            TradeIdeaDistributionManager::class
+        )->health();
+
         return view(
             'admin.trade_ideas.show',
             compact(
                 'tradeIdea',
-                'permissions'
+                'permissions',
+                'distributions',
+                'distributionHealth'
             )
         );
     }
@@ -374,6 +393,194 @@ class TradeIdeaController extends Controller
                 'Content-Disposition' => 'inline',
             ]
         );
+    }
+
+    public function shareCard(
+        TradeIdea $tradeIdea
+    ): \Illuminate\Http\Response {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requirePermission(
+            $admin,
+            'trade_ideas.view'
+        );
+
+        $svg = app(
+            TradeIdeaShareCardService::class
+        )->renderSvg(
+            $tradeIdea
+        );
+
+        return response(
+            $svg,
+            200,
+            [
+                'Content-Type' =>
+                    'image/svg+xml; charset=UTF-8',
+
+                'Cache-Control' =>
+                    'private, no-store, no-cache, must-revalidate, max-age=0',
+
+                'Pragma' =>
+                    'no-cache',
+
+                'Expires' =>
+                    '0',
+
+                'X-Content-Type-Options' =>
+                    'nosniff',
+
+                'Content-Disposition' =>
+                    'inline; filename="tradex-trade-idea.svg"',
+            ]
+        );
+    }
+
+    public function distribute(
+        Request $request,
+        TradeIdea $tradeIdea
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requirePermission(
+            $admin,
+            'trade_ideas.distribute'
+        );
+
+        abort_unless(
+            $tradeIdea->isPublished()
+            || $tradeIdea->isClosed(),
+            422,
+            'Only published or closed Trade Ideas can be distributed.'
+        );
+
+        $summary = app(
+            TradeIdeaDistributionManager::class
+        )->queueManual(
+            $tradeIdea->fresh([
+                'targets',
+            ]),
+            $admin
+        );
+
+        AuditLog::record(
+            actorType: 'ADMIN',
+            actorId: $admin->id,
+            action: 'TRADE_IDEA_DISTRIBUTION_QUEUED',
+            module: 'TRADE_IDEAS',
+            targetType: 'TRADE_IDEA',
+            targetId: $tradeIdea->id,
+            newValues: [
+                'created' =>
+                    $summary['created'],
+
+                'existing' =>
+                    $summary['existing'],
+
+                'configured_destinations' =>
+                    $summary['configured_destinations'],
+            ],
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        if (
+            $summary['configured_destinations']
+            === 0
+        ) {
+            return redirect()
+                ->route(
+                    'admin.trade_ideas.show',
+                    [
+                        'tradeIdea' =>
+                            $tradeIdea,
+                    ]
+                )
+                ->with(
+                    'error',
+                    'No ready Telegram or WhatsApp distribution destination is configured.'
+                );
+        }
+
+        return redirect()
+            ->route(
+                'admin.trade_ideas.show',
+                [
+                    'tradeIdea' =>
+                        $tradeIdea,
+                ]
+            )
+            ->with(
+                'success',
+                $summary['created'] > 0
+                    ? 'Trade Idea distribution queued successfully.'
+                    : 'This exact Trade Idea payload is already queued or sent to the configured destinations.'
+            );
+    }
+
+    public function retryDistribution(
+        Request $request,
+        TradeIdea $tradeIdea,
+        TradeIdeaDistribution $distribution
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requirePermission(
+            $admin,
+            'trade_ideas.distribute'
+        );
+
+        abort_unless(
+            $distribution->trade_idea_id
+                === $tradeIdea->id,
+            404
+        );
+
+        $retried = app(
+            TradeIdeaDistributionManager::class
+        )->retry(
+            $distribution
+        );
+
+        if ($retried) {
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $admin->id,
+                action: 'TRADE_IDEA_DISTRIBUTION_RETRIED',
+                module: 'TRADE_IDEAS',
+                targetType: 'TRADE_IDEA_DISTRIBUTION',
+                targetId: $distribution->id,
+                newValues: [
+                    'trade_idea_id' =>
+                        $tradeIdea->id,
+
+                    'channel' =>
+                        $distribution->channel,
+
+                    'status' =>
+                        TradeIdeaDistribution::STATUS_PENDING,
+                ],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        }
+
+        return redirect()
+            ->route(
+                'admin.trade_ideas.show',
+                [
+                    'tradeIdea' =>
+                        $tradeIdea,
+                ]
+            )
+            ->with(
+                $retried
+                    ? 'success'
+                    : 'error',
+                $retried
+                    ? 'Failed Trade Idea distribution queued for retry.'
+                    : 'This distribution is already processing or has already been sent.'
+            );
     }
 
     public function edit(
@@ -673,6 +880,23 @@ class TradeIdeaController extends Controller
             );
         });
 
+        if (
+            config(
+                'tradex_trade_ideas.auto.on_publish',
+                false
+            )
+        ) {
+            $this->queueAutomaticDistribution(
+                TradeIdeaDistribution::EVENT_INITIAL,
+                $tradeIdea->fresh([
+                    'targets',
+                ]),
+                $admin,
+                null,
+                $request
+            );
+        }
+
         return redirect()
             ->route(
                 'admin.trade_ideas.show',
@@ -699,12 +923,12 @@ class TradeIdeaController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use (
+        $timelineId = DB::transaction(function () use (
             $validated,
             $request,
             $tradeIdea,
             $admin
-        ): void {
+        ): int {
             $locked = TradeIdea::query()
                 ->lockForUpdate()
                 ->findOrFail(
@@ -816,7 +1040,32 @@ class TradeIdeaController extends Controller
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
             );
+
+            return $timeline->id;
         });
+
+        if (
+            config(
+                'tradex_trade_ideas.auto.on_update',
+                false
+            )
+        ) {
+            $timeline =
+                TradeIdeaUpdate::query()
+                    ->findOrFail(
+                        $timelineId
+                    );
+
+            $this->queueAutomaticDistribution(
+                TradeIdeaDistribution::EVENT_UPDATE,
+                $tradeIdea->fresh([
+                    'targets',
+                ]),
+                $admin,
+                $timeline,
+                $request
+            );
+        }
 
         return redirect()
             ->route(
@@ -844,12 +1093,12 @@ class TradeIdeaController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(function () use (
+        $closeTimelineId = DB::transaction(function () use (
             $validated,
             $request,
             $tradeIdea,
             $admin
-        ): void {
+        ): int {
             $locked = TradeIdea::query()
                 ->lockForUpdate()
                 ->findOrFail(
@@ -878,14 +1127,15 @@ class TradeIdeaController extends Controller
             $locked->updated_by_admin_id = $admin->id;
             $locked->save();
 
-            TradeIdeaUpdate::query()->create([
-                'trade_idea_id' => $locked->id,
-                'trade_idea_target_id' => null,
-                'type' => TradeIdeaUpdate::TYPE_CLOSED,
-                'message' => $validated['note'],
-                'price' => $validated['close_price'] ?? null,
-                'created_by_admin_id' => $admin->id,
-            ]);
+            $closeTimeline =
+                TradeIdeaUpdate::query()->create([
+                    'trade_idea_id' => $locked->id,
+                    'trade_idea_target_id' => null,
+                    'type' => TradeIdeaUpdate::TYPE_CLOSED,
+                    'message' => $validated['note'],
+                    'price' => $validated['close_price'] ?? null,
+                    'created_by_admin_id' => $admin->id,
+                ]);
 
             $locked->load(
                 'targets'
@@ -913,7 +1163,32 @@ class TradeIdeaController extends Controller
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
             );
+
+            return $closeTimeline->id;
         });
+
+        if (
+            config(
+                'tradex_trade_ideas.auto.on_close',
+                false
+            )
+        ) {
+            $closeTimeline =
+                TradeIdeaUpdate::query()
+                    ->findOrFail(
+                        $closeTimelineId
+                    );
+
+            $this->queueAutomaticDistribution(
+                TradeIdeaDistribution::EVENT_CLOSED,
+                $tradeIdea->fresh([
+                    'targets',
+                ]),
+                $admin,
+                $closeTimeline,
+                $request
+            );
+        }
 
         return redirect()
             ->route(
@@ -1166,6 +1441,74 @@ class TradeIdeaController extends Controller
             ->delete(
                 $path
             );
+    }
+
+    private function queueAutomaticDistribution(
+        string $eventType,
+        TradeIdea $tradeIdea,
+        AdminUser $admin,
+        ?TradeIdeaUpdate $update,
+        Request $request
+    ): void {
+        try {
+            $manager = app(
+                TradeIdeaDistributionManager::class
+            );
+
+            match ($eventType) {
+                TradeIdeaDistribution::EVENT_INITIAL =>
+                    $manager->queueInitial(
+                        $tradeIdea,
+                        $admin
+                    ),
+
+                TradeIdeaDistribution::EVENT_UPDATE =>
+                    $manager->queueUpdate(
+                        $tradeIdea,
+                        $update
+                            ?? throw new \LogicException(
+                                'Timeline update is required.'
+                            ),
+                        $admin
+                    ),
+
+                TradeIdeaDistribution::EVENT_CLOSED =>
+                    $manager->queueClosed(
+                        $tradeIdea,
+                        $update,
+                        $admin
+                    ),
+
+                default =>
+                    null,
+            };
+        } catch (\Throwable $exception) {
+            /*
+            | Distribution is a secondary external concern. Never roll back or
+            | convert an already-committed Publish / Update / Close into a 500
+            | merely because a provider queue could not be prepared.
+            |
+            | Do not persist raw exception text because provider configuration
+            | or transport details may be sensitive.
+            */
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $admin->id,
+                action: 'TRADE_IDEA_AUTO_DISTRIBUTION_QUEUE_FAILED',
+                module: 'TRADE_IDEAS',
+                targetType: 'TRADE_IDEA',
+                targetId: $tradeIdea->id,
+                newValues: [
+                    'event_type' =>
+                        $eventType,
+
+                    'error_code' =>
+                        'QUEUE_PREPARATION_FAILED',
+                ],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        }
     }
 
     private function authenticatedAdmin(): AdminUser

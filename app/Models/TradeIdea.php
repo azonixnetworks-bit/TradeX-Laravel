@@ -125,6 +125,15 @@ class TradeIdea extends Model
         );
     }
 
+    public function distributions(): HasMany
+    {
+        return $this->hasMany(
+            TradeIdeaDistribution::class
+        )->latest(
+            'id'
+        );
+    }
+
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(
