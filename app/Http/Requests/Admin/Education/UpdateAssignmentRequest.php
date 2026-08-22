@@ -28,23 +28,42 @@ class UpdateAssignmentRequest extends FormRequest
             'reference_image_path',
             'submission_instructions',
         ] as $field) {
-            if ($this->has($field) && is_string($this->input($field))) {
-                $normalized[$field] = trim((string) $this->input($field));
+            if (
+                $this->has($field)
+                && is_string($this->input($field))
+            ) {
+                $normalized[$field] = trim(
+                    (string) $this->input($field)
+                );
             }
         }
 
-        if ($this->has('submission_method') && is_string($this->input('submission_method'))) {
-            $normalized['submission_method'] = Str::upper(
-                trim((string) $this->input('submission_method'))
-            );
+        if (
+            $this->has('submission_method')
+            && is_string($this->input('submission_method'))
+        ) {
+            $normalized['submission_method'] =
+                Str::upper(
+                    trim(
+                        (string) $this->input(
+                            'submission_method'
+                        )
+                    )
+                );
         }
 
-        if (array_key_exists('reference_image_path', $normalized)) {
-            $normalized['reference_image_path'] = str_replace(
-                '\\',
-                '/',
-                $normalized['reference_image_path']
-            );
+        if (
+            array_key_exists(
+                'reference_image_path',
+                $normalized
+            )
+        ) {
+            $normalized['reference_image_path'] =
+                str_replace(
+                    '\\',
+                    '/',
+                    $normalized['reference_image_path']
+                );
         }
 
         if ($normalized !== []) {
@@ -60,9 +79,26 @@ class UpdateAssignmentRequest extends FormRequest
             'course_module_id' => ['prohibited'],
             'lesson_id' => ['prohibited'],
 
-            'title' => ['sometimes', 'required', 'string', 'max:200'],
-            'heading' => ['sometimes', 'nullable', 'string', 'max:250'],
-            'description' => ['sometimes', 'nullable', 'string'],
+            'title' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:200',
+            ],
+
+            'heading' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:250',
+            ],
+
+            'description' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
             'reference_image_path' => [
                 'sometimes',
                 'nullable',
@@ -70,6 +106,37 @@ class UpdateAssignmentRequest extends FormRequest
                 'max:500',
                 $this->protectedLogicalPathRule(),
             ],
+
+            'material_file' => [
+                Rule::prohibitedIf(
+                    fn (): bool =>
+                        $this->boolean(
+                            'remove_material'
+                        )
+                ),
+                'nullable',
+                'file',
+                'mimes:'.implode(
+                    ',',
+                    Assignment::MATERIAL_ALLOWED_EXTENSIONS
+                ),
+                'max:'.Assignment::MATERIAL_MAX_UPLOAD_KB,
+            ],
+
+            'remove_material' => [
+                'sometimes',
+                'nullable',
+                'boolean',
+            ],
+
+            'material_disk' => ['prohibited'],
+            'material_path' => ['prohibited'],
+            'material_original_name' => ['prohibited'],
+            'material_mime_type' => ['prohibited'],
+            'material_size_bytes' => ['prohibited'],
+            'material_sha256' => ['prohibited'],
+            'material_uploaded_at' => ['prohibited'],
+
             'submission_method' => [
                 'sometimes',
                 'required',
@@ -79,9 +146,26 @@ class UpdateAssignmentRequest extends FormRequest
                     Assignment::SUBMISSION_NONE,
                 ]),
             ],
-            'submission_instructions' => ['sometimes', 'nullable', 'string'],
-            'is_required' => ['sometimes', 'nullable', 'boolean'],
-            'sort_order' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:4294967295'],
+
+            'submission_instructions' => [
+                'sometimes',
+                'nullable',
+                'string',
+            ],
+
+            'is_required' => [
+                'sometimes',
+                'nullable',
+                'boolean',
+            ],
+
+            'sort_order' => [
+                'sometimes',
+                'nullable',
+                'integer',
+                'min:0',
+                'max:4294967295',
+            ],
 
             'submission_file' => ['prohibited'],
             'learner_submission' => ['prohibited'],
@@ -99,21 +183,50 @@ class UpdateAssignmentRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'submission_method.in' => 'Assignment submission method must be WHATSAPP or NONE.',
-            'lesson_id.prohibited' => 'An assignment cannot be moved to another lesson through the update request.',
-            'submission_file.prohibited' => 'Learner assignment files are not uploaded or stored through TradeX.',
-            'learner_submission.prohibited' => 'Learner assignment files are not uploaded or stored through TradeX.',
-            'submission_upload.prohibited' => 'Learner assignment files are not uploaded or stored through TradeX.',
-            'attachment.prohibited' => 'Learner assignment files are not uploaded or stored through TradeX.',
-            'status.prohibited' => 'Assignment publication status cannot be changed through the normal update request.',
-            'published_at.prohibited' => 'Assignment publication time is controlled by the authorized publish workflow.',
+            'material_file.prohibited' =>
+                'Do not upload a replacement material while Remove Current Material is selected.',
+
+            'material_file.file' =>
+                'Choose a valid assignment material file.',
+
+            'material_file.mimes' =>
+                'Assignment material must be PDF, JPG, JPEG, PNG, WEBP, DOCX, XLSX, PPTX or TXT.',
+
+            'material_file.max' =>
+                'Assignment material must not exceed 25 MB.',
+
+            'submission_method.in' =>
+                'Assignment submission method must be WHATSAPP or NONE.',
+
+            'lesson_id.prohibited' =>
+                'An assignment cannot be moved to another lesson through the update request.',
+
+            'material_path.prohibited' =>
+                'Assignment material storage path is controlled by TradeX.',
+
+            'material_sha256.prohibited' =>
+                'Assignment material integrity metadata is controlled by TradeX.',
+
+            'submission_file.prohibited' =>
+                'Learner assignment files are not uploaded or stored through TradeX.',
+
+            'learner_submission.prohibited' =>
+                'Learner assignment files are not uploaded or stored through TradeX.',
+
+            'submission_upload.prohibited' =>
+                'Learner assignment files are not uploaded or stored through TradeX.',
+
+            'attachment.prohibited' =>
+                'Learner assignment files are not uploaded or stored through TradeX.',
+
+            'status.prohibited' =>
+                'Assignment publication status cannot be changed through the normal update request.',
+
+            'published_at.prohibited' =>
+                'Assignment publication time is controlled by the authorized publish workflow.',
         ];
     }
 
-    /**
-     * Assignment reference media must remain a relative private logical path.
-     * Learner submission files are never accepted by this request.
-     */
     private function protectedLogicalPathRule(): Closure
     {
         return static function (
@@ -121,7 +234,10 @@ class UpdateAssignmentRequest extends FormRequest
             mixed $value,
             Closure $fail
         ): void {
-            if ($value === null || $value === '') {
+            if (
+                $value === null
+                || $value === ''
+            ) {
                 return;
             }
 
@@ -130,7 +246,12 @@ class UpdateAssignmentRequest extends FormRequest
             }
 
             $path = trim($value);
-            $normalized = str_replace('\\', '/', $path);
+
+            $normalized = str_replace(
+                '\\',
+                '/',
+                $path
+            );
 
             $hasScheme =
                 preg_match(
@@ -158,12 +279,21 @@ class UpdateAssignmentRequest extends FormRequest
 
             if (
                 $path === ''
-                || str_starts_with($normalized, '/')
+                || str_starts_with(
+                    $normalized,
+                    '/'
+                )
                 || $hasScheme
                 || $hasTraversal
                 || $hasDotSegment
-                || str_contains($normalized, '?')
-                || str_contains($normalized, '#')
+                || str_contains(
+                    $normalized,
+                    '?'
+                )
+                || str_contains(
+                    $normalized,
+                    '#'
+                )
                 || $hasControlCharacter
             ) {
                 $fail(
@@ -172,5 +302,4 @@ class UpdateAssignmentRequest extends FormRequest
             }
         };
     }
-
 }
