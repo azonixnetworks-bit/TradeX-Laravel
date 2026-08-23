@@ -1,0 +1,31 @@
+API-10 File Manifest
+====================
+
+Modified/full merged:
+- bootstrap/providers.php
+
+New:
+- app/Http/Controllers/Api/Notifications/MarkAllNotificationsReadController.php
+- app/Http/Controllers/Api/Notifications/MarkNotificationReadController.php
+- app/Http/Controllers/Api/Notifications/NotificationIndexController.php
+- app/Http/Controllers/Api/Notifications/NotificationShowController.php
+- app/Http/Controllers/Api/Notifications/NotificationSummaryController.php
+- app/Http/Requests/Api/Notifications/NotificationIndexRequest.php
+- app/Models/NotificationMessage.php
+- app/Models/UserNotificationReceipt.php
+- app/Providers/NotificationApiServiceProvider.php
+- app/Services/Notifications/NotificationApiService.php
+- config/tradex_notifications_api.php
+- database/migrations/2026_08_23_210000_create_notification_messages_table.php
+- database/migrations/2026_08_23_210100_create_user_notification_receipts_table.php
+- docs/API-10-ENDPOINT-CONTRACT.txt
+- docs/API-10-README.txt
+- routes/api_notifications.php
+- tests/Feature/Api/Notifications/NotificationApiTest.php
+- tests/Feature/Api/Notifications/NotificationAuthenticationTest.php
+- tests/Feature/Api/Notifications/NotificationRateLimitTest.php
+- tests/Feature/Api/Notifications/NotificationRouteSecurityTest.php
+
+Migrations:
+- database/migrations/2026_08_23_210000_create_notification_messages_table.php
+- database/migrations/2026_08_23_210100_create_user_notification_receipts_table.php
