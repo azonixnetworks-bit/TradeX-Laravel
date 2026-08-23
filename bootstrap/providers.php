@@ -1,5 +1,6 @@
 <?php
 
+use App\Providers\AccountSettingsApiServiceProvider;
 use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\DashboardServiceProvider;
@@ -10,4 +11,5 @@ return [
     DashboardServiceProvider::class,
     AffiliateApiServiceProvider::class,
     NotificationApiServiceProvider::class,
+    AccountSettingsApiServiceProvider::class,
 ];

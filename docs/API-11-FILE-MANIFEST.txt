@@ -1,0 +1,26 @@
+API-11 File Manifest
+====================
+
+Modified/full merged:
+- bootstrap/providers.php
+
+New:
+- app/Http/Controllers/Api/Profile/Settings/AccountSecurityController.php
+- app/Http/Controllers/Api/Profile/Settings/AccountSettingsController.php
+- app/Http/Controllers/Api/Profile/Settings/RevokeTrustedDeviceController.php
+- app/Http/Controllers/Api/Profile/Settings/TrustedDeviceIndexController.php
+- app/Http/Requests/Api/Profile/Settings/RevokeTrustedDeviceRequest.php
+- app/Providers/AccountSettingsApiServiceProvider.php
+- app/Services/Profile/AccountSettingsApiService.php
+- config/tradex_account_settings_api.php
+- docs/API-11-ENDPOINT-CONTRACT.txt
+- docs/API-11-README.txt
+- routes/api_account_settings.php
+- tests/Feature/Api/Profile/Settings/AccountSettingsApiTest.php
+- tests/Feature/Api/Profile/Settings/AccountSettingsAuthenticationTest.php
+- tests/Feature/Api/Profile/Settings/AccountSettingsRateLimitTest.php
+- tests/Feature/Api/Profile/Settings/AccountSettingsRouteSecurityTest.php
+
+No migration.
+Existing routes/api.php is not modified.
+Existing Profile services/controllers/requests are not modified.
