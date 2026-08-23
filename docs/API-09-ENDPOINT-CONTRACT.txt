@@ -1,0 +1,159 @@
+API-09 — Affiliate Mobile API Contract
+=======================================
+
+Branch
+------
+feature/api-09-affiliate-mobile
+
+Baseline
+--------
+Frozen main:
+fb25fdffbb443ba472fa7610f525023767b1574e
+
+Entitlement
+-----------
+All API-09 endpoints require:
+- Sanctum authentication
+- valid TradeX trusted mobile device/session
+- ACTIVE PREMIUM account
+
+FREE users receive:
+403 AFFILIATE_PREMIUM_REQUIRED
+
+API-08 dashboard remains unchanged.
+
+Endpoints
+---------
+GET  /api/v1/affiliate/overview
+GET  /api/v1/affiliate/stages
+GET  /api/v1/affiliate/referrals
+GET  /api/v1/affiliate/sales
+GET  /api/v1/affiliate/commissions
+GET  /api/v1/affiliate/milestones
+POST /api/v1/affiliate/share-action
+
+Route names
+-----------
+api.v1.affiliate.overview
+api.v1.affiliate.stages.index
+api.v1.affiliate.referrals.index
+api.v1.affiliate.sales.index
+api.v1.affiliate.commissions.index
+api.v1.affiliate.milestones.index
+api.v1.affiliate.share-action
+
+Commercial foundation
+---------------------
+API-09 is read/share presentation over frozen AFF-01.
+
+Single-level direct-sale only.
+No upline/downline/override/residual/generation/team commission.
+
+Progressive standard commission:
+sales 1-30   = 15%
+sales 31-80  = 17.5%
+sales 81+    = 20% standard maximum
+
+No retroactive rate increase.
+
+Calculation base:
+PayPal Net Eligible Revenue.
+
+Management-approved special commercial exception:
+above 20% up to 24%.
+When active, milestone gifts are not eligible.
+
+Milestone schedule:
+30    -> $75
+80    -> $125
+150   -> $200
+300   -> $400
+500   -> $600
+750   -> $800
+1500  -> $2200
+Maximum cumulative milestone gifts = $4400.
+
+No refund feature
+-----------------
+API-09 contains:
+- no refund request endpoint
+- no admin refund endpoint
+- no REFUNDED state
+- no voluntary refund action
+
+PAYMENT_REVERSED can only represent a forced payment-integrity exception already
+recorded by frozen AFF-01, such as processor chargeback/reversal, duplicate
+payment correction, unauthorized payment, confirmed TradeX billing error, or
+legally required reversal.
+
+The mobile API deliberately does NOT expose:
+- PayPal source_reference
+- payment_reversal_reason
+- admin IDs/reasons
+- internal numeric database IDs
+
+Payout boundary
+---------------
+API-09 does NOT return payout balance, payable balance, payout status or payment
+history because a payout-ledger foundation has not yet been frozen.
+
+Referral privacy
+----------------
+/referrals returns direct referrals only.
+
+It does not expose:
+- email
+- WhatsApp number
+- bank details
+- PayPal email
+- Binance details
+- TOTP/security fields
+- downline referrals
+
+Share action
+------------
+POST body:
+{
+  "channel": "WHATSAPP"
+}
+
+Supported:
+WHATSAPP
+TELEGRAM
+
+TradeX only prepares the external user-share URL/message.
+It does not trigger a server-side provider send and does not claim delivery.
+
+Filters
+-------
+GET /sales
+status:
+CLEARED
+PAYMENT_REVERSED
+
+GET /commissions
+rate_source:
+STANDARD
+SPECIAL
+
+Pagination
+----------
+referrals, sales and commissions:
+per_page default 20
+max 50
+
+Rate limits
+-----------
+api-affiliate-read
+default 120/min/authenticated user
+
+api-affiliate-share
+default 20/min/authenticated user
+
+Errors
+------
+401 unauthenticated
+403 invalid/inactive/untrusted mobile session
+403 AFFILIATE_PREMIUM_REQUIRED
+422 validation/referral-not-available
+429 rate limit exceeded

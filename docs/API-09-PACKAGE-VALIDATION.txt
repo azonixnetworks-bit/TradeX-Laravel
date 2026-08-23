@@ -1,0 +1,10 @@
+API-09 Package Validation
+=========================
+
+PHP syntax lint: PASS
+Static security/contract checks: PASS
+ZIP integrity: PASS
+
+Full Laravel regression is intentionally not claimed here because the complete
+TradeX repository/runtime is on the user's local machine. Run the commands in
+API-09-README.txt after extraction.

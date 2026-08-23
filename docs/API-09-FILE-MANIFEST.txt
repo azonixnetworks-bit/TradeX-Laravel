@@ -1,0 +1,31 @@
+API-09 File Manifest
+====================
+
+Modified/full merged:
+- bootstrap/providers.php
+
+New:
+- app/Http/Controllers/Api/Affiliate/AffiliateCommissionIndexController.php
+- app/Http/Controllers/Api/Affiliate/AffiliateMilestoneIndexController.php
+- app/Http/Controllers/Api/Affiliate/AffiliateOverviewController.php
+- app/Http/Controllers/Api/Affiliate/AffiliateQualifiedSaleIndexController.php
+- app/Http/Controllers/Api/Affiliate/AffiliateShareActionController.php
+- app/Http/Controllers/Api/Affiliate/AffiliateStageIndexController.php
+- app/Http/Controllers/Api/Affiliate/DirectReferralIndexController.php
+- app/Http/Requests/Api/Affiliate/AffiliateCommissionIndexRequest.php
+- app/Http/Requests/Api/Affiliate/AffiliatePaginationRequest.php
+- app/Http/Requests/Api/Affiliate/AffiliateQualifiedSaleIndexRequest.php
+- app/Http/Requests/Api/Affiliate/AffiliateShareActionRequest.php
+- app/Providers/AffiliateApiServiceProvider.php
+- app/Services/Affiliates/AffiliateApiService.php
+- config/tradex_affiliate_api.php
+- docs/API-09-ENDPOINT-CONTRACT.txt
+- docs/API-09-README.txt
+- routes/api_affiliate.php
+- tests/Feature/Api/Affiliate/AffiliateApiTest.php
+- tests/Feature/Api/Affiliate/AffiliateAuthenticationTest.php
+- tests/Feature/Api/Affiliate/AffiliateRateLimitTest.php
+- tests/Feature/Api/Affiliate/AffiliateRouteSecurityTest.php
+
+No migration.
+No routes/api.php modification.
