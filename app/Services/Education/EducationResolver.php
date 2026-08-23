@@ -2,6 +2,7 @@
 
 namespace App\Services\Education;
 
+use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\CourseModule;
 use App\Models\Lesson;
@@ -75,6 +76,36 @@ class EducationResolver
                 '!=',
                 ''
             )
+            ->where(
+                'uuid',
+                $uuid
+            )
+            ->whereHas(
+                'lesson',
+                fn ($query) =>
+                    $query
+                        ->published()
+                        ->whereHas(
+                            'module',
+                            fn ($module) =>
+                                $module
+                                    ->published()
+                                    ->whereHas(
+                                        'course',
+                                        fn ($course) =>
+                                            $course
+                                                ->published()
+                                    )
+                        )
+            )
+            ->firstOrFail();
+    }
+
+    public function assignment(
+        string $uuid
+    ): Assignment {
+        return Assignment::query()
+            ->published()
             ->where(
                 'uuid',
                 $uuid

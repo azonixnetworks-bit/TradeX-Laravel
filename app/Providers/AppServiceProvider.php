@@ -337,5 +337,41 @@ class AppServiceProvider extends ServiceProvider
                 )
             )
         );
+
+        RateLimiter::for(
+            'api-education-assignment-action',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.assignment_action_per_minute',
+                    20
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-education-assignment-material',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.assignment_material_per_minute',
+                    30
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
     }
 }

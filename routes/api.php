@@ -14,6 +14,10 @@ use App\Http\Controllers\Api\Auth\SetupRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\StartRegistrationController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationEmailController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationWhatsAppController;
+use App\Http\Controllers\Api\Education\AssignmentIndexController;
+use App\Http\Controllers\Api\Education\AssignmentMaterialController;
+use App\Http\Controllers\Api\Education\AssignmentShowController;
+use App\Http\Controllers\Api\Education\AssignmentWhatsAppActionController;
 use App\Http\Controllers\Api\Education\CourseIndexController;
 use App\Http\Controllers\Api\Education\CourseShowController;
 use App\Http\Controllers\Api\Education\IssueVideoPlaybackTokenController;
@@ -260,7 +264,6 @@ Route::prefix('v1')
                         );
                 });
 
-
             Route::prefix('education')
                 ->name('education.')
                 ->group(function (): void {
@@ -303,6 +306,16 @@ Route::prefix('v1')
                         )
                         ->name('lessons.show');
 
+                    Route::get(
+                        '/lessons/{lesson}/assignments',
+                        AssignmentIndexController::class
+                    )
+                        ->whereUuid('lesson')
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('lessons.assignments.index');
+
                     Route::patch(
                         '/lessons/{lesson}/progress',
                         UpdateLessonProgressController::class
@@ -312,6 +325,36 @@ Route::prefix('v1')
                             'throttle:api-education-progress'
                         )
                         ->name('lessons.progress.update');
+
+                    Route::get(
+                        '/assignments/{assignment}',
+                        AssignmentShowController::class
+                    )
+                        ->whereUuid('assignment')
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('assignments.show');
+
+                    Route::post(
+                        '/assignments/{assignment}/whatsapp-action',
+                        AssignmentWhatsAppActionController::class
+                    )
+                        ->whereUuid('assignment')
+                        ->middleware(
+                            'throttle:api-education-assignment-action'
+                        )
+                        ->name('assignments.whatsapp-action');
+
+                    Route::get(
+                        '/assignments/{assignment}/material',
+                        AssignmentMaterialController::class
+                    )
+                        ->whereUuid('assignment')
+                        ->middleware(
+                            'throttle:api-education-assignment-material'
+                        )
+                        ->name('assignments.material');
 
                     Route::post(
                         '/videos/{video}/playback-token',
