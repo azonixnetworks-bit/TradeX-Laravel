@@ -1,0 +1,108 @@
+API-08 — Mobile Dashboard Endpoint Contract
+============================================
+
+GET /api/v1/dashboard
+Route: api.v1.dashboard.show
+
+Authentication
+--------------
+Required:
+- Sanctum access token
+- valid TradeX trusted mobile device/session
+- active account as enforced by tradex.mobile
+
+Rate limit
+----------
+api-dashboard-read
+Default: 120 requests/minute/authenticated user
+Config: tradex_dashboard.rate_limits.read_per_minute
+Env: TRADEX_DASHBOARD_READ_PER_MINUTE
+
+Success shape
+-------------
+{
+  "success": true,
+  "data": {
+    "account": {...},
+    "referral": {...},
+    "affiliate": {...},
+    "learning": {...},
+    "trade_ideas": {...},
+    "our_channel": {...}
+  }
+}
+
+Account
+-------
+Public-safe user UUID only; never exposes numeric user ID, password, TOTP,
+financial profile secrets, device IDs or admin status-change internals.
+
+Referral
+--------
+code: permanent referral code or null
+url: permanent general referral URL or null
+direct_referrals_count: direct users attributed through referred_by_user_id
+
+Affiliate
+---------
+Backed by AFF-01 AffiliateProfile / AffiliateStage ledger state.
+
+commission.model = PROGRESSIVE_DIRECT_SALE
+Normal progression:
+- sale 1-30: 15%
+- sale 31-80: 17.5%
+- sale 81+: 20% normal maximum
+
+Approved special exception:
+- above 20% up to 24%
+- milestone gifts disabled
+
+next_sale_rate_percent is intentionally a string with two decimals to avoid
+floating-point money/rate ambiguity in clients.
+
+Financial money object:
+{
+  "currency": "USD",
+  "amount_cents": 1500,
+  "amount": "15.00"
+}
+
+No payout balance/status is claimed by API-08 because payout ledger foundation
+is not yet implemented.
+
+No voluntary refund concept is exposed.
+processor_payment_adjustments can only reflect the no-refund exception
+adjustment ledger already recorded by AFF-01.
+
+Learning
+--------
+Only published Course -> Module -> Lesson hierarchy is counted.
+FREE:
+- FREE-course published lessons
+- PREMIUM-course published preview lessons
+PREMIUM:
+- all published lessons in published hierarchy
+
+continue_learning is the latest accessible IN_PROGRESS lesson or null.
+All navigation uses public UUIDs.
+
+Trade Ideas
+-----------
+PREMIUM:
+- latest API-06-available PUBLISHED/CLOSED item with published_at <= now
+- uses API-06 safe summary presenter
+FREE:
+- latest is null
+- no Trade Idea title/symbol/analysis/chart data is leaked
+
+Our Channel
+-----------
+- PUBLISHED and published_at <= now only
+- preferred language first, fallback to latest published video
+- uses API-07 safe summary + youtube-nocookie embed metadata
+
+Expected errors
+---------------
+401 unauthenticated
+403 invalid/inactive/untrusted TradeX mobile session (tradex.mobile contract)
+429 dashboard read rate limit exceeded
