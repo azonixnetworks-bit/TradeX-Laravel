@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
@@ -56,6 +56,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'totp_secret',
+        'totp_last_used_step',
     ];
 
     protected function casts(): array
@@ -74,6 +76,14 @@ class User extends Authenticatable
             'blocked_at' => 'datetime',
 
             'last_login_at' => 'datetime',
+
+            'totp_secret' => 'encrypted',
+
+            'totp_confirmed_at' =>
+                'datetime',
+
+            'totp_last_used_step' =>
+                'integer',
 
             'password' => 'hashed',
         ];
@@ -236,5 +246,12 @@ class User extends Authenticatable
         return $this->isPremium()
             && $this->isActive()
             && ! $this->trashed();
+    }
+
+    public function hasConfirmedTotp(): bool
+    {
+        return $this->totp_confirmed_at
+            !== null
+            && filled($this->totp_secret);
     }
 }
