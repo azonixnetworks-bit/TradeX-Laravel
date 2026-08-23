@@ -1,0 +1,35 @@
+API-08 File Manifest
+====================
+
+Modified
+--------
+bootstrap/providers.php
+
+New Runtime
+-----------
+app/Providers/DashboardServiceProvider.php
+routes/api_dashboard.php
+app/Http/Controllers/Api/Dashboard/DashboardController.php
+app/Services/Dashboard/DashboardApiService.php
+config/tradex_dashboard.php
+
+New Tests
+---------
+tests/Feature/Api/Dashboard/DashboardApiTest.php
+tests/Feature/Api/Dashboard/DashboardAuthenticationTest.php
+tests/Feature/Api/Dashboard/DashboardRateLimitTest.php
+tests/Feature/Api/Dashboard/DashboardRouteSecurityTest.php
+
+Documentation
+-------------
+docs/API-08-README.txt
+docs/API-08-ENDPOINT-CONTRACT.txt
+docs/API-08-FILE-MANIFEST.txt
+SHA256SUMS.txt
+
+Migration
+---------
+None.
+
+Total PHP files: 10
+Total package files including docs/checksums: 14
