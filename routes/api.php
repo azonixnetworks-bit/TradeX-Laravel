@@ -14,6 +14,13 @@ use App\Http\Controllers\Api\Auth\SetupRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\StartRegistrationController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationEmailController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationWhatsAppController;
+use App\Http\Controllers\Api\Profile\ConfirmTelegramChangeController;
+use App\Http\Controllers\Api\Profile\ConfirmWhatsAppChangeController;
+use App\Http\Controllers\Api\Profile\ProfileController;
+use App\Http\Controllers\Api\Profile\RequestTelegramChangeController;
+use App\Http\Controllers\Api\Profile\RequestWhatsAppChangeController;
+use App\Http\Controllers\Api\Profile\UpdateFinancialProfileController;
+use App\Http\Controllers\Api\Profile\UpdateProfilePreferencesController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use Illuminate\Support\Facades\Route;
 
@@ -146,6 +153,85 @@ Route::prefix('v1')
                     )->name(
                         'device.revoke'
                     );
+                });
+
+            Route::prefix('profile')
+                ->name('profile.')
+                ->group(function (): void {
+                    Route::get(
+                        '/',
+                        ProfileController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-read'
+                        )
+                        ->name('show');
+
+                    Route::patch(
+                        '/preferences',
+                        UpdateProfilePreferencesController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-write'
+                        )
+                        ->name(
+                            'preferences.update'
+                        );
+
+                    Route::patch(
+                        '/financial',
+                        UpdateFinancialProfileController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-sensitive'
+                        )
+                        ->name(
+                            'financial.update'
+                        );
+
+                    Route::post(
+                        '/whatsapp/change/request',
+                        RequestWhatsAppChangeController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-sensitive'
+                        )
+                        ->name(
+                            'whatsapp.change.request'
+                        );
+
+                    Route::post(
+                        '/whatsapp/change/confirm',
+                        ConfirmWhatsAppChangeController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-contact'
+                        )
+                        ->name(
+                            'whatsapp.change.confirm'
+                        );
+
+                    Route::post(
+                        '/telegram/change/request',
+                        RequestTelegramChangeController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-sensitive'
+                        )
+                        ->name(
+                            'telegram.change.request'
+                        );
+
+                    Route::post(
+                        '/telegram/change/confirm',
+                        ConfirmTelegramChangeController::class
+                    )
+                        ->middleware(
+                            'throttle:api-profile-contact'
+                        )
+                        ->name(
+                            'telegram.change.confirm'
+                        );
                 });
 
             Route::get(

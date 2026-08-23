@@ -191,5 +191,77 @@ class AppServiceProvider extends ServiceProvider
                 .$request->ip()
             )
         );
+
+        RateLimiter::for(
+            'api-profile-read',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_profile.rate_limits.read_per_minute',
+                    60
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-profile-write',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_profile.rate_limits.write_per_minute',
+                    20
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-profile-sensitive',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_profile.rate_limits.sensitive_per_minute',
+                    10
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-profile-contact',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_profile.rate_limits.contact_per_minute',
+                    8
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
     }
 }
