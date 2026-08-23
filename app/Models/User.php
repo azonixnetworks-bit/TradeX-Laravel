@@ -5,13 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
+    use HasApiTokens;
     use HasFactory;
     use Notifiable;
     use SoftDeletes;
@@ -115,64 +117,62 @@ class User extends Authenticatable
         );
     }
 
+
     /*
-|--------------------------------------------------------------------------
-| Device Security Relationships
-|--------------------------------------------------------------------------
-*/
+    |--------------------------------------------------------------------------
+    | Device Security Relationships
+    |--------------------------------------------------------------------------
+    */
 
-public function devices(): HasMany
-{
-    return $this->hasMany(
-        UserDevice::class
-    );
-}
-
-
-public function refreshTokens(): HasMany
-{
-    return $this->hasMany(
-        UserRefreshToken::class
-    );
-}
-
-
-public function activeMobileDevice(): HasOne
-{
-    return $this->hasOne(
-        UserDevice::class
-    )
-        ->where(
-            'device_slot',
-            UserDevice::SLOT_MOBILE
-        )
-        ->where(
-            'is_active',
-            true
-        )
-        ->whereNull(
-            'revoked_at'
+    public function devices(): HasMany
+    {
+        return $this->hasMany(
+            UserDevice::class
         );
-}
+    }
 
-
-public function activeDesktopDevice(): HasOne
-{
-    return $this->hasOne(
-        UserDevice::class
-    )
-        ->where(
-            'device_slot',
-            UserDevice::SLOT_DESKTOP
-        )
-        ->where(
-            'is_active',
-            true
-        )
-        ->whereNull(
-            'revoked_at'
+    public function refreshTokens(): HasMany
+    {
+        return $this->hasMany(
+            UserRefreshToken::class
         );
-}
+    }
+
+    public function activeMobileDevice(): HasOne
+    {
+        return $this->hasOne(
+            UserDevice::class
+        )
+            ->where(
+                'device_slot',
+                UserDevice::SLOT_MOBILE
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->whereNull(
+                'revoked_at'
+            );
+    }
+
+    public function activeDesktopDevice(): HasOne
+    {
+        return $this->hasOne(
+            UserDevice::class
+        )
+            ->where(
+                'device_slot',
+                UserDevice::SLOT_DESKTOP
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->whereNull(
+                'revoked_at'
+            );
+    }
 
 
     /*
