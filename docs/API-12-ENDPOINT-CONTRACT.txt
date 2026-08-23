@@ -1,0 +1,328 @@
+API-12 — Payments & Billing Mobile API Contract
+===============================================
+
+Branch
+------
+feature/api-12-payments-billing
+
+Baseline
+--------
+Frozen main:
+64baf23a2f084c66b82ae0d7887f1cdcdb464fcd
+
+Purpose
+-------
+API-12 is the first real TradeX payment-ledger foundation.
+
+The repository previously contained placeholder Payment, PaymentOrder,
+BankDeposit, UsdtDeposit and UserEntitlement model classes but no payment
+database tables or mobile payment API.
+
+API-12 replaces those placeholders with a secure payment foundation and adds
+country-aware mobile payment flows.
+
+Product
+-------
+EDUCATION_PREMIUM
+
+Default PayPal price:
+USD 79.00
+TRADEX_EDUCATION_PRICE_USD_MINOR=7900
+
+Local-bank LKR price:
+must be explicitly configured.
+A zero amount means Local Bank is unavailable.
+
+USDT TRC20 default expected amount:
+79.000000 USDT
+TRADEX_EDUCATION_PRICE_USDT_MICRO=79000000
+
+User endpoints
+--------------
+GET  /api/v1/payments/methods
+GET  /api/v1/payments/activation-status
+GET  /api/v1/payments/history
+GET  /api/v1/payments/orders/{paymentOrder}
+
+POST /api/v1/payments/paypal/orders
+POST /api/v1/payments/paypal/orders/{paymentOrder}/capture
+POST /api/v1/payments/bank-deposits
+POST /api/v1/payments/usdt-deposits
+
+Provider endpoint
+-----------------
+POST /api/v1/payments/paypal/webhook
+
+User security
+-------------
+All user endpoints require:
+- Laravel API middleware
+- Sanctum authentication
+- active TradeX account
+- bound trusted TradeX mobile device/session
+- dedicated rate limiting
+
+The PayPal webhook is intentionally not a user-authenticated route. It is a
+provider-to-server endpoint and PayPalWebhookService cryptographically verifies
+the PayPal transmission before any payment state changes.
+
+Country-aware methods
+---------------------
+Default configuration:
+
+Sri Lanka (LK):
+- PayPal Checkout
+- Local Bank Deposit when LKR amount + merchant bank details are configured
+
+India (IN):
+- PayPal Checkout
+- USDT TRC20 when merchant wallet is configured
+
+Country lists are configuration-driven so TradeX can disable a method if its
+legal/operational availability changes.
+
+PayPal Checkout
+---------------
+The mobile app creates a TradeX PaymentOrder and receives a PayPal approval URL.
+
+Only a PayPal provider-confirmed COMPLETED capture can:
+- create the cleared Payment ledger entry
+- mark the PaymentOrder CLEARED
+- activate PREMIUM account_type
+- set premium_activated_at
+- activate the EDUCATION_PREMIUM UserEntitlement
+
+The client cannot submit a fake capture reference or self-mark a payment
+CLEARED.
+
+PayPal card funding availability is controlled by PayPal for the applicable
+merchant/buyer market. TradeX API-12 does not independently claim that a card
+funding source is available in every country/account.
+
+PayPal Net Eligible Revenue / Affiliate
+---------------------------------------
+When PayPal returns seller_receivable_breakdown:
+- gross amount is recorded
+- PayPal fee is recorded
+- net_amount becomes PayPal Net Eligible Revenue
+
+If the buyer has a valid direct TradeX referrer, the frozen AFF-01
+AffiliateCommercialService is called with:
+- provider = PAYPAL
+- PayPal capture reference
+- PayPal Net Eligible Revenue
+- cleared timestamp
+
+This preserves the frozen progressive affiliate rules.
+
+If PayPal does not provide net_amount yet:
+- payment still clears if the capture itself is valid/completed
+- affiliate processing remains PENDING
+- a later verified PayPal event can enrich the ledger and retry processing
+
+Local Bank Deposit
+------------------
+POST /bank-deposits requires:
+- Idempotency-Key header
+- depositor_name
+- bank_reference
+- deposit_date
+- proof_file: JPG/JPEG/PNG/PDF
+
+Payment proof is stored on the configured private filesystem disk.
+
+The mobile API never returns:
+- proof storage path
+- bank reference
+- depositor name
+
+A bank submission creates:
+PaymentOrder.status = PENDING_REVIEW
+BankDeposit.status = SUBMITTED
+
+It NEVER activates Premium from user-submitted proof.
+
+Authorized finance/admin reconciliation is intentionally a later module.
+
+USDT TRC20
+----------
+POST /usdt-deposits requires:
+- Idempotency-Key header
+- 64-hex transaction hash
+- exact configured amount
+- optional sender address
+
+The transaction hash is globally unique.
+
+The mobile submission is evidence only:
+PaymentOrder.status = PENDING_REVIEW
+UsdtDeposit.status = SUBMITTED
+
+The mobile user cannot self-clear a blockchain payment.
+
+Authorized finance/admin reconciliation/on-chain verification is intentionally
+a later module.
+
+Idempotency
+-----------
+Create/manual submission endpoints require:
+Idempotency-Key
+
+Rules:
+- 16 to 128 characters
+- A-Z / a-z / 0-9 / . _ : -
+
+TradeX stores only SHA-256 of the client idempotency key.
+Unique scope:
+user_id + idempotency-key hash
+
+PayPal provider requests additionally use deterministic PayPal-Request-Id values
+derived from the internal public order UUID.
+
+Payment state
+-------------
+PaymentOrder statuses:
+CREATED
+AWAITING_USER_ACTION
+PENDING_REVIEW
+PROCESSING
+CLEARED
+FAILED
+CANCELLED
+PAYMENT_REVERSED
+
+Payment statuses:
+CLEARED
+PAYMENT_REVERSED
+
+There is deliberately no user-facing voluntary-refund state, endpoint, button,
+or workflow.
+
+No-refund / forced processor exception
+--------------------------------------
+TradeX does not expose a voluntary refund feature.
+
+API-12 only recognizes externally forced payment-integrity exceptions.
+
+For a verified PayPal capture reversal:
+- original cleared Payment remains in the ledger
+- a separate negative PaymentAdjustment is created
+- Payment becomes PAYMENT_REVERSED
+- PaymentOrder becomes PAYMENT_REVERSED
+- private processor reason remains hidden
+- the related frozen AFF-01 qualified sale is reversed through its separate
+  commission adjustment when applicable
+- the existing user entitlement is NOT automatically revoked in API-12
+
+Entitlement revocation after an external processor exception requires a future
+explicit policy/authorized review. API-12 only audits that review is required.
+
+There is no milestone-gift clawback rule introduced by API-12.
+
+Webhook idempotency / privacy
+-----------------------------
+PayPal webhook events are uniquely identified by:
+provider + PayPal event ID
+
+TradeX stores:
+- internal UUID
+- provider
+- event ID
+- event type
+- SHA-256 payload digest
+- processing status/time
+
+The complete webhook payload is not persisted by API-12.
+
+Repeated identical provider events are idempotent.
+
+Sensitive data
+--------------
+API responses never expose:
+- PayPal client secret
+- PayPal OAuth token
+- raw provider capture reference
+- provider capture-reference hash
+- idempotency-key hash
+- private reversal reason
+- local bank proof path
+- local bank depositor name/reference
+- user financial profile secrets
+- numeric internal database IDs
+
+Publicly useful merchant receiving instructions (configured TradeX bank details
+or TradeX USDT wallet) are intentionally returned only when that method is
+available.
+
+Database foundation
+-------------------
+payment_orders
+payments
+payment_adjustments
+bank_deposits
+usdt_deposits
+user_entitlements
+payment_webhook_events
+
+All important foreign keys/indexes use explicit MySQL-safe names.
+
+Rate limits
+-----------
+api-payments-read:
+120/min/authenticated user
+
+api-payments-create:
+20/min/authenticated user
+
+api-payments-capture:
+10/min/authenticated user
+
+api-payments-webhook:
+120/min/IP
+
+Configuration
+-------------
+PayPal:
+TRADEX_PAYPAL_ENABLED=true
+TRADEX_PAYPAL_COUNTRIES=LK,IN
+TRADEX_PAYPAL_ENVIRONMENT=sandbox
+TRADEX_PAYPAL_CLIENT_ID=
+TRADEX_PAYPAL_CLIENT_SECRET=
+TRADEX_PAYPAL_WEBHOOK_ID=
+TRADEX_PAYPAL_RETURN_URL=
+TRADEX_PAYPAL_CANCEL_URL=
+
+Product prices:
+TRADEX_EDUCATION_PRICE_USD_MINOR=7900
+TRADEX_EDUCATION_PRICE_LKR_MINOR=
+TRADEX_EDUCATION_PRICE_USDT_MICRO=79000000
+
+Local Bank:
+TRADEX_LOCAL_BANK_ENABLED=true
+TRADEX_LOCAL_BANK_COUNTRIES=LK
+TRADEX_LOCAL_BANK_NAME=
+TRADEX_LOCAL_BANK_BRANCH=
+TRADEX_LOCAL_BANK_ACCOUNT_HOLDER=
+TRADEX_LOCAL_BANK_ACCOUNT_NUMBER=
+TRADEX_PAYMENT_PROOF_DISK=local
+TRADEX_PAYMENT_PROOF_MAX_KB=5120
+
+USDT:
+TRADEX_USDT_TRC20_ENABLED=true
+TRADEX_USDT_TRC20_COUNTRIES=IN
+TRADEX_USDT_TRC20_WALLET=
+
+Do not commit real secrets to Git.
+
+Errors
+------
+401 user authentication or PayPal webhook signature failure
+403 inactive/untrusted TradeX mobile session
+404 PAYMENT_ORDER_NOT_AVAILABLE
+409 idempotency/provider/order state conflict
+409 duplicate USDT transaction
+409 PREMIUM_ALREADY_ACTIVE
+422 validation / unavailable method / amount mismatch
+429 rate limit
+502 PayPal provider response/service failure
+503 PayPal/payment configuration/service unavailable

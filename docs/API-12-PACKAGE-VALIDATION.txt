@@ -1,0 +1,19 @@
+API-12 Package Validation
+=========================
+
+Package build checks:
+- PHP syntax lint: PASS
+- Static security/contract checks: PASS
+- Route contract: 9 actions
+- Payment migrations: 7
+- Runtime voluntary-refund token check: PASS
+- PayPal webhook signature-verification contract: PASS
+- Manual Bank/USDT cannot self-settle: PASS
+- AFF-01 PayPal Net Eligible Revenue integration: PASS
+- UUID/no numeric-ID presenter contract: PASS
+- MySQL explicit foreign-key naming check: PASS
+
+Full Laravel regression is NOT claimed by this package build.
+The complete TradeX Laravel repository/database runtime is on the user's
+local Windows machine. Run the targeted and full test commands from
+API-12-README.txt after extracting the package.
