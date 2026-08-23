@@ -1,0 +1,94 @@
+API-11 — Profile & Account Settings Mobile API
+==============================================
+
+Branch
+------
+feature/api-11-profile-account-settings
+
+Baseline
+--------
+Frozen main:
+1a3b27722701136ccaa4ab15660d76a8ab651f56
+
+Repository discovery
+--------------------
+TradeX already has a frozen profile foundation:
+GET   /api/v1/profile
+PATCH /api/v1/profile/preferences
+PATCH /api/v1/profile/financial
+POST  /api/v1/profile/whatsapp/change/request
+POST  /api/v1/profile/whatsapp/change/confirm
+POST  /api/v1/profile/telegram/change/request
+POST  /api/v1/profile/telegram/change/confirm
+
+Existing services already provide encrypted financial storage, masked financial
+presentation, TOTP-protected financial changes, TOTP + verified email + email
+OTP for WhatsApp/Telegram changes, and audit logging.
+
+API-11 does not duplicate or rewrite those flows.
+
+New endpoints
+-------------
+GET   /api/v1/profile/settings
+GET   /api/v1/profile/settings/security
+GET   /api/v1/profile/settings/devices
+PATCH /api/v1/profile/settings/devices/{device}/revoke
+
+Authentication
+--------------
+All endpoints require auth:sanctum + tradex.mobile.
+Both FREE and PREMIUM active users may use account settings.
+
+Overview
+--------
+Returns the existing safe ProfilePresenter payload plus the new security/device
+summary and references to existing profile mutation contracts.
+
+Security summary
+----------------
+Returns email/WhatsApp/TOTP verification state, sensitive-change policy,
+one-mobile/one-desktop slot policy, active slot counts, and safe current device
+metadata.
+
+Never exposes TOTP secret, TOTP replay step, access token, refresh token,
+session UUID, installation hash, device public key, login IP, admin IDs or
+internal numeric IDs.
+
+Trusted devices
+---------------
+Device list is ownership-scoped to the authenticated user. Safe fields only:
+uuid, current flag, slot, platform, name/model, OS/app version, trust/active
+state, registered/trusted/last-seen/last-login/revoked timestamps.
+
+Remote device revoke
+--------------------
+PATCH /api/v1/profile/settings/devices/{device}/revoke
+Body: {"totp_code":"123456"}
+
+Rules:
+- device UUID must belong to authenticated user
+- cross-user UUID => generic 404 DEVICE_NOT_AVAILABLE
+- current device cannot be revoked here
+- current device continues using POST /api/v1/auth/device/revoke
+- remote target must be active
+- non-replayed TOTP required
+- target device is deactivated/revoked
+- target refresh token families are revoked
+- target Sanctum access tokens are deleted
+- current session stays active
+- operation is audited
+
+Device policy
+-------------
+1 active MOBILE slot
+1 active DESKTOP slot
+
+Rate limits
+-----------
+api-account-settings-read: default 120/min/user
+api-account-settings-sensitive: default 10/min/user
+
+No migration
+------------
+Uses existing users, user_profiles, user_devices, user_refresh_tokens,
+personal_access_tokens and audit_logs tables.

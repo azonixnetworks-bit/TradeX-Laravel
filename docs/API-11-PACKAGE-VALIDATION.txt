@@ -1,0 +1,8 @@
+API-11 Package Validation
+=========================
+
+PHP syntax lint: PASS
+Static security/contract checks: PASS
+ZIP integrity: PASS
+
+Full Laravel regression is not claimed by this package build. Run local commands in API-11-README.txt.
