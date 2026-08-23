@@ -94,5 +94,102 @@ class AppServiceProvider extends ServiceProvider
                 )
             )
         );
+
+        RateLimiter::for(
+            'api-register-start',
+            function (
+                Request $request
+            ): array {
+                $email = Str::lower(
+                    trim(
+                        (string) $request
+                            ->input(
+                                'email',
+                                'unknown'
+                            )
+                    )
+                );
+
+                return [
+                    Limit::perMinute(
+                        (int) config(
+                            'tradex_registration.rate_limits.start_per_minute',
+                            3
+                        )
+                    )->by(
+                        $email
+                        .'|'
+                        .$request->ip()
+                    ),
+
+                    Limit::perHour(
+                        (int) config(
+                            'tradex_registration.rate_limits.start_per_hour_ip',
+                            20
+                        )
+                    )->by(
+                        'register-ip|'
+                        .$request->ip()
+                    ),
+                ];
+            }
+        );
+
+        RateLimiter::for(
+            'api-register-otp-send',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_registration.rate_limits.otp_send_per_minute',
+                    3
+                )
+            )->by(
+                (string) $request->input(
+                    'registration_id',
+                    $request->ip()
+                )
+                .'|'
+                .$request->ip()
+            )
+        );
+
+        RateLimiter::for(
+            'api-register-verify',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_registration.rate_limits.verify_per_minute',
+                    10
+                )
+            )->by(
+                (string) $request->input(
+                    'registration_id',
+                    $request->ip()
+                )
+                .'|'
+                .$request->ip()
+            )
+        );
+
+        RateLimiter::for(
+            'api-register-totp',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_registration.rate_limits.totp_per_minute',
+                    10
+                )
+            )->by(
+                (string) $request->input(
+                    'registration_id',
+                    $request->ip()
+                )
+                .'|'
+                .$request->ip()
+            )
+        );
     }
 }
