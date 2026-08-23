@@ -433,13 +433,20 @@
         @endif
 
         <div class="action-box">
-            <h3>Share Card Preview</h3>
+            <h3>Share Card Studio</h3>
 
             <p>
-                Generic SVG share card generated from the frozen Trade Idea.
-                Personalized user cards reuse this contract with referral code
-                and affiliate link later in the learner/mobile API.
+                Open the responsive TradeX share-card studio for Square,
+                Portrait or Story output. The existing generic SVG remains
+                available for ADMIN-05A distribution compatibility.
             </p>
+
+            <a
+                class="action-link publish"
+                href="{{ route('admin.trade_ideas.share_card.preview', ['tradeIdea'=>$tradeIdea, 'variant'=>'portrait']) }}"
+            >
+                Open Responsive Share Card
+            </a>
 
             <a
                 class="action-link"
@@ -447,7 +454,7 @@
                 target="_blank"
                 rel="noopener noreferrer"
             >
-                Preview Generic Share Card ↗
+                Preview Generic SVG ↗
             </a>
         </div>
 

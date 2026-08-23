@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\TradeIdeas\TradeIdeaController;
+use App\Http\Controllers\Admin\TradeIdeas\TradeIdeaDistributionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
@@ -47,6 +48,20 @@ Route::prefix('admin')
                     ->whereNumber('tradeIdea')
                     ->whereNumber('distribution')
                     ->name('distributions.retry');
+
+                Route::get(
+                    '/{tradeIdea}/share-card',
+                    [TradeIdeaDistributionController::class, 'preview']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->name('share_card.preview');
+
+                Route::get(
+                    '/{tradeIdea}/share-card/render.svg',
+                    [TradeIdeaDistributionController::class, 'svg']
+                )
+                    ->whereNumber('tradeIdea')
+                    ->name('share_card.svg');
 
                 Route::get('/{tradeIdea}', [TradeIdeaController::class, 'show'])
                     ->whereNumber('tradeIdea')
