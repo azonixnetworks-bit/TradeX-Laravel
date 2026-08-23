@@ -32,7 +32,12 @@ use App\Http\Controllers\Api\Profile\RequestTelegramChangeController;
 use App\Http\Controllers\Api\Profile\RequestWhatsAppChangeController;
 use App\Http\Controllers\Api\Profile\UpdateFinancialProfileController;
 use App\Http\Controllers\Api\Profile\UpdateProfilePreferencesController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaChartController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaIndexController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShareActionController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShowController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
+use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -367,6 +372,63 @@ Route::prefix('v1')
                         ->name('videos.playback-token');
                 });
 
+            Route::prefix('trade-ideas')
+                ->name('trade-ideas.')
+                ->group(function (): void {
+                    Route::get(
+                        '/',
+                        TradeIdeaIndexController::class
+                    )
+                        ->middleware(
+                            'throttle:api-trade-ideas-read'
+                        )
+                        ->name('index');
+
+                    Route::get(
+                        '/{tradeIdea}',
+                        TradeIdeaShowController::class
+                    )
+                        ->whereUuid('tradeIdea')
+                        ->middleware(
+                            'throttle:api-trade-ideas-read'
+                        )
+                        ->name('show');
+
+                    Route::get(
+                        '/{tradeIdea}/chart',
+                        TradeIdeaChartController::class
+                    )
+                        ->whereUuid('tradeIdea')
+                        ->middleware(
+                            'throttle:api-trade-ideas-media'
+                        )
+                        ->name('chart');
+
+                    Route::get(
+                        '/{tradeIdea}/share-card.svg',
+                        UserTradeIdeaUuidShareCardController::class
+                    )
+                        ->whereUuid('tradeIdea')
+                        ->middleware(
+                            'throttle:api-trade-ideas-share'
+                        )
+                        ->name('share-card.uuid');
+
+                    Route::post(
+                        '/{tradeIdea}/share-action',
+                        TradeIdeaShareActionController::class
+                    )
+                        ->whereUuid('tradeIdea')
+                        ->middleware(
+                            'throttle:api-trade-ideas-share'
+                        )
+                        ->name('share-action');
+                });
+
+            /*
+            | ADMIN-05B compatibility route.
+            | Kept unchanged for existing clients while API-06 uses UUIDs.
+            */
             Route::get(
                 '/trade-ideas/{tradeIdea}/share-card',
                 [
