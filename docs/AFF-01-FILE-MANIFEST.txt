@@ -1,0 +1,36 @@
+AFF-01 File Manifest
+
+MODIFIED / FULL MERGED PLACEHOLDER FILES
+app/Models/AffiliateStage.php
+app/Models/AffiliateProfile.php
+app/Models/AffiliateCommission.php
+database/seeders/DatabaseSeeder.php
+
+NEW DOMAIN FILES
+app/Models/AffiliateQualifiedSale.php
+app/Models/AffiliateCommissionAdjustment.php
+app/Models/AffiliateMilestoneReward.php
+app/Services/Affiliates/AffiliateCommercialService.php
+
+NEW MIGRATIONS
+database/migrations/2026_08_23_180000_create_affiliate_stages_table.php
+database/migrations/2026_08_23_180100_create_affiliate_profiles_table.php
+database/migrations/2026_08_23_180200_create_affiliate_qualified_sales_table.php
+database/migrations/2026_08_23_180300_create_affiliate_commissions_table.php
+database/migrations/2026_08_23_180400_create_affiliate_commission_adjustments_table.php
+database/migrations/2026_08_23_180500_create_affiliate_milestone_rewards_table.php
+
+NEW SEEDER
+database/seeders/AffiliateStageSeeder.php
+
+NEW TESTS
+tests/Feature/Affiliates/AffiliateCommercialFoundationTest.php
+
+DOCUMENTATION
+docs/AFF-01-README.txt
+docs/AFF-01-COMMERCIAL-CONTRACT.txt
+docs/AFF-01-FILE-MANIFEST.txt
+SHA256SUMS.txt
+
+POLICY REVISION
+No voluntary refund feature. Forced payment exceptions only.

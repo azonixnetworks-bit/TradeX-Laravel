@@ -1,0 +1,45 @@
+TradeX AFF-01 Commercial Contract — NO-REFUND REVISION
+
+STANDARD STAGES
+Starter          1-30       15.00%   Gift $75 @ 30      Cumulative $75
+Growth           31-80      17.50%   Gift $125 @ 80     Cumulative $200
+Pro              81-150     20.00%   Gift $200 @ 150    Cumulative $400
+Elite            151-300    20.00%   Gift $400 @ 300    Cumulative $800
+Diamond          301-500    20.00%   Gift $600 @ 500    Cumulative $1,400
+Ambassador       501-750    20.00%   Gift $800 @ 750    Cumulative $2,200
+Business Partner 751+       20.00%   Gift $2,200 @ 1500 Cumulative $4,400
+
+COMMISSION BANDS
+Band A: 1-30 = 15.00%
+Band B: 31-80 = 17.50%
+Band C: 81+ = 20.00% standard maximum
+Special exception: management-approved case only, >20% up to 24%; no milestone gift while special rate is applied.
+
+CALCULATION BASE
+PayPal Net Eligible Revenue, USD cents in storage.
+A qualified affiliate sale is recorded only after successful/cleared payment.
+
+ATTRIBUTION
+Single-level direct referral only.
+No upline, downline, team, override, generation, residual or network commission.
+
+NO-REFUND RULE
+TradeX has no voluntary refund option.
+No REFUNDED affiliate-sale state exists.
+No refund request/action is provided by AFF-01.
+
+FORCED PAYMENT EXCEPTIONS
+Only the following approved external/mandatory exceptions can invalidate a cleared payment:
+- PAYPAL_CHARGEBACK
+- PAYPAL_PROCESSOR_REVERSAL
+- DUPLICATE_PAYMENT_CORRECTION
+- UNAUTHORIZED_PAYMENT
+- TRADEX_BILLING_ERROR
+- LEGAL_REQUIRED_REVERSAL
+
+A forced exception creates a separate negative AffiliateCommissionAdjustment.
+The original AffiliateCommission values remain preserved for audit.
+
+MILESTONE GIFTS
+One-time per affiliate + milestone.
+Automatic gift clawback after a forced payment exception is not implemented because that rule has not been approved.

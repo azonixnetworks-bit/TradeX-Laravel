@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             AdminPermissionSeeder::class,
             AdminRolePermissionSeeder::class,
             SuperAdminSeeder::class,
+            AffiliateStageSeeder::class,
         ]);
     }
 }
