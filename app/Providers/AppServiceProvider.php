@@ -373,5 +373,60 @@ class AppServiceProvider extends ServiceProvider
                 )
             )
         );
+
+
+        RateLimiter::for(
+            'api-trade-ideas-read',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_trade_ideas_api.rate_limits.read_per_minute',
+                    120
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-trade-ideas-media',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_trade_ideas_api.rate_limits.media_per_minute',
+                    60
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-trade-ideas-share',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_trade_ideas_api.rate_limits.share_per_minute',
+                    20
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
     }
 }
