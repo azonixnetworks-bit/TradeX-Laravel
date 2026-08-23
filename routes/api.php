@@ -25,6 +25,8 @@ use App\Http\Controllers\Api\Education\LessonShowController;
 use App\Http\Controllers\Api\Education\ModuleShowController;
 use App\Http\Controllers\Api\Education\PlaybackAssetController;
 use App\Http\Controllers\Api\Education\UpdateLessonProgressController;
+use App\Http\Controllers\Api\OurChannel\ChannelVideoIndexController;
+use App\Http\Controllers\Api\OurChannel\ChannelVideoShowController;
 use App\Http\Controllers\Api\Profile\ConfirmTelegramChangeController;
 use App\Http\Controllers\Api\Profile\ConfirmWhatsAppChangeController;
 use App\Http\Controllers\Api\Profile\ProfileController;
@@ -267,6 +269,29 @@ Route::prefix('v1')
                         ->name(
                             'telegram.change.confirm'
                         );
+                });
+
+            Route::prefix('our-channel')
+                ->name('our-channel.')
+                ->group(function (): void {
+                    Route::get(
+                        '/videos',
+                        ChannelVideoIndexController::class
+                    )
+                        ->middleware(
+                            'throttle:api-our-channel-read'
+                        )
+                        ->name('videos.index');
+
+                    Route::get(
+                        '/videos/{channelVideo}',
+                        ChannelVideoShowController::class
+                    )
+                        ->whereUuid('channelVideo')
+                        ->middleware(
+                            'throttle:api-our-channel-read'
+                        )
+                        ->name('videos.show');
                 });
 
             Route::prefix('education')
