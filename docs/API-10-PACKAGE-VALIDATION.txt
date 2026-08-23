@@ -1,0 +1,9 @@
+API-10 Package Validation
+=========================
+
+PHP syntax lint: PASS
+Static security/contract checks: PASS
+
+Full Laravel regression is not claimed by this package build because the
+complete TradeX repository/database runtime is on the user's local machine.
+Run the commands in API-10-README.txt after extraction.

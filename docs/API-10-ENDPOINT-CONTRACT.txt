@@ -1,0 +1,174 @@
+API-10 — Notifications Mobile API Contract
+==========================================
+
+Branch
+------
+feature/api-10-notifications-mobile
+
+Baseline
+--------
+Frozen main:
+d97c04950583c6a241d751d0259f803a137f1e08
+
+Purpose
+-------
+Secure in-app notification center for TradeX mobile users.
+
+API-10 does NOT implement or claim:
+- Firebase Cloud Messaging delivery
+- Apple Push Notification Service delivery
+- WhatsApp provider delivery
+- email provider delivery
+- SMS delivery
+- delivery/read receipts from external providers
+
+Those are separate future delivery integrations.
+
+Endpoints
+---------
+GET   /api/v1/notifications
+GET   /api/v1/notifications/summary
+GET   /api/v1/notifications/{notification}
+PATCH /api/v1/notifications/{notification}/read
+PATCH /api/v1/notifications/read-all
+
+Authentication
+--------------
+All endpoints require:
+- Sanctum authentication
+- valid TradeX trusted mobile device/session
+- active account enforced by tradex.mobile
+
+Both FREE and PREMIUM users may use API-10.
+
+Audience security
+-----------------
+Notification message audience_access_level:
+ALL
+FREE
+PREMIUM
+
+FREE users can read:
+ALL + FREE
+
+PREMIUM users can read:
+ALL + PREMIUM
+
+This audience gate is enforced by the server even if a recipient row was
+mistakenly assigned.
+
+Availability
+------------
+A message is visible only when:
+- is_active = true
+- published_at is not null
+- published_at <= now
+- expires_at is null OR expires_at > now
+- the authenticated user owns the recipient receipt
+- audience access matches the account
+
+Public identity / IDOR
+----------------------
+The route notification identifier is the recipient receipt UUID.
+
+The server always resolves:
+receipt.uuid + authenticated user_id + current message visibility.
+
+A user cannot access another user's receipt UUID.
+
+No internal numeric IDs are exposed.
+
+List filters
+------------
+status:
+READ
+UNREAD
+
+category:
+GENERAL
+SYSTEM
+EDUCATION
+TRADE_IDEA
+AFFILIATE
+PAYMENT
+SECURITY
+
+per_page:
+default 20
+maximum 50
+
+Summary
+-------
+Returns:
+total_available
+unread_count
+has_unread
+
+Read state
+----------
+PATCH /{notification}/read
+- idempotent
+- first call sets read_at
+- subsequent calls preserve the original read_at
+
+PATCH /read-all
+- marks only currently visible/authorized unread notifications
+- hidden, expired, inactive or audience-ineligible notifications are untouched
+
+No delete endpoint
+------------------
+API-10 intentionally does not let mobile users delete notification records.
+Read state is mutable; notification history remains server-controlled.
+
+Navigation security
+-------------------
+API-10 stores/returns only approved in-app navigation metadata:
+action.type
+action.resource_uuid
+
+Approved action types:
+NONE
+DASHBOARD
+EDUCATION_COURSE
+EDUCATION_LESSON
+TRADE_IDEA
+AFFILIATE
+OUR_CHANNEL_VIDEO
+PROFILE
+
+No arbitrary URL field exists in the API-10 notification schema.
+
+Database foundation
+-------------------
+notification_messages
+- reusable message/content record
+- audience/category/priority
+- safe in-app action
+- lifecycle/publish/expiry controls
+- optional admin creator reference
+
+user_notification_receipts
+- per-user UUID
+- message reference
+- user reference
+- read_at
+- unique message + user pair
+
+This avoids duplicating full message content per recipient while preserving
+per-user read state.
+
+Rate limits
+-----------
+api-notifications-read:
+120/min/authenticated user by default
+
+api-notifications-write:
+30/min/authenticated user by default
+
+Errors
+------
+401 unauthenticated
+403 invalid/inactive/untrusted TradeX mobile session
+404 NOTIFICATION_NOT_AVAILABLE
+422 invalid filters
+429 rate limit exceeded
