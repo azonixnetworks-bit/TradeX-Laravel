@@ -14,6 +14,13 @@ use App\Http\Controllers\Api\Auth\SetupRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\StartRegistrationController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationEmailController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationWhatsAppController;
+use App\Http\Controllers\Api\Education\CourseIndexController;
+use App\Http\Controllers\Api\Education\CourseShowController;
+use App\Http\Controllers\Api\Education\IssueVideoPlaybackTokenController;
+use App\Http\Controllers\Api\Education\LessonShowController;
+use App\Http\Controllers\Api\Education\ModuleShowController;
+use App\Http\Controllers\Api\Education\PlaybackAssetController;
+use App\Http\Controllers\Api\Education\UpdateLessonProgressController;
 use App\Http\Controllers\Api\Profile\ConfirmTelegramChangeController;
 use App\Http\Controllers\Api\Profile\ConfirmWhatsAppChangeController;
 use App\Http\Controllers\Api\Profile\ProfileController;
@@ -125,6 +132,25 @@ Route::prefix('v1')
                     });
             });
 
+        Route::get(
+            '/education/playback/{token}/{path?}',
+            PlaybackAssetController::class
+        )
+            ->where(
+                'token',
+                '[A-Fa-f0-9]{64}'
+            )
+            ->where(
+                'path',
+                '.*'
+            )
+            ->middleware(
+                'throttle:api-education-playback'
+            )
+            ->name(
+                'education.playback.asset'
+            );
+
         Route::middleware([
             'auth:sanctum',
             'tradex.mobile',
@@ -232,6 +258,70 @@ Route::prefix('v1')
                         ->name(
                             'telegram.change.confirm'
                         );
+                });
+
+
+            Route::prefix('education')
+                ->name('education.')
+                ->group(function (): void {
+                    Route::get(
+                        '/courses',
+                        CourseIndexController::class
+                    )
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('courses.index');
+
+                    Route::get(
+                        '/courses/{course}',
+                        CourseShowController::class
+                    )
+                        ->whereUuid('course')
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('courses.show');
+
+                    Route::get(
+                        '/modules/{module}',
+                        ModuleShowController::class
+                    )
+                        ->whereUuid('module')
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('modules.show');
+
+                    Route::get(
+                        '/lessons/{lesson}',
+                        LessonShowController::class
+                    )
+                        ->whereUuid('lesson')
+                        ->middleware(
+                            'throttle:api-education-read'
+                        )
+                        ->name('lessons.show');
+
+                    Route::patch(
+                        '/lessons/{lesson}/progress',
+                        UpdateLessonProgressController::class
+                    )
+                        ->whereUuid('lesson')
+                        ->middleware(
+                            'throttle:api-education-progress'
+                        )
+                        ->name('lessons.progress.update');
+
+                    Route::post(
+                        '/videos/{video}/playback-token',
+                        IssueVideoPlaybackTokenController::class
+                    )
+                        ->whereUuid('video')
+                        ->middleware(
+                            'throttle:api-education-token'
+                        )
+                        ->name('videos.playback-token');
                 });
 
             Route::get(
