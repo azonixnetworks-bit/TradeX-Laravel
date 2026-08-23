@@ -39,10 +39,23 @@ return [
             ),
     ],
 
+    'assignments' => [
+        /*
+        | E.164-style digits only is recommended, e.g. 9477XXXXXXX.
+        | Leave empty to open WhatsApp share mode without a fixed recipient.
+        */
+        'whatsapp_recipient' =>
+            env(
+                'TRADEX_EDU_ASSIGNMENT_WHATSAPP_NUMBER'
+            ),
+    ],
+
     'rate_limits' => [
         'read_per_minute' => 120,
         'progress_per_minute' => 30,
         'token_per_minute' => 20,
         'playback_asset_per_minute' => 600,
+        'assignment_action_per_minute' => 20,
+        'assignment_material_per_minute' => 30,
     ],
 ];
