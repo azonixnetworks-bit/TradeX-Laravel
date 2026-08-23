@@ -5,6 +5,7 @@ use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\DashboardServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
+use App\Providers\PaymentApiServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -12,4 +13,5 @@ return [
     AffiliateApiServiceProvider::class,
     NotificationApiServiceProvider::class,
     AccountSettingsApiServiceProvider::class,
+    PaymentApiServiceProvider::class,
 ];

@@ -1,0 +1,66 @@
+API-12 File Manifest
+====================
+
+Modified / full merged existing files:
+- app/Models/Payment.php
+- app/Models/PaymentOrder.php
+- app/Models/BankDeposit.php
+- app/Models/UsdtDeposit.php
+- app/Models/UserEntitlement.php
+- bootstrap/providers.php
+
+New API-12 files:
+- app/Http/Controllers/Api/Payments/CapturePayPalOrderController.php
+- app/Http/Controllers/Api/Payments/CreatePayPalOrderController.php
+- app/Http/Controllers/Api/Payments/PayPalWebhookController.php
+- app/Http/Controllers/Api/Payments/PaymentActivationStatusController.php
+- app/Http/Controllers/Api/Payments/PaymentHistoryController.php
+- app/Http/Controllers/Api/Payments/PaymentMethodIndexController.php
+- app/Http/Controllers/Api/Payments/PaymentOrderShowController.php
+- app/Http/Controllers/Api/Payments/SubmitBankDepositController.php
+- app/Http/Controllers/Api/Payments/SubmitUsdtDepositController.php
+- app/Http/Requests/Api/Payments/CreateBankDepositRequest.php
+- app/Http/Requests/Api/Payments/CreatePayPalOrderRequest.php
+- app/Http/Requests/Api/Payments/CreateUsdtDepositRequest.php
+- app/Http/Requests/Api/Payments/PaymentHistoryRequest.php
+- app/Models/PaymentAdjustment.php
+- app/Models/PaymentWebhookEvent.php
+- app/Providers/PaymentApiServiceProvider.php
+- app/Services/Payments/ManualDepositService.php
+- app/Services/Payments/PayPalGatewayService.php
+- app/Services/Payments/PayPalOrderService.php
+- app/Services/Payments/PayPalWebhookService.php
+- app/Services/Payments/PaymentApiPresenter.php
+- app/Services/Payments/PaymentMethodService.php
+- app/Services/Payments/PaymentMoney.php
+- app/Services/Payments/PaymentOrderService.php
+- app/Services/Payments/PaymentReversalService.php
+- app/Services/Payments/PaymentSettlementService.php
+- config/tradex_payments.php
+- database/migrations/2026_08_23_220000_create_payment_orders_table.php
+- database/migrations/2026_08_23_220100_create_payments_table.php
+- database/migrations/2026_08_23_220200_create_payment_adjustments_table.php
+- database/migrations/2026_08_23_220300_create_bank_deposits_table.php
+- database/migrations/2026_08_23_220400_create_usdt_deposits_table.php
+- database/migrations/2026_08_23_220500_create_user_entitlements_table.php
+- database/migrations/2026_08_23_220600_create_payment_webhook_events_table.php
+- docs/API-12-ENDPOINT-CONTRACT.txt
+- docs/API-12-README.txt
+- routes/api_payments.php
+- tests/Feature/Api/Payments/ManualDepositApiTest.php
+- tests/Feature/Api/Payments/PayPalPaymentApiTest.php
+- tests/Feature/Api/Payments/PayPalWebhookTest.php
+- tests/Feature/Api/Payments/PaymentAuthenticationTest.php
+- tests/Feature/Api/Payments/PaymentHistoryAndStatusTest.php
+- tests/Feature/Api/Payments/PaymentIdorTest.php
+- tests/Feature/Api/Payments/PaymentMethodsApiTest.php
+- tests/Feature/Api/Payments/PaymentRateLimitTest.php
+- tests/Feature/Api/Payments/PaymentRouteSecurityTest.php
+
+Notes:
+- Existing placeholder payment models are replaced with real ledger models.
+- Seven new payment migrations are introduced.
+- Existing frozen routes/api.php is not modified.
+- AFF-01 is reused through AffiliateCommercialService; its frozen files are not modified.
+- No payout feature is introduced.
+- No voluntary-refund endpoint/state/workflow is introduced.
