@@ -263,5 +263,79 @@ class AppServiceProvider extends ServiceProvider
                 )
             )
         );
+
+        RateLimiter::for(
+            'api-education-read',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.read_per_minute',
+                    120
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-education-progress',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.progress_per_minute',
+                    30
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-education-token',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.token_per_minute',
+                    20
+                )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
+        );
+
+        RateLimiter::for(
+            'api-education-playback',
+            fn (
+                Request $request
+            ): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_education.rate_limits.playback_asset_per_minute',
+                    600
+                )
+            )->by(
+                hash(
+                    'sha256',
+                    (string) $request->route(
+                        'token',
+                        $request->ip()
+                    )
+                )
+            )
+        );
     }
 }
