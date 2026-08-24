@@ -137,17 +137,8 @@ class PaymentMethodService
                 true
             );
 
-        $configured =
-            filled(
-                config(
-                    'tradex_payments.paypal.client_id'
-                )
-            )
-            && filled(
-                config(
-                    'tradex_payments.paypal.client_secret'
-                )
-            );
+        $configured = $this
+            ->paypalConfigured();
 
         return [
             'code' =>
@@ -183,6 +174,59 @@ class PaymentMethodService
             'create_endpoint' =>
                 'POST /api/v1/payments/paypal/orders',
         ];
+    }
+
+    private function paypalConfigured(): bool
+    {
+        $driver = strtolower(
+            trim(
+                (string) config(
+                    'tradex_payments.paypal.driver',
+                    'http'
+                )
+            )
+        );
+
+        if ($driver === 'srmklive') {
+            $mode = strtolower(
+                trim(
+                    (string) config(
+                        'paypal.mode',
+                        'sandbox'
+                    )
+                )
+            );
+
+            if (! in_array(
+                $mode,
+                ['sandbox', 'live'],
+                true
+            )) {
+                return false;
+            }
+
+            return filled(
+                config(
+                    'paypal.'.$mode.'.client_id'
+                )
+            )
+                && filled(
+                    config(
+                        'paypal.'.$mode.'.client_secret'
+                    )
+                );
+        }
+
+        return filled(
+            config(
+                'tradex_payments.paypal.client_id'
+            )
+        )
+            && filled(
+                config(
+                    'tradex_payments.paypal.client_secret'
+                )
+            );
     }
 
     private function localBankMethod(

@@ -36,6 +36,12 @@ return [
     ],
 
     'paypal' => [
+        'driver' =>
+            env(
+                'TRADEX_PAYPAL_DRIVER',
+                'http'
+            ),
+
         'enabled' =>
             filter_var(
                 env(

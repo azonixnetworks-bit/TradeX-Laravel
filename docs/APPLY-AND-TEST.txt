@@ -1,0 +1,127 @@
+TradeX OS - API-12 PayPal Product Purchase Plugin Integration
+=============================================================
+
+Target branch:
+  feature/api-12-paypal-plugin-ph
+
+This package is designed for the existing TradeX API-12 architecture.
+It DOES NOT create a duplicate Order model/table and does NOT replace
+PaymentOrder, Payment, UserEntitlement, affiliate settlement, or webhook flow.
+
+Already completed on your local branch:
+  composer require "srmklive/paypal:^3.1" -W
+  php artisan vendor:publish --provider="Srmklive\PayPal\Providers\PayPalServiceProvider"
+
+IMPORTANT:
+  Keep your existing local composer.json + composer.lock changes from the
+  successful package installation. This ZIP intentionally does not overwrite
+  composer.lock.
+
+FILES TO COPY TO PROJECT ROOT
+-----------------------------
+Copy the ZIP contents over the project root, preserving paths:
+
+  app/Services/Payments/PayPalGatewayService.php
+  app/Services/Payments/PayPalPluginClientFactory.php
+  app/Services/Payments/PaymentMethodService.php
+  config/paypal.php
+  config/tradex_payments.php
+  tests/Feature/Api/Payments/PayPalPluginPaymentApiTest.php
+
+ENV - SANDBOX
+-------------
+Use docs/.env.paypal.sandbox.example as reference.
+Do NOT commit .env or secrets.
+
+Minimum required values:
+
+  TRADEX_PAYPAL_DRIVER=srmklive
+  TRADEX_PAYPAL_ENABLED=true
+  TRADEX_PAYPAL_ENVIRONMENT=sandbox
+  PAYPAL_MODE=sandbox
+  PAYPAL_SANDBOX_CLIENT_ID=<sandbox client id>
+  PAYPAL_SANDBOX_CLIENT_SECRET=<sandbox secret>
+  TRADEX_EDUCATION_PRICE_USD_MINOR=7900
+
+Then:
+
+  php artisan optimize:clear
+
+PLUGIN OAUTH SMOKE TEST
+-----------------------
+
+  php artisan tinker
+
+  use Srmklive\PayPal\Services\PayPal as PayPalClient;
+  $provider = new PayPalClient;
+  $provider->setApiCredentials(config('paypal'));
+  $token = $provider->getAccessToken();
+  isset($token['access_token']);
+
+Expected:
+  true
+
+TARGETED TESTS
+--------------
+
+  php artisan test tests/Feature/Api/Payments/PayPalPluginPaymentApiTest.php
+  php artisan test tests/Feature/Api/Payments/PayPalPaymentApiTest.php
+  php artisan test tests/Feature/Api/Payments/PayPalWebhookTest.php
+
+Then full regression:
+
+  php artisan test
+
+LIVE/SANDBOX E2E FLOW
+---------------------
+Existing API-12 endpoints remain unchanged:
+
+  POST /api/v1/payments/paypal/orders
+  POST /api/v1/payments/paypal/orders/{uuid}/capture
+
+Create order response should include:
+  product_code = EDUCATION_PREMIUM
+  amount = USD 79.00
+  status = AWAITING_USER_ACTION
+  approval_url = PayPal checkout URL
+
+The PayPal order now carries the course as a DIGITAL_GOODS line item:
+  Name: TradeX Education Premium
+  SKU: EDUCATION_PREMIUM
+  Quantity: 1
+  Amount: USD 79.00
+  Shipping: NO_SHIPPING
+
+After buyer approval, call the existing capture endpoint.
+A COMPLETED capture is settled by the existing TradeX settlement flow:
+  PaymentOrder -> CLEARED
+  Payment -> CLEARED
+  User -> PREMIUM
+  UserEntitlement -> ACTIVE
+  Affiliate processing -> existing API-12 behavior
+
+PAYPAL MERCHANT RESTRICTION NOTE
+--------------------------------
+This code cannot bypass PayPal merchant/account restrictions.
+If PayPal checkout returns PAYEE_ACCOUNT_RESTRICTED or
+PAYEE_ACCOUNT_LOCKED_OR_CLOSED, the PayPal merchant account must be resolved
+with PayPal. Do not change TradeX settlement logic to work around that error.
+
+GIT SAFETY
+----------
+Do not commit .env or credentials.
+After tests pass:
+
+  git status
+  git diff --check
+  git add app/Services/Payments/PayPalGatewayService.php `
+          app/Services/Payments/PayPalPluginClientFactory.php `
+          app/Services/Payments/PaymentMethodService.php `
+          config/paypal.php `
+          config/tradex_payments.php `
+          tests/Feature/Api/Payments/PayPalPluginPaymentApiTest.php `
+          composer.json composer.lock
+
+  git commit -m "feat(api-12): integrate PayPal product checkout plugin"
+
+Do not merge until targeted + full regression tests pass.
