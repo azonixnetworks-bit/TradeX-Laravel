@@ -201,6 +201,39 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
+    | KYC Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function kycSubmissions(): HasMany
+    {
+        return $this->hasMany(
+            KycSubmission::class
+        );
+    }
+
+    public function latestKycSubmission(): HasOne
+    {
+        return $this->hasOne(
+            KycSubmission::class
+        )->latestOfMany();
+    }
+
+    public function verifiedKycSubmission(): HasOne
+    {
+        return $this->hasOne(
+            KycSubmission::class
+        )
+            ->where(
+                'status',
+                KycSubmission::STATUS_VERIFIED
+            )
+            ->latestOfMany();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Account Type Helpers
     |--------------------------------------------------------------------------
     */
@@ -267,5 +300,11 @@ class User extends Authenticatable
         return $this->totp_confirmed_at
             !== null
             && filled($this->totp_secret);
+    }
+
+    public function hasVerifiedKyc(): bool
+    {
+        return $this->verifiedKycSubmission()
+            ->exists();
     }
 }
