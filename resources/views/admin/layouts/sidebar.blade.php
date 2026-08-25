@@ -147,12 +147,12 @@
         @if($admin->hasPermission('payments.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.payments.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">$</span>
                 <span>Payments</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
