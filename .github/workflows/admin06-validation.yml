@@ -1,0 +1,42 @@
+name: ADMIN-06 Validation
+
+on:
+  push:
+    branches:
+      - feature/admin-affiliate-management
+
+permissions:
+  contents: read
+
+jobs:
+  laravel-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite, sqlite3, mbstring, openssl
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare application key
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Route contract
+        run: php artisan route:list --name=admin.affiliates
+
+      - name: Targeted ADMIN-06 tests
+        run: php artisan test tests/Feature/Admin/Affiliates/AffiliateManagementTest.php
+
+      - name: Full Laravel regression
+        run: php artisan test
