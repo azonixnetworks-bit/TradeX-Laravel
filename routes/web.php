@@ -34,3 +34,15 @@ require __DIR__ . '/admin_trade_ideas.php';
 */
 
 require __DIR__ . '/admin_affiliates.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-07 — Payments Management
+|--------------------------------------------------------------------------
+|
+| Provider-verified PayPal visibility plus authorized manual reconciliation
+| for Local Bank and USDT TRC20 evidence. No discretionary refund actions.
+|
+*/
+
+require __DIR__ . '/admin_payments.php';
