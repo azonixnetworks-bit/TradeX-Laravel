@@ -21,3 +21,16 @@ require __DIR__ . '/admin_our_channel.php';
 */
 
 require __DIR__ . '/admin_trade_ideas.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-06 — Affiliate Management
+|--------------------------------------------------------------------------
+|
+| Secure affiliate operations over the frozen API-09 commercial ledger:
+| direct referrals only, stage configuration, commission visibility and
+| management-approved special commission exceptions.
+|
+*/
+
+require __DIR__ . '/admin_affiliates.php';

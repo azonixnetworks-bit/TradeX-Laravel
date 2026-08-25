@@ -2,28 +2,44 @@
 
 namespace App\Http\Requests\Admin\Affiliates;
 
-use Illuminate\Contracts\Validation\ValidationRule;
+use App\Models\AdminUser;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAffiliateStageRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return false;
+        $admin = auth('admin')->user();
+
+        return $admin instanceof AdminUser
+            && $admin->hasPermission('affiliate_stages.manage');
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     public function rules(): array
     {
         return [
-            //
+            'name' => [
+                'required',
+                'string',
+                'max:80',
+            ],
+            'standard_commission_percent' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:20',
+            ],
+            'milestone_gift_usd' => [
+                'required',
+                'numeric',
+                'min:0',
+                'max:1000000',
+            ],
+            'commercial_rule' => [
+                'required',
+                'string',
+                'max:500',
+            ],
         ];
     }
 }
