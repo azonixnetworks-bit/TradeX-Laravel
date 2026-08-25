@@ -6,6 +6,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\DashboardServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
+use App\Providers\PasswordRecoveryApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
 
@@ -18,4 +19,5 @@ return [
     PaymentApiServiceProvider::class,
     KycApiServiceProvider::class,
     PayoutApiServiceProvider::class,
+    PasswordRecoveryApiServiceProvider::class,
 ];
