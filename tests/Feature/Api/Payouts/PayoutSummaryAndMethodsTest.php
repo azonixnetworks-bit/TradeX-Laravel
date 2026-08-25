@@ -1,0 +1,9 @@
+<?php
+namespace Tests\Feature\Api\Payouts;
+use Illuminate\Foundation\Testing\RefreshDatabase; use Tests\Concerns\CreatesPayoutLedger; use Tests\Concerns\CreatesTradeXMobileSession; use Tests\TestCase;
+class PayoutSummaryAndMethodsTest extends TestCase { use CreatesPayoutLedger,CreatesTradeXMobileSession,RefreshDatabase;
+ public function test_free_user_cannot_access_payouts():void { $u=$this->createApiUser(); $t=$this->issueBoundToken($u); $this->withToken($t)->getJson('/api/v1/payouts/summary')->assertForbidden()->assertJsonPath('error.code','PAYOUT_PREMIUM_REQUIRED'); }
+ public function test_summary_uses_commission_ledger_and_minimum_threshold():void { $u=$this->createApiUser(['account_type'=>'PREMIUM']); $this->configurePayoutProfile($u); $this->seedPayoutCommission($u,2500); $t=$this->issueBoundToken($u); $this->withToken($t)->getJson('/api/v1/payouts/summary')->assertOk()->assertJsonPath('data.available.amount_cents',2500)->assertJsonPath('data.minimum_payout.amount_cents',1500)->assertJsonPath('data.can_request_payout',true); }
+ public function test_methods_mask_sensitive_destinations():void { $u=$this->createApiUser(['account_type'=>'PREMIUM','country_code'=>'LK']); $this->configurePayoutProfile($u); $t=$this->issueBoundToken($u); $r=$this->withToken($t)->getJson('/api/v1/payouts/methods')->assertOk(); $p=json_encode($r->json(),JSON_THROW_ON_ERROR); $this->assertStringNotContainsString('payout@example.test',$p); $this->assertStringNotContainsString('1234567890',$p); $this->assertStringNotContainsString('TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',$p); }
+ public function test_india_does_not_offer_local_bank_in_v1():void { $u=$this->createApiUser(['account_type'=>'PREMIUM','country_code'=>'IN']); $this->configurePayoutProfile($u); $t=$this->issueBoundToken($u); $r=$this->withToken($t)->getJson('/api/v1/payouts/methods')->assertOk(); $this->assertNotContains('LOCAL_BANK',collect($r->json('data.items'))->pluck('code')->all()); }
+}

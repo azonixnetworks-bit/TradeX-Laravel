@@ -7,6 +7,7 @@ use App\Providers\DashboardServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
+use App\Providers\PayoutApiServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -16,4 +17,5 @@ return [
     AccountSettingsApiServiceProvider::class,
     PaymentApiServiceProvider::class,
     KycApiServiceProvider::class,
+    PayoutApiServiceProvider::class,
 ];
