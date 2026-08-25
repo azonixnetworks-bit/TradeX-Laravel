@@ -118,12 +118,12 @@
         @if($admin->hasPermission('affiliates.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.affiliates.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.affiliates.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">♢</span>
                 <span>Affiliates</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
