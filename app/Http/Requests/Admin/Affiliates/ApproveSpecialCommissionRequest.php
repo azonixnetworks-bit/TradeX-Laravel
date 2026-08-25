@@ -2,13 +2,17 @@
 
 namespace App\Http\Requests\Admin\Affiliates;
 
+use App\Models\AdminUser;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ApproveSpecialCommissionRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $admin = auth('admin')->user();
+
+        return $admin instanceof AdminUser
+            && $admin->hasPermission('affiliates.manage');
     }
 
     public function rules(): array
