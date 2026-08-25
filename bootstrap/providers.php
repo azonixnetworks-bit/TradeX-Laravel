@@ -10,6 +10,7 @@ use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
+use App\Providers\SocialAuthApiServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -22,4 +23,5 @@ return [
     PayoutApiServiceProvider::class,
     PasswordRecoveryApiServiceProvider::class,
     MobileSecurityApiServiceProvider::class,
+    SocialAuthApiServiceProvider::class,
 ];
