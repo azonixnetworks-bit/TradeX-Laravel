@@ -1,0 +1,4 @@
+<?php
+namespace App\Http\Controllers\Api\Payouts;
+use App\Http\Controllers\Controller; use App\Http\Requests\Api\Payouts\CreatePayoutRequest; use App\Models\User; use App\Services\Payouts\PayoutApiPresenter; use App\Services\Payouts\PayoutSubmissionService; use Illuminate\Http\JsonResponse;
+class PayoutStoreController extends Controller { public function __invoke(CreatePayoutRequest $request,PayoutSubmissionService $service,PayoutApiPresenter $presenter):JsonResponse { $user=$request->user(); abort_unless($user instanceof User,401); $result=$service->submit($user,(string)$request->validated('method'),$request->validated('amount'),$request->idempotencyKey(),$request); return response()->json(['success'=>true,'data'=>['payout'=>$presenter->payout($result['payout']),'idempotency_replayed'=>(bool)$result['replayed']]],$result['replayed']?200:201); } }
