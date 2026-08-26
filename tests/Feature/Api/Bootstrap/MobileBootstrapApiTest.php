@@ -56,8 +56,12 @@ class MobileBootstrapApiTest extends TestCase
             $response->json('data.bootstrap_sha256')
         );
 
-        $this->assertNotEmpty(
-            $response->headers->get('ETag')
+        $etag = $response->headers->get('ETag');
+
+        $this->assertNotEmpty($etag);
+        $this->assertMatchesRegularExpression(
+            '/^"[a-f0-9]{64}"$/',
+            (string) $etag
         );
     }
 
