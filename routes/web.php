@@ -12,7 +12,7 @@ require __DIR__ . '/admin_our_channel.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-05 — Trade Ideas Management
+| ADMIN-05 â€” Trade Ideas Management
 |--------------------------------------------------------------------------
 |
 | Core Trade Idea setup, targets and audited lifecycle.
@@ -24,7 +24,7 @@ require __DIR__ . '/admin_trade_ideas.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-06 — Affiliate Management
+| ADMIN-06 â€” Affiliate Management
 |--------------------------------------------------------------------------
 |
 | Secure affiliate operations over the frozen API-09 commercial ledger:
@@ -37,7 +37,7 @@ require __DIR__ . '/admin_affiliates.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-07 — Payments Management
+| ADMIN-07 â€” Payments Management
 |--------------------------------------------------------------------------
 |
 | Provider-verified PayPal visibility plus authorized manual reconciliation
@@ -49,7 +49,7 @@ require __DIR__ . '/admin_payments.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-08 — Payout Management
+| ADMIN-08 â€” Payout Management
 |--------------------------------------------------------------------------
 |
 | Controlled affiliate payout review over the frozen payout ledger.
@@ -61,7 +61,7 @@ require __DIR__ . '/admin_payouts.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-09 — Finance Management
+| ADMIN-09 â€” Finance Management
 |--------------------------------------------------------------------------
 |
 | Read-only finance reporting and ledger reconciliation across frozen
@@ -73,7 +73,7 @@ require __DIR__ . '/admin_finance.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-10 — KYC Management
+| ADMIN-10 â€” KYC Management
 |--------------------------------------------------------------------------
 |
 | Controlled review of frozen API-13 KYC submissions. Sensitive identity
@@ -85,7 +85,7 @@ require __DIR__ . '/admin_kyc.php';
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN-11 — Security Management
+| ADMIN-11 â€” Security Management
 |--------------------------------------------------------------------------
 |
 | Read-only security operations visibility over audit events, user refresh
@@ -95,3 +95,15 @@ require __DIR__ . '/admin_kyc.php';
 */
 
 require __DIR__ . '/admin_security.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-12 â€” Audit Log Management
+|--------------------------------------------------------------------------
+|
+| Immutable read-only audit explorer with render-time sensitive payload
+| redaction. Existing audit writers and the audit schema remain untouched.
+|
+*/
+
+require __DIR__ . '/admin_audit.php';

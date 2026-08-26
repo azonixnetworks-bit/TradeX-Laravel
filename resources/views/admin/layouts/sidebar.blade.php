@@ -238,12 +238,12 @@
         @if($admin->hasPermission('audit.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.audit.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.audit.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">▤</span>
                 <span>Audit Logs</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
