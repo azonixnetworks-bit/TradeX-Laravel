@@ -204,12 +204,12 @@
         @if($admin->hasPermission('kyc.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.kyc.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.kyc.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">◉</span>
                 <span>KYC Verification</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
