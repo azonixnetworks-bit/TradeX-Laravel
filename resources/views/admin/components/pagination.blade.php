@@ -1,4 +1,4 @@
-{{-- TradeX Admin skeleton --}} 
+{{-- TradeX Admin pagination --}}
 @if($paginator->hasPages())
 
     <div class="admin-pagination">
@@ -20,13 +20,21 @@
         </div>
 
 
-        <div class="pagination-links">
+        <div
+            class="pagination-links"
+            style="flex-wrap:wrap;max-width:100%;"
+        >
 
             {{-- PREVIOUS --}}
 
             @if($paginator->onFirstPage())
 
-                <span class="page-button disabled">
+                <span
+                    class="page-button disabled"
+                    aria-disabled="true"
+                    aria-label="Previous page"
+                    title="Previous"
+                >
                     ‹
                 </span>
 
@@ -35,6 +43,9 @@
                 <a
                     href="{{ $paginator->previousPageUrl() }}"
                     class="page-button"
+                    aria-label="Previous page"
+                    title="Previous"
+                    rel="prev"
                 >
                     ‹
                 </a>
@@ -72,13 +83,17 @@
                 <a
                     href="{{ $paginator->url(1) }}"
                     class="page-button"
+                    aria-label="Go to page 1"
                 >
                     1
                 </a>
 
                 @if($start > 2)
 
-                    <span class="page-dots">
+                    <span
+                        class="page-dots"
+                        aria-hidden="true"
+                    >
                         …
                     </span>
 
@@ -100,6 +115,8 @@
 
                     <span
                         class="page-button active"
+                        aria-current="page"
+                        aria-label="Page {{ $page }}"
                     >
                         {{ $page }}
                     </span>
@@ -109,6 +126,7 @@
                     <a
                         href="{{ $paginator->url($page) }}"
                         class="page-button"
+                        aria-label="Go to page {{ $page }}"
                     >
                         {{ $page }}
                     </a>
@@ -122,7 +140,10 @@
 
                 @if($end < $last - 1)
 
-                    <span class="page-dots">
+                    <span
+                        class="page-dots"
+                        aria-hidden="true"
+                    >
                         …
                     </span>
 
@@ -131,6 +152,7 @@
                 <a
                     href="{{ $paginator->url($last) }}"
                     class="page-button"
+                    aria-label="Go to page {{ $last }}"
                 >
                     {{ $last }}
                 </a>
@@ -145,13 +167,21 @@
                 <a
                     href="{{ $paginator->nextPageUrl() }}"
                     class="page-button"
+                    aria-label="Next page"
+                    title="Next"
+                    rel="next"
                 >
                     ›
                 </a>
 
             @else
 
-                <span class="page-button disabled">
+                <span
+                    class="page-button disabled"
+                    aria-disabled="true"
+                    aria-label="Next page"
+                    title="Next"
+                >
                     ›
                 </span>
 
