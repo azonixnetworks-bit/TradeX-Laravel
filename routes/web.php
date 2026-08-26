@@ -119,3 +119,16 @@ require __DIR__ . '/admin_audit.php';
 */
 
 require __DIR__ . '/admin_administration.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-14 â€” System Settings Management
+|--------------------------------------------------------------------------
+|
+| Safe DB-backed General settings plus read-only ownership/health views for
+| Affiliate, Payments, Security and Video configuration. Secrets and frozen
+| module business rules remain outside this generic settings surface.
+|
+*/
+
+require __DIR__ . '/admin_settings.php';

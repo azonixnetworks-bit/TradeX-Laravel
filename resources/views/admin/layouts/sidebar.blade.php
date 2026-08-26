@@ -295,12 +295,12 @@
         @if($admin->hasPermission('settings.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.settings.general') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.settings.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">⚙</span>
                 <span>Settings</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
