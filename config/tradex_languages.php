@@ -59,7 +59,7 @@ return [
     ],
 
     'runtime_translation_api' => 'NOT_WIRED',
-    'education_content_localization' => 'NOT_WIRED',
+    'education_content_localization' => 'WIRED_REVIEWED_RUNTIME',
 
     'source_text_max_characters' => 10000,
     'translation_text_max_characters' => 10000,

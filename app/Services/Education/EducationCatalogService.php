@@ -144,18 +144,11 @@ class EducationCatalogService
 
         return [
             'course' =>
-                array_merge(
-                    $this->presenter
-                        ->courseSummary(
-                            $user,
-                            $course
-                        ),
-                    [
-                        'description' =>
-                            $course
-                                ->description,
-                    ]
-                ),
+                $this->presenter
+                    ->courseDetail(
+                        $user,
+                        $course
+                    ),
 
             'modules' =>
                 $modules
@@ -219,18 +212,11 @@ class EducationCatalogService
                     ),
 
             'module' =>
-                array_merge(
-                    $this->presenter
-                        ->moduleSummary(
-                            $user,
-                            $module
-                        ),
-                    [
-                        'description' =>
-                            $module
-                                ->description,
-                    ]
-                ),
+                $this->presenter
+                    ->moduleDetail(
+                        $user,
+                        $module
+                    ),
 
             'lessons' =>
                 $lessons
@@ -294,15 +280,11 @@ class EducationCatalogService
             'lesson' =>
                 array_merge(
                     $this->presenter
-                        ->lessonSummary(
+                        ->lessonDetail(
                             $user,
                             $lesson
                         ),
                     [
-                        'description' =>
-                            $lesson
-                                ->description,
-
                         'published_assignment_count' =>
                             $assignmentCount,
 
@@ -319,6 +301,7 @@ class EducationCatalogService
                         ) =>
                             $this->presenter
                                 ->videoSummary(
+                                    $user,
                                     $video
                                 )
                     )

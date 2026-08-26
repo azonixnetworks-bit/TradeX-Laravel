@@ -13,6 +13,15 @@ return [
             50
         ),
 
+    'localization' => [
+        /*
+        | language_code remains the source-language course filter.
+        | locale controls only the requested display language.
+        */
+        'query_parameter' => 'locale',
+        'header' => 'X-TradeX-Language',
+    ],
+
     'playback' => [
         'token_minutes' =>
             (int) env(

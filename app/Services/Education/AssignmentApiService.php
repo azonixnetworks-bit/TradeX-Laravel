@@ -15,7 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class AssignmentApiService
 {
     public function __construct(
-        private readonly EducationAccessService $access
+        private readonly EducationAccessService $access,
+        private readonly EducationContentLocalizationService $localization
     ) {
     }
 
@@ -51,6 +52,7 @@ class AssignmentApiService
                     ->map(
                         fn (Assignment $assignment): array =>
                             $this->summary(
+                                $user,
                                 $assignment
                             )
                     )
@@ -79,18 +81,30 @@ class AssignmentApiService
                 $assignment
             );
 
+        $localized =
+            $this->localization
+                ->assignment(
+                    $user,
+                    $assignment
+                );
+
+        $fields =
+            $localized['fields'];
+
         return [
             'assignment' =>
                 array_merge(
                     $this->summary(
-                        $assignment
+                        $user,
+                        $assignment,
+                        $localized
                     ),
                     [
                         'heading' =>
-                            $assignment->heading,
+                            $fields['heading'],
 
                         'description' =>
-                            $assignment->description,
+                            $fields['description'],
 
                         'reference_image' => [
                             'available' =>
@@ -102,8 +116,9 @@ class AssignmentApiService
                         ],
 
                         'submission_instructions' =>
-                            $assignment
-                                ->submission_instructions,
+                            $fields[
+                                'submission_instructions'
+                            ],
 
                         'lesson_uuid' =>
                             $assignment
@@ -155,10 +170,18 @@ class AssignmentApiService
                 ? $recipient
                 : '';
 
+        $localized =
+            $this->localization
+                ->assignment(
+                    $user,
+                    $assignment
+                );
+
         $message =
             $this->whatsAppMessage(
                 $user,
-                $assignment
+                $assignment,
+                $localized['fields']
             );
 
         $baseUrl =
@@ -220,6 +243,11 @@ class AssignmentApiService
 
             'prefilled_message' =>
                 $message,
+
+            'localization' =>
+                $localized[
+                    'localization'
+                ],
 
             'metadata' => [
                 'student_upload_to_tradex' =>
@@ -379,14 +407,27 @@ class AssignmentApiService
     }
 
     private function summary(
-        Assignment $assignment
+        User $user,
+        Assignment $assignment,
+        ?array $localized = null
     ): array {
+        $localized ??=
+            $this->localization
+                ->assignment(
+                    $user,
+                    $assignment
+                );
+
         return [
             'uuid' =>
                 $assignment->uuid,
 
             'title' =>
-                $assignment->title,
+                $localized[
+                    'fields'
+                ][
+                    'title'
+                ],
 
             'is_required' =>
                 $assignment->isRequired(),
@@ -450,18 +491,24 @@ class AssignmentApiService
                         )
                         : null,
             ],
+
+            'localization' =>
+                $localized[
+                    'localization'
+                ],
         ];
     }
 
     private function whatsAppMessage(
         User $user,
-        Assignment $assignment
+        Assignment $assignment,
+        array $fields
     ): string {
         $lines = [
             'TradeX Assignment Submission',
             '',
             'Assignment: '
-                .$assignment->title,
+                .$fields['title'],
             'Assignment ID: '
                 .$assignment->uuid,
             'Student: '
@@ -475,8 +522,12 @@ class AssignmentApiService
 
         $instructions =
             trim(
-                (string) $assignment
-                    ->submission_instructions
+                (string) (
+                    $fields[
+                        'submission_instructions'
+                    ]
+                    ?? ''
+                )
             );
 
         if ($instructions !== '') {
