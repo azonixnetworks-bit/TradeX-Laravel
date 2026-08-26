@@ -5,6 +5,7 @@ namespace App\Services\Push;
 use App\Jobs\SendPushDeliveryJob;
 use App\Models\PushNotificationDelivery;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
 use Throwable;
 
 class PushFanoutService
@@ -182,11 +183,14 @@ class PushFanoutService
         }
 
         try {
-            SendPushDeliveryJob::dispatch($claimed->getKey())
-                ->onQueue((string) config(
+            Queue::push(
+                new SendPushDeliveryJob($claimed->getKey()),
+                '',
+                (string) config(
                     'tradex_push.queue',
                     'push-notifications'
-                ));
+                )
+            );
 
             return true;
         } catch (Throwable) {
