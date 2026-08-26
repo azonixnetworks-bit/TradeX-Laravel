@@ -58,10 +58,6 @@ class RuntimeTranslationApiTest extends TestCase
         $response = $this
             ->getJson('/api/v1/translations/en')
             ->assertOk()
-            ->assertJsonPath(
-                'data.values.AUTH.login.title',
-                'Sign in to TradeX'
-            )
             ->assertJsonPath('data.key_count', 1)
             ->assertJsonPath(
                 'data.reviewed_translation_count',
@@ -69,6 +65,13 @@ class RuntimeTranslationApiTest extends TestCase
             )
             ->assertJsonPath('data.fallback_count', 0)
             ->assertJsonPath('data.is_complete', true);
+
+        $authValues = $response->json('data.values.AUTH');
+
+        $this->assertSame(
+            'Sign in to TradeX',
+            $authValues['login.title']
+        );
 
         $this->assertSame(
             $key->source_sha256,
@@ -94,19 +97,24 @@ class RuntimeTranslationApiTest extends TestCase
             'தொடரவும்'
         );
 
-        $this
+        $response = $this
             ->getJson('/api/v1/translations/ta')
             ->assertOk()
-            ->assertJsonPath(
-                'data.values.GENERAL.common.continue',
-                'தொடரவும்'
-            )
             ->assertJsonPath(
                 'data.reviewed_translation_count',
                 1
             )
             ->assertJsonPath('data.fallback_count', 0)
             ->assertJsonPath('data.is_complete', true);
+
+        $generalValues = $response->json(
+            'data.values.GENERAL'
+        );
+
+        $this->assertSame(
+            'தொடரவும்',
+            $generalValues['common.continue']
+        );
     }
 
     public function test_draft_stale_and_integrity_invalid_values_fall_back_to_english_source(): void
@@ -173,20 +181,25 @@ class RuntimeTranslationApiTest extends TestCase
         $response = $this
             ->getJson('/api/v1/translations/ta')
             ->assertOk()
-            ->assertJsonPath(
-                'data.values.APP_UI.home.draft',
-                'Draft fallback'
-            )
-            ->assertJsonPath(
-                'data.values.APP_UI.home.stale',
-                'Stale fallback'
-            )
-            ->assertJsonPath(
-                'data.values.APP_UI.home.tampered',
-                'Tampered fallback'
-            )
             ->assertJsonPath('data.fallback_count', 3)
             ->assertJsonPath('data.is_complete', false);
+
+        $appValues = $response->json(
+            'data.values.APP_UI'
+        );
+
+        $this->assertSame(
+            'Draft fallback',
+            $appValues['home.draft']
+        );
+        $this->assertSame(
+            'Stale fallback',
+            $appValues['home.stale']
+        );
+        $this->assertSame(
+            'Tampered fallback',
+            $appValues['home.tampered']
+        );
 
         $body = $response->getContent();
 
@@ -274,13 +287,18 @@ class RuntimeTranslationApiTest extends TestCase
                 'registration_allowed' => true,
             ]);
 
-        $this
+        $response = $this
             ->getJson('/api/v1/translations/ta')
-            ->assertOk()
-            ->assertJsonPath(
-                'data.values.GENERAL.common.save',
-                'சேமிக்கவும்'
-            );
+            ->assertOk();
+
+        $generalValues = $response->json(
+            'data.values.GENERAL'
+        );
+
+        $this->assertSame(
+            'சேமிக்கவும்',
+            $generalValues['common.save']
+        );
     }
 
     public function test_bundle_supports_etag_conditional_get(): void
