@@ -48,8 +48,30 @@ class LegalPolicyAcceptanceApiTest extends TestCase
             ->assertJsonPath('data.cross_module_enforcement', false)
             ->assertJsonCount(1, 'data.items')
             ->assertJsonPath('data.items.0.uuid', $current->uuid)
-            ->assertJsonPath('data.items.0.version_number', 1)
-            ->assertJsonMissing(['content' => 'Future terms']);
+            ->assertJsonPath('data.items.0.version_number', 1);
+    }
+
+    public function test_current_policy_selection_matches_frozen_admin17_effective_order(): void
+    {
+        $laterEffective = $this->publishedPolicy(
+            'TERMS_OF_SERVICE',
+            2,
+            'Scheduled version that became effective later',
+            now()->subMinute()
+        );
+
+        $this->publishedPolicy(
+            'TERMS_OF_SERVICE',
+            3,
+            'Higher version published for an earlier effective time',
+            now()->subMinutes(2)
+        );
+
+        $this
+            ->getJson('/api/v1/legal/policies/TERMS_OF_SERVICE')
+            ->assertOk()
+            ->assertJsonPath('data.uuid', $laterEffective->uuid)
+            ->assertJsonPath('data.version_number', 2);
     }
 
     public function test_public_policy_show_returns_current_content_and_hash(): void
@@ -185,13 +207,15 @@ class LegalPolicyAcceptanceApiTest extends TestCase
         $old = $this->publishedPolicy(
             'TERMS_OF_SERVICE',
             1,
-            'Old terms content'
+            'Old terms content',
+            now()->subMinutes(2)
         );
 
         $this->publishedPolicy(
             'TERMS_OF_SERVICE',
             2,
-            'New terms content'
+            'New terms content',
+            now()->subMinute()
         );
 
         $user = $this->createApiUser();

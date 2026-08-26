@@ -16,6 +16,17 @@ class LegalPolicyApiServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /*
+         * ADMIN-17's frozen config intentionally declared acceptance runtime
+         * NOT_WIRED. API-17 is the later explicit runtime integration, so the
+         * effective runtime marker is promoted here without rewriting the
+         * frozen ADMIN-17 config file.
+         */
+        config()->set(
+            'tradex_legal.acceptance_runtime',
+            'WIRED_EVIDENCE_ONLY'
+        );
+
         RateLimiter::for(
             'api-legal-public-read',
             fn (Request $request): Limit => Limit::perMinute(

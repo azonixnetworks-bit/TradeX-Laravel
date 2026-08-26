@@ -122,6 +122,7 @@ class LegalPolicyApiService
             ! $device instanceof UserDevice
             || (int) $device->user_id !== (int) $user->getKey()
             || $device->isRevoked()
+            || ! $device->is_trusted
         ) {
             throw new LegalApiException(
                 401,
@@ -209,6 +210,7 @@ class LegalPolicyApiService
             ->whereNotNull('effective_at')
             ->where('effective_at', '<=', now())
             ->orderBy('policy_type')
+            ->orderByDesc('effective_at')
             ->orderByDesc('version_number')
             ->get()
             ->unique('policy_type')

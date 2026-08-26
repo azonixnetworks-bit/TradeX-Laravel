@@ -30,10 +30,15 @@ Authenticated trusted-device routes:
 - `GET /api/v1/legal/acceptance-status`
 - `POST /api/v1/legal/policies/{policyVersionUuid}/accept`
 
-Only the latest version for each policy type whose `published_at` and
-`effective_at` are both at or before the current time is considered current.
+Current-policy selection exactly follows frozen ADMIN-17 behavior:
 
-Draft, future and superseded versions are not accepted through API-17.
+1. status is `PUBLISHED`;
+2. `published_at <= now()`;
+3. `effective_at <= now()`;
+4. greatest `effective_at` wins;
+5. version number breaks an effective-time tie.
+
+Draft, future and historical versions are not accepted through API-17.
 
 ## Acceptance safety
 
@@ -82,6 +87,16 @@ Action:
 Audit stores safe policy/evidence metadata and fingerprint, not the full legal
 content.
 
+## ADMIN-17 runtime marker
+
+The frozen ADMIN-17 config file is not rewritten. During application boot,
+`LegalPolicyApiServiceProvider` promotes the effective runtime marker to:
+
+`WIRED_EVIDENCE_ONLY`
+
+This lets the existing ADMIN-17 UI report the later API integration accurately
+without reopening its business implementation.
+
 ## Enforcement boundary
 
 API-17 is intentionally an evidence/status layer:
@@ -99,13 +114,13 @@ audiences gate which actions.
 API-17 does not modify:
 
 - `LegalPolicyVersion` model;
-- ADMIN-17 admin routes/controllers/services;
+- ADMIN-17 admin routes/controllers/services/config file;
 - `User` model;
 - mobile auth/TOTP/device implementation;
 - Payments/KYC/Affiliate/Education business logic;
 - frozen `routes/api.php`.
 
-The only shared bootstrap change is registration of
+The only shared file change is registration of
 `LegalPolicyApiServiceProvider` in `bootstrap/providers.php`, matching the
 existing isolated API module pattern.
 
