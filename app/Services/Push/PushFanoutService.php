@@ -6,7 +6,6 @@ use App\Jobs\SendPushDeliveryJob;
 use App\Models\PushNotificationDelivery;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
-use RuntimeException;
 use Throwable;
 
 class PushFanoutService
@@ -166,15 +165,6 @@ class PushFanoutService
                         && $locked->next_attempt_at->isFuture()
                     )
                 ) {
-                    if (app()->runningUnitTests()) {
-                        throw new RuntimeException(sprintf(
-                            'Push delivery claim rejected: exists=%s status=%s next_attempt_at=%s',
-                            $locked instanceof PushNotificationDelivery ? 'yes' : 'no',
-                            $locked?->status ?? 'NULL',
-                            $locked?->next_attempt_at?->toISOString() ?? 'NULL'
-                        ));
-                    }
-
                     return null;
                 }
 
@@ -204,18 +194,7 @@ class PushFanoutService
             );
 
             return true;
-        } catch (Throwable $exception) {
-            if (app()->runningUnitTests()) {
-                throw new RuntimeException(
-                    'Push queue dispatch failed: '
-                    .$exception::class
-                    .': '
-                    .$exception->getMessage(),
-                    0,
-                    $exception
-                );
-            }
-
+        } catch (Throwable) {
             $fresh = PushNotificationDelivery::query()
                 ->find($claimed->getKey());
 
