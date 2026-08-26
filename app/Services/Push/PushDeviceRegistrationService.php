@@ -5,6 +5,7 @@ namespace App\Services\Push;
 use App\Exceptions\PushApiException;
 use App\Models\AuditLog;
 use App\Models\PushDeviceToken;
+use App\Models\PushNotificationDelivery;
 use App\Models\User;
 use App\Models\UserDevice;
 use Illuminate\Http\Request;
@@ -61,6 +62,7 @@ class PushDeviceRegistrationService
                 $currentRows = PushDeviceToken::query()
                     ->where('user_device_id', $device->getKey())
                     ->where('is_active', true)
+                    ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
 
@@ -83,9 +85,20 @@ class PushDeviceRegistrationService
                     return [$existing, false, false, false];
                 }
 
+                $mutationTokenIds = $currentRows
+                    ->pluck('id')
+                    ->map(static fn ($id): int => (int) $id)
+                    ->all();
+
+                if ($existing instanceof PushDeviceToken) {
+                    $mutationTokenIds[] = (int) $existing->getKey();
+                }
+
+                $this->assertNoInFlightDeliveries($mutationTokenIds);
+
                 foreach ($currentRows as $current) {
                     if (
-                        ! $existing instanceof PushDeviceToken
+                        ! ($existing instanceof PushDeviceToken)
                         || (int) $current->getKey()
                             !== (int) $existing->getKey()
                     ) {
@@ -175,15 +188,34 @@ class PushDeviceRegistrationService
         $device = $this->trustedMobileDevice($user, $request);
 
         $updated = DB::transaction(
-            fn (): int => PushDeviceToken::query()
-                ->where('user_id', $user->getKey())
-                ->where('user_device_id', $device->getKey())
-                ->where('is_active', true)
-                ->update([
-                    'is_active' => false,
-                    'revoked_at' => now(),
-                    'updated_at' => now(),
-                ]),
+            function () use ($user, $device): int {
+                $tokens = PushDeviceToken::query()
+                    ->where('user_id', $user->getKey())
+                    ->where('user_device_id', $device->getKey())
+                    ->where('is_active', true)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $this->assertNoInFlightDeliveries(
+                    $tokens
+                        ->pluck('id')
+                        ->map(static fn ($id): int => (int) $id)
+                        ->all()
+                );
+
+                $updated = 0;
+
+                foreach ($tokens as $token) {
+                    $token->forceFill([
+                        'is_active' => false,
+                        'revoked_at' => now(),
+                    ])->save();
+                    $updated++;
+                }
+
+                return $updated;
+            },
             3
         );
 
@@ -211,6 +243,31 @@ class PushDeviceRegistrationService
         ];
     }
 
+    private function assertNoInFlightDeliveries(array $tokenIds): void
+    {
+        $tokenIds = array_values(array_unique(array_filter(
+            $tokenIds,
+            static fn (mixed $id): bool => (int) $id > 0
+        )));
+
+        if ($tokenIds === []) {
+            return;
+        }
+
+        $busy = PushNotificationDelivery::query()
+            ->whereIn('push_device_token_id', $tokenIds)
+            ->where('status', PushNotificationDelivery::STATUS_SENDING)
+            ->exists();
+
+        if ($busy) {
+            throw new PushApiException(
+                409,
+                'PUSH_TOKEN_DELIVERY_IN_PROGRESS',
+                'A push delivery is currently in progress. Retry the token change shortly.'
+            );
+        }
+    }
+
     private function trustedMobileDevice(
         User $user,
         Request $request
@@ -218,7 +275,7 @@ class PushDeviceRegistrationService
         $device = $request->attributes->get('tradex_user_device');
 
         if (
-            ! $device instanceof UserDevice
+            ! ($device instanceof UserDevice)
             || (int) $device->user_id !== (int) $user->getKey()
             || $device->isRevoked()
             || ! $device->is_trusted
