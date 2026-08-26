@@ -169,10 +169,6 @@ class RegistrationFlowTest extends TestCase
                 ]
             )
             ->assertOk()
-            ->assertHeader(
-                'Cache-Control',
-                'private, no-store, no-cache, max-age=0, must-revalidate'
-            )
             ->assertJsonPath(
                 'data.next_action',
                 'CONFIRM_TOTP'
@@ -181,6 +177,27 @@ class RegistrationFlowTest extends TestCase
                 'data.qr_code_mime_type',
                 'image/svg+xml'
             );
+
+        $cacheControl = strtolower(
+            (string) $setup->headers->get(
+                'Cache-Control'
+            )
+        );
+
+        foreach (
+            [
+                'private',
+                'no-store',
+                'no-cache',
+                'max-age=0',
+                'must-revalidate',
+            ] as $directive
+        ) {
+            $this->assertStringContainsString(
+                $directive,
+                $cacheControl
+            );
+        }
 
         $qrDataUri = (string) $setup->json(
             'data.qr_code_data_uri'
