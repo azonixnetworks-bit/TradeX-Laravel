@@ -73,13 +73,7 @@
     </div>
 </div>
 
-<div
-    style="
-        display:grid;
-        grid-template-columns:repeat(auto-fit,minmax(310px,1fr));
-        gap:18px;
-    "
->
+<div class="language-card-grid">
 @foreach($languageCards as $card)
     @php
         $language = $card['language'];
