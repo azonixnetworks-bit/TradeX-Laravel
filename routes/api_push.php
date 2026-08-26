@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Push\PushDeviceStatusController;
 use App\Http\Controllers\Api\Push\RegisterPushDeviceController;
 use App\Http\Controllers\Api\Push\UnregisterPushDeviceController;
+use App\Http\Middleware\ResetPushApiAuthState;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Route;
 */
 Route::middleware([
     'api',
+    ResetPushApiAuthState::class,
     'auth:sanctum',
     'tradex.mobile',
 ])
