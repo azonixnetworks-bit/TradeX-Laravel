@@ -273,6 +273,8 @@
             $admin->hasPermission('integrations.view')
             ||
             $admin->hasPermission('legal.view')
+            ||
+            $admin->hasPermission('languages.view')
         )
 
             <div class="nav-section-title">
@@ -347,6 +349,20 @@
             >
                 <span class="nav-icon">§</span>
                 <span>Legal & Policies</span>
+            </a>
+
+        @endif
+
+
+        @if($admin->hasPermission('languages.view'))
+
+            <a
+                href="{{ route('admin.languages.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.languages.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">文</span>
+                <span>Languages</span>
             </a>
 
         @endif
