@@ -1,11 +1,13 @@
 <?php
 
 use App\Console\Commands\AdminReleaseCheckCommand;
+use App\Console\Commands\MobileApiReleaseCheckCommand;
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminSecurityHeaders;
 use App\Http\Middleware\EnsureTradeXMobileApiSession;
 use App\Http\Middleware\ForceAdminTotp;
 use App\Http\Middleware\HardenAdminSession;
+use App\Http\Middleware\HardenMobileApiRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,8 +22,19 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         AdminReleaseCheckCommand::class,
+        MobileApiReleaseCheckCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        /*
+         * API-23 final hardening is installed once on Laravel's api group.
+         * This covers routes/api.php plus provider-loaded API route files
+         * without rewriting frozen API-01...22 route contracts.
+         */
+        $middleware->prependToGroup(
+            'api',
+            HardenMobileApiRequests::class
+        );
+
         /*
          * ADMIN-19 web-group hardening is path-scoped internally to /admin.
          * Non-admin web requests pass through unchanged.
