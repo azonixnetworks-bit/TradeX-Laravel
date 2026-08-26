@@ -5,6 +5,7 @@ use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\DashboardServiceProvider;
 use App\Providers\KycApiServiceProvider;
+use App\Providers\LegalPolicyApiServiceProvider;
 use App\Providers\MobileSecurityApiServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
@@ -24,4 +25,5 @@ return [
     PasswordRecoveryApiServiceProvider::class,
     MobileSecurityApiServiceProvider::class,
     SocialAuthApiServiceProvider::class,
+    LegalPolicyApiServiceProvider::class,
 ];

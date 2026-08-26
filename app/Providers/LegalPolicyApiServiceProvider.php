@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+
+class LegalPolicyApiServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // API-17 uses constructor injection only.
+    }
+
+    public function boot(): void
+    {
+        RateLimiter::for(
+            'api-legal-public-read',
+            fn (Request $request): Limit => Limit::perMinute(
+                (int) config('tradex_legal_api.rate_limits.public_read_per_minute', 120)
+            )->by('legal-public|'.$request->ip())
+        );
+
+        RateLimiter::for(
+            'api-legal-auth-read',
+            fn (Request $request): Limit => Limit::perMinute(
+                (int) config('tradex_legal_api.rate_limits.auth_read_per_minute', 120)
+            )->by(
+                'legal-auth|'.(string) ($request->user()?->getAuthIdentifier() ?? $request->ip())
+            )
+        );
+
+        RateLimiter::for(
+            'api-legal-accept',
+            fn (Request $request): Limit => Limit::perMinute(
+                (int) config('tradex_legal_api.rate_limits.accept_per_minute', 10)
+            )->by(
+                'legal-accept|'.(string) ($request->user()?->getAuthIdentifier() ?? $request->ip())
+            )
+        );
+
+        $this->loadRoutesFrom(
+            base_path('routes/api_legal.php')
+        );
+    }
+}
