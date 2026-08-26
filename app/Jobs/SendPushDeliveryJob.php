@@ -5,7 +5,6 @@ namespace App\Jobs;
 use App\Models\PushNotificationDelivery;
 use App\Services\Push\PushDeliveryService;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
 use RuntimeException;
 use Throwable;
 
-class SendPushDeliveryJob implements ShouldBeUnique, ShouldQueue
+class SendPushDeliveryJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -22,15 +21,9 @@ class SendPushDeliveryJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 5;
     public int $timeout = 30;
-    public int $uniqueFor = 3600;
 
     public function __construct(public readonly int $deliveryId)
     {
-    }
-
-    public function uniqueId(): string
-    {
-        return 'push-delivery-'.$this->deliveryId;
     }
 
     public function backoff(): array
