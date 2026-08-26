@@ -20,38 +20,83 @@ class PushDeliveryService
 
     public function deliver(int $deliveryId, int $queueAttempt = 1): array
     {
+        $claim = $this->claim($deliveryId, $queueAttempt);
+
+        if (isset($claim['outcome'])) {
+            return $claim['outcome'];
+        }
+
+        try {
+            $result = $this->providers->send(
+                $claim['provider'],
+                $claim['plain_token'],
+                $claim['message'],
+                $claim['receipt']
+            );
+        } catch (Throwable) {
+            $result = PushProviderResult::transient(
+                null,
+                'PUSH_PROVIDER_EXCEPTION'
+            );
+        }
+
+        return $this->finalize(
+            $deliveryId,
+            $claim['token_id'],
+            $result,
+            $claim['attempt']
+        );
+    }
+
+    private function claim(int $deliveryId, int $queueAttempt): array
+    {
+        $tokenId = PushNotificationDelivery::query()
+            ->whereKey($deliveryId)
+            ->value('push_device_token_id');
+
         return DB::transaction(
-            function () use ($deliveryId, $queueAttempt): array {
+            function () use (
+                $deliveryId,
+                $queueAttempt,
+                $tokenId
+            ): array {
+                $token = $tokenId !== null
+                    ? PushDeviceToken::query()
+                        ->with('userDevice')
+                        ->lockForUpdate()
+                        ->find($tokenId)
+                    : null;
+
                 $delivery = PushNotificationDelivery::query()
                     ->lockForUpdate()
                     ->findOrFail($deliveryId);
 
                 if ($delivery->isTerminal()) {
-                    return ['retry' => false, 'status' => $delivery->status];
+                    return [
+                        'outcome' => [
+                            'retry' => false,
+                            'status' => $delivery->status,
+                        ],
+                    ];
+                }
+
+                if (
+                    $tokenId === null
+                    || (int) $delivery->push_device_token_id
+                        !== (int) $tokenId
+                ) {
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'DELIVERY_TOKEN_CHANGED'
+                        ),
+                    ];
                 }
 
                 $delivery->load([
                     'receipt.notification',
                     'receipt.user',
                 ]);
-
-                $token = $delivery->push_device_token_id !== null
-                    ? PushDeviceToken::query()
-                        ->with('userDevice')
-                        ->lockForUpdate()
-                        ->find($delivery->push_device_token_id)
-                    : null;
-
-                $attempt = max(
-                    (int) $delivery->attempts + 1,
-                    max(1, $queueAttempt)
-                );
-
-                $delivery->forceFill([
-                    'status' => PushNotificationDelivery::STATUS_SENDING,
-                    'attempts' => $attempt,
-                    'next_attempt_at' => null,
-                ])->save();
 
                 $receipt = $delivery->receipt;
 
@@ -62,7 +107,12 @@ class PushDeliveryService
                     || ! ($token instanceof PushDeviceToken)
                     || ! ($token->userDevice instanceof UserDevice)
                 ) {
-                    return $this->skip($delivery, 'DELIVERY_CONTEXT_MISSING');
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'DELIVERY_CONTEXT_MISSING'
+                        ),
+                    ];
                 }
 
                 $message = $receipt->notification;
@@ -70,14 +120,24 @@ class PushDeliveryService
                 $device = $token->userDevice;
 
                 if (! $this->messageIsDeliverable($message)) {
-                    return $this->skip($delivery, 'MESSAGE_NOT_DELIVERABLE');
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'MESSAGE_NOT_DELIVERABLE'
+                        ),
+                    ];
                 }
 
                 if (
                     $user->status !== 'ACTIVE'
                     || ! $this->audienceStillMatches($message, $user)
                 ) {
-                    return $this->skip($delivery, 'USER_NO_LONGER_ELIGIBLE');
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'USER_NO_LONGER_ELIGIBLE'
+                        ),
+                    ];
                 }
 
                 if (
@@ -94,11 +154,21 @@ class PushDeliveryService
                     || ! $device->is_trusted
                     || ! $device->isMobile()
                 ) {
-                    return $this->skip($delivery, 'DEVICE_NOT_ELIGIBLE');
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'DEVICE_NOT_ELIGIBLE'
+                        ),
+                    ];
                 }
 
                 if (! $this->providerEnabled($token->provider)) {
-                    return $this->skip($delivery, 'PUSH_PROVIDER_DISABLED');
+                    return [
+                        'outcome' => $this->skip(
+                            $delivery,
+                            'PUSH_PROVIDER_DISABLED'
+                        ),
+                    ];
                 }
 
                 try {
@@ -109,19 +179,81 @@ class PushDeliveryService
                         'invalidated_at' => now(),
                     ])->save();
 
-                    return $this->invalid(
-                        $delivery,
-                        null,
-                        'TOKEN_DECRYPTION_FAILED'
-                    );
+                    return [
+                        'outcome' => $this->invalid(
+                            $delivery,
+                            null,
+                            'TOKEN_DECRYPTION_FAILED'
+                        ),
+                    ];
                 }
 
-                $result = $this->providers->send(
-                    $token->provider,
-                    $plainToken,
-                    $message,
-                    $receipt
+                $attempt = max(
+                    (int) $delivery->attempts + 1,
+                    max(1, $queueAttempt)
                 );
+
+                $delivery->forceFill([
+                    'status' => PushNotificationDelivery::STATUS_SENDING,
+                    'attempts' => $attempt,
+                    'next_attempt_at' => null,
+                ])->save();
+
+                return [
+                    'token_id' => (int) $token->getKey(),
+                    'provider' => (string) $token->provider,
+                    'plain_token' => $plainToken,
+                    'message' => $message,
+                    'receipt' => $receipt,
+                    'attempt' => $attempt,
+                ];
+            },
+            3
+        );
+    }
+
+    private function finalize(
+        int $deliveryId,
+        int $tokenId,
+        PushProviderResult $result,
+        int $attempt
+    ): array {
+        return DB::transaction(
+            function () use (
+                $deliveryId,
+                $tokenId,
+                $result,
+                $attempt
+            ): array {
+                $token = PushDeviceToken::query()
+                    ->lockForUpdate()
+                    ->find($tokenId);
+
+                $delivery = PushNotificationDelivery::query()
+                    ->lockForUpdate()
+                    ->findOrFail($deliveryId);
+
+                if ($delivery->isTerminal()) {
+                    return [
+                        'retry' => false,
+                        'status' => $delivery->status,
+                    ];
+                }
+
+                if (
+                    $delivery->status !== PushNotificationDelivery::STATUS_SENDING
+                    || ! ($token instanceof PushDeviceToken)
+                    || (int) $delivery->push_device_token_id
+                        !== (int) $token->getKey()
+                    || (int) $delivery->user_id !== (int) $token->user_id
+                    || $delivery->provider !== $token->provider
+                ) {
+                    return $this->fail(
+                        $delivery,
+                        null,
+                        'DELIVERY_OWNERSHIP_CHANGED'
+                    );
+                }
 
                 return $this->applyProviderResult(
                     $delivery,
