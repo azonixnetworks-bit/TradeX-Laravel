@@ -1,5 +1,7 @@
 @extends('admin.layouts.app')
 
+@inject('totpQrCodes', 'App\Services\Auth\Registration\TotpQrCodeService')
+
 @section('title', 'Admin Two-Factor Authentication')
 @section('page-title', 'Admin Two-Factor Authentication')
 
@@ -131,11 +133,44 @@
             class="panel"
             style="padding:22px;margin-bottom:18px;"
         >
-            <h2>Step 2 — Add to authenticator</h2>
+            <h2>Step 2 — Scan QR or add manually</h2>
 
             <p style="margin-top:12px;">
-                Add the following secret manually in Google Authenticator,
-                Microsoft Authenticator, 1Password or another standard TOTP app.
+                Scan this QR code with Google Authenticator, Microsoft
+                Authenticator, 1Password or another standard TOTP app. If
+                scanning is unavailable, use the secret below manually.
+            </p>
+
+            <div
+                style="
+                    margin-top:18px;
+                    display:flex;
+                    justify-content:center;
+                "
+            >
+                <div
+                    style="
+                        display:inline-flex;
+                        flex-direction:column;
+                        align-items:center;
+                        gap:10px;
+                        padding:16px;
+                        background:#ffffff;
+                        border-radius:14px;
+                    "
+                >
+                    <img
+                        src="{{ $totpQrCodes->dataUri($provisioning['otpauth_uri']) }}"
+                        alt="TradeX Admin TOTP QR code"
+                        width="280"
+                        height="280"
+                        style="display:block;max-width:100%;height:auto;"
+                    >
+                </div>
+            </div>
+
+            <p style="margin-top:12px;text-align:center;">
+                Scan the QR code, then enter the fresh 6-digit code below.
             </p>
 
             <div
