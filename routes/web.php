@@ -58,3 +58,15 @@ require __DIR__ . '/admin_payments.php';
 */
 
 require __DIR__ . '/admin_payouts.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-09 — Finance Management
+|--------------------------------------------------------------------------
+|
+| Read-only finance reporting and ledger reconciliation across frozen
+| payment, affiliate and payout sources. No cross-currency FX invention.
+|
+*/
+
+require __DIR__ . '/admin_finance.php';

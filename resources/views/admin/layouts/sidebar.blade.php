@@ -175,12 +175,12 @@
         @if($admin->hasPermission('finance.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.finance.dashboard') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.finance.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">◫</span>
                 <span>Finance</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
