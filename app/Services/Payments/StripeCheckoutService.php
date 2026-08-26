@@ -15,18 +15,13 @@ class StripeCheckoutService
     public function __construct(
         private readonly PaymentMethodService $methods,
         private readonly PaymentOrderService $orders,
-        private readonly PaymentApiPresenter $presenter,
-        private readonly PaymentMoney $money
+        private readonly PaymentApiPresenter $presenter
     ) {
     }
 
     public function create(User $user, string $idempotencyKey, Request $request): array
     {
-        $method = $this->methods->assertAvailable(
-            $user,
-            PaymentOrder::PROVIDER_STRIPE
-        );
-
+        $method = $this->methods->assertAvailable($user, PaymentOrder::PROVIDER_STRIPE);
         $hash = $this->orders->idempotencyHash($idempotencyKey);
         $existing = PaymentOrder::query()
             ->where('user_id', $user->getKey())
@@ -37,13 +32,11 @@ class StripeCheckoutService
             if ($existing->provider !== PaymentOrder::PROVIDER_STRIPE) {
                 throw new AuthApiException(409, 'PAYMENT_IDEMPOTENCY_CONFLICT', 'The idempotency key is already used by another payment provider.');
             }
-
             return $this->presenter->order($existing);
         }
 
-        $amount = (int) data_get($method, 'amount.minor', 0);
+        $amount = (int) data_get($method, 'amount.amount_minor', 0);
         $currency = strtoupper((string) data_get($method, 'amount.currency', 'USD'));
-
         $order = PaymentOrder::query()->create([
             'user_id' => $user->getKey(),
             'product_code' => PaymentOrder::PRODUCT_EDUCATION_PREMIUM,
@@ -73,20 +66,11 @@ class StripeCheckoutService
                         'price_data' => [
                             'currency' => strtolower($currency),
                             'unit_amount' => $amount,
-                            'product_data' => [
-                                'name' => (string) config('tradex_payments.product.education_premium.name', 'TradeX Education Premium'),
-                            ],
+                            'product_data' => ['name' => (string) config('tradex_payments.product.education_premium.name', 'TradeX Education Premium')],
                         ],
                     ]],
-                    'metadata' => [
-                        'tradex_order_uuid' => $order->uuid,
-                        'tradex_product_code' => $order->product_code,
-                    ],
-                    'payment_intent_data' => [
-                        'metadata' => [
-                            'tradex_order_uuid' => $order->uuid,
-                        ],
-                    ],
+                    'metadata' => ['tradex_order_uuid' => $order->uuid, 'tradex_product_code' => $order->product_code],
+                    'payment_intent_data' => ['metadata' => ['tradex_order_uuid' => $order->uuid]],
                 ]);
         } catch (ConnectionException) {
             $this->markFailed($order, 'STRIPE_CONNECTION_FAILED');
@@ -100,7 +84,6 @@ class StripeCheckoutService
 
         $sessionId = trim((string) $response->json('id'));
         $checkoutUrl = trim((string) $response->json('url'));
-
         if ($sessionId === '' || $checkoutUrl === '') {
             $this->markFailed($order, 'STRIPE_CHECKOUT_RESPONSE_INVALID');
             throw new AuthApiException(502, 'STRIPE_CHECKOUT_RESPONSE_INVALID', 'Stripe returned an incomplete checkout response.');
@@ -114,20 +97,15 @@ class StripeCheckoutService
         ])->save();
 
         AuditLog::record(
-            actorType: 'USER',
-            actorId: $user->getKey(),
-            action: 'STRIPE_CHECKOUT_SESSION_CREATED',
-            module: 'PAYMENTS',
-            targetType: 'PAYMENT_ORDER',
-            targetId: $order->getKey(),
+            actorType: 'USER', actorId: $user->getKey(), action: 'STRIPE_CHECKOUT_SESSION_CREATED',
+            module: 'PAYMENTS', targetType: 'PAYMENT_ORDER', targetId: $order->getKey(),
             newValues: [
                 'payment_order_uuid' => $order->uuid,
                 'provider' => PaymentOrder::PROVIDER_STRIPE,
                 'amount_minor' => $amount,
                 'currency' => $currency,
             ],
-            ipAddress: $request->ip(),
-            userAgent: $request->userAgent()
+            ipAddress: $request->ip(), userAgent: $request->userAgent()
         );
 
         return $this->presenter->order($order->fresh());
@@ -140,9 +118,6 @@ class StripeCheckoutService
 
     private function markFailed(PaymentOrder $order, string $code): void
     {
-        $order->forceFill([
-            'status' => PaymentOrder::STATUS_FAILED,
-            'failure_code' => $code,
-        ])->save();
+        $order->forceFill(['status' => PaymentOrder::STATUS_FAILED, 'failure_code' => $code])->save();
     }
 }

@@ -15,18 +15,13 @@ class NowPaymentsInvoiceService
     public function __construct(
         private readonly PaymentMethodService $methods,
         private readonly PaymentOrderService $orders,
-        private readonly PaymentApiPresenter $presenter,
-        private readonly PaymentMoney $money
+        private readonly PaymentApiPresenter $presenter
     ) {
     }
 
     public function create(User $user, string $idempotencyKey, Request $request): array
     {
-        $method = $this->methods->assertAvailable(
-            $user,
-            PaymentOrder::PROVIDER_NOWPAYMENTS
-        );
-
+        $method = $this->methods->assertAvailable($user, PaymentOrder::PROVIDER_NOWPAYMENTS);
         $hash = $this->orders->idempotencyHash($idempotencyKey);
         $existing = PaymentOrder::query()
             ->where('user_id', $user->getKey())
@@ -37,13 +32,12 @@ class NowPaymentsInvoiceService
             if ($existing->provider !== PaymentOrder::PROVIDER_NOWPAYMENTS) {
                 throw new AuthApiException(409, 'PAYMENT_IDEMPOTENCY_CONFLICT', 'The idempotency key is already used by another payment provider.');
             }
-
             return $this->presenter->order($existing);
         }
 
-        $amountMinor = (int) data_get($method, 'amount.minor', 0);
+        $amountMinor = (int) data_get($method, 'amount.amount_minor', 0);
         $currency = strtoupper((string) data_get($method, 'amount.currency', 'USD'));
-        $amountDecimal = $this->money->minorToDecimal($amountMinor, $currency);
+        $amountDecimal = (string) data_get($method, 'amount.amount', '0.00');
 
         $order = PaymentOrder::query()->create([
             'user_id' => $user->getKey(),
@@ -83,7 +77,6 @@ class NowPaymentsInvoiceService
 
         $invoiceId = trim((string) $response->json('id'));
         $invoiceUrl = trim((string) $response->json('invoice_url'));
-
         if ($invoiceId === '' || $invoiceUrl === '') {
             $this->markFailed($order, 'NOWPAYMENTS_INVOICE_RESPONSE_INVALID');
             throw new AuthApiException(502, 'NOWPAYMENTS_INVOICE_RESPONSE_INVALID', 'NOWPayments returned an incomplete invoice response.');
@@ -97,20 +90,15 @@ class NowPaymentsInvoiceService
         ])->save();
 
         AuditLog::record(
-            actorType: 'USER',
-            actorId: $user->getKey(),
-            action: 'NOWPAYMENTS_INVOICE_CREATED',
-            module: 'PAYMENTS',
-            targetType: 'PAYMENT_ORDER',
-            targetId: $order->getKey(),
+            actorType: 'USER', actorId: $user->getKey(), action: 'NOWPAYMENTS_INVOICE_CREATED',
+            module: 'PAYMENTS', targetType: 'PAYMENT_ORDER', targetId: $order->getKey(),
             newValues: [
                 'payment_order_uuid' => $order->uuid,
                 'provider' => PaymentOrder::PROVIDER_NOWPAYMENTS,
                 'amount_minor' => $amountMinor,
                 'currency' => $currency,
             ],
-            ipAddress: $request->ip(),
-            userAgent: $request->userAgent()
+            ipAddress: $request->ip(), userAgent: $request->userAgent()
         );
 
         return $this->presenter->order($order->fresh());
@@ -122,19 +110,14 @@ class NowPaymentsInvoiceService
         $url = $environment === 'LIVE'
             ? config('tradex_integrations.nowpayments.live_base_url', 'https://api.nowpayments.io')
             : config('tradex_integrations.nowpayments.sandbox_base_url');
-
         if (! filled($url)) {
             throw new AuthApiException(503, 'NOWPAYMENTS_BASE_URL_NOT_CONFIGURED', 'NOWPayments runtime endpoint is not configured.');
         }
-
         return rtrim((string) $url, '/');
     }
 
     private function markFailed(PaymentOrder $order, string $code): void
     {
-        $order->forceFill([
-            'status' => PaymentOrder::STATUS_FAILED,
-            'failure_code' => $code,
-        ])->save();
+        $order->forceFill(['status' => PaymentOrder::STATUS_FAILED, 'failure_code' => $code])->save();
     }
 }
