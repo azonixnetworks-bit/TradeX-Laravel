@@ -19,6 +19,11 @@
         href="{{ asset('admin/css/admin.css') }}"
     >
 
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/responsive.css') }}"
+    >
+
     @stack('styles')
 </head>
 
@@ -27,6 +32,12 @@
 <div class="admin-app">
 
     @include('admin.layouts.sidebar')
+
+    <div
+        id="sidebarBackdrop"
+        class="sidebar-backdrop"
+        aria-hidden="true"
+    ></div>
 
     <div class="admin-main">
 
