@@ -3,13 +3,11 @@
    Additive responsive overrides only. Existing module styles remain intact.
 ============================================================ */
 
-html,
-body {
+.admin-app {
     max-width: 100%;
-    overflow-x: hidden;
+    overflow-x: clip;
 }
 
-.admin-app,
 .admin-main,
 .admin-content,
 .topbar,
@@ -121,10 +119,14 @@ body.sidebar-open {
         max-width: 320px;
         box-shadow: 28px 0 70px rgba(0,0,0,.32);
         visibility: hidden;
+        transition:
+            transform .25s ease,
+            visibility 0s linear .25s;
     }
 
     .sidebar.open {
         visibility: visible;
+        transition-delay: 0s;
     }
 
     .sidebar-backdrop {
