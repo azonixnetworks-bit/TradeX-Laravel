@@ -201,8 +201,15 @@ class AdminResponsiveShellContractTest extends TestCase
             resource_path('views/admin/payments/bank-deposits.blade.php')
         );
 
-        foreach ([$index, $usdt, $paypal, $bank] as $view) {
+        $accounts = file_get_contents(
+            resource_path('views/admin/payments/accounts.blade.php')
+        );
+
+        foreach ([$index, $usdt, $paypal, $bank, $accounts] as $view) {
             $this->assertIsString($view);
+        }
+
+        foreach ([$index, $usdt, $paypal, $bank] as $view) {
             $this->assertStringContainsString(
                 "@include('admin.components.pagination'",
                 $view
@@ -220,6 +227,10 @@ class AdminResponsiveShellContractTest extends TestCase
         $this->assertStringContainsString(
             'Binance / USDT TRC20',
             $usdt
+        );
+        $this->assertStringContainsString(
+            'Binance / USDT TRC20',
+            $accounts
         );
 
         $this->assertStringNotContainsString(
