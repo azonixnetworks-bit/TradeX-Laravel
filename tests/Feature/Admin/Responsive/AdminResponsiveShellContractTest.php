@@ -125,4 +125,39 @@ class AdminResponsiveShellContractTest extends TestCase
             $view
         );
     }
+
+    public function test_audit_logs_reuse_trade_x_pagination_instead_of_default_laravel_pagination(): void
+    {
+        $auditView = file_get_contents(
+            resource_path('views/admin/audit/index.blade.php')
+        );
+
+        $pagination = file_get_contents(
+            resource_path('views/admin/components/pagination.blade.php')
+        );
+
+        $this->assertIsString($auditView);
+        $this->assertIsString($pagination);
+
+        $this->assertStringContainsString(
+            "@include('admin.components.pagination'",
+            $auditView
+        );
+        $this->assertStringNotContainsString(
+            '$logs->links()',
+            $auditView
+        );
+        $this->assertStringContainsString(
+            'style="flex-wrap:wrap;max-width:100%;"',
+            $pagination
+        );
+        $this->assertStringContainsString(
+            'aria-label="Previous page"',
+            $pagination
+        );
+        $this->assertStringContainsString(
+            'aria-label="Next page"',
+            $pagination
+        );
+    }
 }
