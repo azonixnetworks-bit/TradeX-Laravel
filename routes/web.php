@@ -107,3 +107,15 @@ require __DIR__ . '/admin_security.php';
 */
 
 require __DIR__ . '/admin_audit.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-13 â€” Administration Management
+|--------------------------------------------------------------------------
+|
+| Delegated Admin User and custom Role/Permission administration.
+| SUPER_ADMIN and source-controlled system roles remain protected.
+|
+*/
+
+require __DIR__ . '/admin_administration.php';

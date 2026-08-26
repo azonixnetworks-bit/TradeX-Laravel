@@ -267,12 +267,12 @@
         @if($admin->hasPermission('admins.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.administration.admins.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.administration.admins.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">♙</span>
                 <span>Admin Users</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
@@ -281,12 +281,12 @@
         @if($admin->hasPermission('roles.view'))
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.administration.roles.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.administration.roles.*') || request()->routeIs('admin.administration.permissions.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">⚿</span>
                 <span>Roles & Permissions</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
