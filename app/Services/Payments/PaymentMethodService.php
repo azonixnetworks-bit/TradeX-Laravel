@@ -9,7 +9,9 @@ use App\Models\User;
 class PaymentMethodService
 {
     public function __construct(
-        private readonly PaymentMoney $money
+        private readonly PaymentMoney $money,
+        private readonly PaymentProviderRuntimeGate
+            $runtimeGate
     ) {
     }
 
@@ -31,6 +33,32 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->paypalMethod(
+                    $country
+                );
+        }
+
+        if ($this->countryAllowed(
+            $country,
+            (array) config(
+                'tradex_integrations.stripe.countries',
+                []
+            )
+        )) {
+            $methods[] =
+                $this->stripeMethod(
+                    $country
+                );
+        }
+
+        if ($this->countryAllowed(
+            $country,
+            (array) config(
+                'tradex_integrations.nowpayments.countries',
+                []
+            )
+        )) {
+            $methods[] =
+                $this->nowPaymentsMethod(
                     $country
                 );
         }
@@ -173,6 +201,116 @@ class PaymentMethodService
 
             'create_endpoint' =>
                 'POST /api/v1/payments/paypal/orders',
+        ];
+    }
+
+    private function stripeMethod(
+        string $country
+    ): array {
+        $amount =
+            (int) config(
+                'tradex_payments.product.education_premium.stripe.amount_minor',
+                7900
+            );
+
+        $currency =
+            (string) config(
+                'tradex_payments.product.education_premium.stripe.currency',
+                'USD'
+            );
+
+        $available =
+            $amount > 0
+            && $this->runtimeGate
+                ->available(
+                    PaymentOrder::PROVIDER_STRIPE,
+                    $country
+                );
+
+        return [
+            'code' =>
+                PaymentOrder::PROVIDER_STRIPE,
+
+            'display_name' =>
+                'Stripe',
+
+            'mode' =>
+                'ONLINE_REDIRECT',
+
+            'country_code' =>
+                $country,
+
+            'available' =>
+                $available,
+
+            'unavailable_reason' =>
+                $available
+                    ? null
+                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED',
+
+            'amount' =>
+                $this->money->present(
+                    $amount,
+                    $currency
+                ),
+
+            'create_endpoint' =>
+                'POST /api/v1/payments/stripe/checkout-sessions',
+        ];
+    }
+
+    private function nowPaymentsMethod(
+        string $country
+    ): array {
+        $amount =
+            (int) config(
+                'tradex_payments.product.education_premium.nowpayments.amount_minor',
+                7900
+            );
+
+        $currency =
+            (string) config(
+                'tradex_payments.product.education_premium.nowpayments.currency',
+                'USD'
+            );
+
+        $available =
+            $amount > 0
+            && $this->runtimeGate
+                ->available(
+                    PaymentOrder::PROVIDER_NOWPAYMENTS,
+                    $country
+                );
+
+        return [
+            'code' =>
+                PaymentOrder::PROVIDER_NOWPAYMENTS,
+
+            'display_name' =>
+                'NOWPayments',
+
+            'mode' =>
+                'ONLINE_REDIRECT',
+
+            'country_code' =>
+                $country,
+
+            'available' =>
+                $available,
+
+            'unavailable_reason' =>
+                $available
+                    ? null
+                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED',
+
+            'amount' =>
+                $this->money->present(
+                    $amount,
+                    $currency
+                ),
+
+            'create_endpoint' =>
+                'POST /api/v1/payments/nowpayments/invoices',
         ];
     }
 

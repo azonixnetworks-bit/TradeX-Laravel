@@ -8,6 +8,8 @@ use Illuminate\Support\Str;
 class PaymentWebhookEvent extends Model
 {
     public const PROVIDER_PAYPAL = 'PAYPAL';
+    public const PROVIDER_STRIPE = 'STRIPE';
+    public const PROVIDER_NOWPAYMENTS = 'NOWPAYMENTS';
 
     public const STATUS_RECEIVED = 'RECEIVED';
     public const STATUS_PROCESSED = 'PROCESSED';

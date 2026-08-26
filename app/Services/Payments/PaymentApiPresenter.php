@@ -34,8 +34,15 @@ class PaymentApiPresenter
             ),
             'status' => $order->status,
             'approval_url' =>
-                $order->provider
-                    === PaymentOrder::PROVIDER_PAYPAL
+                in_array(
+                    $order->provider,
+                    [
+                        PaymentOrder::PROVIDER_PAYPAL,
+                        PaymentOrder::PROVIDER_STRIPE,
+                        PaymentOrder::PROVIDER_NOWPAYMENTS,
+                    ],
+                    true
+                )
                     && $order->status
                         === PaymentOrder::STATUS_AWAITING_USER_ACTION
                     ? $order->approval_url

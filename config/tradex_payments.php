@@ -15,6 +15,24 @@ return [
                     ),
             ],
 
+            'stripe' => [
+                'currency' => 'USD',
+                'amount_minor' =>
+                    (int) env(
+                        'TRADEX_EDUCATION_PRICE_USD_MINOR',
+                        7900
+                    ),
+            ],
+
+            'nowpayments' => [
+                'currency' => 'USD',
+                'amount_minor' =>
+                    (int) env(
+                        'TRADEX_EDUCATION_PRICE_USD_MINOR',
+                        7900
+                    ),
+            ],
+
             'local_bank' => [
                 'currency' => 'LKR',
                 'amount_minor' =>

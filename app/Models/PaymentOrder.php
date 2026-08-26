@@ -12,6 +12,8 @@ class PaymentOrder extends Model
     public const PRODUCT_EDUCATION_PREMIUM = 'EDUCATION_PREMIUM';
 
     public const PROVIDER_PAYPAL = 'PAYPAL';
+    public const PROVIDER_STRIPE = 'STRIPE';
+    public const PROVIDER_NOWPAYMENTS = 'NOWPAYMENTS';
     public const PROVIDER_LOCAL_BANK = 'LOCAL_BANK';
     public const PROVIDER_USDT_TRC20 = 'USDT_TRC20';
 

@@ -43,6 +43,8 @@ class PaymentHistoryRequest extends FormRequest
                 'string',
                 Rule::in([
                     PaymentOrder::PROVIDER_PAYPAL,
+                    PaymentOrder::PROVIDER_STRIPE,
+                    PaymentOrder::PROVIDER_NOWPAYMENTS,
                     PaymentOrder::PROVIDER_LOCAL_BANK,
                     PaymentOrder::PROVIDER_USDT_TRC20,
                 ]),

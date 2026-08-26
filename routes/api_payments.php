@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\Payments\CapturePayPalOrderController;
+use App\Http\Controllers\Api\Payments\CreateNowPaymentsInvoiceController;
 use App\Http\Controllers\Api\Payments\CreatePayPalOrderController;
+use App\Http\Controllers\Api\Payments\CreateStripeCheckoutController;
+use App\Http\Controllers\Api\Payments\NowPaymentsWebhookController;
 use App\Http\Controllers\Api\Payments\PaymentActivationStatusController;
 use App\Http\Controllers\Api\Payments\PaymentHistoryController;
 use App\Http\Controllers\Api\Payments\PaymentMethodIndexController;
 use App\Http\Controllers\Api\Payments\PaymentOrderShowController;
 use App\Http\Controllers\Api\Payments\PayPalWebhookController;
+use App\Http\Controllers\Api\Payments\StripeWebhookController;
 use App\Http\Controllers\Api\Payments\SubmitBankDepositController;
 use App\Http\Controllers\Api\Payments\SubmitUsdtDepositController;
 use Illuminate\Support\Facades\Route;
@@ -16,9 +20,9 @@ use Illuminate\Support\Facades\Route;
 | API-12 — Payments & Billing Mobile API
 |--------------------------------------------------------------------------
 |
-| PayPal webhook is provider-to-server and therefore does not use a user
-| Sanctum/mobile session. Its authenticity is verified cryptographically by
-| PayPalWebhookService before any payment state is changed.
+| Provider webhooks are provider-to-server and therefore do not use a user
+| Sanctum/mobile session. Their authenticity is verified cryptographically
+| before any payment state is changed.
 |
 | All user-facing payment endpoints remain bound to the trusted TradeX mobile
 | session contract.
@@ -44,6 +48,28 @@ Route::middleware([
             )
             ->name(
                 'paypal.webhook'
+            );
+
+        Route::post(
+            '/stripe/webhook',
+            StripeWebhookController::class
+        )
+            ->middleware(
+                'throttle:api-payments-webhook'
+            )
+            ->name(
+                'stripe.webhook'
+            );
+
+        Route::post(
+            '/nowpayments/webhook',
+            NowPaymentsWebhookController::class
+        )
+            ->middleware(
+                'throttle:api-payments-webhook'
+            )
+            ->name(
+                'nowpayments.webhook'
             );
     });
 
@@ -129,6 +155,28 @@ Route::middleware([
             )
             ->name(
                 'paypal.orders.capture'
+            );
+
+        Route::post(
+            '/stripe/checkout-sessions',
+            CreateStripeCheckoutController::class
+        )
+            ->middleware(
+                'throttle:api-payments-create'
+            )
+            ->name(
+                'stripe.checkout-sessions.create'
+            );
+
+        Route::post(
+            '/nowpayments/invoices',
+            CreateNowPaymentsInvoiceController::class
+        )
+            ->middleware(
+                'throttle:api-payments-create'
+            )
+            ->name(
+                'nowpayments.invoices.create'
             );
 
         Route::post(
