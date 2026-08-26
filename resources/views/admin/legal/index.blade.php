@@ -33,13 +33,7 @@
     API/ledger, so ADMIN-17 does not falsely claim acceptance enforcement.
 </section>
 
-<div
-    style="
-        display:grid;
-        grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
-        gap:18px;
-    "
->
+<div class="legal-card-grid">
 @foreach($policyCards as $card)
     <section
         class="panel"
@@ -58,7 +52,7 @@
         </p>
 
         <table
-            class="users-table"
+            class="users-table compact-meta-table"
             style="margin-top:14px;"
         >
             <tbody>
