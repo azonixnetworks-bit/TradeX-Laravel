@@ -46,3 +46,15 @@ require __DIR__ . '/admin_affiliates.php';
 */
 
 require __DIR__ . '/admin_payments.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-08 — Payout Management
+|--------------------------------------------------------------------------
+|
+| Controlled affiliate payout review over the frozen payout ledger.
+| Amount and destination snapshots remain immutable after user submission.
+|
+*/
+
+require __DIR__ . '/admin_payouts.php';
