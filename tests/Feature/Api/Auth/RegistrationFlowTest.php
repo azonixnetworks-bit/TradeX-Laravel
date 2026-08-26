@@ -169,10 +169,41 @@ class RegistrationFlowTest extends TestCase
                 ]
             )
             ->assertOk()
+            ->assertHeader(
+                'Cache-Control',
+                'private, no-store, no-cache, max-age=0, must-revalidate'
+            )
             ->assertJsonPath(
                 'data.next_action',
                 'CONFIRM_TOTP'
+            )
+            ->assertJsonPath(
+                'data.qr_code_mime_type',
+                'image/svg+xml'
             );
+
+        $qrDataUri = (string) $setup->json(
+            'data.qr_code_data_uri'
+        );
+
+        $this->assertStringStartsWith(
+            'data:image/svg+xml;base64,',
+            $qrDataUri
+        );
+
+        $svg = base64_decode(
+            substr(
+                $qrDataUri,
+                strlen('data:image/svg+xml;base64,')
+            ),
+            true
+        );
+
+        $this->assertIsString($svg);
+        $this->assertStringContainsString(
+            '<svg',
+            $svg
+        );
 
         $secret =
             $setup->json(

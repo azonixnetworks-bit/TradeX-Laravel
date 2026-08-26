@@ -29,6 +29,11 @@ class SetupRegistrationTotpController extends Controller
                 $totp->setup(
                     $session
                 ),
+        ])->withHeaders([
+            'Cache-Control' =>
+                'private, no-store, no-cache, max-age=0, must-revalidate',
+            'Pragma' =>
+                'no-cache',
         ]);
     }
 }
