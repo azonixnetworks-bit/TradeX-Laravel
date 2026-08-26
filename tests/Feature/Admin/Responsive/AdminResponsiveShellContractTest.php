@@ -75,13 +75,16 @@ class AdminResponsiveShellContractTest extends TestCase
                 '.user-stat-grid',
                 '.form-grid',
                 '.language-card-grid',
+                '.integration-card-grid',
+                '.users-table.compact-meta-table',
+                'min-width: 0;',
             ] as $contract
         ) {
             $this->assertStringContainsString($contract, $css);
         }
     }
 
-    public function test_language_management_uses_responsive_card_grid_contract(): void
+    public function test_language_management_uses_responsive_card_grid_and_compact_table_contract(): void
     {
         $view = file_get_contents(
             resource_path('views/admin/languages/index.blade.php')
@@ -92,8 +95,33 @@ class AdminResponsiveShellContractTest extends TestCase
             'class="language-card-grid"',
             $view
         );
+        $this->assertStringContainsString(
+            'class="users-table compact-meta-table"',
+            $view
+        );
         $this->assertStringNotContainsString(
             'grid-template-columns:repeat(auto-fit,minmax(310px,1fr))',
+            $view
+        );
+    }
+
+    public function test_integrations_management_uses_responsive_card_grid_and_compact_table_contract(): void
+    {
+        $view = file_get_contents(
+            resource_path('views/admin/integrations/index.blade.php')
+        );
+
+        $this->assertIsString($view);
+        $this->assertStringContainsString(
+            'class="integration-card-grid"',
+            $view
+        );
+        $this->assertStringContainsString(
+            'class="users-table compact-meta-table"',
+            $view
+        );
+        $this->assertStringNotContainsString(
+            'grid-template-columns:repeat(auto-fit,minmax(280px,1fr))',
             $view
         );
     }
