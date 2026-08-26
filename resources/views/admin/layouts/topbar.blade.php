@@ -40,6 +40,19 @@
 
         </div>
 
+        <a
+            href="{{ route('admin.account.totp.settings') }}"
+            style="
+                text-decoration:none;
+                font-size:12px;
+                font-weight:800;
+            "
+            title="Admin two-factor authentication"
+        >
+            2FA:
+            {{ $admin->hasConfirmedTotp() ? 'ON' : 'SETUP' }}
+        </a>
+
 
         <div class="topbar-admin">
 
