@@ -76,6 +76,7 @@ class AdminResponsiveShellContractTest extends TestCase
                 '.form-grid',
                 '.language-card-grid',
                 '.integration-card-grid',
+                '.legal-card-grid',
                 '.users-table.compact-meta-table',
                 'min-width: 0;',
             ] as $contract
@@ -122,6 +123,27 @@ class AdminResponsiveShellContractTest extends TestCase
         );
         $this->assertStringNotContainsString(
             'grid-template-columns:repeat(auto-fit,minmax(280px,1fr))',
+            $view
+        );
+    }
+
+    public function test_legal_policy_management_uses_responsive_card_grid_and_compact_table_contract(): void
+    {
+        $view = file_get_contents(
+            resource_path('views/admin/legal/index.blade.php')
+        );
+
+        $this->assertIsString($view);
+        $this->assertStringContainsString(
+            'class="legal-card-grid"',
+            $view
+        );
+        $this->assertStringContainsString(
+            'class="users-table compact-meta-table"',
+            $view
+        );
+        $this->assertStringNotContainsString(
+            'grid-template-columns:repeat(auto-fit,minmax(300px,1fr))',
             $view
         );
     }
