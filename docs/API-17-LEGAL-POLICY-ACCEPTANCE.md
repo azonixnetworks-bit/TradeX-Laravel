@@ -10,8 +10,8 @@ Feature branch:
 
 ## Purpose
 
-API-17 wires the customer-facing runtime that ADMIN-17 deliberately left as
-`NOT_WIRED`.
+API-17 adds the customer-facing legal policy read and acceptance-evidence
+runtime that ADMIN-17 deliberately did not implement.
 
 It reuses immutable `legal_policy_versions` and adds a separate immutable
 customer acceptance evidence ledger.
@@ -87,27 +87,35 @@ Action:
 Audit stores safe policy/evidence metadata and fingerprint, not the full legal
 content.
 
-## ADMIN-17 runtime marker
+## Frozen ADMIN-17 runtime marker
 
-The frozen ADMIN-17 config file is not rewritten. During application boot,
-`LegalPolicyApiServiceProvider` promotes the effective runtime marker to:
+`config/tradex_legal.php` belongs to frozen ADMIN-17 and continues to expose:
 
-`WIRED_EVIDENCE_ONLY`
+`acceptance_runtime = NOT_WIRED`
 
-This lets the existing ADMIN-17 UI report the later API integration accurately
-without reopening its business implementation.
+API-17 must not mutate that ADMIN-17 config namespace at application boot.
+That marker describes ADMIN-17's own customer-acceptance integration state and
+is intentionally preserved so ADMIN-17 regression behavior remains unchanged.
 
-## Enforcement boundary
+API-17 owns a separate runtime contract in:
 
-API-17 is intentionally an evidence/status layer:
+`config/tradex_legal_api.php`
+
+with:
 
 `runtime_state = WIRED_EVIDENCE_ONLY`
 
 `cross_module_enforcement = false`
 
+The same API-17 state is returned by the customer-facing legal API responses.
+
+## Enforcement boundary
+
+API-17 is intentionally an evidence/status layer only.
+
 It does not silently modify frozen registration, login, payments, affiliate,
-education or KYC flows. A later explicit integration can decide which policy
-audiences gate which actions.
+education, KYC, or ADMIN-17 behavior. A later explicit integration can decide
+which policy audiences gate which business actions.
 
 ## Frozen boundaries
 
@@ -115,6 +123,7 @@ API-17 does not modify:
 
 - `LegalPolicyVersion` model;
 - ADMIN-17 admin routes/controllers/services/config file;
+- ADMIN-17 `acceptance_runtime = NOT_WIRED` behavior;
 - `User` model;
 - mobile auth/TOTP/device implementation;
 - Payments/KYC/Affiliate/Education business logic;
@@ -131,7 +140,8 @@ php artisan optimize:clear
 php artisan migrate
 php artisan route:list --name=api.v1.legal
 php artisan test tests/Feature/Api/Legal/LegalPolicyAcceptanceApiTest.php
+php artisan test tests/Feature/Admin/Legal/LegalPolicyManagementTest.php
 php artisan test
-git diff --check
+git diff --check origin/main...HEAD
 git status --short
 ```
