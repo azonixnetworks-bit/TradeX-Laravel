@@ -108,7 +108,9 @@ class PushFanoutService
                     'provider' => $candidate->provider,
                     'status' => PushNotificationDelivery::STATUS_PENDING,
                     'attempts' => 0,
-                    'next_attempt_at' => now(),
+                    // NULL means immediately due. A timestamp is reserved for
+                    // actual retry backoff after a provider/queue failure.
+                    'next_attempt_at' => null,
                 ]
             );
 
@@ -158,7 +160,7 @@ class PushFanoutService
                     ->find($delivery->getKey());
 
                 if (
-                    ! $locked instanceof PushNotificationDelivery
+                    ! ($locked instanceof PushNotificationDelivery)
                     || $locked->status !== PushNotificationDelivery::STATUS_PENDING
                     || (
                         $locked->next_attempt_at !== null
@@ -171,6 +173,7 @@ class PushFanoutService
                 $locked->forceFill([
                     'status' => PushNotificationDelivery::STATUS_QUEUED,
                     'queued_at' => now(),
+                    'last_error_code' => null,
                 ])->save();
 
                 return $locked;
@@ -178,7 +181,7 @@ class PushFanoutService
             3
         );
 
-        if (! $claimed instanceof PushNotificationDelivery) {
+        if (! ($claimed instanceof PushNotificationDelivery)) {
             return false;
         }
 
