@@ -396,7 +396,10 @@ class MobileApiReleaseReadinessService
         }
 
         $logLevel = strtolower(
-            (string) config('logging.level', env('LOG_LEVEL', 'debug'))
+            (string) config(
+                'tradex_mobile_api_hardening.observability.log_level',
+                'debug'
+            )
         );
 
         $this->add(

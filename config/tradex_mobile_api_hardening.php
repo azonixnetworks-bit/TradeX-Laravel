@@ -38,4 +38,8 @@ return [
         'request_id' => 'X-Request-Id',
         'authenticated_no_store' => true,
     ],
+
+    'observability' => [
+        'log_level' => env('LOG_LEVEL', 'debug'),
+    ],
 ];
