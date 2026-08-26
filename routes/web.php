@@ -82,3 +82,16 @@ require __DIR__ . '/admin_finance.php';
 */
 
 require __DIR__ . '/admin_kyc.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-11 — Security Management
+|--------------------------------------------------------------------------
+|
+| Read-only security operations visibility over audit events, user refresh
+| sessions, trusted devices and effective application protection posture.
+| Existing user/device mutation flows remain owned by User Management.
+|
+*/
+
+require __DIR__ . '/admin_security.php';

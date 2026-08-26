@@ -191,6 +191,8 @@
             ||
             $admin->hasPermission('security.view')
             ||
+            $admin->hasPermission('security.events')
+            ||
             $admin->hasPermission('audit.view')
         )
 
@@ -215,15 +217,19 @@
         @endif
 
 
-        @if($admin->hasPermission('security.view'))
+        @if(
+            $admin->hasPermission('security.view')
+            ||
+            $admin->hasPermission('security.events')
+        )
 
             <a
-                href="#"
-                class="nav-link nav-disabled"
+                href="{{ route('admin.security.home') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.security.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">⌾</span>
                 <span>Security</span>
-                <span class="coming-soon">Soon</span>
             </a>
 
         @endif
