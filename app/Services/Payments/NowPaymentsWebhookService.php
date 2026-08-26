@@ -11,7 +11,7 @@ use Throwable;
 class NowPaymentsWebhookService
 {
     public function __construct(
-        private readonly PaymentSettlementService $settlement,
+        private readonly OnlineGatewaySettlementService $settlement,
         private readonly PaymentMoney $money
     ) {
     }
@@ -23,13 +23,11 @@ class NowPaymentsWebhookService
         if (! is_array($payload)) {
             throw new AuthApiException(422, 'NOWPAYMENTS_IPN_INVALID', 'NOWPayments IPN JSON is invalid.');
         }
-
         $this->verifySignature($payload, (string) $request->header('x-nowpayments-sig', ''));
 
         $paymentId = trim((string) ($payload['payment_id'] ?? ''));
         $status = strtolower(trim((string) ($payload['payment_status'] ?? '')));
         $orderUuid = trim((string) ($payload['order_id'] ?? ''));
-
         if ($paymentId === '' || $status === '' || $orderUuid === '') {
             throw new AuthApiException(422, 'NOWPAYMENTS_IPN_INVALID', 'NOWPayments IPN is missing required payment metadata.');
         }
@@ -37,7 +35,6 @@ class NowPaymentsWebhookService
         $payloadHash = hash('sha256', $raw);
         $eventId = $paymentId.':'.$status.':'.substr($payloadHash, 0, 24);
         $eventType = 'PAYMENT.'.strtoupper($status);
-
         $event = PaymentWebhookEvent::query()->firstOrCreate([
             'provider' => PaymentWebhookEvent::PROVIDER_NOWPAYMENTS,
             'event_id' => $eventId,
@@ -50,7 +47,6 @@ class NowPaymentsWebhookService
         if (! hash_equals((string) $event->payload_sha256, $payloadHash)) {
             throw new AuthApiException(409, 'NOWPAYMENTS_IPN_EVENT_CONFLICT', 'NOWPayments IPN event data conflicts with a previous callback.');
         }
-
         if (in_array($event->status, [PaymentWebhookEvent::STATUS_PROCESSED, PaymentWebhookEvent::STATUS_IGNORED], true)) {
             return $this->present($event, true);
         }
@@ -61,24 +57,17 @@ class NowPaymentsWebhookService
                 'status' => $handled ? PaymentWebhookEvent::STATUS_PROCESSED : PaymentWebhookEvent::STATUS_IGNORED,
                 'processed_at' => now(),
             ])->save();
-
             return $this->present($event->fresh(), false);
         } catch (Throwable $exception) {
-            $event->forceFill([
-                'status' => PaymentWebhookEvent::STATUS_FAILED,
-                'processed_at' => null,
-            ])->save();
+            $event->forceFill(['status' => PaymentWebhookEvent::STATUS_FAILED, 'processed_at' => null])->save();
             throw $exception;
         }
     }
 
     private function processStatus(array $payload, string $paymentId, string $status, string $orderUuid, string $eventId): bool
     {
-        $order = PaymentOrder::query()
-            ->where('uuid', $orderUuid)
-            ->where('provider', PaymentOrder::PROVIDER_NOWPAYMENTS)
-            ->first();
-
+        $order = PaymentOrder::query()->where('uuid', $orderUuid)
+            ->where('provider', PaymentOrder::PROVIDER_NOWPAYMENTS)->first();
         if (! $order instanceof PaymentOrder) {
             return false;
         }
@@ -89,17 +78,14 @@ class NowPaymentsWebhookService
             if ($currency === '' || $priceAmount === '') {
                 throw new AuthApiException(422, 'NOWPAYMENTS_IPN_AMOUNT_INVALID', 'NOWPayments finished IPN is missing price amount data.');
             }
-
-            $grossMinor = $this->money->decimalToMinor($priceAmount, $currency);
-            $this->settlement->settleOnlineProviderPayment(
+            $this->settlement->settle(
                 order: $order,
                 provider: PaymentOrder::PROVIDER_NOWPAYMENTS,
                 providerPaymentReference: $paymentId,
                 currency: $currency,
-                grossMinor: $grossMinor,
+                grossMinor: $this->money->decimalToMinor($priceAmount, $currency),
                 providerEventId: $eventId
             );
-
             return true;
         }
 
@@ -131,13 +117,11 @@ class NowPaymentsWebhookService
         if ($secret === '' || $received === '') {
             throw new AuthApiException(401, 'NOWPAYMENTS_IPN_SIGNATURE_INVALID', 'NOWPayments IPN signature is missing or cannot be verified.');
         }
-
         $sorted = $this->sortRecursive($payload);
         $encoded = json_encode($sorted, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if (! is_string($encoded)) {
             throw new AuthApiException(422, 'NOWPAYMENTS_IPN_INVALID', 'NOWPayments IPN could not be canonicalized.');
         }
-
         $expected = hash_hmac('sha512', $encoded, $secret);
         if (! hash_equals(strtolower($expected), strtolower($received))) {
             throw new AuthApiException(401, 'NOWPAYMENTS_IPN_SIGNATURE_INVALID', 'NOWPayments IPN signature could not be verified.');

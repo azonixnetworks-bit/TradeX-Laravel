@@ -14,7 +14,7 @@ class StripeWebhookService
     private const EVENT_ASYNC_SUCCEEDED = 'checkout.session.async_payment_succeeded';
 
     public function __construct(
-        private readonly PaymentSettlementService $settlement
+        private readonly OnlineGatewaySettlementService $settlement
     ) {
     }
 
@@ -22,7 +22,6 @@ class StripeWebhookService
     {
         $raw = (string) $request->getContent();
         $this->verifySignature($raw, (string) $request->header('Stripe-Signature', ''));
-
         $payload = json_decode($raw, true);
         if (! is_array($payload)) {
             throw new AuthApiException(422, 'STRIPE_WEBHOOK_EVENT_INVALID', 'Stripe webhook JSON is invalid.');
@@ -56,18 +55,13 @@ class StripeWebhookService
             $handled = in_array($eventType, [self::EVENT_CHECKOUT_COMPLETED, self::EVENT_ASYNC_SUCCEEDED], true)
                 ? $this->handleCheckoutCompleted($payload, $eventId)
                 : false;
-
             $event->forceFill([
                 'status' => $handled ? PaymentWebhookEvent::STATUS_PROCESSED : PaymentWebhookEvent::STATUS_IGNORED,
                 'processed_at' => now(),
             ])->save();
-
             return $this->present($event->fresh(), false);
         } catch (Throwable $exception) {
-            $event->forceFill([
-                'status' => PaymentWebhookEvent::STATUS_FAILED,
-                'processed_at' => null,
-            ])->save();
+            $event->forceFill(['status' => PaymentWebhookEvent::STATUS_FAILED, 'processed_at' => null])->save();
             throw $exception;
         }
     }
@@ -78,7 +72,6 @@ class StripeWebhookService
         if (! is_array($session)) {
             throw new AuthApiException(422, 'STRIPE_WEBHOOK_RESOURCE_INVALID', 'Stripe checkout resource is invalid.');
         }
-
         if (strtolower(trim((string) ($session['payment_status'] ?? ''))) !== 'paid') {
             return false;
         }
@@ -86,36 +79,27 @@ class StripeWebhookService
         $orderUuid = trim((string) ($session['client_reference_id'] ?? data_get($session, 'metadata.tradex_order_uuid', '')));
         $sessionId = trim((string) ($session['id'] ?? ''));
         $paymentIntentId = trim((string) ($session['payment_intent'] ?? ''));
-
         if ($orderUuid === '' || $sessionId === '' || $paymentIntentId === '') {
             throw new AuthApiException(422, 'STRIPE_WEBHOOK_RESOURCE_INVALID', 'Stripe checkout settlement references are incomplete.');
         }
 
-        $order = PaymentOrder::query()
-            ->where('uuid', $orderUuid)
-            ->where('provider', PaymentOrder::PROVIDER_STRIPE)
-            ->first();
-
+        $order = PaymentOrder::query()->where('uuid', $orderUuid)
+            ->where('provider', PaymentOrder::PROVIDER_STRIPE)->first();
         if (! $order instanceof PaymentOrder) {
             return false;
         }
-
         if ($order->provider_reference !== null && ! hash_equals((string) $order->provider_reference, $sessionId)) {
             throw new AuthApiException(409, 'STRIPE_CHECKOUT_REFERENCE_CONFLICT', 'Stripe checkout session does not match the TradeX order.');
         }
 
-        $currency = strtoupper(trim((string) ($session['currency'] ?? '')));
-        $grossMinor = (int) ($session['amount_total'] ?? 0);
-
-        $this->settlement->settleOnlineProviderPayment(
+        $this->settlement->settle(
             order: $order,
             provider: PaymentOrder::PROVIDER_STRIPE,
             providerPaymentReference: $paymentIntentId,
-            currency: $currency,
-            grossMinor: $grossMinor,
+            currency: strtoupper(trim((string) ($session['currency'] ?? ''))),
+            grossMinor: (int) ($session['amount_total'] ?? 0),
             providerEventId: $eventId
         );
-
         return true;
     }
 
@@ -148,7 +132,6 @@ class StripeWebhookService
                 return;
             }
         }
-
         throw new AuthApiException(401, 'STRIPE_WEBHOOK_SIGNATURE_INVALID', 'Stripe webhook signature could not be verified.');
     }
 
