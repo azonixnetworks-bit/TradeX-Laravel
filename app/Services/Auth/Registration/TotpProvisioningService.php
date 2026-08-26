@@ -7,6 +7,11 @@ use App\Models\UserRegistrationSession;
 
 class TotpProvisioningService
 {
+    public function __construct(
+        private TotpQrCodeService $qrCodes
+    ) {
+    }
+
     public function setup(
         UserRegistrationSession $session
     ): array {
@@ -86,6 +91,12 @@ class TotpProvisioningService
 
             'otpauth_uri' =>
                 $uri,
+
+            'qr_code_data_uri' =>
+                $this->qrCodes->dataUri($uri),
+
+            'qr_code_mime_type' =>
+                'image/svg+xml',
 
             'issuer' =>
                 $issuer,
