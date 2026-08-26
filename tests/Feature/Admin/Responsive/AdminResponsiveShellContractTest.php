@@ -182,4 +182,53 @@ class AdminResponsiveShellContractTest extends TestCase
             $pagination
         );
     }
+
+    public function test_payments_expose_binance_usdt_branding_without_changing_provider_code(): void
+    {
+        $index = file_get_contents(
+            resource_path('views/admin/payments/index.blade.php')
+        );
+
+        $usdt = file_get_contents(
+            resource_path('views/admin/payments/usdt-deposits.blade.php')
+        );
+
+        $paypal = file_get_contents(
+            resource_path('views/admin/payments/paypal.blade.php')
+        );
+
+        $bank = file_get_contents(
+            resource_path('views/admin/payments/bank-deposits.blade.php')
+        );
+
+        foreach ([$index, $usdt, $paypal, $bank] as $view) {
+            $this->assertIsString($view);
+            $this->assertStringContainsString(
+                "@include('admin.components.pagination'",
+                $view
+            );
+        }
+
+        $this->assertStringContainsString(
+            'Binance / USDT Review',
+            $index
+        );
+        $this->assertStringContainsString(
+            'value="USDT_TRC20"',
+            $index
+        );
+        $this->assertStringContainsString(
+            'Binance / USDT TRC20',
+            $usdt
+        );
+
+        $this->assertStringNotContainsString(
+            '$orders->links()',
+            $index
+        );
+        $this->assertStringNotContainsString(
+            '$deposits->links()',
+            $usdt
+        );
+    }
 }
