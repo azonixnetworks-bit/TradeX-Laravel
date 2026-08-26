@@ -27,11 +27,17 @@ class AdminUser extends Authenticatable
         'locked_until',
         'last_login_at',
         'last_login_ip',
+        'totp_secret',
+        'totp_setup_at',
+        'totp_confirmed_at',
+        'totp_last_used_step',
     ];
 
     protected $hidden = [
         'password',
         'remember_token',
+        'totp_secret',
+        'totp_last_used_step',
     ];
 
     protected function casts(): array
@@ -41,6 +47,15 @@ class AdminUser extends Authenticatable
             'is_active' => 'boolean',
             'locked_until' => 'datetime',
             'last_login_at' => 'datetime',
+            'totp_setup_at' => 'datetime',
+            'totp_confirmed_at' => 'datetime',
+            'totp_last_used_step' => 'integer',
+
+            /*
+             * TOTP seed is encrypted at rest using Laravel's application key.
+             * It is also hidden from normal array/JSON serialization.
+             */
+            'totp_secret' => 'encrypted',
 
             // Automatically hashes plain password values.
             'password' => 'hashed',
@@ -117,5 +132,19 @@ class AdminUser extends Authenticatable
         return $this->is_active
             && ! $this->isLocked()
             && $this->deleted_at === null;
+    }
+
+    public function hasConfirmedTotp(): bool
+    {
+        /*
+         * Confirmation-state checks must not require decrypting the seed.
+         * Production release readiness separately verifies seed integrity.
+         */
+        return filled(
+            $this->getRawOriginal(
+                'totp_secret'
+            )
+        )
+            && $this->totp_confirmed_at !== null;
     }
 }

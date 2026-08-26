@@ -182,3 +182,16 @@ require __DIR__ . '/admin_legal.php';
 */
 
 require __DIR__ . '/admin_languages.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-19 — Admin Website Final Hardening
+|--------------------------------------------------------------------------
+|
+| Admin-wide security headers, session hardening and rollout-safe TOTP
+| enrollment/challenge routes. Production release gates are verified by
+| tradex:admin-release-check --production.
+|
+*/
+
+require __DIR__ . '/admin_hardening.php';
