@@ -6,6 +6,7 @@ use App\Providers\AppServiceProvider;
 use App\Providers\DashboardServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\LegalPolicyApiServiceProvider;
+use App\Providers\MobileBootstrapApiServiceProvider;
 use App\Providers\MobileSecurityApiServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
@@ -28,4 +29,5 @@ return [
     SocialAuthApiServiceProvider::class,
     LegalPolicyApiServiceProvider::class,
     RuntimeTranslationApiServiceProvider::class,
+    MobileBootstrapApiServiceProvider::class,
 ];
