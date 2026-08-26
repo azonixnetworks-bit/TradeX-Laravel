@@ -65,6 +65,9 @@
             </tbody>
         </table>
     </div>
-    <div style="padding-top:18px;">{{ $logs->links() }}</div>
+
+    @include('admin.components.pagination', [
+        'paginator' => $logs,
+    ])
 </section>
 @endsection
