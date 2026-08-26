@@ -51,11 +51,11 @@ class PushDeliveryService
                 $token = $delivery->pushDeviceToken;
 
                 if (
-                    ! $receipt instanceof UserNotificationReceipt
-                    || ! $receipt->notification instanceof NotificationMessage
-                    || ! $receipt->user instanceof User
-                    || ! $token instanceof PushDeviceToken
-                    || ! $token->userDevice instanceof UserDevice
+                    ! ($receipt instanceof UserNotificationReceipt)
+                    || ! ($receipt->notification instanceof NotificationMessage)
+                    || ! ($receipt->user instanceof User)
+                    || ! ($token instanceof PushDeviceToken)
+                    || ! ($token->userDevice instanceof UserDevice)
                 ) {
                     return $this->skip($delivery, 'DELIVERY_CONTEXT_MISSING');
                 }
