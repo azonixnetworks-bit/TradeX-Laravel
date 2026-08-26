@@ -170,8 +170,13 @@ document.addEventListener(
         sidebar.addEventListener(
             'click',
             function (event) {
+                const target =
+                    event.target instanceof Element
+                        ? event.target
+                        : null;
+
                 const link =
-                    event.target.closest(
+                    target?.closest(
                         '.nav-link'
                     );
 
