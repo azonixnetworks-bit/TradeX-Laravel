@@ -100,7 +100,7 @@
         </h2>
 
         <table
-            class="users-table"
+            class="users-table compact-meta-table"
             style="margin-top:14px;"
         >
             <tbody>
