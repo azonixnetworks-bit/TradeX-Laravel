@@ -68,11 +68,11 @@ class NowPaymentsAdminLedgerTest extends TestCase
         $this->actingAs($admin, 'admin')
             ->get(route('admin.payments.nowpayments.index'))
             ->assertOk()
-            ->assertSee('NOWPayments Ledger')
+            ->assertSeeText('NOWPayments Ledger')
             ->assertSee($nowOrder->uuid)
             ->assertDontSee($paypalOrder->uuid)
             ->assertDontSee('NOWPAYMENTS-SECRET-REFERENCE')
-            ->assertSee('cannot manually approve or settle NOWPayments transactions');
+            ->assertSeeText('Admins cannot manually approve or settle NOWPayments transactions.');
 
         $mutationRoutes = collect(Route::getRoutes()->getRoutes())
             ->filter(fn ($route) => str_starts_with(
