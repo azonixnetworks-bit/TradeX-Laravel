@@ -106,7 +106,9 @@ body.sidebar-open {
 .language-card-grid,
 .language-card-grid > *,
 .integration-card-grid,
-.integration-card-grid > * {
+.integration-card-grid > *,
+.legal-card-grid,
+.legal-card-grid > * {
     min-width: 0;
 }
 
@@ -130,6 +132,13 @@ body.sidebar-open {
 .integration-card-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 18px;
+    width: 100%;
+}
+
+.legal-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 18px;
     width: 100%;
 }
