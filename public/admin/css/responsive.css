@@ -104,7 +104,9 @@ body.sidebar-open {
 .user-stat-card,
 .form-grid,
 .language-card-grid,
-.language-card-grid > * {
+.language-card-grid > *,
+.integration-card-grid,
+.integration-card-grid > * {
     min-width: 0;
 }
 
@@ -123,6 +125,36 @@ body.sidebar-open {
     grid-template-columns: repeat(auto-fit, minmax(min(310px, 100%), 1fr));
     gap: 18px;
     width: 100%;
+}
+
+.integration-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+    gap: 18px;
+    width: 100%;
+}
+
+.users-table.compact-meta-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.users-table.compact-meta-table th,
+.users-table.compact-meta-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    vertical-align: top;
+}
+
+.users-table.compact-meta-table th {
+    width: 42%;
+}
+
+.users-table.compact-meta-table td {
+    width: 58%;
+    text-align: right;
 }
 
 @media (max-width: 1250px) {
@@ -368,6 +400,12 @@ body.sidebar-open {
     .page-date {
         max-width: 100%;
         overflow-wrap: anywhere;
+    }
+
+    .users-table.compact-meta-table th,
+    .users-table.compact-meta-table td {
+        padding-left: 8px;
+        padding-right: 8px;
     }
 }
 
