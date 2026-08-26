@@ -158,3 +158,15 @@ require __DIR__ . '/admin_notifications.php';
 */
 
 require __DIR__ . '/admin_integrations.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-17 â€” Legal & Policy Management
+|--------------------------------------------------------------------------
+|
+| Versioned legal policy drafting and immutable publication history.
+| Substantive legal wording remains subject to qualified legal review.
+|
+*/
+
+require __DIR__ . '/admin_legal.php';

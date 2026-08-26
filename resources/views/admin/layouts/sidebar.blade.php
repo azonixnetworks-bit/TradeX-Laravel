@@ -271,6 +271,8 @@
             $admin->hasPermission('settings.view')
             ||
             $admin->hasPermission('integrations.view')
+            ||
+            $admin->hasPermission('legal.view')
         )
 
             <div class="nav-section-title">
@@ -331,6 +333,20 @@
             >
                 <span class="nav-icon">⌘</span>
                 <span>Integrations</span>
+            </a>
+
+        @endif
+
+
+        @if($admin->hasPermission('legal.view'))
+
+            <a
+                href="{{ route('admin.legal.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.legal.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">§</span>
+                <span>Legal & Policies</span>
             </a>
 
         @endif
