@@ -70,3 +70,15 @@ require __DIR__ . '/admin_payouts.php';
 */
 
 require __DIR__ . '/admin_finance.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-10 — KYC Management
+|--------------------------------------------------------------------------
+|
+| Controlled review of frozen API-13 KYC submissions. Sensitive identity
+| and private document evidence access remain permission-gated and audited.
+|
+*/
+
+require __DIR__ . '/admin_kyc.php';
