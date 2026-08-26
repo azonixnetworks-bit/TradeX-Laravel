@@ -7,6 +7,38 @@ $countryList = static function (string $envKey, string $default = ''): array {
     ), static fn (string $value): bool => preg_match('/^[A-Z]{2}$/', $value) === 1)));
 };
 
+$stripeEnabled = filter_var(
+    env('TRADEX_STRIPE_ENABLED', false),
+    FILTER_VALIDATE_BOOL
+);
+
+$stripeAdapterReady = $stripeEnabled
+    && filled(env('TRADEX_STRIPE_PUBLISHABLE_KEY'))
+    && filled(env('TRADEX_STRIPE_SECRET_KEY'))
+    && filled(env('TRADEX_STRIPE_WEBHOOK_SECRET'))
+    && filled(env('TRADEX_STRIPE_SUCCESS_URL'))
+    && filled(env('TRADEX_STRIPE_CANCEL_URL'));
+
+$nowPaymentsEnabled = filter_var(
+    env('TRADEX_NOWPAYMENTS_ENABLED', false),
+    FILTER_VALIDATE_BOOL
+);
+
+$nowPaymentsEnvironment = strtoupper(
+    (string) env('TRADEX_NOWPAYMENTS_ENVIRONMENT', 'SANDBOX')
+);
+
+$nowPaymentsBaseUrlReady = $nowPaymentsEnvironment === 'LIVE'
+    ? filled(env('TRADEX_NOWPAYMENTS_LIVE_BASE_URL', 'https://api.nowpayments.io'))
+    : filled(env('TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL'));
+
+$nowPaymentsAdapterReady = $nowPaymentsEnabled
+    && filled(env('TRADEX_NOWPAYMENTS_API_KEY'))
+    && filled(env('TRADEX_NOWPAYMENTS_IPN_SECRET'))
+    && filled(env('TRADEX_NOWPAYMENTS_SUCCESS_URL'))
+    && filled(env('TRADEX_NOWPAYMENTS_CANCEL_URL'))
+    && $nowPaymentsBaseUrlReady;
+
 return [
     'providers' => [
         'PAYPAL' => [
@@ -20,14 +52,18 @@ return [
             'display_name' => 'Stripe',
             'kind' => 'PAYMENT_GATEWAY',
             'transaction_owner' => 'Payments API / API-21',
-            'runtime_adapter_status' => 'ACTIVE_EXISTING',
+            'runtime_adapter_status' => $stripeAdapterReady
+                ? 'ACTIVE_EXISTING'
+                : 'NOT_WIRED_ADMIN16',
             'environment_options' => ['SANDBOX', 'LIVE'],
         ],
         'NOWPAYMENTS' => [
             'display_name' => 'NOWPayments',
             'kind' => 'CRYPTO_PAYMENT_GATEWAY',
             'transaction_owner' => 'Payments API / API-21',
-            'runtime_adapter_status' => 'ACTIVE_EXISTING',
+            'runtime_adapter_status' => $nowPaymentsAdapterReady
+                ? 'ACTIVE_EXISTING'
+                : 'NOT_WIRED_ADMIN16',
             'environment_options' => ['SANDBOX', 'LIVE'],
         ],
         'LOCAL_BANK' => [
@@ -39,7 +75,7 @@ return [
         ],
     ],
     'stripe' => [
-        'enabled' => filter_var(env('TRADEX_STRIPE_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'enabled' => $stripeEnabled,
         'countries' => $countryList('TRADEX_STRIPE_COUNTRIES'),
         'environment' => strtoupper((string) env('TRADEX_STRIPE_ENVIRONMENT', 'SANDBOX')),
         'publishable_key' => env('TRADEX_STRIPE_PUBLISHABLE_KEY'),
@@ -52,9 +88,9 @@ return [
         'webhook_tolerance_seconds' => (int) env('TRADEX_STRIPE_WEBHOOK_TOLERANCE_SECONDS', 300),
     ],
     'nowpayments' => [
-        'enabled' => filter_var(env('TRADEX_NOWPAYMENTS_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'enabled' => $nowPaymentsEnabled,
         'countries' => $countryList('TRADEX_NOWPAYMENTS_COUNTRIES'),
-        'environment' => strtoupper((string) env('TRADEX_NOWPAYMENTS_ENVIRONMENT', 'SANDBOX')),
+        'environment' => $nowPaymentsEnvironment,
         'api_key' => env('TRADEX_NOWPAYMENTS_API_KEY'),
         'ipn_secret' => env('TRADEX_NOWPAYMENTS_IPN_SECRET'),
         'sandbox_base_url' => env('TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL'),
