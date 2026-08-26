@@ -129,6 +129,20 @@
         @endif
 
 
+        @if($admin->hasPermission('notifications.view'))
+
+            <a
+                href="{{ route('admin.notifications.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.notifications.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">✦</span>
+                <span>Notifications</span>
+            </a>
+
+        @endif
+
+
         @if(
             $admin->hasPermission('payments.view')
             ||
