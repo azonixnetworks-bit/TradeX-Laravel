@@ -12,6 +12,7 @@ use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
+use App\Providers\PushNotificationApiServiceProvider;
 use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
 
@@ -30,4 +31,5 @@ return [
     LegalPolicyApiServiceProvider::class,
     RuntimeTranslationApiServiceProvider::class,
     MobileBootstrapApiServiceProvider::class,
+    PushNotificationApiServiceProvider::class,
 ];
