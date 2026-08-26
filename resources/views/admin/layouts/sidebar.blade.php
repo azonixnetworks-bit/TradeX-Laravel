@@ -269,6 +269,8 @@
             $admin->hasPermission('roles.view')
             ||
             $admin->hasPermission('settings.view')
+            ||
+            $admin->hasPermission('integrations.view')
         )
 
             <div class="nav-section-title">
@@ -315,6 +317,20 @@
             >
                 <span class="nav-icon">⚙</span>
                 <span>Settings</span>
+            </a>
+
+        @endif
+
+
+        @if($admin->hasPermission('integrations.view'))
+
+            <a
+                href="{{ route('admin.integrations.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.integrations.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">⌘</span>
+                <span>Integrations</span>
             </a>
 
         @endif
