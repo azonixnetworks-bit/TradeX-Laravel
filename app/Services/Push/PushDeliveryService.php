@@ -33,8 +33,14 @@ class PushDeliveryService
                 $delivery->load([
                     'receipt.notification',
                     'receipt.user',
-                    'pushDeviceToken.userDevice',
                 ]);
+
+                $token = $delivery->push_device_token_id !== null
+                    ? PushDeviceToken::query()
+                        ->with('userDevice')
+                        ->lockForUpdate()
+                        ->find($delivery->push_device_token_id)
+                    : null;
 
                 $attempt = max(
                     (int) $delivery->attempts + 1,
@@ -48,7 +54,6 @@ class PushDeliveryService
                 ])->save();
 
                 $receipt = $delivery->receipt;
-                $token = $delivery->pushDeviceToken;
 
                 if (
                     ! ($receipt instanceof UserNotificationReceipt)
@@ -77,7 +82,14 @@ class PushDeliveryService
 
                 if (
                     ! $token->isUsable()
+                    || (int) $delivery->user_id !== (int) $user->getKey()
+                    || (int) $receipt->user_id !== (int) $user->getKey()
                     || (int) $token->user_id !== (int) $user->getKey()
+                    || $delivery->provider !== $token->provider
+                    || ! $this->providerMatchesPlatform(
+                        $token->provider,
+                        $device->platform
+                    )
                     || $device->isRevoked()
                     || ! $device->is_trusted
                     || ! $device->isMobile()
@@ -230,6 +242,19 @@ class PushDeliveryService
                 (bool) config('tradex_push.fcm.enabled', false),
             PushDeviceToken::PROVIDER_APNS =>
                 (bool) config('tradex_push.apns.enabled', false),
+            default => false,
+        };
+    }
+
+    private function providerMatchesPlatform(
+        string $provider,
+        string $platform
+    ): bool {
+        return match ($provider) {
+            PushDeviceToken::PROVIDER_FCM =>
+                $platform === UserDevice::PLATFORM_ANDROID,
+            PushDeviceToken::PROVIDER_APNS =>
+                $platform === UserDevice::PLATFORM_IOS,
             default => false,
         };
     }
