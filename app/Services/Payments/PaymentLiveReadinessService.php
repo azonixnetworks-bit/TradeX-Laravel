@@ -68,7 +68,9 @@ class PaymentLiveReadinessService
         $countries = (array) config('tradex_integrations.stripe.countries', []);
 
         $expectedPublicPrefix = $environment === 'LIVE' ? 'pk_live_' : 'pk_test_';
-        $expectedSecretPrefix = $environment === 'LIVE' ? 'sk_live_' : 'sk_test_';
+        $acceptedServerPrefixes = $environment === 'LIVE'
+            ? ['sk_live_', 'rk_live_']
+            : ['sk_test_', 'rk_test_'];
 
         $this->add(
             $checks,
@@ -105,12 +107,15 @@ class PaymentLiveReadinessService
             'Stripe publishable key must match the configured environment. The value is never displayed.'
         );
 
+        $serverKeyMatchesEnvironment = collect($acceptedServerPrefixes)
+            ->contains(fn (string $prefix): bool => str_starts_with($secret, $prefix));
+
         $this->add(
             $checks,
-            'Stripe secret key',
-            str_starts_with($secret, $expectedSecretPrefix),
+            'Stripe server API key',
+            $serverKeyMatchesEnvironment,
             'critical',
-            'Stripe secret key must match the configured environment. The value is never displayed.'
+            'Stripe server API key must match the configured environment. Restricted rk_* keys are preferred when permissions are sufficient. The value is never displayed.'
         );
 
         $this->add(
