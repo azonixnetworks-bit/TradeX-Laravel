@@ -10,12 +10,14 @@
             id="sidebarToggle"
             class="sidebar-toggle"
             type="button"
-            aria-label="Toggle navigation"
+            aria-label="Open navigation"
+            aria-controls="adminSidebar"
+            aria-expanded="false"
         >
             ☰
         </button>
 
-        <div>
+        <div class="topbar-heading">
 
             <div class="topbar-title">
                 @yield('page-title', 'Dashboard')
@@ -42,11 +44,7 @@
 
         <a
             href="{{ route('admin.account.totp.settings') }}"
-            style="
-                text-decoration:none;
-                font-size:12px;
-                font-weight:800;
-            "
+            class="topbar-totp-link"
             title="Admin two-factor authentication"
         >
             2FA:

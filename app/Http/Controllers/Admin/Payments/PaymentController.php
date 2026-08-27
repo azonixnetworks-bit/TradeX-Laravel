@@ -28,6 +28,10 @@ class PaymentController extends Controller
             'per_page',
         ]));
 
+        $data['stats']['nowpayments'] = PaymentOrder::query()
+            ->where('provider', PaymentOrder::PROVIDER_NOWPAYMENTS)
+            ->count();
+
         $data['permissions'] = $this->permissions($admin);
 
         return view('admin.payments.index', $data);

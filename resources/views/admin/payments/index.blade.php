@@ -8,12 +8,13 @@
     <div>
         <div class="page-eyebrow">PAYMENT OPERATIONS</div>
         <h1>TradeX <span>Payments</span></h1>
-        <p>Provider-verified PayPal records and controlled manual-payment reconciliation.</p>
+        <p>Provider-verified PayPal and NOWPayments records plus controlled Binance / USDT TRC20 and local-bank manual-payment reconciliation.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="secondary-btn" href="{{ route('admin.payments.paypal.index') }}">PayPal</a>
+        <a class="secondary-btn" href="{{ route('admin.payments.nowpayments.index') }}">NOWPayments</a>
         <a class="secondary-btn" href="{{ route('admin.payments.bank.index') }}">Bank Review</a>
-        <a class="secondary-btn" href="{{ route('admin.payments.usdt.index') }}">USDT Review</a>
+        <a class="secondary-btn" href="{{ route('admin.payments.usdt.index') }}">Binance / USDT Review</a>
         @if($permissions['accounts'])
             <a class="secondary-btn" href="{{ route('admin.payments.accounts.index') }}">Payment Accounts</a>
         @endif
@@ -31,12 +32,13 @@
     <div class="user-stat-card"><span>Failed</span><strong>{{ number_format($stats['failed']) }}</strong></div>
     <div class="user-stat-card"><span>Reversed</span><strong>{{ number_format($stats['reversed']) }}</strong></div>
     <div class="user-stat-card"><span>PayPal Orders</span><strong>{{ number_format($stats['paypal']) }}</strong></div>
+    <div class="user-stat-card"><span>NOWPayments Orders</span><strong>{{ number_format($stats['nowpayments']) }}</strong></div>
 </div>
 
 <section class="panel user-filter-panel">
     <form method="GET" action="{{ route('admin.payments.index') }}" class="user-filter-form">
         <div class="filter-search"><label>Search</label><input type="text" name="search" value="{{ request('search') }}" placeholder="Order UUID, user name, email..."></div>
-        <div class="filter-item"><label>Provider</label><select name="provider"><option value="">All</option>@foreach(['PAYPAL','LOCAL_BANK','USDT_TRC20'] as $provider)<option value="{{ $provider }}" @selected(request('provider') === $provider)>{{ $provider }}</option>@endforeach</select></div>
+        <div class="filter-item"><label>Provider</label><select name="provider"><option value="">All</option><option value="PAYPAL" @selected(request('provider') === 'PAYPAL')>PayPal</option><option value="LOCAL_BANK" @selected(request('provider') === 'LOCAL_BANK')>Local Bank</option><option value="USDT_TRC20" @selected(request('provider') === 'USDT_TRC20')>Binance / USDT TRC20</option></select></div>
         <div class="filter-item"><label>Status</label><select name="status"><option value="">All</option>@foreach(['CREATED','AWAITING_USER_ACTION','PENDING_REVIEW','PROCESSING','CLEARED','FAILED','CANCELLED','PAYMENT_REVERSED'] as $status)<option value="{{ $status }}" @selected(request('status') === $status)>{{ $status }}</option>@endforeach</select></div>
         <div class="filter-item"><label>Country</label><input type="text" name="country" maxlength="2" value="{{ request('country') }}" placeholder="LK"></div>
         <div class="filter-item"><label>From</label><input type="date" name="from" value="{{ request('from') }}"></div>
@@ -57,7 +59,7 @@
                 <tr>
                     <td><strong>{{ $order->uuid }}</strong></td>
                     <td>{{ $order->user?->name ?? '—' }}<br><small>{{ $order->user?->email ?? '—' }}</small></td>
-                    <td>{{ $order->provider }}</td>
+                    <td>{{ $order->provider === 'USDT_TRC20' ? 'BINANCE / USDT TRC20' : $order->provider }}</td>
                     <td>{{ $amount['currency'] }} {{ $amount['amount'] }}</td>
                     <td>{{ $order->country_code }}</td>
                     <td><strong>{{ $order->status }}</strong></td>
@@ -70,6 +72,8 @@
             </tbody>
         </table>
     </div>
-    <div style="padding-top:18px;">{{ $orders->links() }}</div>
+    <div style="padding-top:18px;">
+        @include('admin.components.pagination', ['paginator' => $orders])
+    </div>
 </section>
 @endsection

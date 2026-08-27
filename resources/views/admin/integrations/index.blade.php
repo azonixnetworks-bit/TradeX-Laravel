@@ -57,13 +57,7 @@
     API provider extension is implemented and regression-tested.
 </section>
 
-<div
-    style="
-        display:grid;
-        grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
-        gap:18px;
-    "
->
+<div class="integration-card-grid">
 @foreach($providers as $provider)
     <section
         class="panel"
@@ -78,7 +72,7 @@
         </h2>
 
         <table
-            class="users-table"
+            class="users-table compact-meta-table"
             style="margin-top:14px;"
         >
             <tbody>
