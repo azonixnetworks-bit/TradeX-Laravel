@@ -32,5 +32,26 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+
+        <!--
+            Keep the automated test baseline independent from a developer's
+            real local payment sandbox/live .env configuration. Individual
+            Stripe/NOWPayments tests opt in explicitly with config()->set().
+        -->
+        <env name="TRADEX_STRIPE_ENABLED" value="false" force="true"/>
+        <env name="TRADEX_STRIPE_COUNTRIES" value="" force="true"/>
+        <env name="TRADEX_STRIPE_PUBLISHABLE_KEY" value="" force="true"/>
+        <env name="TRADEX_STRIPE_SECRET_KEY" value="" force="true"/>
+        <env name="TRADEX_STRIPE_WEBHOOK_SECRET" value="" force="true"/>
+        <env name="TRADEX_STRIPE_SUCCESS_URL" value="" force="true"/>
+        <env name="TRADEX_STRIPE_CANCEL_URL" value="" force="true"/>
+
+        <env name="TRADEX_NOWPAYMENTS_ENABLED" value="false" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_COUNTRIES" value="" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_API_KEY" value="" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_IPN_SECRET" value="" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL" value="" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_SUCCESS_URL" value="" force="true"/>
+        <env name="TRADEX_NOWPAYMENTS_CANCEL_URL" value="" force="true"/>
     </php>
 </phpunit>
