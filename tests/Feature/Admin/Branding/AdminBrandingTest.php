@@ -118,12 +118,17 @@ class AdminBrandingTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            "url('../brand/tradex-logo.webp')",
+            '.sidebar-brand > .brand-mark',
             $brandingCss
         );
 
         $this->assertStringContainsString(
             "url('../brand/tradex-favicon.png')",
+            $brandingCss
+        );
+
+        $this->assertStringContainsString(
+            '.topbar-left::before',
             $brandingCss
         );
 
