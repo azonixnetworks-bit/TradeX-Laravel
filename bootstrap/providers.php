@@ -3,6 +3,7 @@
 use App\Providers\AccountSettingsApiServiceProvider;
 use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
+use App\Providers\CopyTradingServiceProvider;
 use App\Providers\DashboardServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\LegalPolicyApiServiceProvider;
@@ -32,4 +33,5 @@ return [
     RuntimeTranslationApiServiceProvider::class,
     MobileBootstrapApiServiceProvider::class,
     PushNotificationApiServiceProvider::class,
+    CopyTradingServiceProvider::class,
 ];

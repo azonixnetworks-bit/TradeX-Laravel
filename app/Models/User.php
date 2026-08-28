@@ -234,6 +234,27 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
+    | Copy Trading Broker Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function copyTradeBrokerAccounts(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBrokerAccount::class
+        );
+    }
+
+    public function copyTradeOnboardingIntents(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeOnboardingIntent::class
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Account Type Helpers
     |--------------------------------------------------------------------------
     */

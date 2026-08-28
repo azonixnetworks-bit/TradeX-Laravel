@@ -32,6 +32,13 @@ class AdminRoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'code' => 'COPY_TRADING_ADMIN',
+                'name' => 'Copy Trading Admin',
+                'description' => 'Broker configuration and normal broker-account verification for Copy Trading.',
+                'is_system' => true,
+                'is_active' => true,
+            ],
+            [
                 'code' => 'AFFILIATE_ADMIN',
                 'name' => 'Affiliate Admin',
                 'description' => 'Affiliate members, stages, referral information and commissions.',
