@@ -1,9 +1,9 @@
-{{-- TradeX Admin — ADMIN-05 REV3 Edit Draft Trade Idea --}}
+{{-- TradeX Admin — ADMIN-05 REV3 Edit Draft Long Term Trade Idea --}}
 
 @extends('admin.layouts.app')
 
-@section('title', 'Edit Trade Idea | TradeX')
-@section('page-title', 'Trade Ideas')
+@section('title', 'Edit Long Term Trade Idea | TradeX')
+@section('page-title', 'Long Term Trade Ideas')
 
 @push('styles')
 
@@ -24,11 +24,11 @@
 @section('content')
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">ADMIN-05 REV3 · DRAFT SETUP</div>
-        <h1>Edit <span>Trade Idea</span></h1>
+        <div class="page-eyebrow">ADMIN-05 REV3 · LONG TERM DRAFT SETUP</div>
+        <h1>Edit <span>Long Term Trade Idea</span></h1>
         <p>
             Optional Trade Structure, chart media and context can be changed
-            while the Trade Idea remains DRAFT.
+            while the Long Term Trade Idea remains DRAFT.
         </p>
     </div>
 
