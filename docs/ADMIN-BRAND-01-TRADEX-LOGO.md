@@ -26,8 +26,10 @@ Optimized runtime assets are stored locally in the Laravel public tree. No exter
 
 ## Runtime assets
 
-- `public/admin/brand/tradex-logo.webp` — full brand lockup for login, sidebar, dashboard and report headers.
-- `public/admin/brand/tradex-favicon.png` — compact transparent icon for favicon, topbar and loader/splash use.
+- `public/admin/brand/tradex-logo.webp` — full vertical brand lockup for login, two-factor security, Dashboard and report headers.
+- `public/admin/brand/tradex-favicon.png` — compact transparent bull/bear X mark for sidebar, topbar, browser favicon and loader/splash use.
+
+The supplied full logo is a vertical lockup, so the shallow Admin sidebar intentionally uses the compact official mark beside the existing `TRADEX / ADMINISTRATION` wordmark. This keeps the brand readable instead of shrinking the complete vertical artwork into a 92px header.
 
 ## Admin surfaces
 
@@ -60,7 +62,7 @@ Reduced-motion preferences disable the logo pulse animation.
 ## Accessibility
 
 - Meaningful full-logo placements use `TradeX — Learn. Trade. Grow.` alternative text.
-- Decorative compact loader marks use empty alternative text.
+- Decorative compact shell/loader marks do not replace page or navigation labels.
 - The loader exposes a short status label while visible and becomes `aria-hidden` when dismissed.
 - Branding remains responsive from mobile Admin screens through desktop layouts.
 
