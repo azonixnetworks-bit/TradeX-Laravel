@@ -73,7 +73,7 @@ class CopyTradingNavigationTest extends TestCase
         );
 
         $this->assertStringNotContainsString("'referral_url' =>", $presenter);
-        $this->assertStringNotContainsString("'open_account_via_tradex_url' => $market", $presenter);
+        $this->assertStringNotContainsString('open_account_via_tradex_url', $presenter);
         $this->assertStringContainsString('open_account_action_required', $presenter);
         $this->assertStringContainsString('open_account_via_tradex_url', $action);
     }
