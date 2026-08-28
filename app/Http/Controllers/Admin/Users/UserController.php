@@ -18,7 +18,7 @@ class UserController extends Controller
 {
     /*
     |--------------------------------------------------------------------------
-    | Users Index
+    | Users / Customers Index
     |--------------------------------------------------------------------------
     */
 
@@ -51,6 +51,10 @@ class UserController extends Controller
             )
         );
 
+        $segment =
+            $filters['segment']
+            ?? null;
+
         $accountType =
             $filters['account_type']
             ?? null;
@@ -78,6 +82,17 @@ class UserController extends Controller
                 ?? 20
             );
 
+        $recentDays = max(
+            1,
+            min(
+                365,
+                (int) config(
+                    'tradex_customers.recent_days',
+                    30
+                )
+            )
+        );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -104,6 +119,58 @@ class UserController extends Controller
                     'last_login_at',
                     'created_at',
                 ]);
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADMIN-20 — Customer Segment
+        |--------------------------------------------------------------------------
+        |
+        | These are convenience views over the existing users table. No account
+        | lifecycle or entitlement state is mutated by choosing a segment.
+        |
+        */
+
+        match ($segment) {
+            'PENDING' =>
+                $query->where(
+                    'status',
+                    'PENDING'
+                ),
+
+            'FREE' =>
+                $query->where(
+                    'account_type',
+                    'FREE'
+                ),
+
+            'PREMIUM' =>
+                $query->where(
+                    'account_type',
+                    'PREMIUM'
+                ),
+
+            'RESTRICTED' =>
+                $query->whereIn(
+                    'status',
+                    [
+                        'SUSPENDED',
+                        'BLOCKED',
+                    ]
+                ),
+
+            'RECENT' =>
+                $query->where(
+                    'created_at',
+                    '>=',
+                    now()->subDays(
+                        $recentDays
+                    )
+                ),
+
+            default =>
+                null,
+        };
 
 
         /*
@@ -280,13 +347,25 @@ class UserController extends Controller
                 )->count(),
         ];
 
+        $segmentLabel = match ($segment) {
+            'PENDING' => 'Pending Accounts',
+            'FREE' => 'Free Customers',
+            'PREMIUM' => 'Premium Customers',
+            'RESTRICTED' => 'Suspended / Blocked',
+            'RECENT' => 'Recently Joined',
+            default => 'All Customers',
+        };
+
 
         return view(
             'admin.users.index',
             compact(
                 'users',
                 'stats',
-                'filters'
+                'filters',
+                'segment',
+                'segmentLabel',
+                'recentDays'
             )
         );
     }
