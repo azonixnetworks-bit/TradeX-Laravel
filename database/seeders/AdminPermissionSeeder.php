@@ -53,6 +53,7 @@ class AdminPermissionSeeder extends Seeder
             ['copy_trading.brokers.manage', 'Manage Copy Trading Brokers', 'COPY_TRADING'],
             ['copy_trading.accounts.view', 'View Copy Trading Broker Accounts', 'COPY_TRADING'],
             ['copy_trading.accounts.verify', 'Verify Copy Trading Broker Accounts', 'COPY_TRADING'],
+            ['copy_trading.accounts.activate', 'Activate Eligible Copy Trading Broker Accounts', 'COPY_TRADING'],
             ['copy_trading.accounts.reject', 'Reject Copy Trading Broker Accounts', 'COPY_TRADING'],
             ['copy_trading.accounts.request_resubmission', 'Request Broker Account Resubmission', 'COPY_TRADING'],
             ['copy_trading.accounts.escalate', 'Escalate Broker Account Verification', 'COPY_TRADING'],

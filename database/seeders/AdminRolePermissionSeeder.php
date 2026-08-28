@@ -51,6 +51,7 @@ class AdminRolePermissionSeeder extends Seeder
                 'copy_trading.brokers.manage',
                 'copy_trading.accounts.view',
                 'copy_trading.accounts.verify',
+                'copy_trading.accounts.activate',
                 'copy_trading.accounts.reject',
                 'copy_trading.accounts.request_resubmission',
                 'copy_trading.accounts.escalate',

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBootstrapController;
+use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerAccountActivationShowController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerAccountResubmitController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerAccountStoreController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerIndexController;
@@ -23,49 +24,82 @@ Route::prefix('v1')
                     '/bootstrap',
                     CopyTradeBootstrapController::class
                 )
-                    ->middleware('throttle:api-profile-read')
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
                     ->name('bootstrap');
 
                 Route::get(
                     '/brokers',
                     CopyTradeBrokerIndexController::class
                 )
-                    ->middleware('throttle:api-profile-read')
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
                     ->name('brokers.index');
 
                 Route::get(
                     '/brokers/{copyTradeBroker}/logo',
                     CopyTradeBrokerLogoController::class
                 )
-                    ->middleware('throttle:api-profile-read')
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
                     ->name('brokers.logo');
 
                 Route::post(
                     '/broker-markets/{copyTradeBrokerMarket}/open-account-action',
                     CopyTradeOpenAccountActionController::class
                 )
-                    ->middleware('throttle:api-profile-sensitive')
-                    ->name('broker-markets.open-account-action');
+                    ->middleware(
+                        'throttle:api-profile-sensitive'
+                    )
+                    ->name(
+                        'broker-markets.open-account-action'
+                    );
 
                 Route::post(
                     '/broker-accounts',
                     CopyTradeBrokerAccountStoreController::class
                 )
-                    ->middleware('throttle:api-profile-sensitive')
-                    ->name('broker-accounts.store');
+                    ->middleware(
+                        'throttle:api-profile-sensitive'
+                    )
+                    ->name(
+                        'broker-accounts.store'
+                    );
 
                 Route::post(
                     '/broker-accounts/{copyTradeBrokerAccount}/resubmit',
                     CopyTradeBrokerAccountResubmitController::class
                 )
-                    ->middleware('throttle:api-profile-sensitive')
-                    ->name('broker-accounts.resubmit');
+                    ->middleware(
+                        'throttle:api-profile-sensitive'
+                    )
+                    ->name(
+                        'broker-accounts.resubmit'
+                    );
+
+                Route::get(
+                    '/broker-accounts/{copyTradeBrokerAccount}/activation',
+                    CopyTradeBrokerAccountActivationShowController::class
+                )
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
+                    ->name(
+                        'broker-accounts.activation.show'
+                    );
             });
 
         Route::get(
             '/profile/broker-accounts',
             ProfileBrokerAccountIndexController::class
         )
-            ->middleware('throttle:api-profile-read')
-            ->name('profile.broker-accounts.index');
+            ->middleware(
+                'throttle:api-profile-read'
+            )
+            ->name(
+                'profile.broker-accounts.index'
+            );
     });

@@ -119,7 +119,7 @@
                     <th>Status</th>
                     <th>Verified</th>
                     <th>Activated</th>
-                    <th>Action</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -148,12 +148,21 @@
                     <td>{{ $account->verified_at?->format('Y-m-d H:i') ?? '—' }}</td>
                     <td>{{ $account->activated_at?->format('Y-m-d H:i') ?? '—' }}</td>
                     <td>
-                        <a
-                            class="secondary-btn"
-                            href="{{ route('admin.copy_trading.accounts.show', ['copyTradeBrokerAccount' => $account]) }}"
-                        >
-                            Inspect
-                        </a>
+                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                            <a
+                                class="secondary-btn"
+                                href="{{ route('admin.copy_trading.accounts.show', ['copyTradeBrokerAccount' => $account]) }}"
+                            >
+                                Inspect
+                            </a>
+
+                            <a
+                                class="secondary-btn"
+                                href="{{ route('admin.copy_trading.accounts.activation.show', ['copyTradeBrokerAccount' => $account]) }}"
+                            >
+                                Eligibility
+                            </a>
+                        </div>
                     </td>
                 </tr>
             @empty
