@@ -9,10 +9,17 @@
     >
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="theme-color" content="#03070d">
 
     <title>
         @yield('title', 'TradeX Administration')
     </title>
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('admin/brand/tradex-favicon.png') }}"
+    >
 
     <link
         rel="stylesheet"
@@ -24,10 +31,33 @@
         href="{{ asset('admin/css/responsive.css') }}"
     >
 
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/branding.css') }}"
+    >
+
     @stack('styles')
 </head>
 
 <body>
+
+<div
+    id="tradexLoader"
+    class="tradex-loader"
+    role="status"
+    aria-label="Loading TradeX Administration"
+    aria-live="polite"
+>
+    <div class="tradex-loader-card">
+        <img
+            src="{{ asset('admin/brand/tradex-favicon.png') }}"
+            alt=""
+            width="64"
+            height="64"
+        >
+        <span>TRADEX ADMINISTRATION</span>
+    </div>
+</div>
 
 <div class="admin-app">
 
@@ -73,6 +103,10 @@
 
 <script
     src="{{ asset('admin/js/sidebar.js') }}">
+</script>
+
+<script
+    src="{{ asset('admin/js/branding.js') }}">
 </script>
 
 @stack('scripts')
