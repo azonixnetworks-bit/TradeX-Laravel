@@ -193,7 +193,7 @@
                 {{ request()->routeIs('admin.trade_ideas.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">◇</span>
-                <span>Trade Ideas</span>
+                <span>Long Term Trade Ideas</span>
             </a>
 
         @endif
