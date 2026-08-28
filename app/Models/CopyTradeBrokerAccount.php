@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class CopyTradeBrokerAccount extends Model
@@ -134,6 +135,54 @@ class CopyTradeBrokerAccount extends Model
             CopyTradeBrokerAccountReview::class,
             'broker_account_id'
         )->latest('created_at');
+    }
+
+    public function verifiedBalanceSnapshots(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeVerifiedBalanceSnapshot::class,
+            'broker_account_id'
+        )->latest('observed_at');
+    }
+
+    public function latestVerifiedBalanceSnapshot(): HasOne
+    {
+        return $this->hasOne(
+            CopyTradeVerifiedBalanceSnapshot::class,
+            'broker_account_id'
+        )->latestOfMany('observed_at');
+    }
+
+    public function accountBenefit(): HasOne
+    {
+        return $this->hasOne(
+            CopyTradeAccountBenefit::class,
+            'broker_account_id'
+        );
+    }
+
+    public function entitlementPeriods(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeEntitlementPeriod::class,
+            'broker_account_id'
+        )->latest('starts_at');
+    }
+
+    public function activationEvaluations(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeActivationEvaluation::class,
+            'broker_account_id'
+        )->latest('evaluated_at');
+    }
+
+    public function latestActivationEvaluation(): HasOne
+    {
+        return $this->hasOne(
+            CopyTradeActivationEvaluation::class,
+            'broker_account_id'
+        )->latestOfMany('evaluated_at');
     }
 
     public function verifiedByAdmin(): BelongsTo
