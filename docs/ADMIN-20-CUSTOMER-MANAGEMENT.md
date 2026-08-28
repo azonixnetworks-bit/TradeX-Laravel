@@ -46,6 +46,8 @@ An admin-created invitation does not create or control:
 
 The customer must still complete the normal TradeX registration and security flow. Premium access remains controlled by the existing verified payment/entitlement flow.
 
+ADMIN-20 does not send an email or WhatsApp invitation by itself. It records and tracks the intended onboarding identity; outbound invitation delivery can be integrated separately without weakening the frozen registration authority.
+
 ## Invitation identity protection
 
 A pending invitation stores normalized email and WhatsApp plus separate SHA-256 active fingerprints. Nullable unique indexes prevent two active pending invitations from concurrently claiming the same email or the same WhatsApp number.
@@ -62,10 +64,12 @@ When an invitation is matched, expired, or moved to identity conflict, its activ
 
 Pending invitations are safely reconciled against the normal `users` table when the customer dashboard/onboarding queue is viewed.
 
-- no matching customer: invitation remains `PENDING`;
-- one customer matches email and/or WhatsApp: invitation becomes `MATCHED`;
-- email and WhatsApp resolve to different customer accounts: invitation becomes `CONFLICT`;
+- neither email nor WhatsApp matches a registered customer: invitation remains `PENDING`;
+- email **and** WhatsApp both resolve to the same registered customer: invitation becomes `MATCHED`;
+- only one identity field matches, or email and WhatsApp resolve to different customer accounts: invitation becomes `CONFLICT`;
 - expiration time passes before matching: invitation becomes `EXPIRED`.
+
+The strict two-field match prevents a partial identity match from silently attaching an admin onboarding record to the wrong customer.
 
 Reconciliation never changes customer password, account type, entitlement, payment, KYC, affiliate, or device state.
 
@@ -124,6 +128,7 @@ php artisan optimize:clear
 
 ```powershell
 php artisan test tests/Feature/Admin/Customers/CustomerManagementTest.php
+php artisan test tests/Feature/Admin/Customers/CustomerOnboardingConflictTest.php
 php artisan test tests/Feature/Admin/AdminRbacDenialTest.php
 php artisan test tests/Feature/Admin/AdminRouteHardeningTest.php
 ```
