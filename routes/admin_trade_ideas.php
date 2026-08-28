@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\TradeIdeas\DailyTradeIdeaController;
 use App\Http\Controllers\Admin\TradeIdeas\TradeIdeaController;
 use App\Http\Controllers\Admin\TradeIdeas\TradeIdeaDistributionController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +9,46 @@ Route::prefix('admin')
     ->name('admin.')
     ->middleware('admin.auth')
     ->group(function (): void {
+        Route::prefix('trade-ideas/daily')
+            ->name('daily_trade_ideas.')
+            ->group(function (): void {
+                Route::get('/', [DailyTradeIdeaController::class, 'index'])
+                    ->name('index');
+
+                Route::get('/create', [DailyTradeIdeaController::class, 'create'])
+                    ->name('create');
+
+                Route::post('/', [DailyTradeIdeaController::class, 'store'])
+                    ->name('store');
+
+                Route::get(
+                    '/{dailyTradeIdea}/chart-image',
+                    [DailyTradeIdeaController::class, 'chartImage']
+                )
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('chart_image');
+
+                Route::get('/{dailyTradeIdea}', [DailyTradeIdeaController::class, 'show'])
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('show');
+
+                Route::get('/{dailyTradeIdea}/edit', [DailyTradeIdeaController::class, 'edit'])
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('edit');
+
+                Route::patch('/{dailyTradeIdea}', [DailyTradeIdeaController::class, 'update'])
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('update');
+
+                Route::patch('/{dailyTradeIdea}/publish', [DailyTradeIdeaController::class, 'publish'])
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('publish');
+
+                Route::patch('/{dailyTradeIdea}/archive', [DailyTradeIdeaController::class, 'archive'])
+                    ->whereNumber('dailyTradeIdea')
+                    ->name('archive');
+            });
+
         Route::prefix('trade-ideas')
             ->name('trade_ideas.')
             ->group(function (): void {
