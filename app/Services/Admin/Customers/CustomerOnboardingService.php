@@ -6,6 +6,7 @@ use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\CustomerOnboardingInvitation;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -28,9 +29,14 @@ class CustomerOnboardingService
             (string) $data['whatsapp_number']
         );
 
-        $identityHash = hash(
+        $emailHash = hash(
             'sha256',
-            $email.'|'.$whatsapp
+            $email
+        );
+
+        $whatsappHash = hash(
+            'sha256',
+            $whatsapp
         );
 
         $registeredIdentityExists =
@@ -115,103 +121,129 @@ class CustomerOnboardingService
             )
         );
 
-        return DB::transaction(
-            function () use (
-                $admin,
-                $data,
-                $request,
-                $email,
-                $whatsapp,
-                $identityHash,
-                $referrer,
-                $referralCode,
-                $days
-            ): CustomerOnboardingInvitation {
-                $invitation =
-                    CustomerOnboardingInvitation::query()
-                        ->create([
-                            'uuid' =>
-                                (string) Str::uuid(),
+        try {
+            return DB::transaction(
+                function () use (
+                    $admin,
+                    $data,
+                    $request,
+                    $email,
+                    $whatsapp,
+                    $emailHash,
+                    $whatsappHash,
+                    $referrer,
+                    $referralCode,
+                    $days
+                ): CustomerOnboardingInvitation {
+                    $invitation =
+                        CustomerOnboardingInvitation::query()
+                            ->create([
+                                'uuid' =>
+                                    (string) Str::uuid(),
 
-                            'name' =>
-                                $data['name'],
+                                'name' =>
+                                    $data['name'],
 
-                            'email' =>
-                                $email,
+                                'email' =>
+                                    $email,
 
-                            'whatsapp_number' =>
-                                $whatsapp,
+                                'whatsapp_number' =>
+                                    $whatsapp,
 
+                                'country_code' =>
+                                    strtoupper(
+                                        (string) $data['country_code']
+                                    ),
+
+                                'language_code' =>
+                                    strtolower(
+                                        (string) $data['language_code']
+                                    ),
+
+                                'referral_code_input' =>
+                                    $referralCode,
+
+                                'referred_by_user_id' =>
+                                    $referrer?->getKey(),
+
+                                'status' =>
+                                    CustomerOnboardingInvitation::STATUS_PENDING,
+
+                                'active_email_hash' =>
+                                    $emailHash,
+
+                                'active_whatsapp_hash' =>
+                                    $whatsappHash,
+
+                                'created_by_admin_id' =>
+                                    $admin->getKey(),
+
+                                'internal_note' =>
+                                    $data['internal_note']
+                                    ?? null,
+
+                                'expires_at' =>
+                                    now()->addDays($days),
+                            ]);
+
+                    AuditLog::record(
+                        actorType:
+                            'ADMIN',
+                        actorId:
+                            $admin->getKey(),
+                        action:
+                            'CUSTOMER_ONBOARDING_INVITATION_CREATED',
+                        module:
+                            'USERS',
+                        targetType:
+                            'CUSTOMER_ONBOARDING_INVITATION',
+                        targetId:
+                            $invitation->getKey(),
+                        oldValues:
+                            null,
+                        newValues: [
                             'country_code' =>
-                                strtoupper(
-                                    (string) $data['country_code']
-                                ),
-
+                                $invitation->country_code,
                             'language_code' =>
-                                strtolower(
-                                    (string) $data['language_code']
-                                ),
-
-                            'referral_code_input' =>
-                                $referralCode,
-
-                            'referred_by_user_id' =>
-                                $referrer?->getKey(),
-
-                            'status' =>
-                                CustomerOnboardingInvitation::STATUS_PENDING,
-
-                            'active_identity_hash' =>
-                                $identityHash,
-
-                            'created_by_admin_id' =>
-                                $admin->getKey(),
-
-                            'internal_note' =>
-                                $data['internal_note']
-                                ?? null,
-
+                                $invitation->language_code,
+                            'has_referrer' =>
+                                $invitation->referred_by_user_id
+                                !== null,
                             'expires_at' =>
-                                now()->addDays($days),
-                        ]);
+                                $invitation->expires_at
+                                    ->toIso8601String(),
+                        ],
+                        ipAddress:
+                            $request->ip(),
+                        userAgent:
+                            $request->userAgent()
+                    );
 
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
-                    actorId:
-                        $admin->getKey(),
-                    action:
-                        'CUSTOMER_ONBOARDING_INVITATION_CREATED',
-                    module:
-                        'USERS',
-                    targetType:
-                        'CUSTOMER_ONBOARDING_INVITATION',
-                    targetId:
-                        $invitation->getKey(),
-                    oldValues:
-                        null,
-                    newValues: [
-                        'country_code' =>
-                            $invitation->country_code,
-                        'language_code' =>
-                            $invitation->language_code,
-                        'has_referrer' =>
-                            $invitation->referred_by_user_id
-                            !== null,
-                        'expires_at' =>
-                            $invitation->expires_at
-                                ->toIso8601String(),
-                    ],
-                    ipAddress:
-                        $request->ip(),
-                    userAgent:
-                        $request->userAgent()
+                    return $invitation;
+                },
+                3
+            );
+        } catch (QueryException $exception) {
+            $sqlState = (string) (
+                $exception->errorInfo[0]
+                ?? ''
+            );
+
+            if (
+                in_array(
+                    $sqlState,
+                    ['23000', '23505'],
+                    true
+                )
+            ) {
+                abort(
+                    409,
+                    'A pending onboarding invitation already exists for this customer identity.'
                 );
+            }
 
-                return $invitation;
-            },
-            3
-        );
+            throw $exception;
+        }
     }
 
     public function reconcilePending(): void
@@ -264,7 +296,9 @@ class CustomerOnboardingService
                             $invitation->forceFill([
                                 'status' =>
                                     CustomerOnboardingInvitation::STATUS_CONFLICT,
-                                'active_identity_hash' =>
+                                'active_email_hash' =>
+                                    null,
+                                'active_whatsapp_hash' =>
                                     null,
                             ])->save();
 
@@ -297,7 +331,9 @@ class CustomerOnboardingService
                         $invitation->forceFill([
                             'status' =>
                                 CustomerOnboardingInvitation::STATUS_MATCHED,
-                            'active_identity_hash' =>
+                            'active_email_hash' =>
+                                null,
+                            'active_whatsapp_hash' =>
                                 null,
                             'matched_user_id' =>
                                 $matchedUser->getKey(),
@@ -370,7 +406,9 @@ class CustomerOnboardingService
             ->update([
                 'status' =>
                     CustomerOnboardingInvitation::STATUS_EXPIRED,
-                'active_identity_hash' =>
+                'active_email_hash' =>
+                    null,
+                'active_whatsapp_hash' =>
                     null,
                 'updated_at' =>
                     now(),
