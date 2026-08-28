@@ -71,8 +71,9 @@ class AdminGlobalSelectAndLongTermTradeIdeaUiTest extends TestCase
             resource_path('views/admin/trade_ideas/edit.blade.php')
         );
 
+        // ADMIN-21 uses the owner-approved sidebar hierarchy label.
         $this->assertStringContainsString(
-            'Long Term Trade Ideas',
+            'Long-Term Trade Ideas',
             $sidebar
         );
 
