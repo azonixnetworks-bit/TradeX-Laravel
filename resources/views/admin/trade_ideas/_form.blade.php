@@ -26,7 +26,7 @@
 
 <div class="ti-section">
     <h2>Idea Identity</h2>
-    <p>Core market identity. Trade Ideas are global and are not restricted by language.</p>
+    <p>Core market identity. Long Term Trade Ideas are global and are not restricted by language.</p>
 
     <div class="ti-grid">
         <div class="ti-field full">
@@ -229,7 +229,7 @@
                 <div style="margin-bottom:10px">
                     <img
                         src="{{ route('admin.trade_ideas.chart_image', ['tradeIdea'=>$tradeIdea]) }}"
-                        alt="Current Trade Idea chart"
+                        alt="Current Long Term Trade Idea chart"
                         style="display:block;max-width:100%;max-height:420px;border-radius:12px;border:1px solid rgba(255,255,255,.08)"
                     >
                 </div>
@@ -383,7 +383,7 @@
 <div class="ti-section">
     <h2>Context · Optional</h2>
     <p>
-        Summary and analysis are optional. A Trade Idea can be published
+        Summary and analysis are optional. A Long Term Trade Idea can be published
         without these fields.
     </p>
 

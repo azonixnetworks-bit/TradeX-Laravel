@@ -1,0 +1,354 @@
+/* ============================================================
+   TRADEX ADMIN — PREMIUM RESPONSIVE FORM SYSTEM
+   Presentation-only. Shared by Admin forms without changing validation or logic.
+============================================================ */
+
+.admin-form-panel {
+    position: relative;
+    overflow: hidden;
+    padding: 26px;
+}
+
+.admin-form-panel::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 24px;
+    right: 24px;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(217, 168, 60, .34),
+        transparent
+    );
+}
+
+.admin-form-heading {
+    margin-bottom: 24px;
+}
+
+.admin-form-heading h2 {
+    margin: 6px 0 8px;
+    font-size: 19px;
+}
+
+.admin-form-heading p {
+    max-width: 780px;
+    margin: 0;
+    color: #71869b;
+    font-size: 12px;
+    line-height: 1.65;
+}
+
+.admin-form-callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    padding: 17px 18px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(26, 121, 255, .15);
+    border-radius: 14px;
+    background:
+        linear-gradient(
+            135deg,
+            rgba(18, 79, 150, .10),
+            rgba(7, 22, 36, .72)
+        );
+    color: #9bb0c4;
+    font-size: 11px;
+    line-height: 1.65;
+}
+
+.admin-form-callout.gold {
+    border-color: rgba(217, 168, 60, .17);
+    background:
+        linear-gradient(
+            135deg,
+            rgba(217, 168, 60, .08),
+            rgba(7, 22, 36, .72)
+        );
+}
+
+.admin-form-callout-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: #f1cf73;
+    background: rgba(217, 168, 60, .10);
+    border: 1px solid rgba(217, 168, 60, .15);
+    font-size: 15px;
+}
+
+.admin-form-callout strong {
+    display: block;
+    margin-bottom: 3px;
+    color: #d6e0e9;
+    font-size: 11px;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 19px 20px;
+    width: 100%;
+}
+
+.form-group {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group.full-width,
+.form-span-2 {
+    grid-column: 1 / -1;
+}
+
+.form-group > label {
+    display: block;
+    margin: 0 0 8px;
+    color: #aebdcb;
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: .32px;
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, .075);
+    border-radius: 11px;
+    outline: none;
+    color: #dce5ed;
+    background: #061522;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .015),
+        0 8px 22px rgba(0, 0, 0, .06);
+    transition:
+        border-color .18s ease,
+        box-shadow .18s ease,
+        background .18s ease;
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.form-group select {
+    height: 47px;
+    padding: 0 14px;
+    font-size: 12px;
+}
+
+.form-group textarea {
+    min-height: 112px;
+    padding: 13px 14px;
+    resize: vertical;
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+.form-group select {
+    padding-right: 38px;
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #71869b 50%),
+        linear-gradient(135deg, #71869b 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 20px,
+        calc(100% - 13px) 20px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+    color: #4e657b;
+    opacity: 1;
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):hover,
+.form-group select:hover,
+.form-group textarea:hover {
+    border-color: rgba(255, 255, 255, .12);
+    background-color: #071827;
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: rgba(26, 121, 255, .58);
+    background-color: #071827;
+    box-shadow:
+        0 0 0 3px rgba(26, 121, 255, .07),
+        0 12px 28px rgba(0, 0, 0, .09);
+}
+
+.form-group input:disabled,
+.form-group select:disabled,
+.form-group textarea:disabled {
+    cursor: not-allowed;
+    opacity: .58;
+}
+
+.form-help,
+.form-error {
+    display: block;
+    margin-top: 7px;
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+.form-help {
+    color: #587086;
+}
+
+.form-error {
+    color: #ff7c87;
+}
+
+.admin-form-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 52px;
+    padding: 13px 15px;
+    margin-top: 20px;
+    border: 1px solid rgba(217, 168, 60, .12);
+    border-radius: 12px;
+    color: #7f94a8;
+    background: rgba(217, 168, 60, .035);
+    font-size: 10px;
+    line-height: 1.55;
+}
+
+.admin-form-note strong {
+    color: #e5c566;
+}
+
+.admin-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 22px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, .05);
+}
+
+.admin-form-actions .primary-btn,
+.admin-form-actions .secondary-btn {
+    min-height: 44px;
+    height: auto;
+    padding: 0 17px;
+    border-radius: 10px;
+    font-size: 10px;
+    letter-spacing: .15px;
+    transition:
+        transform .18s ease,
+        box-shadow .18s ease,
+        border-color .18s ease,
+        background .18s ease;
+}
+
+.admin-form-actions .primary-btn:hover,
+.admin-form-actions .primary-btn:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 27px rgba(217, 168, 60, .13);
+    outline: none;
+}
+
+.admin-form-actions .secondary-btn:hover,
+.admin-form-actions .secondary-btn:focus-visible {
+    color: #d4dee7;
+    border-color: rgba(255, 255, 255, .13);
+    background: rgba(255, 255, 255, .04);
+    outline: none;
+}
+
+/* Keep browser autofill consistent with the dark TradeX form surface. */
+.form-group input:-webkit-autofill,
+.form-group input:-webkit-autofill:hover,
+.form-group input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #dce5ed;
+    -webkit-box-shadow: 0 0 0 1000px #061522 inset;
+    transition: background-color 9999s ease-out 0s;
+}
+
+@media (max-width: 820px) {
+    .admin-form-panel {
+        padding: 22px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .form-group.full-width,
+    .form-span-2 {
+        grid-column: auto;
+    }
+
+    .admin-form-actions {
+        align-items: stretch;
+    }
+
+    .admin-form-actions .primary-btn,
+    .admin-form-actions .secondary-btn {
+        flex: 1 1 180px;
+    }
+}
+
+@media (max-width: 560px) {
+    .admin-form-panel {
+        padding: 18px 15px;
+        border-radius: 15px;
+    }
+
+    .admin-form-panel::before {
+        left: 15px;
+        right: 15px;
+    }
+
+    .admin-form-heading {
+        margin-bottom: 19px;
+    }
+
+    .admin-form-heading h2 {
+        font-size: 17px;
+    }
+
+    .admin-form-callout {
+        padding: 14px;
+        gap: 10px;
+    }
+
+    .admin-form-callout-icon {
+        width: 31px;
+        height: 31px;
+        flex-basis: 31px;
+    }
+
+    .form-group input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+    .form-group select {
+        height: 45px;
+        font-size: 12px;
+    }
+
+    .admin-form-actions {
+        flex-direction: column;
+    }
+
+    .admin-form-actions .primary-btn,
+    .admin-form-actions .secondary-btn {
+        width: 100%;
+        flex: 0 0 auto;
+    }
+}

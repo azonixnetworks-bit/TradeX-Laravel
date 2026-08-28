@@ -1,9 +1,9 @@
-{{-- TradeX Admin — ADMIN-05 REV3 Trade Ideas --}}
+{{-- TradeX Admin — ADMIN-05 REV3 Long Term Trade Ideas --}}
 
 @extends('admin.layouts.app')
 
-@section('title', 'Trade Ideas | TradeX Administration')
-@section('page-title', 'Trade Ideas')
+@section('title', 'Long Term Trade Ideas | TradeX Administration')
+@section('page-title', 'Long Term Trade Ideas')
 
 @push('styles')
 <style>
@@ -22,10 +22,10 @@
 @section('content')
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">ADMIN-05 REV3 · MARKET INTELLIGENCE</div>
-        <h1>Trade <span>Ideas</span></h1>
+        <div class="page-eyebrow">ADMIN-05 REV3 · LONG TERM MARKET INTELLIGENCE</div>
+        <h1>Long Term Trade <span>Ideas</span></h1>
         <p>
-            Global Trade Ideas with optional structure, chart media and context.
+            Global Long Term Trade Ideas with optional structure, chart media and context.
         </p>
     </div>
 
@@ -35,7 +35,7 @@
                 class="primary-btn"
                 href="{{ route('admin.trade_ideas.create') }}"
             >
-                + New Trade Idea
+                + New Long Term Trade Idea
             </a>
         </div>
     @endif
@@ -135,7 +135,7 @@
 <section class="panel users-panel">
     <div class="panel-header">
         <div>
-            <div class="panel-eyebrow">TRADE IDEA REGISTER</div>
+            <div class="panel-eyebrow">LONG TERM TRADE IDEA REGISTER</div>
             <h2>Ideas</h2>
         </div>
     </div>
@@ -243,7 +243,7 @@
         @endif
     @empty
         <div class="empty">
-            <strong>No Trade Ideas found</strong>
+            <strong>No Long Term Trade Ideas found</strong>
             <span>Create the first draft or adjust the active filters.</span>
         </div>
     @endforelse

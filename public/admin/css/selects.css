@@ -1,0 +1,76 @@
+/* ============================================================
+   TRADEX ADMIN — GLOBAL DARK SELECT / DROPDOWN NORMALIZATION
+   Presentation-only. Keeps native select semantics and form values intact.
+============================================================ */
+
+.admin-app {
+    color-scheme: dark;
+}
+
+.admin-app select {
+    color-scheme: dark;
+    color: #dce5ed;
+    background-color: #061522;
+}
+
+.admin-app select:not([multiple]):not([size]) {
+    padding-right: 38px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #8195a9 50%),
+        linear-gradient(135deg, #8195a9 50%, transparent 50%);
+    background-position:
+        calc(100% - 18px) 50%,
+        calc(100% - 13px) 50%;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+
+.admin-app select option,
+.admin-app select optgroup {
+    color: #e5edf4;
+    background: #071624;
+}
+
+.admin-app select option:checked {
+    color: #ffffff;
+    background: #123458;
+}
+
+.admin-app select:disabled {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+.admin-app select:focus-visible {
+    outline: none;
+    border-color: rgba(26, 121, 255, .62) !important;
+    box-shadow: 0 0 0 3px rgba(26, 121, 255, .08) !important;
+}
+
+/* Trade Idea screens have legacy scoped form CSS. Normalize their selects too. */
+.admin-app .ti-field select,
+.admin-app .ti-filter select,
+.admin-app .action-box select,
+.admin-app .share-card-field select {
+    color: #dce5ed;
+    background-color: #061522;
+    color-scheme: dark;
+}
+
+.admin-app .ti-field select option,
+.admin-app .ti-filter select option,
+.admin-app .action-box select option,
+.admin-app .share-card-field select option {
+    color: #e5edf4;
+    background: #071624;
+}
+
+@media (forced-colors: active) {
+    .admin-app select:not([multiple]):not([size]) {
+        appearance: auto;
+        -webkit-appearance: auto;
+        background-image: none;
+    }
+}

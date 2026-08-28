@@ -149,16 +149,24 @@
 </section>
 
 @if($canManage)
-<section
-    class="panel"
-    style="padding:22px;"
->
-    <h2>Admin Control-Plane State</h2>
+<div class="admin-form-callout gold">
+    <div class="admin-form-callout-icon" aria-hidden="true">◆</div>
+    <div>
+        <strong>Control-plane only</strong>
+        This records authorized provider approval and country scope. It does
+        not rewrite <code>.env</code>, expose credentials, or settle payments.
+    </div>
+</div>
 
-    <p>
-        This records authorized provider approval and country scope.
-        It does not rewrite <code>.env</code> and does not expose credentials.
-    </p>
+<section class="panel admin-form-panel">
+    <div class="admin-form-heading">
+        <div class="panel-eyebrow">ADMIN CONTROL-PLANE</div>
+        <h2>Provider approval state</h2>
+        <p>
+            Review the server configuration above before changing approval,
+            country scope, environment or merchant eligibility state.
+        </p>
+    </div>
 
     <form
         method="POST"
@@ -178,8 +186,11 @@
 
         <div class="form-grid">
             <div class="form-group">
-                <label>Control Enabled</label>
-                <select name="is_enabled">
+                <label for="integration_is_enabled">Control Enabled</label>
+                <select
+                    id="integration_is_enabled"
+                    name="is_enabled"
+                >
                     <option
                         value="0"
                         @selected(
@@ -203,14 +214,20 @@
                         Enabled / Approved
                     </option>
                 </select>
+                <small class="form-help">
+                    Approval remains subject to server configuration and provider eligibility.
+                </small>
                 @error('is_enabled')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
             <div class="form-group">
-                <label>Environment</label>
-                <select name="environment">
+                <label for="integration_environment">Environment</label>
+                <select
+                    id="integration_environment"
+                    name="environment"
+                >
                     @foreach($provider['environment_options'] as $environment)
                         <option
                             value="{{ $environment }}"
@@ -225,14 +242,18 @@
                         </option>
                     @endforeach
                 </select>
+                <small class="form-help">
+                    Must match the provider environment configured on the server.
+                </small>
                 @error('environment')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
             <div class="form-group">
-                <label>Approved Countries</label>
+                <label for="integration_countries">Approved Countries</label>
                 <input
+                    id="integration_countries"
                     type="text"
                     name="countries"
                     maxlength="200"
@@ -244,22 +265,28 @@
                         )
                     ) }}"
                     placeholder="LK,IN"
+                    autocomplete="off"
                 >
-                <small>
+                <small class="form-help">
                     ISO 2-letter codes only. Provider/merchant eligibility must
                     be checked before approval.
                 </small>
                 @error('countries')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
                 @error('countries.*')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
             <div class="form-group">
-                <label>Merchant / Provider Eligibility Confirmed</label>
-                <select name="eligibility_confirmed">
+                <label for="integration_eligibility">
+                    Merchant / Provider Eligibility Confirmed
+                </label>
+                <select
+                    id="integration_eligibility"
+                    name="eligibility_confirmed"
+                >
                     <option
                         value="0"
                         @selected(
@@ -283,33 +310,35 @@
                         Confirmed
                     </option>
                 </select>
+                <small class="form-help">
+                    Confirm only after the merchant/provider account is genuinely eligible.
+                </small>
                 @error('eligibility_confirmed')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
+                @enderror
+            </div>
+
+            <div class="form-group full-width">
+                <label for="integration_change_reason">Change Reason</label>
+                <textarea
+                    id="integration_change_reason"
+                    name="change_reason"
+                    maxlength="500"
+                    rows="4"
+                    required
+                    placeholder="Record why this provider control state is being changed."
+                >{{ old('change_reason') }}</textarea>
+                <small class="form-help">
+                    The audit event records that a reason was provided, but does
+                    not copy this free text into the audit payload.
+                </small>
+                @error('change_reason')
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
         </div>
 
-        <div
-            class="form-group"
-            style="margin-top:18px;"
-        >
-            <label>Change Reason</label>
-            <textarea
-                name="change_reason"
-                maxlength="500"
-                rows="4"
-                required
-            >{{ old('change_reason') }}</textarea>
-            <small>
-                The audit event records that a reason was provided, but does
-                not copy free text into the audit payload.
-            </small>
-            @error('change_reason')
-                <small>{{ $message }}</small>
-            @enderror
-        </div>
-
-        <div style="margin-top:20px;">
+        <div class="admin-form-actions">
             <button
                 class="primary-btn"
                 type="submit"
