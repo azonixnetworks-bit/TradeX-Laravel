@@ -9,8 +9,8 @@
         <div class="page-eyebrow">CUSTOMER ONBOARDING</div>
         <h1>Add <span>Customer</span></h1>
         <p>
-            Create a pre-onboarding invitation without creating credentials,
-            TOTP secrets, premium access, or payment state.
+            Create a secure pre-onboarding invitation without creating
+            credentials, TOTP secrets, premium access, or payment state.
         </p>
     </div>
 
@@ -22,14 +22,26 @@
     </a>
 </div>
 
-<section class="panel" style="padding:18px;margin-bottom:18px;">
-    <strong>Security boundary:</strong>
-    this action does not create an active customer account. The customer must
-    complete the normal TradeX registration flow, verification and TOTP setup.
-    Premium access remains payment/entitlement controlled.
-</section>
+<div class="admin-form-callout">
+    <div class="admin-form-callout-icon" aria-hidden="true">◇</div>
+    <div>
+        <strong>Security boundary</strong>
+        This action does not create an active customer account. The customer
+        must complete the normal TradeX registration flow, verification and
+        TOTP setup. Premium access remains payment/entitlement controlled.
+    </div>
+</div>
 
-<section class="panel" style="padding:22px;">
+<section class="panel admin-form-panel">
+    <div class="admin-form-heading">
+        <div class="panel-eyebrow">CUSTOMER DETAILS</div>
+        <h2>Pre-onboarding information</h2>
+        <p>
+            Use the customer&apos;s real contact details. Email and WhatsApp are
+            later reconciled against the customer&apos;s completed registration.
+        </p>
+    </div>
+
     <form
         method="POST"
         action="{{ route('admin.customers.store') }}"
@@ -47,14 +59,15 @@
                     required
                     value="{{ old('name') }}"
                     autocomplete="name"
+                    placeholder="Customer full name"
                 >
                 @error('name')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
             <div class="form-group">
-                <label for="email">Email</label>
+                <label for="email">Email Address</label>
                 <input
                     id="email"
                     type="email"
@@ -63,9 +76,10 @@
                     required
                     value="{{ old('email') }}"
                     autocomplete="email"
+                    placeholder="customer@example.com"
                 >
                 @error('email')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
@@ -81,9 +95,11 @@
                     placeholder="+94771234567"
                     autocomplete="tel"
                 >
-                <small>E.164 international format including + country code.</small>
+                <small class="form-help">
+                    E.164 international format including the + country code.
+                </small>
                 @error('whatsapp_number')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
@@ -94,7 +110,7 @@
                     name="country_code"
                     required
                 >
-                    <option value="">Select</option>
+                    <option value="">Select country</option>
                     @foreach([
                         'LK' => 'Sri Lanka',
                         'IN' => 'India',
@@ -110,12 +126,12 @@
                     @endforeach
                 </select>
                 @error('country_code')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
             <div class="form-group">
-                <label for="language_code">Language</label>
+                <label for="language_code">Preferred Language</label>
                 <select
                     id="language_code"
                     name="language_code"
@@ -131,7 +147,7 @@
                     @endforeach
                 </select>
                 @error('language_code')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
 
@@ -144,38 +160,44 @@
                     maxlength="30"
                     value="{{ old('referral_code') }}"
                     placeholder="Optional"
+                    autocomplete="off"
                 >
-                <small>Only an existing ACTIVE TradeX customer referral code is accepted.</small>
+                <small class="form-help">
+                    Only an existing ACTIVE TradeX customer referral code is accepted.
+                </small>
                 @error('referral_code')
-                    <small>{{ $message }}</small>
+                    <small class="form-error">{{ $message }}</small>
+                @enderror
+            </div>
+
+            <div class="form-group full-width">
+                <label for="internal_note">Internal Admin Note</label>
+                <textarea
+                    id="internal_note"
+                    name="internal_note"
+                    maxlength="500"
+                    rows="4"
+                    placeholder="Optional operational note. Do not store passwords, OTPs, TOTP secrets or payment credentials."
+                >{{ old('internal_note') }}</textarea>
+                <small class="form-help">
+                    Internal operational context only. Sensitive credentials must never be stored here.
+                </small>
+                @error('internal_note')
+                    <small class="form-error">{{ $message }}</small>
                 @enderror
             </div>
         </div>
 
-        <div class="form-group" style="margin-top:18px;">
-            <label for="internal_note">Internal Admin Note</label>
-            <textarea
-                id="internal_note"
-                name="internal_note"
-                maxlength="500"
-                rows="4"
-                placeholder="Optional operational note. Do not store passwords, OTPs, TOTP secrets or payment credentials."
-            >{{ old('internal_note') }}</textarea>
-            @error('internal_note')
-                <small>{{ $message }}</small>
-            @enderror
+        <div class="admin-form-note">
+            <span aria-hidden="true">◆</span>
+            <span>
+                <strong>Initial account type: FREE.</strong>
+                The customer receives account access only after completing the
+                normal registration flow. Admin onboarding cannot grant PREMIUM.
+            </span>
         </div>
 
-        <div
-            class="panel"
-            style="padding:14px;margin-top:18px;"
-        >
-            <strong>Initial account type:</strong> FREE after the customer
-            completes normal registration. Admin onboarding cannot grant
-            PREMIUM access.
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;">
+        <div class="admin-form-actions">
             <button class="primary-btn" type="submit">
                 Create Onboarding Invitation
             </button>
