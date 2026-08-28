@@ -1,0 +1,292 @@
+/* ============================================================
+   TRADEX ADMIN — ADMIN-BRAND-01 OFFICIAL BRANDING
+   Visual-only branding layer. No business/auth/payment behavior.
+============================================================ */
+
+:root {
+    --tradex-brand-gold: #d9a83c;
+    --tradex-brand-gold-light: #f1cf73;
+    --tradex-brand-blue: #213b58;
+    --tradex-brand-shadow: rgba(217, 168, 60, .16);
+}
+
+.tradex-brand-image {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* ================================
+   SIDEBAR BRAND
+================================ */
+
+.sidebar-brand {
+    padding: 8px 14px;
+    gap: 8px;
+    justify-content: space-between;
+}
+
+.sidebar-brand-home {
+    min-width: 0;
+    height: 74px;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.sidebar-brand-logo {
+    width: 178px;
+    height: 74px;
+    object-fit: contain;
+    object-position: left center;
+    filter: drop-shadow(0 9px 19px rgba(0, 0, 0, .28));
+}
+
+/* Old text mark is intentionally superseded by the official image. */
+.sidebar-brand > .brand-mark,
+.sidebar-brand > div:not(.sidebar-brand-home) {
+    display: none;
+}
+
+/* ================================
+   TOPBAR BRAND
+================================ */
+
+.topbar-brand-mark {
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(217, 168, 60, .18);
+    border-radius: 11px;
+    background:
+        linear-gradient(145deg, rgba(18, 34, 52, .92), rgba(3, 9, 16, .94));
+    box-shadow: 0 9px 24px rgba(0, 0, 0, .22);
+    overflow: hidden;
+}
+
+.topbar-brand-mark img {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+}
+
+/* ================================
+   DASHBOARD BRAND LOCKUP
+================================ */
+
+.dashboard-brand-side {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dashboard-brand-lockup {
+    width: 104px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 8px;
+    border: 1px solid rgba(217, 168, 60, .12);
+    border-radius: 14px;
+    background:
+        linear-gradient(145deg, rgba(9, 25, 40, .82), rgba(4, 12, 21, .78));
+    box-shadow: 0 13px 30px rgba(0, 0, 0, .16);
+}
+
+.dashboard-brand-lockup img {
+    width: 88px;
+    max-height: 64px;
+    object-fit: contain;
+}
+
+/* ================================
+   PAGE LOADER / SPLASH
+================================ */
+
+.tradex-loader {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at 50% 44%, rgba(31, 68, 105, .24), transparent 34%),
+        #03070d;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity .24s ease, visibility 0s linear 0s;
+}
+
+.tradex-loader.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .24s ease, visibility 0s linear .24s;
+}
+
+.tradex-loader-card {
+    display: grid;
+    place-items: center;
+    gap: 13px;
+    min-width: 190px;
+    padding: 22px 28px;
+    border: 1px solid rgba(255, 255, 255, .06);
+    border-radius: 22px;
+    background: rgba(6, 17, 30, .76);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, .42);
+    backdrop-filter: blur(12px);
+}
+
+.tradex-loader-card img {
+    width: 76px;
+    height: 76px;
+    object-fit: contain;
+    animation: tradex-brand-pulse 1.4s ease-in-out infinite;
+}
+
+.tradex-loader-card span {
+    color: #71869b;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 2.2px;
+}
+
+@keyframes tradex-brand-pulse {
+    0%, 100% {
+        transform: scale(.96);
+        filter: drop-shadow(0 0 0 rgba(217, 168, 60, 0));
+        opacity: .86;
+    }
+
+    50% {
+        transform: scale(1.02);
+        filter: drop-shadow(0 0 16px rgba(217, 168, 60, .22));
+        opacity: 1;
+    }
+}
+
+/* ================================
+   AUTH BRAND HELPERS
+================================ */
+
+.auth-brand-logo {
+    display: block;
+    width: min(280px, 86%);
+    max-height: 240px;
+    object-fit: contain;
+    object-position: left center;
+    filter: drop-shadow(0 16px 34px rgba(0, 0, 0, .28));
+}
+
+.auth-brand-mark {
+    width: 74px;
+    height: 74px;
+    object-fit: contain;
+}
+
+/* ================================
+   REPORT / PRINT BRAND HEADER
+================================ */
+
+.tradex-report-brand {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 22px;
+    padding-bottom: 16px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, .10);
+}
+
+.tradex-report-brand-logo {
+    width: 132px;
+    max-height: 90px;
+    object-fit: contain;
+}
+
+.tradex-report-brand-meta {
+    text-align: right;
+}
+
+.tradex-report-brand-meta strong,
+.tradex-report-brand-meta span {
+    display: block;
+}
+
+.tradex-report-brand-meta span {
+    margin-top: 5px;
+    color: #72869a;
+    font-size: 11px;
+}
+
+@media (max-width: 1000px) {
+    .sidebar-brand-logo {
+        width: 176px;
+    }
+}
+
+@media (max-width: 820px) {
+    .topbar-brand-mark {
+        width: 34px;
+        height: 34px;
+        flex-basis: 34px;
+    }
+
+    .topbar-brand-mark img {
+        width: 31px;
+        height: 31px;
+    }
+
+    .dashboard-brand-side {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .dashboard-brand-lockup {
+        width: 92px;
+        height: 64px;
+    }
+
+    .dashboard-brand-lockup img {
+        width: 78px;
+        max-height: 56px;
+    }
+}
+
+@media (max-width: 560px) {
+    .topbar-brand-mark {
+        display: none;
+    }
+
+    .tradex-report-brand {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .tradex-report-brand-meta {
+        text-align: left;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tradex-loader,
+    .tradex-loader-card img {
+        transition: none;
+        animation: none;
+    }
+}
+
+@media print {
+    .tradex-report-brand {
+        color: #111;
+        border-bottom-color: #d8d8d8;
+    }
+
+    .tradex-report-brand-meta span {
+        color: #555;
+    }
+}
