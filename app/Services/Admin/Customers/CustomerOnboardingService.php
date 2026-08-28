@@ -287,46 +287,19 @@ class CustomerOnboardingService
                             continue;
                         }
 
-                        if (
+                        $exactIdentityMatch =
                             $emailUser !== null
                             && $whatsappUser !== null
                             && $emailUser->getKey()
-                                !== $whatsappUser->getKey()
-                        ) {
-                            $invitation->forceFill([
-                                'status' =>
-                                    CustomerOnboardingInvitation::STATUS_CONFLICT,
-                                'active_email_hash' =>
-                                    null,
-                                'active_whatsapp_hash' =>
-                                    null,
-                            ])->save();
+                                === $whatsappUser->getKey();
 
-                            AuditLog::record(
-                                actorType:
-                                    'SYSTEM',
-                                actorId:
-                                    null,
-                                action:
-                                    'CUSTOMER_ONBOARDING_MATCH_CONFLICT',
-                                module:
-                                    'USERS',
-                                targetType:
-                                    'CUSTOMER_ONBOARDING_INVITATION',
-                                targetId:
-                                    $invitation->getKey(),
-                                newValues: [
-                                    'status' =>
-                                        CustomerOnboardingInvitation::STATUS_CONFLICT,
-                                ]
+                        if (! $exactIdentityMatch) {
+                            $this->markConflict(
+                                $invitation
                             );
 
                             continue;
                         }
-
-                        $matchedUser =
-                            $emailUser
-                            ?? $whatsappUser;
 
                         $invitation->forceFill([
                             'status' =>
@@ -336,7 +309,7 @@ class CustomerOnboardingService
                             'active_whatsapp_hash' =>
                                 null,
                             'matched_user_id' =>
-                                $matchedUser->getKey(),
+                                $emailUser->getKey(),
                             'matched_at' =>
                                 now(),
                         ])->save();
@@ -356,7 +329,7 @@ class CustomerOnboardingService
                                 $invitation->getKey(),
                             newValues: [
                                 'matched_user_id' =>
-                                    $matchedUser->getKey(),
+                                    $emailUser->getKey(),
                                 'status' =>
                                     CustomerOnboardingInvitation::STATUS_MATCHED,
                             ]
@@ -389,6 +362,38 @@ class CustomerOnboardingService
             ->orderByDesc('created_at')
             ->paginate($perPage)
             ->withQueryString();
+    }
+
+    private function markConflict(
+        CustomerOnboardingInvitation $invitation
+    ): void {
+        $invitation->forceFill([
+            'status' =>
+                CustomerOnboardingInvitation::STATUS_CONFLICT,
+            'active_email_hash' =>
+                null,
+            'active_whatsapp_hash' =>
+                null,
+        ])->save();
+
+        AuditLog::record(
+            actorType:
+                'SYSTEM',
+            actorId:
+                null,
+            action:
+                'CUSTOMER_ONBOARDING_MATCH_CONFLICT',
+            module:
+                'USERS',
+            targetType:
+                'CUSTOMER_ONBOARDING_INVITATION',
+            targetId:
+                $invitation->getKey(),
+            newValues: [
+                'status' =>
+                    CustomerOnboardingInvitation::STATUS_CONFLICT,
+            ]
+        );
     }
 
     private function expireStaleInvitations(): void
