@@ -42,6 +42,11 @@
     >
 
     @stack('styles')
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/selects.css') }}"
+    >
 </head>
 
 <body>
