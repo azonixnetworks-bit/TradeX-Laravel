@@ -28,6 +28,11 @@ class CustomerOnboardingService
             (string) $data['whatsapp_number']
         );
 
+        $identityHash = hash(
+            'sha256',
+            $email.'|'.$whatsapp
+        );
+
         $registeredIdentityExists =
             User::query()
                 ->whereRaw(
@@ -117,6 +122,7 @@ class CustomerOnboardingService
                 $request,
                 $email,
                 $whatsapp,
+                $identityHash,
                 $referrer,
                 $referralCode,
                 $days
@@ -154,6 +160,9 @@ class CustomerOnboardingService
 
                             'status' =>
                                 CustomerOnboardingInvitation::STATUS_PENDING,
+
+                            'active_identity_hash' =>
+                                $identityHash,
 
                             'created_by_admin_id' =>
                                 $admin->getKey(),
@@ -255,6 +264,8 @@ class CustomerOnboardingService
                             $invitation->forceFill([
                                 'status' =>
                                     CustomerOnboardingInvitation::STATUS_CONFLICT,
+                                'active_identity_hash' =>
+                                    null,
                             ])->save();
 
                             AuditLog::record(
@@ -286,6 +297,8 @@ class CustomerOnboardingService
                         $invitation->forceFill([
                             'status' =>
                                 CustomerOnboardingInvitation::STATUS_MATCHED,
+                            'active_identity_hash' =>
+                                null,
                             'matched_user_id' =>
                                 $matchedUser->getKey(),
                             'matched_at' =>
@@ -357,6 +370,8 @@ class CustomerOnboardingService
             ->update([
                 'status' =>
                     CustomerOnboardingInvitation::STATUS_EXPIRED,
+                'active_identity_hash' =>
+                    null,
                 'updated_at' =>
                     now(),
             ]);
