@@ -91,7 +91,7 @@ class CopyTradePresenter
             'account_number_masked' =>
                 $account->maskedAccountNumber(),
             'status' => $account->status,
-            'status_reason' => $account->last_status_reason,
+            'status_reason' => $this->userVisibleStatusReason($account),
             'resubmission_count' => $account->resubmission_count,
             'submitted_at' => $account->submitted_at?->toIso8601String(),
             'verified_at' => $account->verified_at?->toIso8601String(),
@@ -132,6 +132,25 @@ class CopyTradePresenter
         }
 
         return 'CONNECT_BROKER';
+    }
+
+    private function userVisibleStatusReason(
+        CopyTradeBrokerAccount $account
+    ): ?string {
+        if (
+            ! in_array(
+                $account->status,
+                [
+                    CopyTradeBrokerAccount::STATUS_REJECTED,
+                    CopyTradeBrokerAccount::STATUS_NEEDS_RESUBMISSION,
+                ],
+                true
+            )
+        ) {
+            return null;
+        }
+
+        return $account->last_status_reason;
     }
 
     private function activationState(
