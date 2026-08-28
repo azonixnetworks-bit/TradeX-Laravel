@@ -36,6 +36,11 @@
         href="{{ asset('admin/css/branding.css') }}"
     >
 
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/forms.css') }}"
+    >
+
     @stack('styles')
 </head>
 
