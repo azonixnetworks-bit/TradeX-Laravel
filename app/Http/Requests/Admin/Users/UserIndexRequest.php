@@ -24,6 +24,17 @@ class UserIndexRequest extends FormRequest
                 'max:100',
             ],
 
+            'segment' => [
+                'nullable',
+                Rule::in([
+                    'PENDING',
+                    'FREE',
+                    'PREMIUM',
+                    'RESTRICTED',
+                    'RECENT',
+                ]),
+            ],
+
             'account_type' => [
                 'nullable',
                 Rule::in([
@@ -69,5 +80,28 @@ class UserIndexRequest extends FormRequest
                 ]),
             ],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'segment' => strtoupper(
+                trim(
+                    (string) $this->query(
+                        'segment',
+                        ''
+                    )
+                )
+            ) ?: null,
+
+            'country' => strtoupper(
+                trim(
+                    (string) $this->query(
+                        'country',
+                        ''
+                    )
+                )
+            ) ?: null,
+        ]);
     }
 }
