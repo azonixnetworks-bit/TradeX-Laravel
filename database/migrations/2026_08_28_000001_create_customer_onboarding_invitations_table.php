@@ -40,12 +40,19 @@ return new class extends Migration
                     ->index();
 
                 /*
-                 * Only an active PENDING invitation keeps this fingerprint.
-                 * The nullable unique column closes the concurrent duplicate
-                 * invitation race while allowing historical rows to coexist.
+                 * Only an active PENDING invitation keeps these fingerprints.
+                 * Nullable unique columns close concurrent duplicate races for
+                 * either email or WhatsApp while historical rows may coexist.
                  */
                 $table->char(
-                    'active_identity_hash',
+                    'active_email_hash',
+                    64
+                )
+                    ->nullable()
+                    ->unique();
+
+                $table->char(
+                    'active_whatsapp_hash',
                     64
                 )
                     ->nullable()
