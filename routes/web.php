@@ -195,3 +195,16 @@ require __DIR__ . '/admin_languages.php';
 */
 
 require __DIR__ . '/admin_hardening.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-20 — Customer Management & Admin Onboarding
+|--------------------------------------------------------------------------
+|
+| Customer dashboard, safe admin-created pre-onboarding invitations and
+| customer segment navigation. Invitations never create credentials,
+| TOTP secrets, premium entitlements or payment state.
+|
+*/
+
+require __DIR__ . '/admin_customers.php';
