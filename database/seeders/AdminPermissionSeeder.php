@@ -14,9 +14,10 @@ class AdminPermissionSeeder extends Seeder
             // DASHBOARD
             ['dashboard.view', 'View Dashboard', 'DASHBOARD'],
 
-            // USERS
+            // USERS / CUSTOMERS
             ['users.view', 'View Users', 'USERS'],
             ['users.view_details', 'View User Details', 'USERS'],
+            ['users.invite', 'Invite Customers', 'USERS'],
             ['users.activate', 'Activate Users', 'USERS'],
             ['users.suspend', 'Suspend Users', 'USERS'],
             ['users.block', 'Block Users', 'USERS'],

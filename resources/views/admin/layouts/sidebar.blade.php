@@ -1,5 +1,6 @@
 @php
     $admin = auth('admin')->user();
+    $customerSegment = strtoupper((string) request()->query('segment', ''));
 @endphp
 
 <aside
@@ -38,13 +39,114 @@
                 class="nav-link
                 {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"
             >
-                <span class="nav-icon">
-                    ◈
-                </span>
+                <span class="nav-icon">◈</span>
+                <span>Dashboard</span>
+            </a>
 
-                <span>
-                    Dashboard
-                </span>
+        @endif
+
+
+        @if(
+            $admin->hasPermission('users.view')
+            || $admin->hasPermission('users.invite')
+        )
+            <div class="nav-section-title">
+                CUSTOMERS
+            </div>
+        @endif
+
+
+        @if($admin->hasPermission('users.view'))
+
+            <a
+                href="{{ route('admin.customers.dashboard') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.customers.dashboard') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◎</span>
+                <span>Customer Dashboard</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.*') && $customerSegment === '' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">☰</span>
+                <span>All Customers</span>
+            </a>
+
+        @endif
+
+
+        @if($admin->hasPermission('users.invite'))
+
+            <a
+                href="{{ route('admin.customers.create') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.customers.create') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">＋</span>
+                <span>Add Customer</span>
+            </a>
+
+        @endif
+
+
+        @if($admin->hasPermission('users.view'))
+
+            <a
+                href="{{ route('admin.customers.onboarding') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.customers.onboarding') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◌</span>
+                <span>Pending Onboarding</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index', ['segment' => 'PENDING']) }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.index') && $customerSegment === 'PENDING' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◔</span>
+                <span>Pending Accounts</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index', ['segment' => 'FREE']) }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.index') && $customerSegment === 'FREE' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">○</span>
+                <span>Free Customers</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index', ['segment' => 'PREMIUM']) }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.index') && $customerSegment === 'PREMIUM' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◆</span>
+                <span>Premium Customers</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index', ['segment' => 'RESTRICTED']) }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.index') && $customerSegment === 'RESTRICTED' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">⊘</span>
+                <span>Suspended / Blocked</span>
+            </a>
+
+            <a
+                href="{{ route('admin.users.index', ['segment' => 'RECENT']) }}"
+                class="nav-link
+                {{ request()->routeIs('admin.users.index') && $customerSegment === 'RECENT' ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◷</span>
+                <span>Recently Joined</span>
             </a>
 
         @endif
@@ -53,24 +155,6 @@
         <div class="nav-section-title">
             MANAGEMENT
         </div>
-
-       @if($admin->hasPermission('users.view'))
-
-            <a
-                href="{{ route('admin.users.index') }}"
-                class="nav-link
-                {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
-            >
-                <span class="nav-icon">
-                    ◎
-                </span>
-
-                <span>
-                    Users
-                </span>
-            </a>
-
-        @endif
 
 
         @if($admin->hasPermission('education.view'))
