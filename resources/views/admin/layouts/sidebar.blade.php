@@ -212,6 +212,42 @@
         @endif
 
 
+        @if($admin->hasPermission('copy_trading.view'))
+
+            <div class="nav-section-title">
+                COPY TRADING
+            </div>
+
+            <a
+                href="{{ route('admin.copy_trading.brokers.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.copy_trading.brokers.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◎</span>
+                <span>Broker Management</span>
+            </a>
+
+            <a
+                href="{{ route('admin.copy_trading.verifications.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.copy_trading.verifications.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">✓</span>
+                <span>Broker Account Verification</span>
+            </a>
+
+            <a
+                href="{{ route('admin.copy_trading.accounts.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.copy_trading.accounts.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◫</span>
+                <span>Copy Trade Accounts</span>
+            </a>
+
+        @endif
+
+
         @if($admin->hasPermission('affiliates.view'))
 
             <a
