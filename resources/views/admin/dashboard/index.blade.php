@@ -238,7 +238,7 @@
 
                     <div>
                         <strong>
-                            Trade Ideas
+                            Long Term Trade Ideas
                         </strong>
 
                         <span>
