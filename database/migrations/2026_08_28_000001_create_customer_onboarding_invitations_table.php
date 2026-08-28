@@ -39,6 +39,18 @@ return new class extends Migration
                     ->default('PENDING')
                     ->index();
 
+                /*
+                 * Only an active PENDING invitation keeps this fingerprint.
+                 * The nullable unique column closes the concurrent duplicate
+                 * invitation race while allowing historical rows to coexist.
+                 */
+                $table->char(
+                    'active_identity_hash',
+                    64
+                )
+                    ->nullable()
+                    ->unique();
+
                 $table->foreignId(
                     'matched_user_id'
                 )
