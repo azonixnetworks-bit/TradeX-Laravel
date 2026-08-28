@@ -1,9 +1,9 @@
-{{-- TradeX Admin — ADMIN-05 REV3 Create Trade Idea --}}
+{{-- TradeX Admin — ADMIN-05 REV3 Create Long Term Trade Idea --}}
 
 @extends('admin.layouts.app')
 
-@section('title', 'Create Trade Idea | TradeX')
-@section('page-title', 'Trade Ideas')
+@section('title', 'Create Long Term Trade Idea | TradeX')
+@section('page-title', 'Long Term Trade Ideas')
 
 @push('styles')
 
@@ -24,11 +24,11 @@
 @section('content')
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">ADMIN-05 REV3 · TRADE IDEAS</div>
-        <h1>Create <span>Trade Idea</span></h1>
+        <div class="page-eyebrow">ADMIN-05 REV3 · LONG TERM TRADE IDEAS</div>
+        <h1>Create <span>Long Term Trade Idea</span></h1>
         <p>
             Trade Structure, chart media and context are optional.
-            Trade Ideas are supplied globally without language filtering.
+            Long Term Trade Ideas are supplied globally without language filtering.
         </p>
     </div>
 
