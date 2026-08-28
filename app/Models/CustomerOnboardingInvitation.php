@@ -22,6 +22,7 @@ class CustomerOnboardingInvitation extends Model
         'referral_code_input',
         'referred_by_user_id',
         'status',
+        'active_identity_hash',
         'matched_user_id',
         'created_by_admin_id',
         'internal_note',
@@ -32,6 +33,7 @@ class CustomerOnboardingInvitation extends Model
     protected function casts(): array
     {
         return [
+            'internal_note' => 'encrypted',
             'expires_at' => 'datetime',
             'matched_at' => 'datetime',
         ];
