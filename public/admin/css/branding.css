@@ -22,9 +22,29 @@
 ================================ */
 
 .sidebar-brand {
-    padding: 8px 14px;
+    padding: 7px 14px;
     gap: 8px;
-    justify-content: space-between;
+    justify-content: flex-start;
+    position: relative;
+}
+
+.sidebar-brand::before {
+    content: "";
+    width: 184px;
+    height: 76px;
+    flex: 0 0 184px;
+    display: block;
+    background-image: url('../brand/tradex-logo.webp');
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: contain;
+    filter: drop-shadow(0 9px 19px rgba(0, 0, 0, .28));
+}
+
+/* Old text mark is intentionally superseded by the official image. */
+.sidebar-brand > .brand-mark,
+.sidebar-brand > div:not(.sidebar-brand-home) {
+    display: none;
 }
 
 .sidebar-brand-home {
@@ -43,16 +63,11 @@
     filter: drop-shadow(0 9px 19px rgba(0, 0, 0, .28));
 }
 
-/* Old text mark is intentionally superseded by the official image. */
-.sidebar-brand > .brand-mark,
-.sidebar-brand > div:not(.sidebar-brand-home) {
-    display: none;
-}
-
 /* ================================
    TOPBAR BRAND
 ================================ */
 
+.topbar-left::before,
 .topbar-brand-mark {
     width: 38px;
     height: 38px;
@@ -61,10 +76,17 @@
     place-items: center;
     border: 1px solid rgba(217, 168, 60, .18);
     border-radius: 11px;
-    background:
-        linear-gradient(145deg, rgba(18, 34, 52, .92), rgba(3, 9, 16, .94));
+    background-color: rgba(8, 21, 35, .92);
+    background-image: url('../brand/tradex-favicon.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 34px 34px;
     box-shadow: 0 9px 24px rgba(0, 0, 0, .22);
     overflow: hidden;
+}
+
+.topbar-left::before {
+    content: "";
 }
 
 .topbar-brand-mark img {
@@ -74,7 +96,7 @@
 }
 
 /* ================================
-   DASHBOARD BRAND LOCKUP
+   DASHBOARD / PAGE BRAND ACCENT
 ================================ */
 
 .dashboard-brand-side {
@@ -224,16 +246,19 @@
 }
 
 @media (max-width: 1000px) {
-    .sidebar-brand-logo {
+    .sidebar-brand::before {
         width: 176px;
+        flex-basis: 176px;
     }
 }
 
 @media (max-width: 820px) {
+    .topbar-left::before,
     .topbar-brand-mark {
         width: 34px;
         height: 34px;
         flex-basis: 34px;
+        background-size: 31px 31px;
     }
 
     .topbar-brand-mark img {
@@ -258,6 +283,7 @@
 }
 
 @media (max-width: 560px) {
+    .topbar-left::before,
     .topbar-brand-mark {
         display: none;
     }
