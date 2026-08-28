@@ -187,13 +187,26 @@
 
         @if($admin->hasPermission('trade_ideas.view'))
 
+            <div class="nav-section-title">
+                TRADE IDEAS
+            </div>
+
             <a
                 href="{{ route('admin.trade_ideas.index') }}"
                 class="nav-link
                 {{ request()->routeIs('admin.trade_ideas.*') ? 'active' : '' }}"
             >
                 <span class="nav-icon">◇</span>
-                <span>Long Term Trade Ideas</span>
+                <span>Long-Term Trade Ideas</span>
+            </a>
+
+            <a
+                href="{{ route('admin.daily_trade_ideas.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.daily_trade_ideas.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◈</span>
+                <span>Daily Trade Ideas</span>
             </a>
 
         @endif
