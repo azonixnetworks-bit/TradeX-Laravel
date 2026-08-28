@@ -12,6 +12,19 @@ require __DIR__ . '/admin_our_channel.php';
 
 /*
 |--------------------------------------------------------------------------
+| PAYMENT-LIVE-01 — Stripe Browser Return Pages
+|--------------------------------------------------------------------------
+|
+| These routes are browser UX only. They never settle a payment and never
+| activate an entitlement. Stripe's cryptographically verified webhook
+| remains the sole settlement authority for Stripe payments.
+|
+*/
+Route::view('/payments/stripe/success', 'payments.stripe-success')->name('payments.stripe.success');
+Route::view('/payments/stripe/cancel', 'payments.stripe-cancel')->name('payments.stripe.cancel');
+
+/*
+|--------------------------------------------------------------------------
 | ADMIN-05 — Trade Ideas Management
 |--------------------------------------------------------------------------
 |
