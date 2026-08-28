@@ -28,8 +28,22 @@
 
     </div>
 
-    <div class="page-date">
-        {{ now()->format('d M Y') }}
+    <div class="dashboard-brand-side">
+        <div
+            class="dashboard-brand-lockup"
+            aria-label="TradeX — Learn. Trade. Grow."
+        >
+            <img
+                src="{{ asset('admin/brand/tradex-logo.webp') }}"
+                alt="TradeX — Learn. Trade. Grow."
+                width="310"
+                height="320"
+            >
+        </div>
+
+        <div class="page-date">
+            {{ now()->format('d M Y') }}
+        </div>
     </div>
 
 </div>
@@ -170,16 +184,16 @@
 
                     <div>
                         <strong>
-                            Users
+                            Customers
                         </strong>
 
                         <span>
-                            Manage TradeX members
+                            Manage TradeX customers
                         </span>
                     </div>
 
                     <div class="soon-tag">
-                        ADMIN-02
+                        ADMIN-20
                     </div>
 
                 </div>
