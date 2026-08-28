@@ -229,6 +229,36 @@
     object-fit: contain;
 }
 
+/*
+ * Login-specific visual fallback.
+ * The semantic <img> remains in the Blade template for accessibility, but
+ * these containers also paint the same local asset as a CSS background.
+ * This makes the official logo resilient to browser image-layout/cache quirks
+ * without introducing any external dependency.
+ */
+.brand-logo-wrap {
+    background-image: url('../brand/tradex-logo.webp');
+    background-repeat: no-repeat;
+    background-position: left top;
+    background-size: auto 230px;
+}
+
+.brand-logo-wrap > .auth-brand-logo {
+    opacity: 0;
+}
+
+.login-mobile-brand {
+    min-height: 150px;
+    background-image: url('../brand/tradex-logo.webp');
+    background-repeat: no-repeat;
+    background-position: left center;
+    background-size: auto 150px;
+}
+
+.login-mobile-brand > img {
+    opacity: 0;
+}
+
 /* ================================
    REPORT / PRINT BRAND HEADER
 ================================ */
