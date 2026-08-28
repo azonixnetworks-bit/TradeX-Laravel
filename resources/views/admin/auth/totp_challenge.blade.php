@@ -8,7 +8,20 @@
         content="width=device-width, initial-scale=1.0"
     >
 
+    <meta name="theme-color" content="#03070d">
+
     <title>TradeX Admin Two-Factor Authentication</title>
+
+    <link
+        rel="icon"
+        type="image/png"
+        href="{{ asset('admin/brand/tradex-favicon.png') }}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/branding.css') }}"
+    >
 
     <style>
         * {
@@ -21,7 +34,9 @@
             display: grid;
             place-items: center;
             padding: 24px;
-            background: #03070d;
+            background:
+                radial-gradient(circle at 50% 12%, rgba(28, 78, 128, .18), transparent 34%),
+                #03070d;
             color: #ffffff;
             font-family:
                 Inter,
@@ -38,6 +53,31 @@
             border-radius: 24px;
             background: #07111e;
             box-shadow: 0 35px 90px rgba(0,0,0,.48);
+        }
+
+        .brand-lockup {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            margin-bottom: 22px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+
+        .brand-lockup img {
+            width: 116px;
+            max-height: 112px;
+            object-fit: contain;
+            object-position: left center;
+        }
+
+        .brand-lockup span {
+            color: #71869b;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1.7px;
+            text-align: right;
         }
 
         .eyebrow {
@@ -76,13 +116,20 @@
             text-align: center;
         }
 
+        input:focus {
+            outline: none;
+            border-color: rgba(220,174,69,.58);
+            box-shadow: 0 0 0 4px rgba(220,174,69,.08);
+        }
+
         button {
             width: 100%;
             margin-top: 18px;
             padding: 14px 18px;
             border: 0;
             border-radius: 12px;
-            background: #dcae45;
+            background:
+                linear-gradient(135deg, #c9972d, #f0cb6a);
             color: #09111b;
             font-weight: 900;
             cursor: pointer;
@@ -96,13 +143,60 @@
         .meta {
             margin-top: 18px;
             font-size: 12px;
+            line-height: 1.6;
             color: #6f8298;
+        }
+
+        @media (max-width: 520px) {
+            .card {
+                padding: 26px 22px;
+            }
+
+            .brand-lockup {
+                align-items: flex-start;
+            }
+
+            .brand-lockup img {
+                width: 96px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
         }
     </style>
 </head>
 
 <body>
+    <div
+        id="tradexLoader"
+        class="tradex-loader"
+        role="status"
+        aria-label="Loading TradeX security"
+        aria-live="polite"
+    >
+        <div class="tradex-loader-card">
+            <img
+                src="{{ asset('admin/brand/tradex-favicon.png') }}"
+                alt=""
+                width="64"
+                height="64"
+            >
+            <span>TRADEX ADMIN SECURITY</span>
+        </div>
+    </div>
+
     <main class="card">
+        <div class="brand-lockup">
+            <img
+                src="{{ asset('admin/brand/tradex-logo.webp') }}"
+                alt="TradeX — Learn. Trade. Grow."
+                width="310"
+                height="320"
+            >
+            <span>SECURE<br>ADMINISTRATION</span>
+        </div>
+
         <div class="eyebrow">
             TRADEX ADMIN SECURITY
         </div>
@@ -152,5 +246,9 @@
             TOTP verification is required before an admin session is created.
         </div>
     </main>
+
+    <script
+        src="{{ asset('admin/js/branding.js') }}">
+    </script>
 </body>
 </html>
