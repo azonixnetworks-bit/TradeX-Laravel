@@ -214,7 +214,7 @@ class PayPalWebhookTest extends TestCase
         );
     }
 
-    public function test_forced_paypal_reversal_creates_separate_adjustment_reverses_affiliate_but_does_not_auto_revoke_entitlement(): void
+    public function test_forced_paypal_reversal_creates_adjustment_reverses_affiliate_and_revokes_exact_tied_entitlement(): void
     {
         $this->seed(
             AffiliateStageSeeder::class
@@ -229,6 +229,9 @@ class PayPalWebhookTest extends TestCase
             $this->createApiUser([
                 'account_type' =>
                     'PREMIUM',
+
+                'education_premium_entitlement' =>
+                    false,
 
                 'referred_by_user_id' =>
                     $affiliate->getKey(),
@@ -434,15 +437,19 @@ class PayPalWebhookTest extends TestCase
                     PaymentOrder::PRODUCT_EDUCATION_PREMIUM,
 
                 'status' =>
-                    UserEntitlement::STATUS_ACTIVE,
+                    UserEntitlement::STATUS_REVOKED,
             ]
         );
 
         $buyer->refresh();
 
         $this->assertSame(
-            'PREMIUM',
+            'FREE',
             $buyer->account_type
+        );
+
+        $this->assertFalse(
+            $buyer->canAccessPremium()
         );
     }
 

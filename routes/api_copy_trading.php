@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerIndexController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerLogoController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeOpenAccountActionController;
 use App\Http\Controllers\Api\CopyTrading\ProfileBrokerAccountIndexController;
+use App\Http\Middleware\EnsureEducationPremium;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -54,9 +55,10 @@ Route::prefix('v1')
                     '/broker-markets/{copyTradeBrokerMarket}/open-account-action',
                     CopyTradeOpenAccountActionController::class
                 )
-                    ->middleware(
-                        'throttle:api-profile-sensitive'
-                    )
+                    ->middleware([
+                        EnsureEducationPremium::class,
+                        'throttle:api-profile-sensitive',
+                    ])
                     ->name(
                         'broker-markets.open-account-action'
                     );
@@ -65,9 +67,10 @@ Route::prefix('v1')
                     '/broker-accounts',
                     CopyTradeBrokerAccountStoreController::class
                 )
-                    ->middleware(
-                        'throttle:api-profile-sensitive'
-                    )
+                    ->middleware([
+                        EnsureEducationPremium::class,
+                        'throttle:api-profile-sensitive',
+                    ])
                     ->name(
                         'broker-accounts.store'
                     );
@@ -76,9 +79,10 @@ Route::prefix('v1')
                     '/broker-accounts/{copyTradeBrokerAccount}/resubmit',
                     CopyTradeBrokerAccountResubmitController::class
                 )
-                    ->middleware(
-                        'throttle:api-profile-sensitive'
-                    )
+                    ->middleware([
+                        EnsureEducationPremium::class,
+                        'throttle:api-profile-sensitive',
+                    ])
                     ->name(
                         'broker-accounts.resubmit'
                     );

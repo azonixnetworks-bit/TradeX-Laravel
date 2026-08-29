@@ -2,8 +2,10 @@
 
 namespace Tests\Concerns;
 
+use App\Models\Product;
 use App\Models\User;
 use App\Models\UserDevice;
+use App\Models\UserEntitlement;
 use Illuminate\Support\Str;
 
 trait CreatesTradeXMobileSession
@@ -21,9 +23,41 @@ trait CreatesTradeXMobileSession
                 ?? now(),
         ];
 
+        $requestedAccountType =
+            strtoupper(
+                (string) (
+                    $overrides['account_type']
+                    ?? 'FREE'
+                )
+            );
+
+        /*
+         * ADMIN-25 test compatibility:
+         * Existing tests that ask createApiUser(account_type=PREMIUM)
+         * are declaring premium access intent. Seed the authoritative
+         * lifetime entitlement as a legacy/manual payment_id=NULL row.
+         *
+         * Tests that need to construct a specific payment-backed
+         * entitlement can opt out with:
+         * education_premium_entitlement => false
+         */
+        $seedEducationPremium =
+            array_key_exists(
+                'education_premium_entitlement',
+                $overrides
+            )
+                ? (bool) $overrides[
+                    'education_premium_entitlement'
+                ]
+                : $requestedAccountType
+                    === 'PREMIUM';
+
         unset(
             $overrides['totp_secret'],
-            $overrides['totp_confirmed_at']
+            $overrides['totp_confirmed_at'],
+            $overrides[
+                'education_premium_entitlement'
+            ]
         );
 
         $user = User::query()
@@ -84,6 +118,32 @@ trait CreatesTradeXMobileSession
         $user->forceFill(
             $security
         )->save();
+
+        if ($seedEducationPremium) {
+            UserEntitlement::query()
+                ->updateOrCreate(
+                    [
+                        'user_id' =>
+                            $user->getKey(),
+                        'product_code' =>
+                            Product::CODE_EDUCATION_PREMIUM,
+                    ],
+                    [
+                        'status' =>
+                            UserEntitlement::STATUS_ACTIVE,
+                        'activated_at' =>
+                            $user
+                                ->premium_activated_at
+                            ?? now(),
+                        'payment_id' =>
+                            null,
+                        'revoked_at' =>
+                            null,
+                        'revoke_reason' =>
+                            null,
+                    ]
+                );
+        }
 
         return $user->fresh();
     }

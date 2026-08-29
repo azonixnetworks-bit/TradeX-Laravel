@@ -31,6 +31,9 @@ class AdminPermissionSeeder extends Seeder
             ['education.delete', 'Delete Education Content', 'EDUCATION'],
             ['education.publish', 'Publish Education Content', 'EDUCATION'],
 
+            ['products.view', 'View Product Catalog', 'PRODUCTS'],
+            ['products.manage', 'Manage Product Catalog', 'PRODUCTS'],
+
             ['our_channel.view', 'View Our Channel', 'OUR_CHANNEL'],
             ['our_channel.manage', 'Manage Our Channel', 'OUR_CHANNEL'],
 

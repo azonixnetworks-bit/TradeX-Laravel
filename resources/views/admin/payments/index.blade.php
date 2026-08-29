@@ -11,6 +11,9 @@
         <p>Provider-verified PayPal and NOWPayments records plus controlled Binance / USDT TRC20 and local-bank manual-payment reconciliation.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        @if(auth('admin')->user()->hasPermission('products.view'))
+            <a class="secondary-btn" href="{{ route('admin.products.index') }}">Products</a>
+        @endif
         <a class="secondary-btn" href="{{ route('admin.payments.paypal.index') }}">PayPal</a>
         <a class="secondary-btn" href="{{ route('admin.payments.nowpayments.index') }}">NOWPayments</a>
         <a class="secondary-btn" href="{{ route('admin.payments.bank.index') }}">Bank Review</a>

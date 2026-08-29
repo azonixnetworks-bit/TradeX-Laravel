@@ -255,6 +255,20 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
+    | Product / Entitlement Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function userEntitlements(): HasMany
+    {
+        return $this->hasMany(
+            UserEntitlement::class
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Account Type Helpers
     |--------------------------------------------------------------------------
     */
@@ -311,9 +325,28 @@ class User extends Authenticatable
 
     public function canAccessPremium(): bool
     {
-        return $this->isPremium()
-            && $this->isActive()
-            && ! $this->trashed();
+        if (
+            ! $this->isActive()
+            || $this->trashed()
+        ) {
+            return false;
+        }
+
+        /*
+         * ADMIN-25:
+         * account_type is only a compatibility/UI mirror.
+         * The active EDUCATION_PREMIUM entitlement is authoritative.
+         */
+        return $this->userEntitlements()
+            ->where(
+                'product_code',
+                Product::CODE_EDUCATION_PREMIUM
+            )
+            ->where(
+                'status',
+                UserEntitlement::STATUS_ACTIVE
+            )
+            ->exists();
     }
 
     public function hasConfirmedTotp(): bool
