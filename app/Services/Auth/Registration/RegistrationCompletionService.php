@@ -37,6 +37,14 @@ class RegistrationCompletionService
             ];
         }
 
+        if ($session->isAdminInvite()) {
+            throw new AuthApiException(
+                409,
+                'INVITE_ONBOARDING_CONFIRM_REQUIRED',
+                'Complete TOTP confirmation and legal acceptance through the secure invite onboarding flow.'
+            );
+        }
+
         if (
             $session->email_verified_at
             === null

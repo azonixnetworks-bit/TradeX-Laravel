@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\VerifyRegistrationOtpRequest;
+use App\Models\CustomerOnboardingInvitation;
 use App\Services\Auth\Registration\RegistrationOtpService;
 use App\Services\Auth\Registration\RegistrationSessionService;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +31,21 @@ class VerifyRegistrationEmailController extends Controller
         );
 
         $session->refresh();
+
+        if ($session->isAdminInvite()) {
+            CustomerOnboardingInvitation::query()
+                ->whereKey(
+                    $session->customer_onboarding_invitation_id
+                )
+                ->where(
+                    'status',
+                    CustomerOnboardingInvitation::STATUS_PENDING
+                )
+                ->update([
+                    'onboarding_stage' =>
+                        CustomerOnboardingInvitation::STAGE_EMAIL_VERIFIED,
+                ]);
+        }
 
         $whatsAppSent = true;
 

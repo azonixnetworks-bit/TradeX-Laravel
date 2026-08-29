@@ -4,6 +4,7 @@ namespace App\Services\Auth\Registration;
 
 use App\Exceptions\AuthApiException;
 use App\Models\AuditLog;
+use App\Models\CustomerOnboardingInvitation;
 use App\Models\User;
 use App\Models\UserRegistrationSession;
 use Illuminate\Http\Request;
@@ -132,6 +133,12 @@ class RegistrationSessionService
                             'language_code' =>
                                 $data['language_code'],
 
+                            'source' =>
+                                UserRegistrationSession::SOURCE_SELF_REGISTER,
+
+                            'password_set_at' =>
+                                now(),
+
                             'status' =>
                                 UserRegistrationSession::STATUS_PENDING,
 
@@ -164,6 +171,9 @@ class RegistrationSessionService
 
                         'language_code' =>
                             $session->language_code,
+
+                        'source' =>
+                            UserRegistrationSession::SOURCE_SELF_REGISTER,
 
                         'has_referrer' =>
                             $session->referred_by_user_id
@@ -280,6 +290,34 @@ class RegistrationSessionService
             );
         }
 
+        if (
+            $session->isAdminInvite()
+            && ! $session->isCompleted()
+        ) {
+            $invitation =
+                $session->customerOnboardingInvitation;
+
+            if (
+                ! $invitation instanceof CustomerOnboardingInvitation
+                || ! $invitation->isPending()
+                || $invitation->revoked_at !== null
+                || $invitation->expires_at->isPast()
+            ) {
+                if ($session->isPending()) {
+                    $session->forceFill([
+                        'status' =>
+                            UserRegistrationSession::STATUS_SUPERSEDED,
+                    ])->save();
+                }
+
+                throw new AuthApiException(
+                    409,
+                    'CUSTOMER_INVITATION_NOT_ACTIVE',
+                    'This customer invitation is no longer active.'
+                );
+            }
+        }
+
         return $session;
     }
 
@@ -290,6 +328,10 @@ class RegistrationSessionService
             'registration_id' =>
                 $session->uuid,
 
+            'source' =>
+                $session->source
+                ?? UserRegistrationSession::SOURCE_SELF_REGISTER,
+
             'status' =>
                 $session->status,
 
@@ -299,6 +341,10 @@ class RegistrationSessionService
 
             'whatsapp_verified' =>
                 $session->whatsapp_verified_at
+                !== null,
+
+            'password_set' =>
+                $session->password_set_at
                 !== null,
 
             'totp_setup' =>
@@ -343,6 +389,30 @@ class RegistrationSessionService
             === null
         ) {
             return 'VERIFY_WHATSAPP_OTP';
+        }
+
+        if ($session->isAdminInvite()) {
+            if ($session->password_set_at === null) {
+                return 'SET_PASSWORD';
+            }
+
+            if (blank($session->totp_secret)) {
+                return 'SETUP_TOTP';
+            }
+
+            if ($session->totp_confirmed_at === null) {
+                return 'CONFIRM_TOTP';
+            }
+
+            if (
+                $session->customerOnboardingInvitation
+                    ?->onboarding_stage
+                === CustomerOnboardingInvitation::STAGE_TERMS_ACCEPTED
+            ) {
+                return 'COMPLETE_ONBOARDING';
+            }
+
+            return 'ACCEPT_LEGAL_TERMS';
         }
 
         if (

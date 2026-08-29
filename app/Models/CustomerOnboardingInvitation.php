@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CustomerOnboardingInvitation extends Model
 {
@@ -15,10 +16,12 @@ class CustomerOnboardingInvitation extends Model
 
     public const STAGE_INVITE_CREATED = 'INVITE_CREATED';
     public const STAGE_INVITE_SENT = 'INVITE_SENT';
+    public const STAGE_EMAIL_OTP_SENT = 'EMAIL_OTP_SENT';
     public const STAGE_EMAIL_VERIFIED = 'EMAIL_VERIFIED';
     public const STAGE_WHATSAPP_VERIFIED = 'WHATSAPP_VERIFIED';
     public const STAGE_PASSWORD_SET = 'PASSWORD_SET';
     public const STAGE_TOTP_SETUP = 'TOTP_SETUP';
+    public const STAGE_TOTP_CONFIRMED = 'TOTP_CONFIRMED';
     public const STAGE_TERMS_ACCEPTED = 'TERMS_ACCEPTED';
     public const STAGE_COMPLETED = 'COMPLETED';
 
@@ -36,6 +39,7 @@ class CustomerOnboardingInvitation extends Model
         'activation_token_hash',
         'invited_at',
         'last_invited_at',
+        'activation_consumed_at',
         'invite_send_count',
         'active_email_hash',
         'active_whatsapp_hash',
@@ -61,6 +65,7 @@ class CustomerOnboardingInvitation extends Model
             'internal_note' => 'encrypted',
             'invited_at' => 'datetime',
             'last_invited_at' => 'datetime',
+            'activation_consumed_at' => 'datetime',
             'invite_send_count' => 'integer',
             'expires_at' => 'datetime',
             'matched_at' => 'datetime',
@@ -100,6 +105,14 @@ class CustomerOnboardingInvitation extends Model
         );
     }
 
+    public function registrationSessions(): HasMany
+    {
+        return $this->hasMany(
+            UserRegistrationSession::class,
+            'customer_onboarding_invitation_id'
+        );
+    }
+
     public function getRouteKeyName(): string
     {
         return 'uuid';
@@ -114,6 +127,7 @@ class CustomerOnboardingInvitation extends Model
     {
         return $this->isPending()
             && filled($this->activation_token_hash)
+            && $this->activation_consumed_at === null
             && $this->revoked_at === null
             && $this->expires_at->isFuture();
     }
