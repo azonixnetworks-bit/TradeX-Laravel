@@ -40,4 +40,24 @@ Route::prefix('admin/customers')
                 'onboarding',
             ]
         )->name('onboarding');
+
+        Route::post(
+            '/onboarding/{invitation:uuid}/resend',
+            [
+                CustomerManagementController::class,
+                'resendInvitation',
+            ]
+        )
+            ->middleware('throttle:5,1')
+            ->name('onboarding.resend');
+
+        Route::post(
+            '/onboarding/{invitation:uuid}/revoke',
+            [
+                CustomerManagementController::class,
+                'revokeInvitation',
+            ]
+        )
+            ->middleware('throttle:5,1')
+            ->name('onboarding.revoke');
     });
