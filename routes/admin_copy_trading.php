@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Admin\CopyTrading\CopyTradeActivationController;
+use App\Http\Controllers\Admin\CopyTrading\CopyTradeBillingCalendarController;
+use App\Http\Controllers\Admin\CopyTrading\CopyTradeBillingController;
 use App\Http\Controllers\Admin\CopyTrading\CopyTradeBrokerAccountController;
 use App\Http\Controllers\Admin\CopyTrading\CopyTradeBrokerController;
 use Illuminate\Support\Facades\Route;
@@ -118,9 +120,7 @@ Route::prefix('admin/copy-trading')
                         CopyTradeBrokerAccountController::class,
                         'requestResubmission',
                     ]
-                )->name(
-                    'request-resubmission'
-                );
+                )->name('request-resubmission');
 
                 Route::patch(
                     '/{copyTradeBrokerAccount}/escalate',
@@ -175,7 +175,9 @@ Route::prefix('admin/copy-trading')
                 CopyTradeActivationController::class,
                 'recordBalance',
             ]
-        )->name('accounts.activation.balance.store');
+        )->name(
+            'accounts.activation.balance.store'
+        );
 
         Route::post(
             '/accounts/{copyTradeBrokerAccount}/activation/evaluate',
@@ -183,5 +185,83 @@ Route::prefix('admin/copy-trading')
                 CopyTradeActivationController::class,
                 'activate',
             ]
-        )->name('accounts.activation.evaluate');
+        )->name(
+            'accounts.activation.evaluate'
+        );
+
+        Route::prefix('billing')
+            ->name('billing.')
+            ->group(function (): void {
+                Route::get(
+                    '/',
+                    [
+                        CopyTradeBillingController::class,
+                        'index',
+                    ]
+                )->name('index');
+
+                Route::get(
+                    '/calendar',
+                    [
+                        CopyTradeBillingCalendarController::class,
+                        'index',
+                    ]
+                )->name('calendar.index');
+
+                Route::post(
+                    '/calendar',
+                    [
+                        CopyTradeBillingCalendarController::class,
+                        'store',
+                    ]
+                )->name('calendar.store');
+
+                Route::get(
+                    '/accounts/{copyTradeBrokerAccount}',
+                    [
+                        CopyTradeBillingController::class,
+                        'show',
+                    ]
+                )->name('accounts.show');
+
+                Route::post(
+                    '/accounts/{copyTradeBrokerAccount}/initialize',
+                    [
+                        CopyTradeBillingController::class,
+                        'initialize',
+                    ]
+                )->name('accounts.initialize');
+
+                Route::post(
+                    '/accounts/{copyTradeBrokerAccount}/upgrade',
+                    [
+                        CopyTradeBillingController::class,
+                        'upgrade',
+                    ]
+                )->name('accounts.upgrade');
+
+                Route::post(
+                    '/accounts/{copyTradeBrokerAccount}/sweep',
+                    [
+                        CopyTradeBillingController::class,
+                        'sweep',
+                    ]
+                )->name('accounts.sweep');
+
+                Route::post(
+                    '/accounts/{copyTradeBrokerAccount}/adjustments',
+                    [
+                        CopyTradeBillingController::class,
+                        'storeAdjustment',
+                    ]
+                )->name('accounts.adjustments.store');
+
+                Route::post(
+                    '/invoices/{copyTradeBillingInvoice}/link-payment',
+                    [
+                        CopyTradeBillingController::class,
+                        'linkPayment',
+                    ]
+                )->name('invoices.link-payment');
+            });
     });
