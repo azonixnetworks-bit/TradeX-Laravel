@@ -5,6 +5,7 @@ namespace App\Services\Admin\Customers;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\CustomerOnboardingInvitation;
+use App\Models\UserRegistrationSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -36,6 +37,8 @@ class CustomerOnboardingInvitationDeliveryService
         $previous = [
             'activation_token_hash' =>
                 $invitation->activation_token_hash,
+            'activation_consumed_at' =>
+                $invitation->activation_consumed_at,
             'onboarding_stage' =>
                 $invitation->onboarding_stage,
             'expires_at' =>
@@ -51,10 +54,10 @@ class CustomerOnboardingInvitationDeliveryService
         $invitation->forceFill([
             'activation_token_hash' =>
                 $newTokenHash,
+            'activation_consumed_at' => null,
             'onboarding_stage' =>
                 CustomerOnboardingInvitation::STAGE_INVITE_CREATED,
-            'expires_at' =>
-                $expiresAt,
+            'expires_at' => $expiresAt,
         ])->save();
 
         try {
@@ -72,6 +75,8 @@ class CustomerOnboardingInvitationDeliveryService
                 ->update([
                     'activation_token_hash' =>
                         $previous['activation_token_hash'],
+                    'activation_consumed_at' =>
+                        $previous['activation_consumed_at'],
                     'onboarding_stage' =>
                         $previous['onboarding_stage'],
                     'expires_at' =>
@@ -118,8 +123,7 @@ class CustomerOnboardingInvitationDeliveryService
                     CustomerOnboardingInvitation::STAGE_INVITE_SENT,
                 'invited_at' =>
                     $invitation->invited_at ?? $now,
-                'last_invited_at' =>
-                    $now,
+                'last_invited_at' => $now,
                 'invite_send_count' =>
                     ((int) $invitation->invite_send_count) + 1,
             ]);
@@ -145,6 +149,23 @@ class CustomerOnboardingInvitationDeliveryService
             return false;
         }
 
+        /*
+         * A successfully reissued invitation becomes the only supported
+         * onboarding path. Any older registration session linked to this
+         * invitation is superseded so two parallel credentials cannot remain
+         * usable after an admin intentionally resends the activation link.
+         */
+        $supersededSessions = $invitation
+            ->registrationSessions()
+            ->where(
+                'status',
+                UserRegistrationSession::STATUS_PENDING
+            )
+            ->update([
+                'status' =>
+                    UserRegistrationSession::STATUS_SUPERSEDED,
+            ]);
+
         AuditLog::record(
             actorType: 'ADMIN',
             actorId: $admin->getKey(),
@@ -161,6 +182,8 @@ class CustomerOnboardingInvitationDeliveryService
                     $invitation->expires_at->toIso8601String(),
                 'invite_send_count' =>
                     $invitation->invite_send_count,
+                'superseded_registration_sessions' =>
+                    $supersededSessions,
             ],
             ipAddress: $request->ip(),
             userAgent: $request->userAgent()
@@ -191,6 +214,17 @@ class CustomerOnboardingInvitationDeliveryService
             'revoked_by_admin_id' => $admin->getKey(),
         ])->save();
 
+        $supersededSessions = $invitation
+            ->registrationSessions()
+            ->where(
+                'status',
+                UserRegistrationSession::STATUS_PENDING
+            )
+            ->update([
+                'status' =>
+                    UserRegistrationSession::STATUS_SUPERSEDED,
+            ]);
+
         AuditLog::record(
             actorType: 'ADMIN',
             actorId: $admin->getKey(),
@@ -202,6 +236,8 @@ class CustomerOnboardingInvitationDeliveryService
             newValues: [
                 'status' =>
                     CustomerOnboardingInvitation::STATUS_REVOKED,
+                'superseded_registration_sessions' =>
+                    $supersededSessions,
             ],
             ipAddress: $request->ip(),
             userAgent: $request->userAgent()

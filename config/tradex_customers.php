@@ -17,8 +17,8 @@ return [
 
     /*
      * Mobile/universal-link destination used by invitation email delivery.
-     * The app/frontend must read invitation_id + token from this URL and use
-     * them with the invite-registration API introduced in the next slice.
+     * The app/frontend reads invitation_id + token and exchanges them through
+     * the secure invite-registration API. The raw token is never persisted.
      */
     'activation_url' =>
         env(
@@ -31,6 +31,17 @@ return [
                 '/'
             ).'/onboarding/activate'
         ),
+
+    /*
+     * Policies that an admin-invited customer must accept before the account
+     * can be created and activated. Payment- or affiliate-specific policies
+     * remain gated by their own modules and are intentionally excluded here.
+     */
+    'required_onboarding_legal_policies' => [
+        'TERMS_OF_SERVICE',
+        'PRIVACY_POLICY',
+        'TRADING_RISK_DISCLOSURE',
+    ],
 
     /*
     |--------------------------------------------------------------------------

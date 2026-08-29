@@ -3,6 +3,7 @@
 namespace App\Services\Auth\Registration;
 
 use App\Exceptions\AuthApiException;
+use App\Models\CustomerOnboardingInvitation;
 use App\Models\UserRegistrationSession;
 
 class TotpProvisioningService
@@ -29,6 +30,17 @@ class TotpProvisioningService
         }
 
         if (
+            $session->isAdminInvite()
+            && $session->password_set_at === null
+        ) {
+            throw new AuthApiException(
+                409,
+                'PASSWORD_SETUP_REQUIRED',
+                'Set your account password before TOTP setup.'
+            );
+        }
+
+        if (
             blank(
                 $session->totp_secret
             )
@@ -42,6 +54,21 @@ class TotpProvisioningService
             ])->save();
 
             $session->refresh();
+        }
+
+        if ($session->isAdminInvite()) {
+            CustomerOnboardingInvitation::query()
+                ->whereKey(
+                    $session->customer_onboarding_invitation_id
+                )
+                ->where(
+                    'status',
+                    CustomerOnboardingInvitation::STATUS_PENDING
+                )
+                ->update([
+                    'onboarding_stage' =>
+                        CustomerOnboardingInvitation::STAGE_TOTP_SETUP,
+                ]);
         }
 
         $issuer = (string) config(

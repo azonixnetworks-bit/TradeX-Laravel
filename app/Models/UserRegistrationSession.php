@@ -16,6 +16,9 @@ class UserRegistrationSession extends Model
     public const STATUS_EXPIRED = 'EXPIRED';
     public const STATUS_SUPERSEDED = 'SUPERSEDED';
 
+    public const SOURCE_SELF_REGISTER = 'SELF_REGISTER';
+    public const SOURCE_ADMIN_INVITE = 'ADMIN_INVITE';
+
     protected $fillable = [
         'uuid',
         'registration_token_hash',
@@ -27,8 +30,11 @@ class UserRegistrationSession extends Model
         'referred_by_user_id',
         'country_code',
         'language_code',
+        'source',
+        'customer_onboarding_invitation_id',
         'email_verified_at',
         'whatsapp_verified_at',
+        'password_set_at',
         'totp_secret',
         'totp_setup_at',
         'totp_confirmed_at',
@@ -52,6 +58,7 @@ class UserRegistrationSession extends Model
         return [
             'email_verified_at' => 'datetime',
             'whatsapp_verified_at' => 'datetime',
+            'password_set_at' => 'datetime',
             'totp_secret' => 'encrypted',
             'totp_setup_at' => 'datetime',
             'totp_confirmed_at' => 'datetime',
@@ -77,10 +84,26 @@ class UserRegistrationSession extends Model
         );
     }
 
+    public function customerOnboardingInvitation(): BelongsTo
+    {
+        return $this->belongsTo(
+            CustomerOnboardingInvitation::class,
+            'customer_onboarding_invitation_id'
+        );
+    }
+
     public function otpChallenges(): HasMany
     {
         return $this->hasMany(
             UserRegistrationOtpChallenge::class,
+            'user_registration_session_id'
+        );
+    }
+
+    public function onboardingLegalAcceptances(): HasMany
+    {
+        return $this->hasMany(
+            OnboardingLegalPolicyAcceptance::class,
             'user_registration_session_id'
         );
     }
@@ -98,5 +121,10 @@ class UserRegistrationSession extends Model
     public function isExpired(): bool
     {
         return $this->expires_at->isPast();
+    }
+
+    public function isAdminInvite(): bool
+    {
+        return $this->source === self::SOURCE_ADMIN_INVITE;
     }
 }
