@@ -8,6 +8,7 @@ use App\Models\AdminUser;
 use App\Models\CustomerOnboardingInvitation;
 use App\Models\User;
 use App\Models\UserRegistrationSession;
+use App\Services\Admin\Customers\CustomerOnboardingInvitationDeliveryService;
 use App\Services\Admin\Customers\CustomerOnboardingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -169,7 +170,8 @@ class CustomerManagementController extends Controller
 
     public function store(
         StoreCustomerOnboardingInvitationRequest $request,
-        CustomerOnboardingService $onboarding
+        CustomerOnboardingService $onboarding,
+        CustomerOnboardingInvitationDeliveryService $delivery
     ): RedirectResponse {
         $admin = $this->admin();
         $this->requirePermission(
@@ -184,18 +186,32 @@ class CustomerManagementController extends Controller
                 $request
             );
 
-        return redirect()
+        $sent = $delivery->send(
+            $invitation,
+            $admin,
+            $request
+        );
+
+        $redirect = redirect()
             ->route(
                 'admin.customers.onboarding'
-            )
-            ->with(
-                'success',
-                'Customer onboarding invitation created. No password, TOTP secret, premium entitlement, or active login was created.'
             )
             ->with(
                 'created_invitation_uuid',
                 $invitation->uuid
             );
+
+        if ($sent) {
+            return $redirect->with(
+                'success',
+                'Customer onboarding invitation created and secure activation link sent. No password, TOTP secret, premium entitlement, or active login was created.'
+            );
+        }
+
+        return $redirect->with(
+            'warning',
+            'Customer onboarding invitation was created, but the activation email could not be delivered. Use Resend Invite after checking mail configuration.'
+        );
     }
 
     public function onboarding(
@@ -222,6 +238,7 @@ class CustomerManagementController extends Controller
             CustomerOnboardingInvitation::STATUS_MATCHED,
             CustomerOnboardingInvitation::STATUS_EXPIRED,
             CustomerOnboardingInvitation::STATUS_CONFLICT,
+            CustomerOnboardingInvitation::STATUS_REVOKED,
         ];
 
         if (
@@ -278,6 +295,14 @@ class CustomerManagementController extends Controller
                         CustomerOnboardingInvitation::STATUS_CONFLICT
                     )
                     ->count(),
+
+            'revoked' =>
+                CustomerOnboardingInvitation::query()
+                    ->where(
+                        'status',
+                        CustomerOnboardingInvitation::STATUS_REVOKED
+                    )
+                    ->count(),
         ];
 
         return view(
@@ -287,6 +312,60 @@ class CustomerManagementController extends Controller
                 'summary',
                 'status'
             )
+        );
+    }
+
+    public function resendInvitation(
+        CustomerOnboardingInvitation $invitation,
+        Request $request,
+        CustomerOnboardingInvitationDeliveryService $delivery
+    ): RedirectResponse {
+        $admin = $this->admin();
+        $this->requirePermission(
+            $admin,
+            'users.invite'
+        );
+
+        $sent = $delivery->send(
+            $invitation,
+            $admin,
+            $request,
+            true
+        );
+
+        if ($sent) {
+            return back()->with(
+                'success',
+                'A new secure activation link was sent. Any previously issued activation link is now invalid.'
+            );
+        }
+
+        return back()->with(
+            'warning',
+            'A new usable activation link could not be confirmed. Refresh the queue and retry after checking mail delivery.'
+        );
+    }
+
+    public function revokeInvitation(
+        CustomerOnboardingInvitation $invitation,
+        Request $request,
+        CustomerOnboardingInvitationDeliveryService $delivery
+    ): RedirectResponse {
+        $admin = $this->admin();
+        $this->requirePermission(
+            $admin,
+            'users.invite'
+        );
+
+        $delivery->revoke(
+            $invitation,
+            $admin,
+            $request
+        );
+
+        return back()->with(
+            'success',
+            'Customer onboarding invitation revoked. Its activation link can no longer be used.'
         );
     }
 

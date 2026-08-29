@@ -169,6 +169,9 @@ class CustomerOnboardingService
                                 'status' =>
                                     CustomerOnboardingInvitation::STATUS_PENDING,
 
+                                'onboarding_stage' =>
+                                    CustomerOnboardingInvitation::STAGE_INVITE_CREATED,
+
                                 'active_email_hash' =>
                                     $emailHash,
 
@@ -209,6 +212,8 @@ class CustomerOnboardingService
                             'has_referrer' =>
                                 $invitation->referred_by_user_id
                                 !== null,
+                            'onboarding_stage' =>
+                                $invitation->onboarding_stage,
                             'expires_at' =>
                                 $invitation->expires_at
                                     ->toIso8601String(),
@@ -304,6 +309,10 @@ class CustomerOnboardingService
                         $invitation->forceFill([
                             'status' =>
                                 CustomerOnboardingInvitation::STATUS_MATCHED,
+                            'onboarding_stage' =>
+                                CustomerOnboardingInvitation::STAGE_COMPLETED,
+                            'activation_token_hash' =>
+                                null,
                             'active_email_hash' =>
                                 null,
                             'active_whatsapp_hash' =>
@@ -332,6 +341,8 @@ class CustomerOnboardingService
                                     $emailUser->getKey(),
                                 'status' =>
                                     CustomerOnboardingInvitation::STATUS_MATCHED,
+                                'onboarding_stage' =>
+                                    CustomerOnboardingInvitation::STAGE_COMPLETED,
                             ]
                         );
                     }
@@ -349,6 +360,7 @@ class CustomerOnboardingService
             ->with([
                 'matchedUser:id,name,email,status,account_type',
                 'createdByAdmin:id,name,email',
+                'revokedByAdmin:id,name,email',
                 'referrer:id,name,email,referral_code',
             ])
             ->when(
@@ -370,6 +382,8 @@ class CustomerOnboardingService
         $invitation->forceFill([
             'status' =>
                 CustomerOnboardingInvitation::STATUS_CONFLICT,
+            'activation_token_hash' =>
+                null,
             'active_email_hash' =>
                 null,
             'active_whatsapp_hash' =>
@@ -411,6 +425,8 @@ class CustomerOnboardingService
             ->update([
                 'status' =>
                     CustomerOnboardingInvitation::STATUS_EXPIRED,
+                'activation_token_hash' =>
+                    null,
                 'active_email_hash' =>
                     null,
                 'active_whatsapp_hash' =>
