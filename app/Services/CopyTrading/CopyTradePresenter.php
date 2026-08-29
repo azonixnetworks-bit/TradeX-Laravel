@@ -6,6 +6,7 @@ use App\Models\CopyTradeActivationEvaluationGate;
 use App\Models\CopyTradeBrokerAccount;
 use App\Models\CopyTradeBrokerMarket;
 use App\Models\CopyTradeEntitlementPeriod;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -16,9 +17,33 @@ class CopyTradePresenter
         Collection $brokerMarkets,
         Collection $accounts
     ): array {
+        $premiumActive =
+            $user->canAccessPremium();
+
         return [
             'first_time_user' => $accounts->isEmpty(),
-            'next_step' => $this->nextStep($accounts),
+            'next_step' =>
+                $premiumActive
+                    ? $this->nextStep(
+                        $accounts
+                    )
+                    : 'EDUCATION_PREMIUM_REQUIRED',
+            'education_premium' => [
+                'required' =>
+                    true,
+                'active' =>
+                    $premiumActive,
+                'product_code' =>
+                    Product::CODE_EDUCATION_PREMIUM,
+                'reason_code' =>
+                    $premiumActive
+                        ? 'EDUCATION_PREMIUM_ACTIVE'
+                        : 'EDUCATION_PREMIUM_REQUIRED',
+                'products_endpoint' =>
+                    '/api/v1/products',
+                'payment_methods_endpoint' =>
+                    '/api/v1/payments/methods',
+            ],
             'has_verified_broker_account' => $accounts->contains(
                 fn (
                     CopyTradeBrokerAccount $account
@@ -26,12 +51,14 @@ class CopyTradePresenter
                     $account
                         ->hasVerifiedBrokerRelationship()
             ),
-            'copy_trade_ready' => $accounts->contains(
-                fn (
-                    CopyTradeBrokerAccount $account
-                ): bool =>
-                    $account->isActive()
-            ),
+            'copy_trade_ready' =>
+                $premiumActive
+                && $accounts->contains(
+                    fn (
+                        CopyTradeBrokerAccount $account
+                    ): bool =>
+                        $account->isActive()
+                ),
             'brokers' => $brokerMarkets
                 ->map(
                     fn (
@@ -56,6 +83,8 @@ class CopyTradePresenter
                 ->all(),
             'activation_policy' => [
                 'verification_does_not_auto_activate' =>
+                    true,
+                'education_premium_required' =>
                     true,
                 'required_broker_account_mode' =>
                     'LIVE',
@@ -120,6 +149,7 @@ class CopyTradePresenter
         CopyTradeBrokerAccount $account
     ): array {
         $account->loadMissing([
+            'user',
             'broker',
             'brokerMarket',
         ]);
@@ -170,7 +200,9 @@ class CopyTradePresenter
                         $account
                     ),
             'copy_trade_ready' =>
-                $account->isActive(),
+                $account->isActive()
+                && $account->user
+                    ?->canAccessPremium(),
             'activation' =>
                 $this->activation(
                     $account
@@ -182,6 +214,7 @@ class CopyTradePresenter
         CopyTradeBrokerAccount $account
     ): array {
         $account->loadMissing([
+            'user',
             'latestVerifiedBalanceSnapshot',
             'accountBenefit',
             'entitlementPeriods',
@@ -212,8 +245,13 @@ class CopyTradePresenter
                     ->activationState(
                         $account
                     ),
+            'education_premium_active' =>
+                (bool) $account->user
+                    ?->canAccessPremium(),
             'copy_trade_ready' =>
-                $account->isActive(),
+                $account->isActive()
+                && (bool) $account->user
+                    ?->canAccessPremium(),
             'minimum_verified_billable_balance_minor' =>
                 (int) config(
                     'tradex_copy_trading.activation.minimum_verified_billable_balance_minor',

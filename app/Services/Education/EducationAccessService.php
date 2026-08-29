@@ -7,9 +7,16 @@ use App\Models\Assignment;
 use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\User;
+use App\Services\Entitlements\EducationPremiumEntitlementService;
 
 class EducationAccessService
 {
+    public function __construct(
+        private readonly EducationPremiumEntitlementService
+            $educationPremium
+    ) {
+    }
+
     public function canAccessCourse(
         User $user,
         Course $course
@@ -18,7 +25,10 @@ class EducationAccessService
             return true;
         }
 
-        return $user->canAccessPremium();
+        return $user->isActive()
+            && ! $user->trashed()
+            && $this->educationPremium
+                ->hasActive($user);
     }
 
     public function canAccessLesson(
@@ -72,9 +82,9 @@ class EducationAccessService
         }
 
         /*
-        |------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         | Assignment premium policy
-        |------------------------------------------------------------------
+        |--------------------------------------------------------------------------
         |
         | A preview lesson may be opened by a FREE user, but assignments are
         | a premium entitlement. Therefore preview status never bypasses the

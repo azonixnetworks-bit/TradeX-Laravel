@@ -13,6 +13,7 @@ use App\Providers\NotificationApiServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
+use App\Providers\ProductServiceProvider;
 use App\Providers\PushNotificationApiServiceProvider;
 use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
@@ -24,6 +25,7 @@ return [
     NotificationApiServiceProvider::class,
     AccountSettingsApiServiceProvider::class,
     PaymentApiServiceProvider::class,
+    ProductServiceProvider::class,
     KycApiServiceProvider::class,
     PayoutApiServiceProvider::class,
     PasswordRecoveryApiServiceProvider::class,

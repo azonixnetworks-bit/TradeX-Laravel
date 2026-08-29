@@ -4,14 +4,18 @@ namespace App\Services\Payments;
 
 use App\Exceptions\AuthApiException;
 use App\Models\PaymentOrder;
+use App\Models\Product;
 use App\Models\User;
+use App\Services\Products\ProductCatalogService;
 
 class PaymentMethodService
 {
     public function __construct(
         private readonly PaymentMoney $money,
         private readonly PaymentProviderRuntimeGate
-            $runtimeGate
+            $runtimeGate,
+        private readonly ProductCatalogService
+            $products
     ) {
     }
 
@@ -21,6 +25,10 @@ class PaymentMethodService
         $country = strtoupper(
             (string) $user->country_code
         );
+
+        $product =
+            $this->products
+                ->educationPremium();
 
         $methods = [];
 
@@ -33,7 +41,8 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->paypalMethod(
-                    $country
+                    $country,
+                    $product
                 );
         }
 
@@ -46,7 +55,8 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->stripeMethod(
-                    $country
+                    $country,
+                    $product
                 );
         }
 
@@ -59,7 +69,8 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->nowPaymentsMethod(
-                    $country
+                    $country,
+                    $product
                 );
         }
 
@@ -72,7 +83,8 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->localBankMethod(
-                    $country
+                    $country,
+                    $product
                 );
         }
 
@@ -85,25 +97,41 @@ class PaymentMethodService
         )) {
             $methods[] =
                 $this->usdtMethod(
-                    $country
+                    $country,
+                    $product
                 );
         }
 
         return [
             'country_code' => $country,
             'product' => [
+                'uuid' =>
+                    $product->uuid,
                 'code' =>
-                    PaymentOrder::PRODUCT_EDUCATION_PREMIUM,
-
+                    $product->code,
                 'name' =>
-                    (string) config(
-                        'tradex_payments.product.education_premium.name',
-                        'TradeX Education Premium'
-                    ),
+                    $product->name,
+                'billing_type' =>
+                    $product
+                        ->billing_type,
+                'is_active' =>
+                    (bool) $product
+                        ->is_active,
+                'base_price' =>
+                    $this->money
+                        ->present(
+                            (int) $product
+                                ->amount_minor,
+                            (string) $product
+                                ->currency
+                        ),
             ],
 
             'purchase_allowed' =>
-                ! $user->canAccessPremium(),
+                (bool) $product
+                    ->is_active
+                && ! $user
+                    ->canAccessPremium(),
 
             'methods' => $methods,
         ];
@@ -121,10 +149,25 @@ class PaymentMethodService
             );
         }
 
+        $catalog =
+            $this->methodsFor($user);
+
+        if (
+            ! (bool) data_get(
+                $catalog,
+                'product.is_active',
+                false
+            )
+        ) {
+            throw new AuthApiException(
+                422,
+                'PRODUCT_INACTIVE',
+                'This TradeX product is not currently available for new purchases.'
+            );
+        }
+
         $method = collect(
-            $this->methodsFor(
-                $user
-            )['methods']
+            $catalog['methods']
         )->firstWhere(
             'code',
             $provider
@@ -145,19 +188,26 @@ class PaymentMethodService
     }
 
     private function paypalMethod(
-        string $country
+        string $country,
+        Product $product
     ): array {
-        $amount =
-            (int) config(
-                'tradex_payments.product.education_premium.paypal.amount_minor',
-                7900
+        $currency =
+            strtoupper(
+                (string) config(
+                    'tradex_payments.product.education_premium.paypal.currency',
+                    'USD'
+                )
             );
 
-        $currency =
-            (string) config(
-                'tradex_payments.product.education_premium.paypal.currency',
-                'USD'
-            );
+        $amount =
+            $currency
+                === strtoupper(
+                    (string) $product
+                        ->currency
+                )
+                ? (int) $product
+                    ->amount_minor
+                : 0;
 
         $enabled =
             (bool) config(
@@ -167,6 +217,12 @@ class PaymentMethodService
 
         $configured = $this
             ->paypalConfigured();
+
+        $available =
+            (bool) $product->is_active
+            && $enabled
+            && $configured
+            && $amount > 0;
 
         return [
             'code' =>
@@ -182,16 +238,20 @@ class PaymentMethodService
                 $country,
 
             'available' =>
-                $enabled
-                && $configured
-                && $amount > 0,
+                $available,
 
             'unavailable_reason' =>
-                $enabled
-                && $configured
-                && $amount > 0
+                $available
                     ? null
-                    : 'CONFIGURATION_REQUIRED',
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : (
+                                $amount <= 0
+                                    ? 'PRODUCT_CURRENCY_MISMATCH'
+                                    : 'CONFIGURATION_REQUIRED'
+                            )
+                    ),
 
             'amount' =>
                 $this->money->present(
@@ -205,27 +265,38 @@ class PaymentMethodService
     }
 
     private function stripeMethod(
-        string $country
+        string $country,
+        Product $product
     ): array {
-        $amount =
-            (int) config(
-                'tradex_payments.product.education_premium.stripe.amount_minor',
-                7900
-            );
-
         $currency =
-            (string) config(
-                'tradex_payments.product.education_premium.stripe.currency',
-                'USD'
+            strtoupper(
+                (string) config(
+                    'tradex_payments.product.education_premium.stripe.currency',
+                    'USD'
+                )
             );
 
-        $available =
+        $amount =
+            $currency
+                === strtoupper(
+                    (string) $product
+                        ->currency
+                )
+                ? (int) $product
+                    ->amount_minor
+                : 0;
+
+        $runtime =
             $amount > 0
             && $this->runtimeGate
                 ->available(
                     PaymentOrder::PROVIDER_STRIPE,
                     $country
                 );
+
+        $available =
+            (bool) $product->is_active
+            && $runtime;
 
         return [
             'code' =>
@@ -246,7 +317,15 @@ class PaymentMethodService
             'unavailable_reason' =>
                 $available
                     ? null
-                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED',
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : (
+                                $amount <= 0
+                                    ? 'PRODUCT_CURRENCY_MISMATCH'
+                                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED'
+                            )
+                    ),
 
             'amount' =>
                 $this->money->present(
@@ -260,27 +339,38 @@ class PaymentMethodService
     }
 
     private function nowPaymentsMethod(
-        string $country
+        string $country,
+        Product $product
     ): array {
-        $amount =
-            (int) config(
-                'tradex_payments.product.education_premium.nowpayments.amount_minor',
-                7900
-            );
-
         $currency =
-            (string) config(
-                'tradex_payments.product.education_premium.nowpayments.currency',
-                'USD'
+            strtoupper(
+                (string) config(
+                    'tradex_payments.product.education_premium.nowpayments.currency',
+                    'USD'
+                )
             );
 
-        $available =
+        $amount =
+            $currency
+                === strtoupper(
+                    (string) $product
+                        ->currency
+                )
+                ? (int) $product
+                    ->amount_minor
+                : 0;
+
+        $runtime =
             $amount > 0
             && $this->runtimeGate
                 ->available(
                     PaymentOrder::PROVIDER_NOWPAYMENTS,
                     $country
                 );
+
+        $available =
+            (bool) $product->is_active
+            && $runtime;
 
         return [
             'code' =>
@@ -301,7 +391,15 @@ class PaymentMethodService
             'unavailable_reason' =>
                 $available
                     ? null
-                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED',
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : (
+                                $amount <= 0
+                                    ? 'PRODUCT_CURRENCY_MISMATCH'
+                                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED'
+                            )
+                    ),
 
             'amount' =>
                 $this->money->present(
@@ -368,7 +466,8 @@ class PaymentMethodService
     }
 
     private function localBankMethod(
-        string $country
+        string $country,
+        Product $product
     ): array {
         $amount =
             (int) config(
@@ -419,6 +518,11 @@ class PaymentMethodService
             && $holder !== ''
             && $account !== '';
 
+        $available =
+            (bool) $product->is_active
+            && $enabled
+            && $configured;
+
         return [
             'code' =>
                 PaymentOrder::PROVIDER_LOCAL_BANK,
@@ -433,15 +537,21 @@ class PaymentMethodService
                 $country,
 
             'available' =>
-                $enabled
-                && $configured,
+                $available,
 
             'unavailable_reason' =>
-                $enabled
-                && $configured
+                $available
                     ? null
-                    : 'CONFIGURATION_REQUIRED',
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : 'CONFIGURATION_REQUIRED'
+                    ),
 
+            /*
+             * ADMIN-25 deliberately keeps the explicitly configured
+             * local-currency tender amount. No FX conversion is invented.
+             */
             'amount' =>
                 $this->money->present(
                     $amount,
@@ -461,7 +571,8 @@ class PaymentMethodService
     }
 
     private function usdtMethod(
-        string $country
+        string $country,
+        Product $product
     ): array {
         $amount =
             (int) config(
@@ -491,6 +602,11 @@ class PaymentMethodService
             $amount > 0
             && $wallet !== '';
 
+        $available =
+            (bool) $product->is_active
+            && $enabled
+            && $configured;
+
         return [
             'code' =>
                 PaymentOrder::PROVIDER_USDT_TRC20,
@@ -505,15 +621,21 @@ class PaymentMethodService
                 $country,
 
             'available' =>
-                $enabled
-                && $configured,
+                $available,
 
             'unavailable_reason' =>
-                $enabled
-                && $configured
+                $available
                     ? null
-                    : 'CONFIGURATION_REQUIRED',
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : 'CONFIGURATION_REQUIRED'
+                    ),
 
+            /*
+             * ADMIN-25 deliberately keeps the explicitly configured
+             * USDT tender amount. No FX conversion is invented.
+             */
             'amount' =>
                 $this->money->present(
                     $amount,

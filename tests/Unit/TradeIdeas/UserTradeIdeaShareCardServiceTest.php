@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\TradeIdeas\UserTradeIdeaShareCardService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
+use Mockery;
 use Tests\TestCase;
 
 class UserTradeIdeaShareCardServiceTest extends TestCase
@@ -60,16 +61,19 @@ class UserTradeIdeaShareCardServiceTest extends TestCase
     public function test_free_user_cannot_generate_personalized_trade_idea_share_card(): void
     {
         $user =
-            new User([
-                'account_type' =>
+            $this->testUser(
+                canAccessPremium:
+                    false,
+
+                accountType:
                     'FREE',
 
-                'status' =>
+                status:
                     'ACTIVE',
 
-                'referral_code' =>
-                    'FREE123',
-            ]);
+                referralCode:
+                    'FREE123'
+            );
 
         $this->expectException(
             AuthorizationException::class
@@ -86,16 +90,19 @@ class UserTradeIdeaShareCardServiceTest extends TestCase
     public function test_inactive_premium_user_cannot_generate_share_card(): void
     {
         $user =
-            new User([
-                'account_type' =>
+            $this->testUser(
+                canAccessPremium:
+                    false,
+
+                accountType:
                     'PREMIUM',
 
-                'status' =>
+                status:
                     'SUSPENDED',
 
-                'referral_code' =>
-                    'LOCKED123',
-            ]);
+                referralCode:
+                    'LOCKED123'
+            );
 
         $this->expectException(
             AuthorizationException::class
@@ -183,16 +190,51 @@ class UserTradeIdeaShareCardServiceTest extends TestCase
     private function premiumUser(
         ?string $referralCode = 'USER123'
     ): User {
-        return new User([
-            'account_type' =>
+        return $this->testUser(
+            canAccessPremium:
+                true,
+
+            accountType:
                 'PREMIUM',
 
-            'status' =>
+            status:
                 'ACTIVE',
+
+            referralCode:
+                $referralCode
+        );
+    }
+
+    private function testUser(
+        bool $canAccessPremium,
+        string $accountType,
+        string $status,
+        ?string $referralCode
+    ): User {
+        /** @var User $user */
+        $user =
+            Mockery::mock(
+                User::class
+            )->makePartial();
+
+        $user->forceFill([
+            'account_type' =>
+                $accountType,
+
+            'status' =>
+                $status,
 
             'referral_code' =>
                 $referralCode,
         ]);
+
+        $user->shouldReceive(
+            'canAccessPremium'
+        )->andReturn(
+            $canAccessPremium
+        );
+
+        return $user;
     }
 
     private function publishedTradeIdea(): TradeIdea

@@ -8,6 +8,7 @@ use App\Models\Payment;
 use App\Models\PaymentAdjustment;
 use App\Models\PaymentOrder;
 use App\Services\Affiliates\AffiliateCommercialService;
+use App\Services\Entitlements\EducationPremiumEntitlementService;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -15,7 +16,9 @@ class PaymentReversalService
 {
     public function __construct(
         private readonly AffiliateCommercialService
-            $affiliateCommercial
+            $affiliateCommercial,
+        private readonly EducationPremiumEntitlementService
+            $educationPremium
     ) {
     }
 
@@ -52,6 +55,15 @@ class PaymentReversalService
                     && $existing
                     instanceof PaymentAdjustment
                 ) {
+                    /*
+                     * Ensure an older API-12 reversal is reconciled with
+                     * the ADMIN-25 tied-payment entitlement policy.
+                     */
+                    $this->educationPremium
+                        ->revokeForReversedPayment(
+                            $locked
+                        );
+
                     return $existing;
                 }
 
@@ -97,6 +109,12 @@ class PaymentReversalService
                             PaymentOrder::STATUS_PAYMENT_REVERSED,
                     ]);
 
+                $revoked =
+                    $this->educationPremium
+                        ->revokeForReversedPayment(
+                            $locked
+                        );
+
                 AuditLog::record(
                     actorType: 'SYSTEM',
                     actorId: null,
@@ -114,15 +132,15 @@ class PaymentReversalService
                         'payment_reversal_code' =>
                             Payment::REVERSAL_PAYPAL_PROCESSOR,
                         'entitlement_review_required' =>
-                            true,
+                            false,
+                        'entitlement_policy' =>
+                            'ADMIN_25_TIED_PAYMENT_ONLY',
+                        'education_entitlement_revoked' =>
+                            $revoked !== null,
+                        'copy_trade_force_close' =>
+                            false,
                     ]
                 );
-
-                /*
-                | API-12 deliberately does not auto-revoke a user's entitlement
-                | after a forced processor exception. That operational policy is
-                | not frozen yet. Finance/Super Admin review is required.
-                */
 
                 return $adjustment;
             },

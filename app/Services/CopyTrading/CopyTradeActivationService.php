@@ -8,6 +8,7 @@ use App\Models\CopyTradeActivationEvaluation;
 use App\Models\CopyTradeActivationEvaluationGate;
 use App\Models\CopyTradeBrokerAccount;
 use App\Models\CopyTradeVerifiedBalanceSnapshot;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Carbon;
@@ -20,6 +21,13 @@ class CopyTradeActivationService
 
     public const GATE_BALANCE =
         'VERIFIED_BILLABLE_BALANCE';
+
+    /*
+     * ADMIN-25 approved additive prerequisite.
+     * Existing ADMIN-23 gate semantics remain unchanged.
+     */
+    public const GATE_EDUCATION_PREMIUM =
+        'EDUCATION_PREMIUM';
 
     public const GATE_BENEFIT =
         'ACCOUNT_BENEFIT_ASSIGNMENT';
@@ -84,6 +92,11 @@ class CopyTradeActivationService
                 $balanceGate =
                     $this->balanceGate($locked);
 
+                $educationPremiumGate =
+                    $this->educationPremiumGate(
+                        $locked
+                    );
+
                 $benefitPreview =
                     $this->benefits
                         ->preview($locked);
@@ -144,6 +157,9 @@ class CopyTradeActivationService
 
                     self::GATE_BALANCE =>
                         $balanceGate,
+
+                    self::GATE_EDUCATION_PREMIUM =>
+                        $educationPremiumGate,
 
                     self::GATE_BENEFIT =>
                         $benefitGate,
@@ -461,6 +477,33 @@ class CopyTradeActivationService
                     $snapshot
                         ?->observed_at
                         ?->toIso8601String(),
+            ],
+        ];
+    }
+
+    private function educationPremiumGate(
+        CopyTradeBrokerAccount $account
+    ): array {
+        $account->loadMissing('user');
+
+        $passed =
+            $account->user
+                instanceof User
+            && $account->user
+                ->canAccessPremium();
+
+        return [
+            'passed' =>
+                $passed,
+            'reason_code' =>
+                $passed
+                    ? 'EDUCATION_PREMIUM_ACTIVE'
+                    : 'EDUCATION_PREMIUM_REQUIRED',
+            'evidence' => [
+                'product_code' =>
+                    Product::CODE_EDUCATION_PREMIUM,
+                'active' =>
+                    $passed,
             ],
         ];
     }
