@@ -90,12 +90,22 @@
     </div>
 
     <div class="admin-form-actions">
-        <button class="primary-btn" type="submit">Filter Accounts</button>
+        <button class="primary-btn" type="submit">
+            Filter Accounts
+        </button>
+
         <a
             class="secondary-btn"
             href="{{ route('admin.copy_trading.accounts.index') }}"
         >
             Reset
+        </a>
+
+        <a
+            class="secondary-btn"
+            href="{{ route('admin.copy_trading.billing.index') }}"
+        >
+            Billing Register
         </a>
     </div>
 </form>
@@ -131,24 +141,48 @@
                         default => 'status-blocked',
                     };
                 @endphp
+
                 <tr>
                     <td>
-                        <strong>{{ $account->user?->name ?? 'Unknown customer' }}</strong><br>
-                        <small>{{ $account->user?->email ?? '—' }}</small>
+                        <strong>
+                            {{ $account->user?->name ?? 'Unknown customer' }}
+                        </strong><br>
+                        <small>
+                            {{ $account->user?->email ?? '—' }}
+                        </small>
                     </td>
-                    <td>{{ $account->broker?->name ?? '—' }}</td>
-                    <td>{{ $account->brokerMarket?->market_category ?? '—' }}</td>
-                    <td>{{ $account->maskedAccountNumber() }}</td>
+
+                    <td>
+                        {{ $account->broker?->name ?? '—' }}
+                    </td>
+
+                    <td>
+                        {{ $account->brokerMarket?->market_category ?? '—' }}
+                    </td>
+
+                    <td>
+                        {{ $account->maskedAccountNumber() }}
+                    </td>
+
                     <td>
                         <span class="user-status {{ $statusClass }}">
                             <span class="user-status-dot"></span>
                             {{ str_replace('_', ' ', $account->status) }}
                         </span>
                     </td>
-                    <td>{{ $account->verified_at?->format('Y-m-d H:i') ?? '—' }}</td>
-                    <td>{{ $account->activated_at?->format('Y-m-d H:i') ?? '—' }}</td>
+
                     <td>
-                        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        {{ $account->verified_at?->format('Y-m-d H:i') ?? '—' }}
+                    </td>
+
+                    <td>
+                        {{ $account->activated_at?->format('Y-m-d H:i') ?? '—' }}
+                    </td>
+
+                    <td>
+                        <div
+                            style="display:flex;gap:8px;flex-wrap:wrap;"
+                        >
                             <a
                                 class="secondary-btn"
                                 href="{{ route('admin.copy_trading.accounts.show', ['copyTradeBrokerAccount' => $account]) }}"
@@ -162,12 +196,22 @@
                             >
                                 Eligibility
                             </a>
+
+                            <a
+                                class="secondary-btn"
+                                href="{{ route('admin.copy_trading.billing.accounts.show', ['copyTradeBrokerAccount' => $account]) }}"
+                            >
+                                Billing
+                            </a>
                         </div>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8" style="text-align:center;padding:30px;">
+                    <td
+                        colspan="8"
+                        style="text-align:center;padding:30px;"
+                    >
                         No Copy Trade broker accounts found.
                     </td>
                 </tr>

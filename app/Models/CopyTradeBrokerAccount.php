@@ -185,6 +185,46 @@ class CopyTradeBrokerAccount extends Model
         )->latestOfMany('evaluated_at');
     }
 
+    public function billingCycles(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBillingCycle::class,
+            'broker_account_id'
+        )->latest('period_end');
+    }
+
+    public function billingSnapshots(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBillingSnapshot::class,
+            'broker_account_id'
+        )->latest('event_at');
+    }
+
+    public function billingBalanceEvents(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBillingBalanceEvent::class,
+            'broker_account_id'
+        )->latest('occurred_at');
+    }
+
+    public function billingInvoices(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBillingInvoice::class,
+            'broker_account_id'
+        )->latest('issued_at');
+    }
+
+    public function billingAdjustments(): HasMany
+    {
+        return $this->hasMany(
+            CopyTradeBillingAdjustment::class,
+            'broker_account_id'
+        )->latest('created_at');
+    }
+
     public function verifiedByAdmin(): BelongsTo
     {
         return $this->belongsTo(

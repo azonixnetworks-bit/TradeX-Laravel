@@ -76,11 +76,126 @@ return [
     ],
 
     /*
+    |--------------------------------------------------------------------------
+    | ADMIN-24 — Copy Trading Billing & Renewal
+    |--------------------------------------------------------------------------
+    |
+    | Module 12 freezes the commercial formula, but it does not freeze:
+    | - a numeric grace-period duration,
+    | - an exact payment gateway implementation,
+    | - tax rates / jurisdictional invoice wording,
+    | - the IC Markets server timezone value.
+    |
+    | These values are therefore never guessed by code.
+    |
+    */
+
+    'billing' => [
+        'currency' => 'USD',
+
+        'pricing_tiers' => [
+            [
+                'code' => 'USD_250_999',
+                'min_balance_minor' => 25000,
+                'max_balance_minor' => 100000,
+                'full_monthly_fee_minor' => 500,
+            ],
+            [
+                'code' => 'USD_1000_2999',
+                'min_balance_minor' => 100000,
+                'max_balance_minor' => 300000,
+                'full_monthly_fee_minor' => 1000,
+            ],
+            [
+                'code' => 'USD_3000_9999',
+                'min_balance_minor' => 300000,
+                'max_balance_minor' => 1000000,
+                'full_monthly_fee_minor' => 2000,
+            ],
+            [
+                'code' => 'USD_10000_49999',
+                'min_balance_minor' => 1000000,
+                'max_balance_minor' => 5000000,
+                'full_monthly_fee_minor' => 5000,
+            ],
+            [
+                'code' => 'USD_50000_99999',
+                'min_balance_minor' => 5000000,
+                'max_balance_minor' => 10000000,
+                'full_monthly_fee_minor' => 10000,
+            ],
+            [
+                'code' => 'USD_100000_199999',
+                'min_balance_minor' => 10000000,
+                'max_balance_minor' => 20000000,
+                'full_monthly_fee_minor' => 19900,
+            ],
+            [
+                'code' => 'USD_200000_299999',
+                'min_balance_minor' => 20000000,
+                'max_balance_minor' => 30000000,
+                'full_monthly_fee_minor' => 29900,
+            ],
+            [
+                'code' => 'USD_300000_499999',
+                'min_balance_minor' => 30000000,
+                'max_balance_minor' => 50000000,
+                'full_monthly_fee_minor' => 39900,
+            ],
+            [
+                'code' => 'USD_500000_999999',
+                'min_balance_minor' => 50000000,
+                'max_balance_minor' => 100000000,
+                'full_monthly_fee_minor' => 59900,
+            ],
+            [
+                'code' => 'USD_1000000_PLUS',
+                'min_balance_minor' => 100000000,
+                'max_balance_minor' => null,
+                'full_monthly_fee_minor' => 99900,
+            ],
+        ],
+
+        /*
+         * Required before Forex billing can run.
+         * Use the approved IC Markets server timezone.
+         */
+        'forex_server_timezone' =>
+            env('TRADEX_COPY_TRADE_FOREX_SERVER_TIMEZONE'),
+
+        'calendar_sources' => [
+            'ADMIN_MANUAL',
+            'BROKER_API',
+            'SYSTEM_IMPORT',
+        ],
+
+        /*
+         * Frozen Module 12 says "applicable grace period" but does not define
+         * its numeric duration. Production must set the approved value.
+         */
+        'grace_period_days' =>
+            is_numeric(
+                env('TRADEX_COPY_TRADE_GRACE_PERIOD_DAYS')
+            )
+                ? (int) env(
+                    'TRADEX_COPY_TRADE_GRACE_PERIOD_DAYS'
+                )
+                : null,
+
+        /*
+         * Disabled by default until operational calendar/grace settings
+         * and the approved payment adapter are deployed.
+         */
+        'sweep_enabled' =>
+            (bool) env(
+                'TRADEX_COPY_TRADE_BILLING_SWEEP_ENABLED',
+                false
+            ),
+    ],
+
+    /*
     | Deterministic fingerprinting is used only for duplicate protection.
     | The real broker account number remains encrypted at rest.
-    |
-    | A blank/absent dedicated key falls back to APP_KEY for local/dev
-    | compatibility. Production should set a separate stable high-entropy key.
     */
     'fingerprint_key' =>
         env('TRADEX_COPY_TRADE_FINGERPRINT_KEY')

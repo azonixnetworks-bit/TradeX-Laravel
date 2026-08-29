@@ -28,3 +28,13 @@ Schedule::command('tradex:finance:daily-sales-report')
             false
         )
     );
+
+Schedule::command('tradex:copy-trade-billing:sweep')
+    ->hourly()
+    ->withoutOverlapping(60)
+    ->when(
+        fn (): bool => (bool) config(
+            'tradex_copy_trading.billing.sweep_enabled',
+            false
+        )
+    );

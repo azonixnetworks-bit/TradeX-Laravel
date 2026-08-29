@@ -11,25 +11,20 @@ class AdminRolePermissionSeeder extends Seeder
     public function run(): void
     {
         $rolePermissions = [
-
             'CONTENT_ADMIN' => [
                 'dashboard.view',
-
                 'education.view',
                 'education.create',
                 'education.update',
                 'education.delete',
                 'education.publish',
-
                 'our_channel.view',
                 'our_channel.manage',
-
                 'notifications.view',
             ],
 
             'TRADE_IDEA_ADMIN' => [
                 'dashboard.view',
-
                 'trade_ideas.view',
                 'trade_ideas.create',
                 'trade_ideas.update',
@@ -37,16 +32,13 @@ class AdminRolePermissionSeeder extends Seeder
                 'trade_ideas.publish',
                 'trade_ideas.close',
                 'trade_ideas.distribute',
-
                 'notifications.view',
             ],
 
             'COPY_TRADING_ADMIN' => [
                 'dashboard.view',
-
                 'users.view',
                 'users.view_details',
-
                 'copy_trading.view',
                 'copy_trading.brokers.manage',
                 'copy_trading.accounts.view',
@@ -56,41 +48,39 @@ class AdminRolePermissionSeeder extends Seeder
                 'copy_trading.accounts.request_resubmission',
                 'copy_trading.accounts.escalate',
                 'copy_trading.evidence.view',
+                'copy_trading.billing.view',
+                'copy_trading.billing.manage',
+                'copy_trading.billing.calendar.manage',
             ],
 
             'AFFILIATE_ADMIN' => [
                 'dashboard.view',
-
                 'users.view',
                 'users.view_details',
-
                 'affiliates.view',
                 'affiliates.view_tree',
                 'affiliates.manage',
                 'affiliate_stages.manage',
-
                 'commissions.view',
                 'commissions.manage',
             ],
 
             'FINANCE_ADMIN' => [
                 'dashboard.view',
-
                 'users.view',
                 'users.view_details',
-
                 'payments.view',
                 'payments.verify',
                 'payments.reject',
                 'payments.reconcile',
                 'payment_accounts.manage',
-
                 'finance.view',
                 'finance.reports',
                 'finance.reconciliation',
-
+                'copy_trading.billing.view',
+                'copy_trading.billing.manage',
+                'copy_trading.billing.adjust',
                 'commissions.view',
-
                 'payouts.view',
                 'payouts.approve',
                 'payouts.reject',
@@ -99,10 +89,8 @@ class AdminRolePermissionSeeder extends Seeder
 
             'KYC_ADMIN' => [
                 'dashboard.view',
-
                 'users.view',
                 'users.view_details',
-
                 'kyc.view',
                 'kyc.view_documents',
                 'kyc.approve',
@@ -112,28 +100,17 @@ class AdminRolePermissionSeeder extends Seeder
 
             'SUPPORT_ADMIN' => [
                 'dashboard.view',
-
                 'users.view',
                 'users.view_details',
-
                 'education.view',
                 'our_channel.view',
-
                 'trade_ideas.view',
-
                 'affiliates.view',
-
                 'payments.view',
-
                 'notifications.view',
             ],
         ];
 
-        /*
-         * SUPER_ADMIN:
-         * Keep every permission attached as well,
-         * even though AdminUser::isSuperAdmin() already bypasses checks.
-         */
         $superAdmin = AdminRole::where(
             'code',
             'SUPER_ADMIN'
@@ -144,7 +121,6 @@ class AdminRolePermissionSeeder extends Seeder
         );
 
         foreach ($rolePermissions as $roleCode => $permissionCodes) {
-
             $role = AdminRole::where(
                 'code',
                 $roleCode

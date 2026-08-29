@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\Api\CopyTrading\CopyTradeAccountBillingShowController;
+use App\Http\Controllers\Api\CopyTrading\CopyTradeBillingIndexController;
+use App\Http\Controllers\Api\CopyTrading\CopyTradeBillingInvoiceShowController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBootstrapController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerAccountActivationShowController;
 use App\Http\Controllers\Api\CopyTrading\CopyTradeBrokerAccountResubmitController;
@@ -89,6 +92,37 @@ Route::prefix('v1')
                     )
                     ->name(
                         'broker-accounts.activation.show'
+                    );
+
+                Route::get(
+                    '/billing',
+                    CopyTradeBillingIndexController::class
+                )
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
+                    ->name('billing.index');
+
+                Route::get(
+                    '/broker-accounts/{copyTradeBrokerAccount}/billing',
+                    CopyTradeAccountBillingShowController::class
+                )
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
+                    ->name(
+                        'broker-accounts.billing.show'
+                    );
+
+                Route::get(
+                    '/billing/invoices/{copyTradeBillingInvoice}',
+                    CopyTradeBillingInvoiceShowController::class
+                )
+                    ->middleware(
+                        'throttle:api-profile-read'
+                    )
+                    ->name(
+                        'billing.invoices.show'
                     );
             });
 
