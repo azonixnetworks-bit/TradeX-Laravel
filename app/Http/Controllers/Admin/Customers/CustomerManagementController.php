@@ -333,14 +333,18 @@ class CustomerManagementController extends Controller
             true
         );
 
+        $redirect = redirect()->route(
+            'admin.customers.onboarding'
+        );
+
         if ($sent) {
-            return back()->with(
+            return $redirect->with(
                 'success',
                 'A new secure activation link was sent. Any previously issued activation link is now invalid.'
             );
         }
 
-        return back()->with(
+        return $redirect->with(
             'warning',
             'A new usable activation link could not be confirmed. Refresh the queue and retry after checking mail delivery.'
         );
@@ -363,10 +367,14 @@ class CustomerManagementController extends Controller
             $request
         );
 
-        return back()->with(
-            'success',
-            'Customer onboarding invitation revoked. Its activation link can no longer be used.'
-        );
+        return redirect()
+            ->route(
+                'admin.customers.onboarding'
+            )
+            ->with(
+                'success',
+                'Customer onboarding invitation revoked. Its activation link can no longer be used.'
+            );
     }
 
     private function admin(): AdminUser
