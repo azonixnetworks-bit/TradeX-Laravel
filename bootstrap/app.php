@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureTradeXMobileApiSession;
 use App\Http\Middleware\ForceAdminTotp;
 use App\Http\Middleware\HardenAdminSession;
 use App\Http\Middleware\HardenMobileApiRequests;
+use App\Support\Admin\AdminWebExceptionResponder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -66,6 +67,21 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*')
                 || $request->expectsJson(),
+        );
+
+        /*
+         * ADMIN-20D: HTML admin requests get a controlled error boundary.
+         * API requests remain on their existing JSON exception contracts.
+         */
+        $exceptions->render(
+            function (\Throwable $exception, Request $request) {
+                return app(
+                    AdminWebExceptionResponder::class
+                )->render(
+                    $exception,
+                    $request
+                );
+            }
         );
     })
     ->create();
