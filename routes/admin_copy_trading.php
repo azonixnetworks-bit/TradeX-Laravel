@@ -62,6 +62,14 @@ Route::prefix('admin/copy-trading')
                     ]
                 )->name('update');
 
+                Route::delete(
+                    '/{copyTradeBroker}',
+                    [
+                        CopyTradeBrokerController::class,
+                        'destroy',
+                    ]
+                )->name('destroy');
+
                 Route::post(
                     '/{copyTradeBroker}/markets',
                     [

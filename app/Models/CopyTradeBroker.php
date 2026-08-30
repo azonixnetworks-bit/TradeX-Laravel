@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Str;
 
 class CopyTradeBroker extends Model
@@ -49,6 +50,16 @@ class CopyTradeBroker extends Model
         return $this->hasMany(
             CopyTradeBrokerMarket::class,
             'broker_id'
+        );
+    }
+
+    public function onboardingIntents(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            CopyTradeOnboardingIntent::class,
+            CopyTradeBrokerMarket::class,
+            'broker_id',
+            'broker_market_id'
         );
     }
 

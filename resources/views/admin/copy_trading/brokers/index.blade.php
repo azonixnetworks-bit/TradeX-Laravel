@@ -30,7 +30,8 @@
         <strong>Partner-link boundary</strong>
         Referral URLs are configuration, not source code. Deactivate a broker or
         market immediately when partner onboarding should stop. Existing broker
-        account history is preserved.
+        account history is preserved. Permanent delete is available only for a
+        broker that has never been used for onboarding or a broker account.
     </div>
 </div>
 
@@ -56,6 +57,11 @@
             </thead>
             <tbody>
             @forelse($brokers as $broker)
+                @php
+                    $hasAccountHistory = (int) $broker->accounts_count > 0;
+                    $hasOnboardingHistory = (bool) $broker->onboarding_intents_exists;
+                    $canDeleteBroker = ! $hasAccountHistory && ! $hasOnboardingHistory;
+                @endphp
                 <tr>
                     <td>
                         <strong>{{ $broker->name }}</strong><br>
@@ -87,12 +93,48 @@
                     </td>
                     <td>
                         @if($canManage)
-                            <a
-                                class="secondary-btn"
-                                href="{{ route('admin.copy_trading.brokers.edit', ['copyTradeBroker' => $broker]) }}"
-                            >
-                                Configure
-                            </a>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                                <a
+                                    class="secondary-btn"
+                                    href="{{ route('admin.copy_trading.brokers.edit', ['copyTradeBroker' => $broker]) }}"
+                                >
+                                    Configure
+                                </a>
+
+                                @if($canDeleteBroker)
+                                    <form
+                                        method="POST"
+                                        action="{{ route('admin.copy_trading.brokers.destroy', ['copyTradeBroker' => $broker]) }}"
+                                        onsubmit="return confirm('Delete this unused broker permanently? This action is only allowed when no onboarding or broker-account history exists.');"
+                                        style="margin:0;"
+                                    >
+                                        @csrf
+                                        @method('DELETE')
+                                        <button
+                                            type="submit"
+                                            class="secondary-btn"
+                                            style="border-color:rgba(255,105,120,.65);color:#ff6978;"
+                                        >
+                                            Delete
+                                        </button>
+                                    </form>
+                                @else
+                                    <button
+                                        type="button"
+                                        class="secondary-btn"
+                                        disabled
+                                        title="History exists. Deactivate this broker instead of deleting it."
+                                        style="opacity:.55;cursor:not-allowed;"
+                                    >
+                                        Delete locked
+                                    </button>
+                                @endif
+                            </div>
+                            @unless($canDeleteBroker)
+                                <small style="display:block;margin-top:6px;opacity:.72;">
+                                    History preserved · deactivate instead
+                                </small>
+                            @endunless
                         @else
                             —
                         @endif
