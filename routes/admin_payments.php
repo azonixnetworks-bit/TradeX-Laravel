@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Payments\NowPaymentsController;
 use App\Http\Controllers\Admin\Payments\PayPalController;
 use App\Http\Controllers\Admin\Payments\PaymentAccountController;
 use App\Http\Controllers\Admin\Payments\PaymentController;
+use App\Http\Controllers\Admin\Payments\StripeController;
 use App\Http\Controllers\Admin\Payments\UsdtDepositController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,6 +21,9 @@ Route::prefix('admin/payments')
 
         Route::get('/paypal', [PayPalController::class, 'index'])
             ->name('paypal.index');
+
+        Route::get('/stripe', [StripeController::class, 'index'])
+            ->name('stripe.index');
 
         Route::get('/nowpayments', [NowPaymentsController::class, 'index'])
             ->name('nowpayments.index');
