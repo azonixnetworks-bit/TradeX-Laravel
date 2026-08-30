@@ -42,6 +42,18 @@
 
         </div>
 
+        <button
+            id="adminThemeToggle"
+            class="theme-toggle"
+            type="button"
+            aria-label="Switch to light theme"
+            aria-pressed="false"
+            title="Switch to light theme"
+        >
+            <span class="theme-toggle-icon" data-theme-icon aria-hidden="true">☀</span>
+            <span class="theme-toggle-state" data-theme-state>Light</span>
+        </button>
+
         <a
             href="{{ route('admin.account.totp.settings') }}"
             class="topbar-totp-link"
