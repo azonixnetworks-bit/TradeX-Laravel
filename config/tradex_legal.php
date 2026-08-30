@@ -77,6 +77,17 @@ return [
         500,
 
     /*
+     * Legal publication datetime-local inputs are entered by administrators in
+     * this business timezone, then normalized to the application's UTC clock
+     * before persistence/comparison. Keep APP timezone/storage semantics UTC.
+     */
+    'admin_timezone' =>
+        env(
+            'TRADEX_ADMIN_TIMEZONE',
+            'Asia/Colombo'
+        ),
+
+    /*
      * Current repository has no customer legal-acceptance API/ledger.
      * ADMIN-17 must not claim acceptance enforcement is wired.
      */

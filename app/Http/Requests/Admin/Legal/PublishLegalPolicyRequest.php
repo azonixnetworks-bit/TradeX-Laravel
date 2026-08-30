@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Admin\Legal;
 
 use App\Models\AdminUser;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Http\FormRequest;
+use Throwable;
 
 class PublishLegalPolicyRequest extends FormRequest
 {
@@ -23,20 +25,15 @@ class PublishLegalPolicyRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $effectiveAt =
-            $this->input(
-                'effective_at'
+            $this->normalizeEffectiveAt(
+                $this->input(
+                    'effective_at'
+                )
             );
 
         $this->merge([
             'effective_at' =>
-                is_scalar($effectiveAt)
-                && trim(
-                    (string) $effectiveAt
-                ) !== ''
-                    ? trim(
-                        (string) $effectiveAt
-                    )
-                    : null,
+                $effectiveAt,
 
             'publish_confirmation' =>
                 filter_var(
@@ -68,5 +65,52 @@ class PublishLegalPolicyRequest extends FormRequest
                 'accepted',
             ],
         ];
+    }
+
+    private function normalizeEffectiveAt(
+        mixed $value
+    ): ?string {
+        if (
+            ! is_scalar($value)
+            || trim((string) $value) === ''
+        ) {
+            return null;
+        }
+
+        $raw =
+            trim(
+                (string) $value
+            );
+
+        try {
+            $adminTimezone =
+                (string) config(
+                    'tradex_legal.admin_timezone',
+                    'Asia/Colombo'
+                );
+
+            $applicationTimezone =
+                (string) config(
+                    'app.timezone',
+                    'UTC'
+                );
+
+            return CarbonImmutable::parse(
+                $raw,
+                $adminTimezone
+            )
+                ->setTimezone(
+                    $applicationTimezone
+                )
+                ->format(
+                    'Y-m-d H:i:s'
+                );
+        } catch (Throwable) {
+            /*
+             * Preserve invalid input so the normal Laravel `date` validation
+             * rule returns a validation error instead of turning it into a 500.
+             */
+            return $raw;
+        }
     }
 }

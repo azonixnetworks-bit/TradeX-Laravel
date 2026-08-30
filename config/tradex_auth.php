@@ -16,4 +16,12 @@ return [
         'digits' => 6,
         'window' => 1,
     ],
+
+    'recovery_codes' => [
+        'count' => 10,
+        'pepper' => env(
+            'TRADEX_MFA_RECOVERY_PEPPER',
+            env('APP_KEY')
+        ),
+    ],
 ];

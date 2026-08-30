@@ -2,9 +2,11 @@
 
 use App\Http\Controllers\Api\Auth\AcceptInvitationLegalPoliciesController;
 use App\Http\Controllers\Api\Auth\ActivateCustomerInvitationController;
+use App\Http\Controllers\Api\Auth\BootstrapInvitationRecoveryCodesController;
 use App\Http\Controllers\Api\Auth\CompleteInvitationOnboardingController;
 use App\Http\Controllers\Api\Auth\ConfirmInvitationTotpController;
 use App\Http\Controllers\Api\Auth\InvitationLegalPoliciesController;
+use App\Http\Controllers\Api\Auth\RegenerateMfaRecoveryCodesController;
 use App\Http\Controllers\Api\Auth\SetInvitationPasswordController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,4 +54,26 @@ Route::prefix('v1/auth/invite')
         )
             ->middleware('throttle:api-register-verify')
             ->name('complete');
+
+        Route::post(
+            '/recovery-codes',
+            BootstrapInvitationRecoveryCodesController::class
+        )
+            ->middleware('throttle:api-register-verify')
+            ->name('recovery-codes.bootstrap');
+    });
+
+Route::middleware([
+    'auth:sanctum',
+    'tradex.mobile',
+])
+    ->prefix('v1/auth')
+    ->name('api.v1.auth.')
+    ->group(function (): void {
+        Route::post(
+            '/recovery-codes/regenerate',
+            RegenerateMfaRecoveryCodesController::class
+        )
+            ->middleware('throttle:api-register-totp')
+            ->name('recovery-codes.regenerate');
     });
