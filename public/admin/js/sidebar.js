@@ -6,6 +6,211 @@ document.addEventListener(
                 'adminSidebar'
             );
 
+        if (! sidebar) {
+            return;
+        }
+
+        const nav =
+            sidebar.querySelector(
+                '.sidebar-nav'
+            );
+
+        const scrollStorageKey =
+            'tradex.admin.sidebar.scroll.v1';
+
+        const readStoredScroll =
+            function () {
+                try {
+                    const stored =
+                        window.sessionStorage.getItem(
+                            scrollStorageKey
+                        );
+
+                    if (stored === null) {
+                        return null;
+                    }
+
+                    const parsed =
+                        Number.parseInt(
+                            stored,
+                            10
+                        );
+
+                    if (
+                        ! Number.isFinite(parsed)
+                        || parsed < 0
+                    ) {
+                        return null;
+                    }
+
+                    return parsed;
+                } catch (error) {
+                    return null;
+                }
+            };
+
+        const persistScroll =
+            function () {
+                if (! nav) {
+                    return;
+                }
+
+                try {
+                    window.sessionStorage.setItem(
+                        scrollStorageKey,
+                        String(
+                            Math.max(
+                                0,
+                                Math.round(
+                                    nav.scrollTop
+                                )
+                            )
+                        )
+                    );
+                } catch (error) {
+                    // Storage can be unavailable in restricted browser modes.
+                }
+            };
+
+        const activeLinkIsVisible =
+            function (activeLink) {
+                if (! nav || ! activeLink) {
+                    return false;
+                }
+
+                const navRect =
+                    nav.getBoundingClientRect();
+
+                const linkRect =
+                    activeLink.getBoundingClientRect();
+
+                return linkRect.top >= navRect.top
+                    && linkRect.bottom <= navRect.bottom;
+            };
+
+        const restoreSidebarScroll =
+            function () {
+                if (! nav) {
+                    return;
+                }
+
+                const storedScroll =
+                    readStoredScroll();
+
+                const applyStoredScroll =
+                    function () {
+                        if (storedScroll === null) {
+                            return false;
+                        }
+
+                        const maximumScroll =
+                            Math.max(
+                                0,
+                                nav.scrollHeight
+                                - nav.clientHeight
+                            );
+
+                        nav.scrollTop =
+                            Math.min(
+                                storedScroll,
+                                maximumScroll
+                            );
+
+                        return true;
+                    };
+
+                if (applyStoredScroll()) {
+                    window.requestAnimationFrame(
+                        applyStoredScroll
+                    );
+
+                    return;
+                }
+
+                window.requestAnimationFrame(
+                    function () {
+                        const activeLink =
+                            nav.querySelector(
+                                '.nav-link.active'
+                            );
+
+                        if (
+                            activeLink
+                            && ! activeLinkIsVisible(
+                                activeLink
+                            )
+                        ) {
+                            activeLink.scrollIntoView({
+                                block: 'nearest',
+                                inline: 'nearest',
+                            });
+                        }
+                    }
+                );
+            };
+
+        restoreSidebarScroll();
+
+        if (nav) {
+            let scrollFrame = null;
+
+            nav.addEventListener(
+                'scroll',
+                function () {
+                    if (scrollFrame !== null) {
+                        return;
+                    }
+
+                    scrollFrame =
+                        window.requestAnimationFrame(
+                            function () {
+                                scrollFrame = null;
+                                persistScroll();
+                            }
+                        );
+                },
+                {
+                    passive: true,
+                }
+            );
+
+            sidebar.addEventListener(
+                'click',
+                function (event) {
+                    const target =
+                        event.target instanceof Element
+                            ? event.target
+                            : null;
+
+                    if (
+                        target?.closest(
+                            '.nav-link'
+                        )
+                    ) {
+                        persistScroll();
+                    }
+                },
+                true
+            );
+
+            window.addEventListener(
+                'pagehide',
+                persistScroll
+            );
+
+            document.addEventListener(
+                'visibilitychange',
+                function () {
+                    if (
+                        document.visibilityState
+                        === 'hidden'
+                    ) {
+                        persistScroll();
+                    }
+                }
+            );
+        }
+
         const toggle =
             document.getElementById(
                 'sidebarToggle'
@@ -16,7 +221,7 @@ document.addEventListener(
                 'sidebarBackdrop'
             );
 
-        if (! sidebar || ! toggle || ! backdrop) {
+        if (! toggle || ! backdrop) {
             return;
         }
 
