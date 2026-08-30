@@ -28,6 +28,10 @@ class PaymentController extends Controller
             'per_page',
         ]));
 
+        $data['stats']['stripe'] = PaymentOrder::query()
+            ->where('provider', PaymentOrder::PROVIDER_STRIPE)
+            ->count();
+
         $data['stats']['nowpayments'] = PaymentOrder::query()
             ->where('provider', PaymentOrder::PROVIDER_NOWPAYMENTS)
             ->count();

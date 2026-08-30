@@ -8,13 +8,14 @@
     <div>
         <div class="page-eyebrow">PAYMENT OPERATIONS</div>
         <h1>TradeX <span>Payments</span></h1>
-        <p>Provider-verified PayPal and NOWPayments records plus controlled Binance / USDT TRC20 and local-bank manual-payment reconciliation.</p>
+        <p>Provider-verified PayPal, Stripe and NOWPayments records plus controlled Binance / USDT TRC20 and local-bank manual-payment reconciliation.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
         @if(auth('admin')->user()->hasPermission('products.view'))
             <a class="secondary-btn" href="{{ route('admin.products.index') }}">Products</a>
         @endif
         <a class="secondary-btn" href="{{ route('admin.payments.paypal.index') }}">PayPal</a>
+        <a class="secondary-btn" href="{{ route('admin.payments.stripe.index') }}">Stripe</a>
         <a class="secondary-btn" href="{{ route('admin.payments.nowpayments.index') }}">NOWPayments</a>
         <a class="secondary-btn" href="{{ route('admin.payments.bank.index') }}">Bank Review</a>
         <a class="secondary-btn" href="{{ route('admin.payments.usdt.index') }}">Binance / USDT Review</a>
@@ -35,6 +36,7 @@
     <div class="user-stat-card"><span>Failed</span><strong>{{ number_format($stats['failed']) }}</strong></div>
     <div class="user-stat-card"><span>Reversed</span><strong>{{ number_format($stats['reversed']) }}</strong></div>
     <div class="user-stat-card"><span>PayPal Orders</span><strong>{{ number_format($stats['paypal']) }}</strong></div>
+    <div class="user-stat-card"><span>Stripe Orders</span><strong>{{ number_format($stats['stripe']) }}</strong></div>
     <div class="user-stat-card"><span>NOWPayments Orders</span><strong>{{ number_format($stats['nowpayments']) }}</strong></div>
 </div>
 
