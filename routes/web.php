@@ -6,6 +6,7 @@ Route::get('/', function () {
     return redirect()->route('admin.login');
 });
 
+require __DIR__ . '/customer_onboarding.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/admin_video_playback.php';
 require __DIR__ . '/admin_our_channel.php';
@@ -201,9 +202,9 @@ require __DIR__ . '/admin_hardening.php';
 | ADMIN-20 — Customer Management & Admin Onboarding
 |--------------------------------------------------------------------------
 |
-| Customer dashboard, safe admin-created pre-onboarding invitations and
-| customer segment navigation. Invitations never create credentials,
-| TOTP secrets, premium entitlements or payment state.
+| Customer dashboard, secure admin-created invitations and customer segment
+| navigation. Credentials, TOTP and final customer activation remain
+| customer-owned through the public onboarding flow.
 |
 */
 

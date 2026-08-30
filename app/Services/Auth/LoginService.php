@@ -15,6 +15,8 @@ class LoginService
     public function __construct(
         private readonly TotpService
             $totp,
+        private readonly MfaRecoveryCodeService
+            $recoveryCodes,
         private readonly DeviceBindingService
             $devices,
         private readonly AccessTokenService
@@ -84,12 +86,22 @@ class LoginService
                     );
                 }
 
-                $this->totp->consume(
-                    $user,
-                    (string) $payload[
-                        'totp_code'
-                    ]
-                );
+                $mfaMethod = 'TOTP';
+
+                if (filled($payload['recovery_code'] ?? null)) {
+                    $this->recoveryCodes->consume(
+                        $user,
+                        (string) $payload['recovery_code'],
+                        $request
+                    );
+
+                    $mfaMethod = 'RECOVERY_CODE';
+                } else {
+                    $this->totp->consume(
+                        $user,
+                        (string) $payload['totp_code']
+                    );
+                }
 
                 $device =
                     $this->devices
@@ -139,6 +151,8 @@ class LoginService
                             $device->platform,
                         'session_uuid' =>
                             $familyUuid,
+                        'mfa_method' =>
+                            $mfaMethod,
                     ],
                     $request->ip(),
                     $request->userAgent()
@@ -164,6 +178,8 @@ class LoginService
                         ) * 86400,
                     'session_uuid' =>
                         $familyUuid,
+                    'mfa_method' =>
+                        $mfaMethod,
                     'user' =>
                         $this->safeUser(
                             $user

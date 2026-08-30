@@ -30,8 +30,18 @@ class LoginRequest extends FormRequest
             ],
 
             'totp_code' => [
-                'required',
+                'nullable',
                 'digits:6',
+                'required_without:recovery_code',
+                'prohibits:recovery_code',
+            ],
+
+            'recovery_code' => [
+                'nullable',
+                'string',
+                'max:80',
+                'required_without:totp_code',
+                'prohibits:totp_code',
             ],
 
             'installation_id' => [
@@ -85,6 +95,8 @@ class LoginRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $recoveryCode = $this->input('recovery_code');
+
         $this->merge([
             'email' => mb_strtolower(
                 trim((string) $this->input('email'))
@@ -92,6 +104,9 @@ class LoginRequest extends FormRequest
             'platform' => strtoupper(
                 trim((string) $this->input('platform'))
             ),
+            'recovery_code' => is_string($recoveryCode)
+                ? trim($recoveryCode)
+                : $recoveryCode,
         ]);
     }
 }

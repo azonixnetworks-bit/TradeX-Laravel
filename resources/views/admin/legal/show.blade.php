@@ -3,6 +3,13 @@
 @section('title', $policy->title)
 @section('page-title', $policy->title)
 
+@php
+    $adminTimezone = (string) config(
+        'tradex_legal.admin_timezone',
+        'Asia/Colombo'
+    );
+@endphp
+
 @section('content')
 <div class="page-header">
     <div>
@@ -106,13 +113,19 @@
                 <tr>
                     <th>Published At</th>
                     <td>
-                        {{ $policy->published_at?->format('Y-m-d H:i:s') ?? 'Not published' }}
+                        {{ $policy->published_at?->copy()->setTimezone($adminTimezone)->format('Y-m-d H:i:s') ?? 'Not published' }}
+                        @if($policy->published_at)
+                            <small>({{ $adminTimezone }})</small>
+                        @endif
                     </td>
                 </tr>
                 <tr>
                     <th>Effective At</th>
                     <td>
-                        {{ $policy->effective_at?->format('Y-m-d H:i:s') ?? 'Not assigned' }}
+                        {{ $policy->effective_at?->copy()->setTimezone($adminTimezone)->format('Y-m-d H:i:s') ?? 'Not assigned' }}
+                        @if($policy->effective_at)
+                            <small>({{ $adminTimezone }})</small>
+                        @endif
                     </td>
                 </tr>
                 <tr>
@@ -188,14 +201,16 @@
         >
 
         <div class="form-group">
-            <label>Effective At</label>
+            <label>Effective At ({{ $adminTimezone }})</label>
             <input
                 type="datetime-local"
                 name="effective_at"
                 value="{{ old('effective_at') }}"
             >
             <small>
-                Leave blank for immediate effect. Backdating is rejected.
+                Enter business local time in {{ $adminTimezone }}. Leave blank
+                for immediate effect. TradeX normalizes the stored timestamp to
+                the application UTC clock. Backdating is rejected.
             </small>
             @error('effective_at')
                 <small>{{ $message }}</small>
@@ -269,7 +284,7 @@
                 <tr>
                     <th>Version</th>
                     <th>Status</th>
-                    <th>Effective</th>
+                    <th>Effective ({{ $adminTimezone }})</th>
                     <th>Fingerprint</th>
                     <th></th>
                 </tr>
@@ -293,7 +308,7 @@
                         @endif
                     </td>
                     <td>
-                        {{ $version->effective_at?->format('Y-m-d H:i') ?? '—' }}
+                        {{ $version->effective_at?->copy()->setTimezone($adminTimezone)->format('Y-m-d H:i') ?? '—' }}
                     </td>
                     <td>
                         <code>{{ substr($version->content_sha256, 0, 16) }}…</code>
