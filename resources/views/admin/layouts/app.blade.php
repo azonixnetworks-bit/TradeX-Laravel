@@ -41,6 +41,11 @@
         href="{{ asset('admin/css/forms.css') }}"
     >
 
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/notifications.css') }}"
+    >
+
     @stack('styles')
 
     <link
@@ -69,6 +74,8 @@
     </div>
 </div>
 
+@include('admin.components.flash-notifications')
+
 <div class="admin-app">
 
     @include('admin.layouts.sidebar')
@@ -84,18 +91,6 @@
         @include('admin.layouts.topbar')
 
         <main class="admin-content">
-
-            @if(session('success'))
-                <div class="alert alert-success">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if(session('error'))
-                <div class="alert alert-danger">
-                    {{ session('error') }}
-                </div>
-            @endif
 
             @yield('content')
 
@@ -117,6 +112,10 @@
 
 <script
     src="{{ asset('admin/js/branding.js') }}">
+</script>
+
+<script
+    src="{{ asset('admin/js/notifications.js') }}">
 </script>
 
 @stack('scripts')
