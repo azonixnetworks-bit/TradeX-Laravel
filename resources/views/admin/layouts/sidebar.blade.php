@@ -277,6 +277,8 @@
 
 
         @if(
+            $admin->hasPermission('products.view')
+            ||
             $admin->hasPermission('payments.view')
             ||
             $admin->hasPermission('finance.view')
@@ -287,6 +289,20 @@
             <div class="nav-section-title">
                 FINANCE
             </div>
+
+        @endif
+
+
+        @if($admin->hasPermission('products.view'))
+
+            <a
+                href="{{ route('admin.products.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.products.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◇</span>
+                <span>Product Catalog</span>
+            </a>
 
         @endif
 

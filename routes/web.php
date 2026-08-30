@@ -74,6 +74,18 @@ require __DIR__ . '/admin_finance.php';
 
 /*
 |--------------------------------------------------------------------------
+| Product Catalog
+|--------------------------------------------------------------------------
+|
+| Registers the existing permission-gated Product Catalog controller and
+| views without changing payment-order snapshots or entitlement semantics.
+|
+*/
+
+require __DIR__ . '/admin_products.php';
+
+/*
+|--------------------------------------------------------------------------
 | ADMIN-10 — KYC Management
 |--------------------------------------------------------------------------
 |
