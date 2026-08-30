@@ -164,6 +164,85 @@ class CopyTradeBrokerAdminService
         return $broker->fresh('markets');
     }
 
+    public function deleteUnusedBroker(
+        CopyTradeBroker $broker,
+        AdminUser $admin,
+        Request $request
+    ): void {
+        $logo = DB::transaction(function () use (
+            $broker,
+            $admin,
+            $request
+        ): array {
+            $locked = CopyTradeBroker::query()
+                ->whereKey($broker->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $markets = CopyTradeBrokerMarket::query()
+                ->where('broker_id', $locked->id)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $locked->setRelation('markets', $markets);
+
+            if (
+                $locked->accounts()->exists()
+                || $locked->onboardingIntents()->exists()
+            ) {
+                throw new DomainException(
+                    'This broker has Copy Trading onboarding or account history and cannot be deleted. Deactivate the broker instead.'
+                );
+            }
+
+            $before = $this->brokerSnapshot($locked);
+            $targetId = $locked->id;
+            $logo = [
+                'disk' => $locked->logo_disk,
+                'path' => $locked->logo_path,
+            ];
+
+            CopyTradeBrokerMarket::query()
+                ->where('broker_id', $locked->id)
+                ->delete();
+
+            $locked->delete();
+
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $admin->id,
+                action: 'COPY_TRADE_BROKER_DELETED',
+                module: 'COPY_TRADING',
+                targetType: 'COPY_TRADE_BROKER',
+                targetId: $targetId,
+                oldValues: $before,
+                newValues: [
+                    'deleted' => true,
+                    'deletion_policy' => 'UNUSED_BROKER_ONLY',
+                ],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+
+            return $logo;
+        });
+
+        try {
+            $this->deleteFile(
+                $logo['disk'] ?? null,
+                $logo['path'] ?? null
+            );
+        } catch (\Throwable $exception) {
+            /*
+             * The database deletion has already committed. Do not report the
+             * broker as undeleted because a stale private logo could not be
+             * cleaned up; log the storage cleanup failure for operations.
+             */
+            report($exception);
+        }
+    }
+
     public function createMarket(
         CopyTradeBroker $broker,
         array $data,

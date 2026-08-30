@@ -28,6 +28,7 @@ class CopyTradeBrokerController extends Controller
         $brokers = CopyTradeBroker::query()
             ->with('markets')
             ->withCount('accounts')
+            ->withExists('onboardingIntents')
             ->orderBy('name')
             ->paginate(20)
             ->withQueryString();
@@ -111,6 +112,39 @@ class CopyTradeBrokerController extends Controller
         );
 
         return back()->with('success', 'Broker configuration updated.');
+    }
+
+    public function destroy(
+        Request $request,
+        CopyTradeBroker $copyTradeBroker,
+        CopyTradeBrokerAdminService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission('copy_trading.brokers.manage'),
+            403
+        );
+
+        try {
+            $service->deleteUnusedBroker(
+                $copyTradeBroker,
+                $admin,
+                $request
+            );
+        } catch (DomainException $exception) {
+            return back()->with(
+                'warning',
+                $exception->getMessage()
+            );
+        }
+
+        return redirect()
+            ->route('admin.copy_trading.brokers.index')
+            ->with(
+                'success',
+                'Unused Copy Trading broker deleted successfully.'
+            );
     }
 
     public function storeMarket(
