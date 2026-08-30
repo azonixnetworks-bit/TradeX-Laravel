@@ -4,11 +4,34 @@
 @section('page-title', 'Audit Logs')
 
 @section('content')
+@php
+    $auditTimezone = (string) config('tradex_reporting.audit_timezone', 'Asia/Colombo');
+    $today = \Carbon\CarbonImmutable::now($auditTimezone)->toDateString();
+    $yesterday = \Carbon\CarbonImmutable::now($auditTimezone)->subDay()->toDateString();
+    $last7 = \Carbon\CarbonImmutable::now($auditTimezone)->subDays(6)->toDateString();
+    $last30 = \Carbon\CarbonImmutable::now($auditTimezone)->subDays(29)->toDateString();
+
+    $reportFilters = request()->except(['page', 'per_page']);
+    $exportFrom = request('from') ?: $today;
+    $exportTo = request('to') ?: (request('from') ?: $today);
+    $exportQuery = array_merge(
+        $reportFilters,
+        ['from' => $exportFrom, 'to' => $exportTo]
+    );
+@endphp
+
 <div class="page-header">
     <div>
         <div class="page-eyebrow">IMMUTABLE ACTIVITY HISTORY</div>
         <h1>Audit <span>Logs</span></h1>
-        <p>Search and review TradeX audit metadata. Raw old/new JSON payloads are never shown in this list.</p>
+        <p>Search, review and securely export TradeX audit metadata. Sensitive payload keys are redacted before report download.</p>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a
+            class="primary-btn"
+            href="{{ route('admin.audit.export', $exportQuery) }}"
+        >Download CSV</a>
     </div>
 </div>
 
@@ -22,7 +45,18 @@
 
 <section class="panel" style="padding:18px;margin-bottom:18px;">
     <strong>Read-only audit boundary:</strong>
-    ADMIN-12 does not edit or delete audit rows. Event detail payloads are sanitized at render time; the stored immutable row is not rewritten.
+    Audit rows remain immutable. Exported old/new payloads are sanitized at download time; passwords, tokens, OTP/TOTP, account identifiers, wallet addresses and similar sensitive values are redacted.
+</section>
+
+<section class="panel" style="padding:18px;margin-bottom:18px;">
+    <div class="panel-eyebrow">QUICK REPORT PERIODS · {{ $auditTimezone }}</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+        <a class="secondary-btn" href="{{ route('admin.audit.index', array_merge($reportFilters, ['from' => $today, 'to' => $today])) }}">Today</a>
+        <a class="secondary-btn" href="{{ route('admin.audit.index', array_merge($reportFilters, ['from' => $yesterday, 'to' => $yesterday])) }}">Yesterday</a>
+        <a class="secondary-btn" href="{{ route('admin.audit.index', array_merge($reportFilters, ['from' => $last7, 'to' => $today])) }}">Last 7 Days</a>
+        <a class="secondary-btn" href="{{ route('admin.audit.index', array_merge($reportFilters, ['from' => $last30, 'to' => $today])) }}">Last 30 Days</a>
+    </div>
+    <p style="margin-bottom:0;"><small>If no From/To date is selected, Download CSV exports today only. Maximum single export window: {{ config('tradex_reporting.max_range_days', 366) }} days.</small></p>
 </section>
 
 <section class="panel user-filter-panel">
@@ -50,7 +84,7 @@
             @forelse($logs as $log)
                 <tr>
                     <td>#{{ $log->getKey() }}</td>
-                    <td>{{ $log->created_at?->format('Y-m-d H:i:s') ?? '—' }}</td>
+                    <td>{{ $log->created_at?->timezone($auditTimezone)->format('Y-m-d H:i:s') ?? '—' }}</td>
                     <td><strong>{{ $log->action }}</strong></td>
                     <td>{{ $log->module ?: '—' }}</td>
                     <td>{{ $log->actor_type }} @if($log->actor_id)#{{ $log->actor_id }}@endif</td>

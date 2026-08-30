@@ -5,8 +5,10 @@ namespace App\Services\Admin\Audit;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Throwable;
 
 class AdminAuditService
 {
@@ -112,13 +114,19 @@ class AdminAuditService
         }
 
         $from = trim((string) ($filters['from'] ?? ''));
-        if ($from !== '') {
-            $query->whereDate('created_at', '>=', $from);
+        if (
+            $from !== ''
+            && ($boundary = $this->dateBoundary($from, false)) !== null
+        ) {
+            $query->where('created_at', '>=', $boundary);
         }
 
         $to = trim((string) ($filters['to'] ?? ''));
-        if ($to !== '') {
-            $query->whereDate('created_at', '<=', $to);
+        if (
+            $to !== ''
+            && ($boundary = $this->dateBoundary($to, true)) !== null
+        ) {
+            $query->where('created_at', '<=', $boundary);
         }
     }
 
@@ -327,5 +335,32 @@ class AdminAuditService
 
         $text = trim((string) $value);
         return $text !== '' ? $this->boundedString($text, $limit) : null;
+    }
+
+    private function dateBoundary(
+        string $date,
+        bool $endOfDay
+    ): ?CarbonImmutable {
+        if (! preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            return null;
+        }
+
+        try {
+            $local = CarbonImmutable::createFromFormat(
+                'Y-m-d H:i:s',
+                $date.' 00:00:00',
+                (string) config(
+                    'tradex_reporting.audit_timezone',
+                    'Asia/Colombo'
+                )
+            );
+        } catch (Throwable) {
+            return null;
+        }
+
+        return ($endOfDay ? $local->endOfDay() : $local->startOfDay())
+            ->timezone(
+                (string) config('app.timezone', 'UTC')
+            );
     }
 }

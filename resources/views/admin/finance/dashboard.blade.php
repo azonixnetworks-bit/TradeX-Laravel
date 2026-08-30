@@ -19,6 +19,7 @@
 
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
         @if($permissions['reports'])
+            <a class="primary-btn" href="{{ route('admin.finance.sales-report') }}">Sales Reports</a>
             <a class="secondary-btn" href="{{ route('admin.finance.daily') }}">Daily Sales</a>
             <a class="secondary-btn" href="{{ route('admin.finance.monthly') }}">Monthly Sales</a>
         @endif

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\Finance\DailySalesController;
 use App\Http\Controllers\Admin\Finance\FinanceDashboardController;
 use App\Http\Controllers\Admin\Finance\MonthlySalesController;
 use App\Http\Controllers\Admin\Finance\ReconciliationController;
+use App\Http\Controllers\Admin\Finance\SalesReportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin/finance')
@@ -12,6 +13,13 @@ Route::prefix('admin/finance')
     ->group(function (): void {
         Route::get('/', [FinanceDashboardController::class, 'index'])
             ->name('dashboard');
+
+        Route::get('/sales-report', [SalesReportController::class, 'index'])
+            ->name('sales-report');
+
+        Route::get('/sales-report/export', [SalesReportController::class, 'export'])
+            ->middleware('throttle:20,1')
+            ->name('sales-report.export');
 
         Route::get('/daily-sales', [DailySalesController::class, 'index'])
             ->name('daily');
