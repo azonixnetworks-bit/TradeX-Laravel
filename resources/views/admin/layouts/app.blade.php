@@ -15,6 +15,8 @@
         @yield('title', 'TradeX Administration')
     </title>
 
+    <script src="{{ asset('admin/js/theme-init.js') }}"></script>
+
     <link
         rel="icon"
         type="image/png"
@@ -51,6 +53,11 @@
     <link
         rel="stylesheet"
         href="{{ asset('admin/css/selects.css') }}"
+    >
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/themes.css') }}"
     >
 </head>
 
@@ -116,6 +123,10 @@
 
 <script
     src="{{ asset('admin/js/notifications.js') }}">
+</script>
+
+<script
+    src="{{ asset('admin/js/theme.js') }}">
 </script>
 
 @stack('scripts')
