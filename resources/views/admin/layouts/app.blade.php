@@ -99,6 +99,12 @@
 
         <main class="admin-content">
 
+            @if (request()->routeIs('admin.payments.accounts.index'))
+                <div hidden aria-hidden="true">
+                    @include('admin.payments._provider-security-status')
+                </div>
+            @endif
+
             @yield('content')
 
         </main>
