@@ -10,8 +10,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 class PaymentOrderService
 {
     public function __construct(
-        private readonly PaymentApiPresenter
-            $presenter
+        private readonly PaymentApiPresenter $presenter
     ) {
     }
 
@@ -24,26 +23,21 @@ class PaymentOrderService
                 'payment',
                 'bankDeposit',
                 'usdtDeposit',
+                'cryptoDeposit',
             ])
             ->where(
                 'user_id',
                 $user->getKey()
             );
 
-        if (filled(
-            $filters['provider']
-                ?? null
-        )) {
+        if (filled($filters['provider'] ?? null)) {
             $query->where(
                 'provider',
                 $filters['provider']
             );
         }
 
-        if (filled(
-            $filters['status']
-                ?? null
-        )) {
+        if (filled($filters['status'] ?? null)) {
             $query->where(
                 'status',
                 $filters['status']
@@ -54,32 +48,21 @@ class PaymentOrderService
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->paginate(
-                $this->perPage(
-                    $filters
-                )
+                $this->perPage($filters)
             )
             ->withQueryString();
 
         return [
             'items' =>
-                collect(
-                    $paginator->items()
-                )
+                collect($paginator->items())
                     ->map(
-                        fn (
-                            PaymentOrder $order
-                        ): array =>
-                            $this->presenter
-                                ->order(
-                                    $order
-                                )
+                        fn (PaymentOrder $order): array =>
+                            $this->presenter->order($order)
                     )
                     ->values()
                     ->all(),
             'pagination' =>
-                $this->pagination(
-                    $paginator
-                ),
+                $this->pagination($paginator),
         ];
     }
 
@@ -87,13 +70,12 @@ class PaymentOrderService
         User $user,
         string $uuid
     ): array {
-        return $this->presenter
-            ->order(
-                $this->resolveOwned(
-                    $user,
-                    $uuid
-                )
-            );
+        return $this->presenter->order(
+            $this->resolveOwned(
+                $user,
+                $uuid
+            )
+        );
     }
 
     public function resolveOwned(
@@ -105,11 +87,9 @@ class PaymentOrderService
                 'payment',
                 'bankDeposit',
                 'usdtDeposit',
+                'cryptoDeposit',
             ])
-            ->where(
-                'uuid',
-                $uuid
-            )
+            ->where('uuid', $uuid)
             ->where(
                 'user_id',
                 $user->getKey()
@@ -153,15 +133,11 @@ class PaymentOrderService
             'latest_payment_order' =>
                 $latest instanceof PaymentOrder
                     ? [
-                        'uuid' =>
-                            $latest->uuid,
-                        'provider' =>
-                            $latest->provider,
-                        'status' =>
-                            $latest->status,
+                        'uuid' => $latest->uuid,
+                        'provider' => $latest->provider,
+                        'status' => $latest->status,
                         'created_at' =>
-                            $latest
-                                ->created_at
+                            $latest->created_at
                                 ?->toISOString(),
                     ]
                     : null,

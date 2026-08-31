@@ -22,6 +22,8 @@ class UsdtDeposit extends Model
         'tx_hash',
         'sender_address',
         'amount_micro',
+        'proof_disk',
+        'proof_path',
         'status',
         'submitted_at',
         'reviewed_by_admin_id',
@@ -31,6 +33,8 @@ class UsdtDeposit extends Model
 
     protected $hidden = [
         'sender_address',
+        'proof_disk',
+        'proof_path',
         'reviewed_by_admin_id',
         'review_reason',
     ];
@@ -40,6 +44,7 @@ class UsdtDeposit extends Model
         return [
             'sender_address' => 'encrypted',
             'amount_micro' => 'integer',
+            'proof_path' => 'encrypted',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
             'review_reason' => 'encrypted',
@@ -57,10 +62,7 @@ class UsdtDeposit extends Model
 
     public function order(): BelongsTo
     {
-        return $this->belongsTo(
-            PaymentOrder::class,
-            'payment_order_id'
-        );
+        return $this->belongsTo(PaymentOrder::class, 'payment_order_id');
     }
 
     public function user(): BelongsTo
@@ -70,9 +72,6 @@ class UsdtDeposit extends Model
 
     public function reviewedByAdmin(): BelongsTo
     {
-        return $this->belongsTo(
-            AdminUser::class,
-            'reviewed_by_admin_id'
-        );
+        return $this->belongsTo(AdminUser::class, 'reviewed_by_admin_id');
     }
 }
