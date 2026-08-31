@@ -44,6 +44,37 @@ class PaymentReceivingAccountManagementTest extends TestCase
         );
     }
 
+    public function test_payment_accounts_page_exposes_explicit_owner_receiving_account_actions(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'payment_accounts.manage',
+        ]);
+
+        $response = $this->actingAs($admin, 'admin')
+            ->get(
+                route('admin.payments.accounts.index')
+            );
+
+        $response
+            ->assertOk()
+            ->assertSee('Add Bank Account')
+            ->assertSee('Add USDT Wallet')
+            ->assertSee('Add Other Crypto Wallet')
+            ->assertSee('Save Bank Account')
+            ->assertSee('Save USDT Wallet')
+            ->assertSee('Save Other Crypto Wallet')
+            ->assertSee('USDT / TRC20')
+            ->assertSee('id="add-bank-account"', false)
+            ->assertSee('id="add-usdt-wallet"', false)
+            ->assertSee('id="add-other-crypto-wallet"', false)
+            ->assertSee('name="bank_name"', false)
+            ->assertSee('name="account_number"', false)
+            ->assertSee('name="wallet_address"', false)
+            ->assertSee('name="qr_image"', false)
+            ->assertSee('name="coin_symbol" value="USDT"', false)
+            ->assertSee('name="network" value="TRC20"', false);
+    }
+
     public function test_manager_can_add_multiple_bank_accounts_with_sensitive_values_encrypted_at_rest(): void
     {
         $admin = $this->adminWithPermissions([
@@ -89,6 +120,11 @@ class PaymentReceivingAccountManagementTest extends TestCase
         $this->assertSame(
             2500000,
             $account->tender_amount_minor
+        );
+
+        $this->assertSame(
+            '25000.00',
+            $account->tender_amount_decimal
         );
 
         $raw = DB::table(
@@ -154,6 +190,11 @@ class PaymentReceivingAccountManagementTest extends TestCase
             $account->tender_amount_minor
         );
 
+        $this->assertSame(
+            '79.000000',
+            $account->tender_amount_decimal
+        );
+
         Storage::disk($account->qr_disk)
             ->assertExists($account->qr_path);
 
@@ -183,6 +224,69 @@ class PaymentReceivingAccountManagementTest extends TestCase
 
         $this->assertFalse(
             $account->fresh()->is_active
+        );
+    }
+
+    public function test_manager_can_store_high_precision_generic_crypto_without_rounding(): void
+    {
+        $admin =
+            $this->adminWithPermissions([
+                'payment_accounts.manage',
+            ]);
+
+        $this->actingAs(
+            $admin,
+            'admin'
+        )
+            ->post(
+                route(
+                    'admin.payments.accounts.receiving.store'
+                ),
+                $this->cryptoPayload([
+                    'display_name' =>
+                        'ETH ERC20',
+                    'currency' =>
+                        'ETH',
+                    'amount_scale' =>
+                        18,
+                    'tender_amount' =>
+                        '0.025000000000000000',
+                    'coin_name' =>
+                        'Ethereum',
+                    'coin_symbol' =>
+                        'ETH',
+                    'network' =>
+                        'ERC20',
+                    'wallet_address' =>
+                        '0xTradeXEthWallet123456789',
+                ])
+            )
+            ->assertRedirect(
+                route(
+                    'admin.payments.accounts.index'
+                )
+            );
+
+        $account =
+            PaymentReceivingAccount::query()
+                ->where(
+                    'coin_symbol',
+                    'ETH'
+                )
+                ->firstOrFail();
+
+        $this->assertSame(
+            18,
+            $account->amount_scale
+        );
+
+        $this->assertSame(
+            '0.025000000000000000',
+            $account->tender_amount_decimal
+        );
+
+        $this->assertNull(
+            $account->tender_amount_minor
         );
     }
 
