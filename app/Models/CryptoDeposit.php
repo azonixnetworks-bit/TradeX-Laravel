@@ -22,6 +22,7 @@ class CryptoDeposit extends Model
         'coin_symbol',
         'network',
         'tx_hash',
+        'tx_hash_digest',
         'sender_address',
         'amount_decimal',
         'amount_scale',
@@ -35,6 +36,7 @@ class CryptoDeposit extends Model
     ];
 
     protected $hidden = [
+        'tx_hash_digest',
         'sender_address',
         'proof_disk',
         'proof_path',
@@ -45,12 +47,18 @@ class CryptoDeposit extends Model
     protected function casts(): array
     {
         return [
-            'sender_address' => 'encrypted',
-            'proof_path' => 'encrypted',
-            'amount_scale' => 'integer',
-            'submitted_at' => 'datetime',
-            'reviewed_at' => 'datetime',
-            'review_reason' => 'encrypted',
+            'sender_address' =>
+                'encrypted',
+            'proof_path' =>
+                'encrypted',
+            'amount_scale' =>
+                'integer',
+            'submitted_at' =>
+                'datetime',
+            'reviewed_at' =>
+                'datetime',
+            'review_reason' =>
+                'encrypted',
         ];
     }
 
@@ -67,6 +75,60 @@ class CryptoDeposit extends Model
                 ) {
                     $deposit->uuid =
                         (string) Str::uuid();
+                }
+
+                /*
+                 * Duplicate identity belongs to the immutable blockchain
+                 * network contract. Keep the invariant at the model boundary
+                 * as well as in PreparedManualPaymentService so direct model
+                 * creation by tests/jobs/admin tooling cannot omit it.
+                 */
+                if (
+                    blank(
+                        $deposit
+                            ->tx_hash_digest
+                    )
+                    && filled(
+                        $deposit
+                            ->network
+                    )
+                    && filled(
+                        $deposit
+                            ->tx_hash
+                    )
+                ) {
+                    $network =
+                        strtoupper(
+                            trim(
+                                (string) $deposit
+                                    ->network
+                            )
+                        );
+
+                    $txHash =
+                        trim(
+                            (string) $deposit
+                                ->tx_hash
+                        );
+
+                    $identity =
+                        preg_match(
+                            '/^(?:0x)?[A-Fa-f0-9]{32,191}$/',
+                            $txHash
+                        ) === 1
+                            ? strtolower(
+                                $txHash
+                            )
+                            : $txHash;
+
+                    $deposit
+                        ->tx_hash_digest =
+                        hash(
+                            'sha256',
+                            $network
+                            ."\0"
+                            .$identity
+                        );
                 }
             }
         );

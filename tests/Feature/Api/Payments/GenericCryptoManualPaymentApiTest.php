@@ -43,6 +43,8 @@ class GenericCryptoManualPaymentApiTest
                         'BTC',
                     'tender_amount_minor' =>
                         1234567,
+                    'tender_amount_decimal' =>
+                        '0.01234567',
                     'amount_scale' =>
                         8,
                     'coin_name' =>
@@ -65,6 +67,28 @@ class GenericCryptoManualPaymentApiTest
             $this->issueBoundToken(
                 $user
             );
+
+        $methods =
+            $this->withToken(
+                $token
+            )
+                ->getJson(
+                    '/api/v1/payments/methods'
+                )
+                ->assertOk();
+
+        $this->assertContains(
+            PaymentOrder::PROVIDER_CRYPTO_MANUAL,
+            collect(
+                $methods->json(
+                    'data.methods'
+                )
+            )
+                ->pluck(
+                    'code'
+                )
+                ->all()
+        );
 
         $this->withToken($token)
             ->getJson(
@@ -211,6 +235,8 @@ class GenericCryptoManualPaymentApiTest
 
     public function test_generic_crypto_rejects_wrong_amount_and_duplicate_tx(): void
     {
+        Storage::fake('local');
+
         config()->set(
             'tradex_payments.crypto_manual.enabled',
             true
@@ -237,6 +263,8 @@ class GenericCryptoManualPaymentApiTest
                         'USDC',
                     'tender_amount_minor' =>
                         79000000,
+                    'tender_amount_decimal' =>
+                        '79.000000',
                     'amount_scale' =>
                         6,
                     'coin_name' =>
@@ -284,7 +312,7 @@ class GenericCryptoManualPaymentApiTest
         $this->withToken(
             $token
         )
-            ->postJson(
+            ->post(
                 '/api/v1/payments/manual-orders/'
                     .$firstUuid
                     .'/crypto-evidence',
@@ -293,6 +321,17 @@ class GenericCryptoManualPaymentApiTest
                         'polygon_tx_wrong_amount_123456',
                     'amount' =>
                         '78.999999',
+                    'proof_file' =>
+                        UploadedFile::fake()
+                            ->create(
+                                'wrong-amount.pdf',
+                                32,
+                                'application/pdf'
+                            ),
+                ],
+                [
+                    'Accept' =>
+                        'application/json',
                 ]
             )
             ->assertStatus(
@@ -305,7 +344,7 @@ class GenericCryptoManualPaymentApiTest
         $this->withToken(
             $token
         )
-            ->postJson(
+            ->post(
                 '/api/v1/payments/manual-orders/'
                     .$firstUuid
                     .'/crypto-evidence',
@@ -314,6 +353,17 @@ class GenericCryptoManualPaymentApiTest
                         $txHash,
                     'amount' =>
                         '79.000000',
+                    'proof_file' =>
+                        UploadedFile::fake()
+                            ->create(
+                                'first-usdc.pdf',
+                                32,
+                                'application/pdf'
+                            ),
+                ],
+                [
+                    'Accept' =>
+                        'application/json',
                 ]
             )
             ->assertOk();
@@ -338,7 +388,7 @@ class GenericCryptoManualPaymentApiTest
         $this->withToken(
             $token
         )
-            ->postJson(
+            ->post(
                 '/api/v1/payments/manual-orders/'
                     .$second->json(
                         'data.uuid'
@@ -349,10 +399,226 @@ class GenericCryptoManualPaymentApiTest
                         $txHash,
                     'amount' =>
                         '79.000000',
+                    'proof_file' =>
+                        UploadedFile::fake()
+                            ->create(
+                                'duplicate-usdc.pdf',
+                                32,
+                                'application/pdf'
+                            ),
+                ],
+                [
+                    'Accept' =>
+                        'application/json',
                 ]
             )
             ->assertStatus(
                 409
             );
     }
+
+    public function test_same_transaction_identifier_can_be_used_on_different_network_contracts(): void
+    {
+        Storage::fake('local');
+
+        config()->set(
+            'tradex_payments.crypto_manual.enabled',
+            true
+        );
+
+        $user =
+            $this->createApiUser([
+                'country_code' =>
+                    'LK',
+                'account_type' =>
+                    'FREE',
+            ]);
+
+        $polygon =
+            PaymentReceivingAccount::query()
+                ->create([
+                    'type' =>
+                        'CRYPTO',
+                    'display_name' =>
+                        'USDC Polygon',
+                    'country_code' =>
+                        'LK',
+                    'currency' =>
+                        'USDC',
+                    'tender_amount_minor' =>
+                        1000000,
+                    'tender_amount_decimal' =>
+                        '1.000000',
+                    'amount_scale' =>
+                        6,
+                    'coin_name' =>
+                        'USD Coin',
+                    'coin_symbol' =>
+                        'USDC',
+                    'network' =>
+                        'POLYGON',
+                    'wallet_address' =>
+                        '0xPolygonTradeXWallet123456',
+                    'is_active' =>
+                        true,
+                    'display_order' =>
+                        1,
+                ]);
+
+        $arbitrum =
+            PaymentReceivingAccount::query()
+                ->create([
+                    'type' =>
+                        'CRYPTO',
+                    'display_name' =>
+                        'USDC Arbitrum',
+                    'country_code' =>
+                        'LK',
+                    'currency' =>
+                        'USDC',
+                    'tender_amount_minor' =>
+                        1000000,
+                    'tender_amount_decimal' =>
+                        '1.000000',
+                    'amount_scale' =>
+                        6,
+                    'coin_name' =>
+                        'USD Coin',
+                    'coin_symbol' =>
+                        'USDC',
+                    'network' =>
+                        'ARBITRUM',
+                    'wallet_address' =>
+                        '0xArbitrumTradeXWallet123456',
+                    'is_active' =>
+                        true,
+                    'display_order' =>
+                        2,
+                ]);
+
+        $token =
+            $this->issueBoundToken(
+                $user
+            );
+
+        $polygonOrder =
+            $this->withToken(
+                $token
+            )
+                ->withHeader(
+                    'Idempotency-Key',
+                    'admin23c-polygon-001'
+                )
+                ->postJson(
+                    '/api/v1/payments/manual-orders',
+                    [
+                        'receiving_account_uuid' =>
+                            $polygon->uuid,
+                    ]
+                )
+                ->assertCreated();
+
+        $arbitrumOrder =
+            $this->withToken(
+                $token
+            )
+                ->withHeader(
+                    'Idempotency-Key',
+                    'admin23c-arbitrum-001'
+                )
+                ->postJson(
+                    '/api/v1/payments/manual-orders',
+                    [
+                        'receiving_account_uuid' =>
+                            $arbitrum->uuid,
+                    ]
+                )
+                ->assertCreated();
+
+        $sharedIdentifier =
+            'shared_cross_network_tx_123456789';
+
+        $this->withToken(
+            $token
+        )
+            ->post(
+                '/api/v1/payments/manual-orders/'
+                    .$polygonOrder->json(
+                        'data.uuid'
+                    )
+                    .'/crypto-evidence',
+                [
+                    'tx_hash' =>
+                        $sharedIdentifier,
+                    'amount' =>
+                        '1.000000',
+                    'proof_file' =>
+                        UploadedFile::fake()
+                            ->create(
+                                'polygon-proof.pdf',
+                                32,
+                                'application/pdf'
+                            ),
+                ],
+                [
+                    'Accept' =>
+                        'application/json',
+                ]
+            )
+            ->assertOk();
+
+        $this->withToken(
+            $token
+        )
+            ->post(
+                '/api/v1/payments/manual-orders/'
+                    .$arbitrumOrder->json(
+                        'data.uuid'
+                    )
+                    .'/crypto-evidence',
+                [
+                    'tx_hash' =>
+                        $sharedIdentifier,
+                    'amount' =>
+                        '1.000000',
+                    'proof_file' =>
+                        UploadedFile::fake()
+                            ->create(
+                                'arbitrum-proof.pdf',
+                                32,
+                                'application/pdf'
+                            ),
+                ],
+                [
+                    'Accept' =>
+                        'application/json',
+                ]
+            )
+            ->assertOk();
+
+        $this->assertSame(
+            2,
+            CryptoDeposit::query()
+                ->where(
+                    'tx_hash',
+                    $sharedIdentifier
+                )
+                ->count()
+        );
+
+        $this->assertSame(
+            2,
+            CryptoDeposit::query()
+                ->where(
+                    'tx_hash',
+                    $sharedIdentifier
+                )
+                ->pluck(
+                    'tx_hash_digest'
+                )
+                ->unique()
+                ->count()
+        );
+    }
+
 }

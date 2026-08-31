@@ -217,6 +217,7 @@ class PreparedManualPaymentService
                 'payment',
                 'bankDeposit',
                 'usdtDeposit',
+                'cryptoDeposit',
             ])
         );
     }
@@ -334,7 +335,7 @@ class PreparedManualPaymentService
         User $user,
         string $orderUuid,
         array $data,
-        ?UploadedFile $proof,
+        UploadedFile $proof,
         Request $request
     ): array {
         $order = $this->ownedPreparedOrder(
@@ -389,15 +390,13 @@ class PreparedManualPaymentService
             'local'
         );
 
-        $path = null;
-
-        if ($proof instanceof UploadedFile) {
-            $path = $this->storeProof(
+        $path =
+            $this->storeProof(
                 $disk,
-                'payments/crypto/'.$user->uuid,
+                'payments/crypto/'
+                    .$user->uuid,
                 $proof
             );
-        }
 
         $used = false;
 
@@ -588,11 +587,33 @@ class PreparedManualPaymentService
             (string) $data['tx_hash']
         );
 
+        $txHashIdentity =
+            preg_match(
+                '/^(?:0x)?[A-Fa-f0-9]{32,191}$/',
+                $txHash
+            ) === 1
+                ? strtolower(
+                    $txHash
+                )
+                : $txHash;
+
+        /*
+         * Transaction identifiers are only globally unique within their
+         * network contract. Scope the deterministic duplicate key by the
+         * immutable prepared network so identical-looking IDs on two
+         * different networks do not falsely collide.
+         */
+        $txHashDigest =
+            hash(
+                'sha256',
+                $network."\0".$txHashIdentity
+            );
+
         if (
             CryptoDeposit::query()
                 ->where(
-                    'tx_hash',
-                    $txHash
+                    'tx_hash_digest',
+                    $txHashDigest
                 )
                 ->exists()
         ) {
@@ -608,19 +629,16 @@ class PreparedManualPaymentService
             'local'
         );
 
-        $path = null;
-
-        if (
+        $path =
             $proof
             instanceof UploadedFile
-        ) {
-            $path = $this->storeProof(
-                $disk,
-                'payments/crypto/'
-                    .$user->uuid,
-                $proof
-            );
-        }
+                ? $this->storeProof(
+                    $disk,
+                    'payments/crypto/'
+                        .$user->uuid,
+                    $proof
+                )
+                : null;
 
         $used = false;
 
@@ -631,6 +649,7 @@ class PreparedManualPaymentService
                     $user,
                     $data,
                     $txHash,
+                    $txHashDigest,
                     $coin,
                     $network,
                     $scale,
@@ -671,8 +690,8 @@ class PreparedManualPaymentService
                     if (
                         CryptoDeposit::query()
                             ->where(
-                                'tx_hash',
-                                $txHash
+                                'tx_hash_digest',
+                                $txHashDigest
                             )
                             ->lockForUpdate()
                             ->exists()
@@ -696,6 +715,8 @@ class PreparedManualPaymentService
                                 $network,
                             'tx_hash' =>
                                 $txHash,
+                            'tx_hash_digest' =>
+                                $txHashDigest,
                             'sender_address' =>
                                 filled(
                                     $data[
@@ -937,22 +958,48 @@ class PreparedManualPaymentService
     private function snapshot(
         PaymentReceivingAccount $account
     ): array {
+        $scale =
+            (int) $account
+                ->amount_scale;
+
+        $amount =
+            filled(
+                $account
+                    ->tender_amount_decimal
+            )
+                ? (string) $account
+                    ->tender_amount_decimal
+                : $this->decimal
+                    ->formatMinor(
+                        (int) $account
+                            ->tender_amount_minor,
+                        $scale
+                    );
+
         $snapshot = [
-            'account_uuid' => $account->uuid,
-            'type' => $account->type,
-            'display_name' => $account->display_name,
-            'country_code' => $account->country_code,
-            'currency' => $account->currency,
+            'account_uuid' =>
+                $account->uuid,
+            'type' =>
+                $account->type,
+            'display_name' =>
+                $account->display_name,
+            'country_code' =>
+                $account->country_code,
+            'currency' =>
+                $account->currency,
             'amount_minor' =>
-                (int) $account->tender_amount_minor,
+                $account
+                    ->tender_amount_minor
+                    !== null
+                        ? (int) $account
+                            ->tender_amount_minor
+                        : null,
             'amount_scale' =>
-                (int) $account->amount_scale,
+                $scale,
             'amount' =>
-                $this->decimal->formatMinor(
-                    (int) $account->tender_amount_minor,
-                    (int) $account->amount_scale
-                ),
-            'instructions' => $account->instructions,
+                $amount,
+            'instructions' =>
+                $account->instructions,
         ];
 
         if ($account->isBank()) {

@@ -4,6 +4,7 @@ namespace App\Services\Payments;
 
 use App\Exceptions\AuthApiException;
 use App\Models\PaymentOrder;
+use App\Models\PaymentReceivingAccount;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Products\ProductCatalogService;
@@ -102,6 +103,17 @@ class PaymentMethodService
                 );
         }
 
+        if (
+            $this->hasGenericCryptoAccount(
+                $country
+            )
+        ) {
+            $methods[] =
+                $this->genericCryptoMethod(
+                    $country,
+                    $product
+                );
+        }
         return [
             'country_code' => $country,
             'product' => [
@@ -654,6 +666,126 @@ class PaymentMethodService
         ];
     }
 
+    private function genericCryptoMethod(
+        string $country,
+        Product $product
+    ): array {
+        $enabled =
+            (bool) config(
+                'tradex_payments.crypto_manual.enabled',
+                true
+            );
+
+        $configured =
+            $this->hasGenericCryptoAccount(
+                $country
+            );
+
+        $available =
+            (bool) $product->is_active
+            && $enabled
+            && $configured;
+
+        return [
+            'code' =>
+                PaymentOrder::PROVIDER_CRYPTO_MANUAL,
+
+            'display_name' =>
+                'Other Crypto',
+
+            'mode' =>
+                'MANUAL_REVIEW',
+
+            'country_code' =>
+                $country,
+
+            'available' =>
+                $available,
+
+            'unavailable_reason' =>
+                $available
+                    ? null
+                    : (
+                        ! $product->is_active
+                            ? 'PRODUCT_INACTIVE'
+                            : (
+                                ! $enabled
+                                    ? 'PAYMENT_METHOD_DISABLED'
+                                    : 'CONFIGURATION_REQUIRED'
+                            )
+                    ),
+
+            /*
+             * This is the authoritative TradeX commercial product value.
+             * The exact coin/network tender is account-specific and is
+             * returned by /manual-accounts. No crypto FX is invented here.
+             */
+            'amount' =>
+                $this->money->present(
+                    (int) $product
+                        ->amount_minor,
+                    (string) $product
+                        ->currency
+                ),
+
+            'account_catalog_endpoint' =>
+                'GET /api/v1/payments/manual-accounts',
+
+            'create_endpoint' =>
+                'POST /api/v1/payments/manual-orders',
+        ];
+    }
+
+    private function hasGenericCryptoAccount(
+        string $country
+    ): bool {
+        return PaymentReceivingAccount::query()
+            ->where(
+                'type',
+                PaymentReceivingAccount::TYPE_CRYPTO
+            )
+            ->where(
+                'country_code',
+                strtoupper(
+                    $country
+                )
+            )
+            ->where(
+                'is_active',
+                true
+            )
+            ->whereNotNull(
+                'tender_amount_minor'
+            )
+            ->where(
+                'tender_amount_minor',
+                '>',
+                0
+            )
+            ->where(
+                function (
+                    $query
+                ): void {
+                    /*
+                     * USDT/TRC20 retains its dedicated compatibility provider.
+                     * Every other configured coin/network belongs to the
+                     * generic manual-crypto flow.
+                     */
+                    $query
+                        ->where(
+                            'coin_symbol',
+                            '!=',
+                            'USDT'
+                        )
+                        ->orWhere(
+                            'network',
+                            '!=',
+                            'TRC20'
+                        );
+                }
+            )
+            ->exists();
+    }
     private function countryAllowed(
         string $country,
         array $countries

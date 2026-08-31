@@ -10,15 +10,21 @@ return new class extends Migration
     {
         Schema::create(
             'crypto_deposits',
-            function (Blueprint $table): void {
+            function (
+                Blueprint $table
+            ): void {
                 $table->id();
-                $table->uuid('uuid')->unique();
+                $table->uuid(
+                    'uuid'
+                )->unique();
 
                 $table->foreignId(
                     'payment_order_id'
                 )->unique();
 
-                $table->foreignId('user_id');
+                $table->foreignId(
+                    'user_id'
+                );
 
                 $table->string(
                     'coin_symbol',
@@ -30,9 +36,20 @@ return new class extends Migration
                     60
                 );
 
-                $table->string(
-                    'tx_hash',
-                    191
+                /*
+                 * tx_hash stays readable to authorized review staff.
+                 * tx_hash_digest stores SHA-256(network + NUL + canonical
+                 * transaction identity). The unique key is therefore scoped
+                 * to the immutable network contract and remains independent
+                 * of database text collation.
+                 */
+                $table->text(
+                    'tx_hash'
+                );
+
+                $table->char(
+                    'tx_hash_digest',
+                    64
                 )->unique();
 
                 $table->text(
@@ -60,7 +77,9 @@ return new class extends Migration
                 $table->string(
                     'status',
                     30
-                )->default('SUBMITTED');
+                )->default(
+                    'SUBMITTED'
+                );
 
                 $table->timestamp(
                     'submitted_at'
@@ -84,24 +103,36 @@ return new class extends Migration
                     'payment_order_id',
                     'crypto_dep_order_fk'
                 )
-                    ->references('id')
-                    ->on('payment_orders')
+                    ->references(
+                        'id'
+                    )
+                    ->on(
+                        'payment_orders'
+                    )
                     ->restrictOnDelete();
 
                 $table->foreign(
                     'user_id',
                     'crypto_dep_user_fk'
                 )
-                    ->references('id')
-                    ->on('users')
+                    ->references(
+                        'id'
+                    )
+                    ->on(
+                        'users'
+                    )
                     ->restrictOnDelete();
 
                 $table->foreign(
                     'reviewed_by_admin_id',
                     'crypto_dep_admin_fk'
                 )
-                    ->references('id')
-                    ->on('admin_users')
+                    ->references(
+                        'id'
+                    )
+                    ->on(
+                        'admin_users'
+                    )
                     ->nullOnDelete();
 
                 $table->index(
@@ -110,6 +141,15 @@ return new class extends Migration
                         'submitted_at',
                     ],
                     'crypto_dep_review_idx'
+                );
+
+                $table->index(
+                    [
+                        'coin_symbol',
+                        'network',
+                        'status',
+                    ],
+                    'crypto_dep_asset_review_idx'
                 );
             }
         );
