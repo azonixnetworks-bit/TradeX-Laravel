@@ -281,6 +281,10 @@
             ||
             $admin->hasPermission('payments.view')
             ||
+            $admin->hasPermission('payment_accounts.manage')
+            ||
+            $admin->isSuperAdmin()
+            ||
             $admin->hasPermission('finance.view')
             ||
             $admin->hasPermission('payouts.view')
@@ -312,10 +316,62 @@
             <a
                 href="{{ route('admin.payments.index') }}"
                 class="nav-link
-                {{ request()->routeIs('admin.payments.*') ? 'active' : '' }}"
+                {{
+                    request()->routeIs('admin.payments.index')
+                    || request()->routeIs('admin.payments.show')
+                    || request()->routeIs('admin.payments.paypal.*')
+                    || request()->routeIs('admin.payments.stripe.*')
+                    || request()->routeIs('admin.payments.nowpayments.*')
+                        ? 'active'
+                        : ''
+                }}"
             >
                 <span class="nav-icon">$</span>
                 <span>Payments</span>
+            </a>
+
+            <a
+                href="{{ route('admin.payments.bank.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.payments.bank.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">▤</span>
+                <span>Bank Deposits</span>
+            </a>
+
+            <a
+                href="{{ route('admin.payments.crypto.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.payments.crypto.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◇</span>
+                <span>Crypto Deposits</span>
+            </a>
+
+            <a
+                href="{{ route('admin.payments.usdt.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.payments.usdt.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◈</span>
+                <span>USDT Deposits</span>
+            </a>
+
+        @endif
+
+
+        @if(
+            $admin->isSuperAdmin()
+            || $admin->hasPermission('payment_accounts.manage')
+        )
+
+            <a
+                href="{{ route('admin.payments.accounts.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.payments.accounts.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◫</span>
+                <span>Payment Accounts</span>
             </a>
 
         @endif
