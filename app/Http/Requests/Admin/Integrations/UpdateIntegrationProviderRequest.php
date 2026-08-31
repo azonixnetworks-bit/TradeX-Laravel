@@ -142,9 +142,43 @@ class UpdateIntegrationProviderRequest extends FormRequest
             'countries.*' => [
                 'required',
                 'string',
-                'size:2',
-                'regex:/^[A-Z]{2}$/',
+                'max:2',
                 'distinct',
+                function (
+                    string $attribute,
+                    mixed $value,
+                    \Closure $fail
+                ): void {
+                    $country = strtoupper(
+                        trim((string) $value)
+                    );
+
+                    $providerCode = strtoupper(
+                        trim(
+                            (string) $this->route(
+                                'providerCode'
+                            )
+                        )
+                    );
+
+                    if (
+                        $providerCode === 'STRIPE'
+                        && $country === '*'
+                    ) {
+                        return;
+                    }
+
+                    if (
+                        preg_match(
+                            '/^[A-Z]{2}$/',
+                            $country
+                        ) !== 1
+                    ) {
+                        $fail(
+                            'Country scope must use ISO 2-letter codes; Stripe may use * for all customer countries.'
+                        );
+                    }
+                },
             ],
 
             'version' => [

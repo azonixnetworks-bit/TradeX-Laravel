@@ -879,7 +879,8 @@ class AdminIntegrationService
                 );
 
             if (
-                preg_match(
+                $country !== '*'
+                && preg_match(
                     '/^[A-Z]{2}$/',
                     $country
                 ) !== 1
