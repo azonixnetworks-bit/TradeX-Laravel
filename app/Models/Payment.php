@@ -19,6 +19,7 @@ class Payment extends Model
 
     public const REVERSAL_PAYPAL_PROCESSOR = 'PAYPAL_PROCESSOR_REVERSAL';
     public const REVERSAL_PAYPAL_CHARGEBACK = 'PAYPAL_CHARGEBACK';
+    public const REVERSAL_STRIPE_PROCESSOR = 'STRIPE_PROCESSOR_REVERSAL';
     public const REVERSAL_DUPLICATE_PAYMENT = 'DUPLICATE_PAYMENT_CORRECTION';
     public const REVERSAL_UNAUTHORIZED_PAYMENT = 'UNAUTHORIZED_PAYMENT';
     public const REVERSAL_BILLING_ERROR = 'TRADEX_BILLING_ERROR';
@@ -88,9 +89,7 @@ class Payment extends Model
 
     public function adjustments(): HasMany
     {
-        return $this->hasMany(
-            PaymentAdjustment::class
-        );
+        return $this->hasMany(PaymentAdjustment::class);
     }
 
     public function isCleared(): bool
