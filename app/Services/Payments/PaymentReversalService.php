@@ -15,10 +15,8 @@ use Illuminate\Support\Facades\DB;
 class PaymentReversalService
 {
     public function __construct(
-        private readonly AffiliateCommercialService
-            $affiliateCommercial,
-        private readonly EducationPremiumEntitlementService
-            $educationPremium
+        private readonly AffiliateCommercialService $affiliateCommercial,
+        private readonly EducationPremiumEntitlementService $educationPremium
     ) {
     }
 
@@ -26,94 +24,109 @@ class PaymentReversalService
         Payment $payment,
         ?string $providerEventId = null
     ): PaymentAdjustment {
+        return $this->recordProcessorReversal(
+            payment: $payment,
+            reversalCode: Payment::REVERSAL_PAYPAL_PROCESSOR,
+            reason: 'PayPal reported an externally forced capture reversal.',
+            providerEventId: $providerEventId,
+            reversePayPalAffiliate: true
+        );
+    }
+
+    public function recordStripeProcessorReversal(
+        Payment $payment,
+        string $reason,
+        ?string $providerEventId = null
+    ): PaymentAdjustment {
+        if ($payment->provider !== PaymentOrder::PROVIDER_STRIPE) {
+            throw new DomainException(
+                'Stripe processor reversal requires a Stripe payment.'
+            );
+        }
+
+        $reason = trim($reason);
+
+        if ($reason === '') {
+            $reason = 'Stripe reported an externally forced processor reversal.';
+        }
+
+        return $this->recordProcessorReversal(
+            payment: $payment,
+            reversalCode: Payment::REVERSAL_STRIPE_PROCESSOR,
+            reason: $reason,
+            providerEventId: $providerEventId,
+            reversePayPalAffiliate: false
+        );
+    }
+
+    private function recordProcessorReversal(
+        Payment $payment,
+        string $reversalCode,
+        string $reason,
+        ?string $providerEventId,
+        bool $reversePayPalAffiliate
+    ): PaymentAdjustment {
         $adjustment = DB::transaction(
             function () use (
                 $payment,
+                $reversalCode,
+                $reason,
                 $providerEventId
             ): PaymentAdjustment {
                 $locked = Payment::query()
-                    ->whereKey(
-                        $payment->getKey()
-                    )
+                    ->whereKey($payment->getKey())
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $existing =
-                    PaymentAdjustment::query()
-                        ->where(
-                            'payment_id',
-                            $locked->getKey()
-                        )
-                        ->where(
-                            'type',
-                            PaymentAdjustment::TYPE_PAYMENT_REVERSAL
-                        )
-                        ->first();
+                $existing = PaymentAdjustment::query()
+                    ->where('payment_id', $locked->getKey())
+                    ->where('type', PaymentAdjustment::TYPE_PAYMENT_REVERSAL)
+                    ->first();
 
                 if (
                     $locked->isPaymentReversed()
-                    && $existing
-                    instanceof PaymentAdjustment
+                    && $existing instanceof PaymentAdjustment
                 ) {
                     /*
-                     * Ensure an older API-12 reversal is reconciled with
-                     * the ADMIN-25 tied-payment entitlement policy.
+                     * Provider webhook retries must be idempotent. Reconcile
+                     * only the entitlement tied to this already-reversed
+                     * payment and return the same durable adjustment.
                      */
-                    $this->educationPremium
-                        ->revokeForReversedPayment(
-                            $locked
-                        );
+                    $this->educationPremium->revokeForReversedPayment($locked);
 
                     return $existing;
                 }
 
-                $reason =
-                    'PayPal reported an externally forced capture reversal.';
+                if (! $locked->isCleared()) {
+                    throw new DomainException(
+                        'Only a cleared payment can be processor-reversed.'
+                    );
+                }
 
-                $adjustment =
-                    PaymentAdjustment::query()
-                        ->create([
-                            'payment_id' =>
-                                $locked->getKey(),
-                            'type' =>
-                                PaymentAdjustment::TYPE_PAYMENT_REVERSAL,
-                            'amount_minor' =>
-                                -1 * (int) $locked
-                                    ->gross_amount_minor,
-                            'currency' =>
-                                $locked->currency,
-                            'reason' =>
-                                $reason,
-                            'provider_event_id' =>
-                                $providerEventId,
-                        ]);
+                $adjustment = PaymentAdjustment::query()->create([
+                    'payment_id' => $locked->getKey(),
+                    'type' => PaymentAdjustment::TYPE_PAYMENT_REVERSAL,
+                    'amount_minor' => -1 * (int) $locked->gross_amount_minor,
+                    'currency' => $locked->currency,
+                    'reason' => $reason,
+                    'provider_event_id' => $providerEventId,
+                ]);
 
                 $locked->forceFill([
-                    'status' =>
-                        Payment::STATUS_PAYMENT_REVERSED,
-                    'payment_reversed_at' =>
-                        now(),
-                    'payment_reversal_code' =>
-                        Payment::REVERSAL_PAYPAL_PROCESSOR,
-                    'payment_reversal_reason' =>
-                        $reason,
+                    'status' => Payment::STATUS_PAYMENT_REVERSED,
+                    'payment_reversed_at' => now(),
+                    'payment_reversal_code' => $reversalCode,
+                    'payment_reversal_reason' => $reason,
                 ])->save();
 
                 PaymentOrder::query()
-                    ->whereKey(
-                        $locked
-                            ->payment_order_id
-                    )
+                    ->whereKey($locked->payment_order_id)
                     ->update([
-                        'status' =>
-                            PaymentOrder::STATUS_PAYMENT_REVERSED,
+                        'status' => PaymentOrder::STATUS_PAYMENT_REVERSED,
                     ]);
 
-                $revoked =
-                    $this->educationPremium
-                        ->revokeForReversedPayment(
-                            $locked
-                        );
+                $revoked = $this->educationPremium
+                    ->revokeForReversedPayment($locked);
 
                 AuditLog::record(
                     actorType: 'SYSTEM',
@@ -123,22 +136,17 @@ class PaymentReversalService
                     targetType: 'PAYMENT',
                     targetId: $locked->getKey(),
                     oldValues: [
-                        'status' =>
-                            Payment::STATUS_CLEARED,
+                        'status' => Payment::STATUS_CLEARED,
                     ],
                     newValues: [
-                        'status' =>
-                            Payment::STATUS_PAYMENT_REVERSED,
-                        'payment_reversal_code' =>
-                            Payment::REVERSAL_PAYPAL_PROCESSOR,
-                        'entitlement_review_required' =>
-                            false,
-                        'entitlement_policy' =>
-                            'ADMIN_25_TIED_PAYMENT_ONLY',
-                        'education_entitlement_revoked' =>
-                            $revoked !== null,
-                        'copy_trade_force_close' =>
-                            false,
+                        'status' => Payment::STATUS_PAYMENT_REVERSED,
+                        'provider' => $locked->provider,
+                        'payment_reversal_code' => $reversalCode,
+                        'provider_event_recorded' => $providerEventId !== null,
+                        'entitlement_review_required' => false,
+                        'entitlement_policy' => 'ADMIN_25_TIED_PAYMENT_ONLY',
+                        'education_entitlement_revoked' => $revoked !== null,
+                        'copy_trade_force_close' => false,
                     ]
                 );
 
@@ -147,20 +155,16 @@ class PaymentReversalService
             3
         );
 
-        $this->reverseAffiliateIfPresent(
-            $payment->fresh()
-        );
+        if ($reversePayPalAffiliate) {
+            $this->reverseAffiliateIfPresent($payment->fresh());
+        }
 
         return $adjustment;
     }
 
-    private function reverseAffiliateIfPresent(
-        Payment $payment
-    ): void {
-        $captureReference = trim(
-            (string) $payment
-                ->provider_capture_reference
-        );
+    private function reverseAffiliateIfPresent(Payment $payment): void
+    {
+        $captureReference = trim((string) $payment->provider_capture_reference);
 
         if ($captureReference === '') {
             return;
@@ -171,10 +175,7 @@ class PaymentReversalService
                 'source_provider',
                 AffiliateQualifiedSale::PROVIDER_PAYPAL
             )
-            ->where(
-                'source_reference',
-                $captureReference
-            )
+            ->where('source_reference', $captureReference)
             ->first();
 
         if (! $sale instanceof AffiliateQualifiedSale) {
@@ -182,12 +183,11 @@ class PaymentReversalService
         }
 
         try {
-            $this->affiliateCommercial
-                ->recordForcedPaymentReversal(
-                    $sale,
-                    AffiliateQualifiedSale::REVERSAL_PAYPAL_PROCESSOR,
-                    'PayPal processor reversal linked to the cleared TradeX payment.'
-                );
+            $this->affiliateCommercial->recordForcedPaymentReversal(
+                $sale,
+                AffiliateQualifiedSale::REVERSAL_PAYPAL_PROCESSOR,
+                'PayPal processor reversal linked to the cleared TradeX payment.'
+            );
         } catch (DomainException $exception) {
             AuditLog::record(
                 actorType: 'SYSTEM',
@@ -197,10 +197,8 @@ class PaymentReversalService
                 targetType: 'PAYMENT',
                 targetId: $payment->getKey(),
                 newValues: [
-                    'payment_uuid' =>
-                        $payment->uuid,
-                    'manual_review_required' =>
-                        true,
+                    'payment_uuid' => $payment->uuid,
+                    'manual_review_required' => true,
                 ]
             );
         }

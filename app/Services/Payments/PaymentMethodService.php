@@ -790,20 +790,35 @@ class PaymentMethodService
         string $country,
         array $countries
     ): bool {
-        return in_array(
-            $country,
-            array_map(
-                static fn (
-                    mixed $value
-                ): string =>
-                    strtoupper(
-                        trim(
-                            (string) $value
-                        )
-                    ),
-                $countries
-            ),
-            true
+        $country = strtoupper(
+            trim($country)
         );
+
+        $normalized = array_values(
+            array_unique(
+                array_map(
+                    static fn (
+                        mixed $value
+                    ): string =>
+                        strtoupper(
+                            trim(
+                                (string) $value
+                            )
+                        ),
+                    $countries
+                )
+            )
+        );
+
+        return in_array(
+            '*',
+            $normalized,
+            true
+        )
+            || in_array(
+                $country,
+                $normalized,
+                true
+            );
     }
 }

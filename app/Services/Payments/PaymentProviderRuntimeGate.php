@@ -7,6 +7,11 @@ use App\Models\IntegrationProviderState;
 
 class PaymentProviderRuntimeGate
 {
+    public function __construct(
+        private readonly StripeConfigurationSafety $stripeConfiguration
+    ) {
+    }
+
     public function available(string $provider, string $country): bool
     {
         $provider = strtoupper(trim($provider));
@@ -30,7 +35,7 @@ class PaymentProviderRuntimeGate
             (array) config('tradex_integrations.'.$key.'.countries', [])
         );
 
-        if (! in_array($country, $sourceCountries, true)) {
+        if (! $this->countryAllowed($country, $sourceCountries)) {
             return false;
         }
 
@@ -52,7 +57,7 @@ class PaymentProviderRuntimeGate
 
         $approvedCountries = $this->countries($state->countries ?? []);
 
-        if (! in_array($country, $approvedCountries, true)) {
+        if (! $this->countryAllowed($country, $approvedCountries)) {
             return false;
         }
 
@@ -78,10 +83,7 @@ class PaymentProviderRuntimeGate
     private function configured(string $provider): bool
     {
         return match ($provider) {
-            'STRIPE' => filled(config('tradex_integrations.stripe.secret_key'))
-                && filled(config('tradex_integrations.stripe.webhook_secret'))
-                && filled(config('tradex_integrations.stripe.success_url'))
-                && filled(config('tradex_integrations.stripe.cancel_url')),
+            'STRIPE' => $this->stripeConfiguration->configured(),
             'NOWPAYMENTS' => filled(config('tradex_integrations.nowpayments.api_key'))
                 && filled(config('tradex_integrations.nowpayments.ipn_secret'))
                 && filled(config('tradex_integrations.nowpayments.success_url'))
@@ -90,11 +92,24 @@ class PaymentProviderRuntimeGate
         };
     }
 
+    private function countryAllowed(
+        string $country,
+        array $values
+    ): bool {
+        $countries = $this->countries($values);
+
+        return in_array('*', $countries, true)
+            || in_array($country, $countries, true);
+    }
+
     private function countries(array $values): array
     {
         return array_values(array_unique(array_filter(array_map(
             static fn (mixed $value): string => strtoupper(trim((string) $value)),
             $values
-        ), static fn (string $value): bool => preg_match('/^[A-Z]{2}$/', $value) === 1)));
+        ), static fn (string $value): bool =>
+            $value === '*'
+            || preg_match('/^[A-Z]{2}$/', $value) === 1
+        )));
     }
 }

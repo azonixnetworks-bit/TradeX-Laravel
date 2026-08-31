@@ -2,7 +2,8 @@
 
 $countryList = static function (
     string $envKey,
-    string $default = ''
+    string $default = '',
+    bool $allowWildcard = false
 ): array {
     return array_values(
         array_unique(
@@ -19,7 +20,11 @@ $countryList = static function (
                     )
                 ),
                 static fn (string $value): bool =>
-                    preg_match(
+                    (
+                        $allowWildcard
+                        && $value === '*'
+                    )
+                    || preg_match(
                         '/^[A-Z]{2}$/',
                         $value
                     ) === 1
@@ -167,7 +172,9 @@ return [
 
         'countries' =>
             $countryList(
-                'TRADEX_STRIPE_COUNTRIES'
+                'TRADEX_STRIPE_COUNTRIES',
+                '',
+                true
             ),
 
         'environment' =>
