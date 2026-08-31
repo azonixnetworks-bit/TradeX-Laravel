@@ -7,11 +7,17 @@ use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\PaymentOrder;
 use App\Models\User;
-use App\Models\UserEntitlement;
+use App\Services\Entitlements\ClearedPaymentEntitlementReconciler;
 use Illuminate\Support\Facades\DB;
 
 class OnlineGatewaySettlementService
 {
+    public function __construct(
+        private readonly ClearedPaymentEntitlementReconciler
+            $entitlementReconciler
+    ) {
+    }
+
     public function settle(
         PaymentOrder $order,
         string $provider,
@@ -50,7 +56,7 @@ class OnlineGatewaySettlementService
 
         $referenceHash = hash('sha256', $provider.'|'.$providerPaymentReference);
 
-        return DB::transaction(function () use (
+        $payment = DB::transaction(function () use (
             $order,
             $provider,
             $providerPaymentReference,
@@ -133,24 +139,6 @@ class OnlineGatewaySettlementService
                 'failure_code' => null,
             ])->save();
 
-            if (! $user->isPremium()) {
-                $user->forceFill([
-                    'account_type' => 'PREMIUM',
-                    'premium_activated_at' => $user->premium_activated_at ?? now(),
-                ])->save();
-            }
-
-            UserEntitlement::query()->updateOrCreate([
-                'user_id' => $user->getKey(),
-                'product_code' => $lockedOrder->product_code,
-            ], [
-                'status' => UserEntitlement::STATUS_ACTIVE,
-                'activated_at' => now(),
-                'payment_id' => $payment->getKey(),
-                'revoked_at' => null,
-                'revoke_reason' => null,
-            ]);
-
             AuditLog::record(
                 actorType: 'SYSTEM',
                 actorId: null,
@@ -171,21 +159,19 @@ class OnlineGatewaySettlementService
                 ]
             );
 
-            AuditLog::record(
-                actorType: 'SYSTEM',
-                actorId: null,
-                action: 'PREMIUM_ENTITLEMENT_ACTIVATED',
-                module: 'PAYMENTS',
-                targetType: 'USER',
-                targetId: $user->getKey(),
-                newValues: [
-                    'product_code' => $lockedOrder->product_code,
-                    'payment_uuid' => $payment->uuid,
-                    'provider' => $provider,
-                ]
-            );
-
             return $payment->fresh();
         }, 3);
+
+        /*
+         * Keep the externally-confirmed payment ledger durable even if
+         * entitlement activation needs a retry or duplicate-payment review.
+         * Existing-payment webhook retries run this reconciliation again.
+         */
+        if ($payment->isCleared()) {
+            $this->entitlementReconciler
+                ->reconcile($payment);
+        }
+
+        return $payment->fresh();
     }
 }

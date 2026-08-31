@@ -8,8 +8,8 @@ use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\PaymentOrder;
 use App\Models\User;
-use App\Models\UserEntitlement;
 use App\Services\Affiliates\AffiliateCommercialService;
+use App\Services\Entitlements\ClearedPaymentEntitlementReconciler;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -18,7 +18,9 @@ class PaymentSettlementService
     public function __construct(
         private readonly PaymentMoney $money,
         private readonly AffiliateCommercialService
-            $affiliateCommercial
+            $affiliateCommercial,
+        private readonly ClearedPaymentEntitlementReconciler
+            $entitlementReconciler
     ) {
     }
 
@@ -277,39 +279,6 @@ class PaymentSettlementService
                         null,
                 ])->save();
 
-                if (! $user->isPremium()) {
-                    $user->forceFill([
-                        'account_type' =>
-                            'PREMIUM',
-                        'premium_activated_at' =>
-                            $user->premium_activated_at
-                            ?? now(),
-                    ])->save();
-                }
-
-                UserEntitlement::query()
-                    ->updateOrCreate(
-                        [
-                            'user_id' =>
-                                $user->getKey(),
-                            'product_code' =>
-                                $lockedOrder
-                                    ->product_code,
-                        ],
-                        [
-                            'status' =>
-                                UserEntitlement::STATUS_ACTIVE,
-                            'activated_at' =>
-                                now(),
-                            'payment_id' =>
-                                $payment->getKey(),
-                            'revoked_at' =>
-                                null,
-                            'revoke_reason' =>
-                                null,
-                        ]
-                    );
-
                 AuditLog::record(
                     actorType: 'SYSTEM',
                     actorId: null,
@@ -338,26 +307,21 @@ class PaymentSettlementService
                     ]
                 );
 
-                AuditLog::record(
-                    actorType: 'SYSTEM',
-                    actorId: null,
-                    action: 'PREMIUM_ENTITLEMENT_ACTIVATED',
-                    module: 'PAYMENTS',
-                    targetType: 'USER',
-                    targetId: $user->getKey(),
-                    newValues: [
-                        'product_code' =>
-                            $lockedOrder
-                                ->product_code,
-                        'payment_uuid' =>
-                            $payment->uuid,
-                    ]
-                );
-
                 return $payment->fresh();
             },
             3
         );
+
+        /*
+         * The provider money ledger commits first. Entitlement activation is
+         * reconciled only after that commit so an entitlement-side exception
+         * can never roll back an externally-completed PayPal payment.
+         * Existing-payment retries pass through this same reconciliation path.
+         */
+        if ($payment->isCleared()) {
+            $this->entitlementReconciler
+                ->reconcile($payment);
+        }
 
         $this->processAffiliate(
             $payment
