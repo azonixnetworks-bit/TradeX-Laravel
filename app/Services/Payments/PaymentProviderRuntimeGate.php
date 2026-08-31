@@ -7,6 +7,11 @@ use App\Models\IntegrationProviderState;
 
 class PaymentProviderRuntimeGate
 {
+    public function __construct(
+        private readonly StripeConfigurationSafety $stripeConfiguration
+    ) {
+    }
+
     public function available(string $provider, string $country): bool
     {
         $provider = strtoupper(trim($provider));
@@ -78,10 +83,7 @@ class PaymentProviderRuntimeGate
     private function configured(string $provider): bool
     {
         return match ($provider) {
-            'STRIPE' => filled(config('tradex_integrations.stripe.secret_key'))
-                && filled(config('tradex_integrations.stripe.webhook_secret'))
-                && filled(config('tradex_integrations.stripe.success_url'))
-                && filled(config('tradex_integrations.stripe.cancel_url')),
+            'STRIPE' => $this->stripeConfiguration->configured(),
             'NOWPAYMENTS' => filled(config('tradex_integrations.nowpayments.api_key'))
                 && filled(config('tradex_integrations.nowpayments.ipn_secret'))
                 && filled(config('tradex_integrations.nowpayments.success_url'))
