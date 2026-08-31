@@ -93,12 +93,12 @@ class ManualPaymentAccountCatalogService
                 true
             )
             ->whereNotNull(
-                'tender_amount_minor'
+                'tender_amount_decimal'
             )
             ->where(
-                'tender_amount_minor',
-                '>',
-                0
+                'tender_amount_decimal',
+                '!=',
+                ''
             )
             ->where(
                 function (
@@ -121,10 +121,24 @@ class ManualPaymentAccountCatalogService
                 'id'
             );
     }
-
     private function summary(
         PaymentReceivingAccount $account
     ): array {
+        $amount =
+            filled(
+                $account
+                    ->tender_amount_decimal
+            )
+                ? (string) $account
+                    ->tender_amount_decimal
+                : $this->decimal
+                    ->formatMinor(
+                        (int) $account
+                            ->tender_amount_minor,
+                        (int) $account
+                            ->amount_scale
+                    );
+
         $data = [
             'uuid' =>
                 $account->uuid,
@@ -141,19 +155,17 @@ class ManualPaymentAccountCatalogService
                     $account
                         ->currency,
                 'amount_minor' =>
-                    (int) $account
-                        ->tender_amount_minor,
+                    $account
+                        ->tender_amount_minor
+                        !== null
+                            ? (int) $account
+                                ->tender_amount_minor
+                            : null,
                 'scale' =>
                     (int) $account
                         ->amount_scale,
                 'amount' =>
-                    $this->decimal
-                        ->formatMinor(
-                            (int) $account
-                                ->tender_amount_minor,
-                            (int) $account
-                                ->amount_scale
-                        ),
+                    $amount,
             ],
         ];
 
@@ -195,4 +207,5 @@ class ManualPaymentAccountCatalogService
 
         return $data;
     }
+
 }

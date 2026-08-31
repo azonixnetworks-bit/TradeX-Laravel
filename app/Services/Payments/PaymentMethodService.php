@@ -755,12 +755,12 @@ class PaymentMethodService
                 true
             )
             ->whereNotNull(
-                'tender_amount_minor'
+                'tender_amount_decimal'
             )
             ->where(
-                'tender_amount_minor',
-                '>',
-                0
+                'tender_amount_decimal',
+                '!=',
+                ''
             )
             ->where(
                 function (
