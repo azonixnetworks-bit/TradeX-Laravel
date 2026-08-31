@@ -8,7 +8,7 @@ use App\Models\BankDeposit;
 use App\Models\Payment;
 use App\Models\PaymentOrder;
 use App\Models\User;
-use App\Models\UserEntitlement;
+use App\Services\Entitlements\ClearedPaymentEntitlementReconciler;
 use App\Models\UsdtDeposit;
 use App\Services\Payments\PaymentMoney;
 use DomainException;
@@ -22,7 +22,8 @@ class AdminPaymentService
     private const MANUAL_REVIEW_REJECTED = 'MANUAL_REVIEW_REJECTED';
 
     public function __construct(
-        private readonly PaymentMoney $money
+        private readonly PaymentMoney $money,
+        private readonly ClearedPaymentEntitlementReconciler $entitlements
     ) {
     }
 
@@ -34,6 +35,7 @@ class AdminPaymentService
                 'payment:id,payment_order_id,uuid,status,provider,cleared_at,payment_reversed_at',
                 'bankDeposit:id,payment_order_id,uuid,status,submitted_at',
                 'usdtDeposit:id,payment_order_id,uuid,status,submitted_at',
+                'cryptoDeposit:id,payment_order_id,uuid,status,submitted_at',
             ]);
 
         $this->applyOrderFilters($query, $filters);
@@ -54,6 +56,7 @@ class AdminPaymentService
                     ->whereIn('provider', [
                         PaymentOrder::PROVIDER_LOCAL_BANK,
                         PaymentOrder::PROVIDER_USDT_TRC20,
+                        PaymentOrder::PROVIDER_CRYPTO_MANUAL,
                     ])
                     ->count(),
                 'cleared' => PaymentOrder::query()
@@ -79,6 +82,7 @@ class AdminPaymentService
             'payment.adjustments',
             'bankDeposit.reviewedByAdmin:id,name,email',
             'usdtDeposit.reviewedByAdmin:id,name,email',
+            'cryptoDeposit.reviewedByAdmin:id,name,email',
         ]);
 
         return [
@@ -200,9 +204,18 @@ class AdminPaymentService
                 'review_reason' => trim($reason),
             ])->save();
 
-            $this->clearOrderAndActivateEntitlement(
+            $this->clearOrder(
                 $order,
-                $user,
+                $payment
+            );
+
+            /*
+             * Manual admin settlement is internally reversible. Reconcile
+             * before the outer transaction commits so an unexpected
+             * entitlement error rolls back the payment, review decision and
+             * order clearing together.
+             */
+            $this->entitlements->reconcile(
                 $payment
             );
 
@@ -214,11 +227,10 @@ class AdminPaymentService
                 $request
             );
 
-            $this->auditClearedAndEntitlement(
+            $this->auditClearedPayment(
                 $admin,
                 $order,
                 $payment,
-                $user,
                 $request
             );
 
@@ -351,9 +363,18 @@ class AdminPaymentService
                 'review_reason' => trim($reason),
             ])->save();
 
-            $this->clearOrderAndActivateEntitlement(
+            $this->clearOrder(
                 $order,
-                $user,
+                $payment
+            );
+
+            /*
+             * Manual admin settlement is internally reversible. Reconcile
+             * before the outer transaction commits so an unexpected
+             * entitlement error rolls back the payment, review decision and
+             * order clearing together.
+             */
+            $this->entitlements->reconcile(
                 $payment
             );
 
@@ -365,11 +386,10 @@ class AdminPaymentService
                 $request
             );
 
-            $this->auditClearedAndEntitlement(
+            $this->auditClearedPayment(
                 $admin,
                 $order,
                 $payment,
-                $user,
                 $request
             );
 
@@ -551,9 +571,8 @@ class AdminPaymentService
         ]);
     }
 
-    private function clearOrderAndActivateEntitlement(
+    private function clearOrder(
         PaymentOrder $order,
-        User $user,
         Payment $payment
     ): void {
         $order->forceFill([
@@ -561,27 +580,6 @@ class AdminPaymentService
             'cleared_at' => $payment->cleared_at,
             'failure_code' => null,
         ])->save();
-
-        if (! $user->isPremium()) {
-            $user->forceFill([
-                'account_type' => 'PREMIUM',
-                'premium_activated_at' => $user->premium_activated_at ?? now(),
-            ])->save();
-        }
-
-        UserEntitlement::query()->updateOrCreate(
-            [
-                'user_id' => $user->getKey(),
-                'product_code' => $order->product_code,
-            ],
-            [
-                'status' => UserEntitlement::STATUS_ACTIVE,
-                'activated_at' => now(),
-                'payment_id' => $payment->getKey(),
-                'revoked_at' => null,
-                'revoke_reason' => null,
-            ]
-        );
     }
 
     private function assertManualReviewable(
@@ -637,11 +635,10 @@ class AdminPaymentService
         );
     }
 
-    private function auditClearedAndEntitlement(
+    private function auditClearedPayment(
         AdminUser $admin,
         PaymentOrder $order,
         Payment $payment,
-        User $user,
         Request $request
     ): void {
         AuditLog::record(
@@ -663,22 +660,6 @@ class AdminPaymentService
             ipAddress: $request->ip(),
             userAgent: $request->userAgent()
         );
-
-        AuditLog::record(
-            actorType: 'ADMIN',
-            actorId: $admin->getKey(),
-            action: 'PREMIUM_ENTITLEMENT_ACTIVATED',
-            module: 'PAYMENTS',
-            targetType: 'USER',
-            targetId: $user->getKey(),
-            newValues: [
-                'product_code' => $order->product_code,
-                'payment_uuid' => $payment->uuid,
-                'manual_reconciliation' => true,
-            ],
-            ipAddress: $request->ip(),
-            userAgent: $request->userAgent()
-        );
     }
 
     private function applyOrderFilters(
@@ -691,6 +672,7 @@ class AdminPaymentService
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
                     ->where('uuid', 'like', '%'.$search.'%')
+                    ->orWhere('manual_reference', 'like', '%'.$search.'%')
                     ->orWhereHas('user', function (Builder $user) use ($search): void {
                         $user
                             ->where('name', 'like', '%'.$search.'%')
@@ -741,7 +723,9 @@ class AdminPaymentService
                 $builder
                     ->where('uuid', 'like', '%'.$search.'%')
                     ->orWhereHas('order', function (Builder $order) use ($search): void {
-                        $order->where('uuid', 'like', '%'.$search.'%');
+                        $order
+                            ->where('uuid', 'like', '%'.$search.'%')
+                            ->orWhere('manual_reference', 'like', '%'.$search.'%');
                     })
                     ->orWhereHas('user', function (Builder $user) use ($search): void {
                         $user
@@ -793,8 +777,11 @@ class AdminPaymentService
     {
         return [
             PaymentOrder::PROVIDER_PAYPAL,
+            PaymentOrder::PROVIDER_STRIPE,
+            PaymentOrder::PROVIDER_NOWPAYMENTS,
             PaymentOrder::PROVIDER_LOCAL_BANK,
             PaymentOrder::PROVIDER_USDT_TRC20,
+            PaymentOrder::PROVIDER_CRYPTO_MANUAL,
         ];
     }
 
