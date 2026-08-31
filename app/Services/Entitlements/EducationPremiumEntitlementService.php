@@ -2,6 +2,7 @@
 
 namespace App\Services\Entitlements;
 
+use App\Exceptions\EducationPremiumEntitlementConflictException;
 use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\PaymentOrder;
@@ -123,7 +124,7 @@ class EducationPremiumEntitlementService
                         && $boundPayment
                             ->isCleared()
                     ) {
-                        throw new DomainException(
+                        throw new EducationPremiumEntitlementConflictException(
                             'An active education premium entitlement is already backed by another cleared payment.'
                         );
                     }
