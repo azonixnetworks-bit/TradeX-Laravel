@@ -18,6 +18,7 @@ class PaymentReceivingAccount extends Model
         'country_code',
         'currency',
         'tender_amount_minor',
+        'tender_amount_decimal',
         'amount_scale',
         'bank_name',
         'bank_branch',
@@ -78,6 +79,75 @@ class PaymentReceivingAccount extends Model
                 ) {
                     $account->uuid =
                         (string) Str::uuid();
+                }
+
+                /*
+                 * Backward-compatible invariant for legacy/test/job callers
+                 * that still create an account with the minor-unit value only.
+                 * New admin writes persist the exact decimal explicitly.
+                 */
+                if (
+                    blank(
+                        $account
+                            ->tender_amount_decimal
+                    )
+                    && $account
+                        ->tender_amount_minor
+                        !== null
+                ) {
+                    $scale =
+                        (int) (
+                            $account
+                                ->amount_scale
+                            ?? 0
+                        );
+
+                    if (
+                        $scale >= 0
+                        && $scale <= 18
+                    ) {
+                        $minor =
+                            ltrim(
+                                (string) $account
+                                    ->tender_amount_minor,
+                                '0'
+                            );
+
+                        if (
+                            $minor === ''
+                        ) {
+                            $minor = '0';
+                        }
+
+                        if (
+                            $scale === 0
+                        ) {
+                            $account
+                                ->tender_amount_decimal =
+                                $minor;
+                        } else {
+                            $digits =
+                                str_pad(
+                                    $minor,
+                                    $scale + 1,
+                                    '0',
+                                    STR_PAD_LEFT
+                                );
+
+                            $account
+                                ->tender_amount_decimal =
+                                substr(
+                                    $digits,
+                                    0,
+                                    -$scale
+                                )
+                                .'.'
+                                .substr(
+                                    $digits,
+                                    -$scale
+                                );
+                        }
+                    }
                 }
             }
         );

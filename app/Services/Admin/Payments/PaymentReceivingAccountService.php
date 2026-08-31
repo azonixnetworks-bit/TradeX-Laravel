@@ -2,6 +2,7 @@
 
 namespace App\Services\Admin\Payments;
 
+use App\Exceptions\AuthApiException;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\PaymentReceivingAccount;
@@ -363,6 +364,84 @@ class PaymentReceivingAccountService
             $type
             === PaymentReceivingAccount::TYPE_BANK;
 
+        $coinSymbol =
+            ! $isBank
+                ? strtoupper(
+                    trim(
+                        (string) $data[
+                            'coin_symbol'
+                        ]
+                    )
+                )
+                : null;
+
+        $network =
+            ! $isBank
+                ? strtoupper(
+                    trim(
+                        (string) $data[
+                            'network'
+                        ]
+                    )
+                )
+                : null;
+
+        $normalizedAmount =
+            $this->decimal
+                ->normalize(
+                    (string) $data[
+                        'tender_amount'
+                    ],
+                    $scale
+                );
+
+        if (
+            preg_match(
+                '/[1-9]/',
+                str_replace(
+                    '.',
+                    '',
+                    $normalizedAmount
+                )
+            ) !== 1
+        ) {
+            throw new AuthApiException(
+                422,
+                'PAYMENT_AMOUNT_INVALID',
+                'The configured payment amount must be greater than zero.'
+            );
+        }
+
+        $isUsdtTrc20 =
+            ! $isBank
+            && $coinSymbol === 'USDT'
+            && $network === 'TRC20';
+
+        /*
+         * Bank and the dedicated USDT/TRC20 compatibility flow still use the
+         * minor-unit settlement ledger. Generic crypto supports exact
+         * precision up to 18 decimals without forcing the value into BIGINT.
+         */
+        if (
+            ($isBank || $isUsdtTrc20)
+            && $scale > 8
+        ) {
+            throw new AuthApiException(
+                422,
+                'PAYMENT_MINOR_SCALE_UNSUPPORTED',
+                'Bank and USDT TRC20 receiving accounts support up to 8 decimal places.'
+            );
+        }
+
+        $minor =
+            $scale <= 8
+                ? $this->decimal
+                    ->toMinor(
+                        $normalizedAmount,
+                        $scale
+                    )
+                : null;
+
         return [
             'type' =>
                 $type,
@@ -389,13 +468,9 @@ class PaymentReceivingAccountService
                     )
                 ),
             'tender_amount_minor' =>
-                $this->decimal
-                    ->toMinor(
-                        (string) $data[
-                            'tender_amount'
-                        ],
-                        $scale
-                    ),
+                $minor,
+            'tender_amount_decimal' =>
+                $normalizedAmount,
             'amount_scale' =>
                 $scale,
 
@@ -445,26 +520,10 @@ class PaymentReceivingAccountService
                     : null,
 
             'coin_symbol' =>
-                ! $isBank
-                    ? strtoupper(
-                        trim(
-                            (string) $data[
-                                'coin_symbol'
-                            ]
-                        )
-                    )
-                    : null,
+                $coinSymbol,
 
             'network' =>
-                ! $isBank
-                    ? strtoupper(
-                        trim(
-                            (string) $data[
-                                'network'
-                            ]
-                        )
-                    )
-                    : null,
+                $network,
 
             'wallet_address' =>
                 ! $isBank
@@ -500,7 +559,6 @@ class PaymentReceivingAccountService
                 ],
         ];
     }
-
     private function storeQr(
         string $uuid,
         ?UploadedFile $file
@@ -624,11 +682,15 @@ class PaymentReceivingAccountService
             'currency' =>
                 $account->currency,
             'tender_amount_minor' =>
-                (int) (
-                    $account
-                        ->tender_amount_minor
-                    ?? 0
-                ),
+                $account
+                    ->tender_amount_minor
+                    !== null
+                        ? (int) $account
+                            ->tender_amount_minor
+                        : null,
+            'tender_amount_decimal' =>
+                (string) $account
+                    ->tender_amount_decimal,
             'amount_scale' =>
                 (int) $account
                     ->amount_scale,

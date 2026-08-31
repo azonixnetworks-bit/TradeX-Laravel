@@ -95,7 +95,7 @@
     </section>
 
     <section class="panel" id="add-usdt-wallet" style="padding:22px;scroll-margin-top:24px;">
-        <div class="panel-eyebrow">USDT TRC20</div>
+        <div class="panel-eyebrow">Binance / USDT TRC20</div>
         <h2>Add USDT Wallet</h2>
         <p>Add your TradeX USDT receiving wallet. This dedicated form locks the coin/network contract to <strong>USDT / TRC20</strong> so customers are not accidentally shown the wrong network.</p>
         <form method="POST" action="{{ route('admin.payments.accounts.receiving.store') }}" enctype="multipart/form-data">
