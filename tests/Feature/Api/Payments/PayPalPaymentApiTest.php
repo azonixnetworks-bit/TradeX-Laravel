@@ -10,6 +10,7 @@ use App\Models\PaymentOrder;
 use App\Models\UserEntitlement;
 use Database\Seeders\AffiliateStageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
@@ -278,6 +279,26 @@ class PayPalPaymentApiTest extends TestCase
 
         $this->assertNoInternalIdKey(
             $captured->json('data')
+        );
+
+        Http::assertSent(
+            function (
+                HttpClientRequest $request
+            ) use (
+                $orderUuid
+            ): bool {
+                return $request->method() === 'POST'
+                    && $request->url()
+                        === 'https://api-m.sandbox.paypal.com'
+                        .'/v2/checkout/orders/'
+                        .'PAYPAL-ORDER-API12'
+                        .'/capture'
+                    && $request->body() === '{}'
+                    && $request->hasHeader(
+                        'PayPal-Request-Id',
+                        'tradex-capture-'.$orderUuid
+                    );
+            }
         );
 
         Http::assertSentCount(
