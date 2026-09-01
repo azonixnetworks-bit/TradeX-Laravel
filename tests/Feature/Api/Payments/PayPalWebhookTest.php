@@ -501,6 +501,16 @@ class PayPalWebhookTest extends TestCase
     private function configureWebhook(): void
     {
         config()->set(
+            'tradex_payments.paypal.driver',
+            'http'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.environment',
+            'sandbox'
+        );
+
+        config()->set(
             'tradex_payments.paypal.client_id',
             'paypal-client'
         );
@@ -513,6 +523,26 @@ class PayPalWebhookTest extends TestCase
         config()->set(
             'tradex_payments.paypal.webhook_id',
             'paypal-webhook-id'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.sandbox_base_url',
+            'https://api-m.sandbox.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.live_base_url',
+            'https://api-m.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.return_url',
+            'https://app.tradex.test/payments/paypal/return'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.cancel_url',
+            'https://app.tradex.test/payments/paypal/cancel'
         );
     }
 

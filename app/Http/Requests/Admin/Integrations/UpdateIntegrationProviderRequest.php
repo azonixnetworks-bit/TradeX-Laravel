@@ -162,7 +162,11 @@ class UpdateIntegrationProviderRequest extends FormRequest
                     );
 
                     if (
-                        $providerCode === 'STRIPE'
+                        in_array(
+                            $providerCode,
+                            ['PAYPAL', 'STRIPE'],
+                            true
+                        )
                         && $country === '*'
                     ) {
                         return;
@@ -175,7 +179,7 @@ class UpdateIntegrationProviderRequest extends FormRequest
                         ) !== 1
                     ) {
                         $fail(
-                            'Country scope must use ISO 2-letter codes; Stripe may use * for all customer countries.'
+                            'Country scope must use ISO 2-letter codes; PayPal or Stripe may use * for all customer countries.'
                         );
                     }
                 },

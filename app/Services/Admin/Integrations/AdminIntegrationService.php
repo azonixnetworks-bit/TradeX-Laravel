@@ -5,11 +5,17 @@ namespace App\Services\Admin\Integrations;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\IntegrationProviderState;
+use App\Services\Payments\PayPalConfigurationSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class AdminIntegrationService
 {
+    public function __construct(
+        private readonly PayPalConfigurationSafety $paypalConfiguration
+    ) {
+    }
+
     public const PROVIDERS = [
         'PAYPAL',
         'STRIPE',
@@ -619,77 +625,89 @@ class AdminIntegrationService
 
     private function paypalReadiness(): array
     {
-        $driver =
-            strtolower(
-                trim(
-                    (string) config(
-                        'tradex_payments.paypal.driver',
-                        'http'
-                    )
-                )
-            );
-
-        if ($driver === 'srmklive') {
-            $mode =
-                strtolower(
-                    trim(
-                        (string) config(
-                            'paypal.mode',
-                            'sandbox'
-                        )
-                    )
-                );
-
-            $clientConfigured =
-                filled(
-                    config(
-                        'paypal.'
-                        .$mode
-                        .'.client_id'
-                    )
-                );
-
-            $secretConfigured =
-                filled(
-                    config(
-                        'paypal.'
-                        .$mode
-                        .'.client_secret'
-                    )
-                );
-        } else {
-            $clientConfigured =
-                filled(
-                    config(
-                        'tradex_payments.paypal.client_id'
-                    )
-                );
-
-            $secretConfigured =
-                filled(
-                    config(
-                        'tradex_payments.paypal.client_secret'
-                    )
-                );
-        }
+        $checks =
+            $this->paypalConfiguration
+                ->checks();
 
         return [
             'configured' =>
-                $clientConfigured
-                && $secretConfigured,
+                ! in_array(
+                    false,
+                    $checks,
+                    true
+                ),
 
             'checks' => [
+                'Driver supported' =>
+                    (bool) (
+                        $checks[
+                            'driver_supported'
+                        ]
+                        ?? false
+                    ),
+
+                'Environment supported' =>
+                    (bool) (
+                        $checks[
+                            'environment_supported'
+                        ]
+                        ?? false
+                    ),
+
+                'Plugin environment aligned' =>
+                    (bool) (
+                        $checks[
+                            'plugin_environment_matches'
+                        ]
+                        ?? false
+                    ),
+
                 'Client identifier configured' =>
-                    $clientConfigured,
+                    (bool) (
+                        $checks[
+                            'client_id_configured'
+                        ]
+                        ?? false
+                    ),
 
                 'Client secret configured' =>
-                    $secretConfigured,
+                    (bool) (
+                        $checks[
+                            'client_secret_configured'
+                        ]
+                        ?? false
+                    ),
 
                 'Webhook identifier configured' =>
-                    filled(
-                        config(
-                            'tradex_payments.paypal.webhook_id'
-                        )
+                    (bool) (
+                        $checks[
+                            'webhook_id_configured'
+                        ]
+                        ?? false
+                    ),
+
+                'Official PayPal API endpoint' =>
+                    (bool) (
+                        $checks[
+                            'official_api_endpoint'
+                        ]
+                        ?? false
+                    ),
+
+                'Return URL safe' =>
+                    (bool) (
+                        $checks[
+                            'return_url_valid'
+                        ]
+                        ?? false
+                    ),
+
+                'Cancel URL safe' =>
+                    (bool) (
+                        $checks[
+                            'cancel_url_valid'
+                        ]
+                        ?? false
                     ),
             ],
         ];
