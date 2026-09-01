@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\Payments;
 
+use App\Models\IntegrationProviderState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
@@ -126,8 +127,23 @@ class PaymentMethodsApiTest extends TestCase
     private function configurePayPal(): void
     {
         config()->set(
+            'tradex_payments.paypal.driver',
+            'http'
+        );
+
+        config()->set(
             'tradex_payments.paypal.enabled',
             true
+        );
+
+        config()->set(
+            'tradex_payments.paypal.countries',
+            ['LK', 'IN']
+        );
+
+        config()->set(
+            'tradex_payments.paypal.environment',
+            'sandbox'
         );
 
         config()->set(
@@ -139,6 +155,52 @@ class PaymentMethodsApiTest extends TestCase
             'tradex_payments.paypal.client_secret',
             'super-secret-paypal-client-secret'
         );
+
+        config()->set(
+            'tradex_payments.paypal.webhook_id',
+            'paypal-webhook-id'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.sandbox_base_url',
+            'https://api-m.sandbox.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.live_base_url',
+            'https://api-m.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.return_url',
+            'https://app.tradex.test/payments/paypal/return'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.cancel_url',
+            'https://app.tradex.test/payments/paypal/cancel'
+        );
+
+        IntegrationProviderState::query()
+            ->create([
+                'provider_code' =>
+                    'PAYPAL',
+
+                'is_enabled' =>
+                    true,
+
+                'environment' =>
+                    'SANDBOX',
+
+                'countries' =>
+                    ['LK', 'IN'],
+
+                'eligibility_confirmed' =>
+                    true,
+
+                'version' =>
+                    1,
+            ]);
     }
 
     private function configureLocalBank(): void

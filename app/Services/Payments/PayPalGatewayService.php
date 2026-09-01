@@ -14,13 +14,18 @@ class PayPalGatewayService
 {
     public function __construct(
         private readonly PayPalPluginClientFactory
-            $pluginFactory
+            $pluginFactory,
+        private readonly PayPalConfigurationSafety
+            $configuration
     ) {
     }
 
     public function createOrder(
         PaymentOrder $order
     ): array {
+        $this->configuration
+            ->assertConfigured();
+
         if ($this->usesPlugin()) {
             return $this->createOrderWithPlugin(
                 $order
@@ -35,6 +40,9 @@ class PayPalGatewayService
     public function captureOrder(
         PaymentOrder $order
     ): array {
+        $this->configuration
+            ->assertWebhookConfigured();
+
         if ($this->usesPlugin()) {
             return $this->captureOrderWithPlugin(
                 $order
@@ -49,12 +57,14 @@ class PayPalGatewayService
     public function verifyWebhook(
         Request $request
     ): bool {
-        if ($this->usesPlugin()) {
-            return $this->verifyWebhookWithPlugin(
-                $request
-            );
-        }
+        $this->configuration
+            ->assertWebhookConfigured();
 
+        /*
+         * Always use PayPal's official verification endpoint with the exact
+         * raw webhook event bytes. This keeps verification behavior identical
+         * for the HTTP and srmklive checkout drivers.
+         */
         return $this->verifyWebhookWithHttp(
             $request
         );
@@ -337,22 +347,52 @@ class PayPalGatewayService
             return false;
         }
 
-        $event = $request->json()->all();
+        $rawEvent = (string) $request
+            ->getContent();
 
-        if ($event === []) {
+        $decoded = json_decode(
+            $rawEvent,
+            true
+        );
+
+        if (
+            ! is_array($decoded)
+            || $decoded === []
+        ) {
             return false;
         }
 
+        /*
+         * PayPal requires webhook_event to be posted back exactly as received.
+         * Do not parse and re-encode the event. Only the wrapper fields are
+         * encoded here; the original raw JSON bytes are appended untouched.
+         */
+        $metadataJson = json_encode(
+            [
+                ...$headers,
+                'webhook_id' =>
+                    $webhookId,
+            ],
+            JSON_THROW_ON_ERROR
+        );
+
+        $verificationBody =
+            substr(
+                $metadataJson,
+                0,
+                -1
+            )
+            .',"webhook_event":'
+            .$rawEvent
+            .'}';
+
         $response = $this->api()
+            ->withBody(
+                $verificationBody,
+                'application/json'
+            )
             ->post(
-                '/v1/notifications/verify-webhook-signature',
-                [
-                    ...$headers,
-                    'webhook_id' =>
-                        $webhookId,
-                    'webhook_event' =>
-                        $event,
-                ]
+                '/v1/notifications/verify-webhook-signature'
             );
 
         $data = $this->jsonOrFail(
@@ -572,28 +612,13 @@ class PayPalGatewayService
 
     private function api(): PendingRequest
     {
-        $clientId = trim(
-            (string) config(
-                'tradex_payments.paypal.client_id'
-            )
-        );
+        $this->configuration
+            ->assertApiConfigured();
 
-        $clientSecret = trim(
-            (string) config(
-                'tradex_payments.paypal.client_secret'
-            )
-        );
-
-        if (
-            $clientId === ''
-            || $clientSecret === ''
-        ) {
-            throw new AuthApiException(
-                503,
-                'PAYPAL_NOT_CONFIGURED',
-                'PayPal checkout is not configured.'
-            );
-        }
+        [
+            $clientId,
+            $clientSecret,
+        ] = $this->credentials();
 
         $tokenResponse = Http::baseUrl(
             $this->baseUrl()
@@ -647,6 +672,51 @@ class PayPalGatewayService
             ->withToken(
                 $accessToken
             );
+    }
+
+    private function credentials(): array
+    {
+        $driver = strtolower(
+            trim(
+                (string) config(
+                    'tradex_payments.paypal.driver',
+                    'http'
+                )
+            )
+        );
+
+        $environment = strtolower(
+            trim(
+                (string) config(
+                    'tradex_payments.paypal.environment',
+                    'sandbox'
+                )
+            )
+        );
+
+        if ($driver === 'srmklive') {
+            return [
+                trim((string) config(
+                    'paypal.'
+                    .$environment
+                    .'.client_id'
+                )),
+                trim((string) config(
+                    'paypal.'
+                    .$environment
+                    .'.client_secret'
+                )),
+            ];
+        }
+
+        return [
+            trim((string) config(
+                'tradex_payments.paypal.client_id'
+            )),
+            trim((string) config(
+                'tradex_payments.paypal.client_secret'
+            )),
+        ];
     }
 
     private function baseUrl(): string

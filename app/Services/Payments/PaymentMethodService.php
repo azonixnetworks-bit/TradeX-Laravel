@@ -221,20 +221,17 @@ class PaymentMethodService
                     ->amount_minor
                 : 0;
 
-        $enabled =
-            (bool) config(
-                'tradex_payments.paypal.enabled',
-                true
-            );
-
-        $configured = $this
-            ->paypalConfigured();
+        $runtime =
+            $amount > 0
+            && $this->runtimeGate
+                ->available(
+                    PaymentOrder::PROVIDER_PAYPAL,
+                    $country
+                );
 
         $available =
             (bool) $product->is_active
-            && $enabled
-            && $configured
-            && $amount > 0;
+            && $runtime;
 
         return [
             'code' =>
@@ -261,7 +258,7 @@ class PaymentMethodService
                             : (
                                 $amount <= 0
                                     ? 'PRODUCT_CURRENCY_MISMATCH'
-                                    : 'CONFIGURATION_REQUIRED'
+                                    : 'RUNTIME_APPROVAL_OR_CONFIGURATION_REQUIRED'
                             )
                     ),
 

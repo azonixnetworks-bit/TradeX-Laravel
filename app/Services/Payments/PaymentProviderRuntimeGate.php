@@ -8,34 +8,38 @@ use App\Models\IntegrationProviderState;
 class PaymentProviderRuntimeGate
 {
     public function __construct(
-        private readonly StripeConfigurationSafety $stripeConfiguration
+        private readonly StripeConfigurationSafety $stripeConfiguration,
+        private readonly PayPalConfigurationSafety $paypalConfiguration
     ) {
     }
 
-    public function available(string $provider, string $country): bool
-    {
+    public function available(
+        string $provider,
+        string $country
+    ): bool {
         $provider = strtoupper(trim($provider));
         $country = strtoupper(trim($country));
 
-        $key = match ($provider) {
-            'STRIPE' => 'stripe',
-            'NOWPAYMENTS' => 'nowpayments',
-            default => null,
-        };
-
-        if ($key === null || $country === '') {
+        if ($country === '') {
             return false;
         }
 
-        if (! (bool) config('tradex_integrations.'.$key.'.enabled', false)) {
-            return false;
-        }
-
-        $sourceCountries = $this->countries(
-            (array) config('tradex_integrations.'.$key.'.countries', [])
+        $source = $this->sourceRuntime(
+            $provider
         );
 
-        if (! $this->countryAllowed($country, $sourceCountries)) {
+        if ($source === null) {
+            return false;
+        }
+
+        if (! $source['enabled']) {
+            return false;
+        }
+
+        if (! $this->countryAllowed(
+            $country,
+            $source['countries']
+        )) {
             return false;
         }
 
@@ -44,7 +48,10 @@ class PaymentProviderRuntimeGate
         }
 
         $state = IntegrationProviderState::query()
-            ->where('provider_code', $provider)
+            ->where(
+                'provider_code',
+                $provider
+            )
             ->first();
 
         if (
@@ -55,23 +62,30 @@ class PaymentProviderRuntimeGate
             return false;
         }
 
-        $approvedCountries = $this->countries($state->countries ?? []);
+        $approvedCountries = $this->countries(
+            $state->countries ?? []
+        );
 
-        if (! $this->countryAllowed($country, $approvedCountries)) {
+        if (! $this->countryAllowed(
+            $country,
+            $approvedCountries
+        )) {
             return false;
         }
 
-        $sourceEnvironment = strtoupper((string) config(
-            'tradex_integrations.'.$key.'.environment',
-            'SANDBOX'
-        ));
-
-        return strtoupper((string) $state->environment) === $sourceEnvironment;
+        return strtoupper(
+            (string) $state->environment
+        ) === $source['environment'];
     }
 
-    public function assertAvailable(string $provider, string $country): void
-    {
-        if (! $this->available($provider, $country)) {
+    public function assertAvailable(
+        string $provider,
+        string $country
+    ): void {
+        if (! $this->available(
+            $provider,
+            $country
+        )) {
             throw new AuthApiException(
                 422,
                 'PAYMENT_PROVIDER_NOT_RUNTIME_APPROVED',
@@ -80,14 +94,112 @@ class PaymentProviderRuntimeGate
         }
     }
 
-    private function configured(string $provider): bool
-    {
+    private function sourceRuntime(
+        string $provider
+    ): ?array {
         return match ($provider) {
-            'STRIPE' => $this->stripeConfiguration->configured(),
-            'NOWPAYMENTS' => filled(config('tradex_integrations.nowpayments.api_key'))
-                && filled(config('tradex_integrations.nowpayments.ipn_secret'))
-                && filled(config('tradex_integrations.nowpayments.success_url'))
-                && filled(config('tradex_integrations.nowpayments.cancel_url')),
+            'PAYPAL' => [
+                'enabled' =>
+                    (bool) config(
+                        'tradex_payments.paypal.enabled',
+                        false
+                    ),
+
+                'countries' =>
+                    $this->countries(
+                        (array) config(
+                            'tradex_payments.paypal.countries',
+                            []
+                        )
+                    ),
+
+                'environment' =>
+                    strtoupper(trim(
+                        (string) config(
+                            'tradex_payments.paypal.environment',
+                            'SANDBOX'
+                        )
+                    )),
+            ],
+
+            'STRIPE' => [
+                'enabled' =>
+                    (bool) config(
+                        'tradex_integrations.stripe.enabled',
+                        false
+                    ),
+
+                'countries' =>
+                    $this->countries(
+                        (array) config(
+                            'tradex_integrations.stripe.countries',
+                            []
+                        )
+                    ),
+
+                'environment' =>
+                    strtoupper(trim(
+                        (string) config(
+                            'tradex_integrations.stripe.environment',
+                            'SANDBOX'
+                        )
+                    )),
+            ],
+
+            'NOWPAYMENTS' => [
+                'enabled' =>
+                    (bool) config(
+                        'tradex_integrations.nowpayments.enabled',
+                        false
+                    ),
+
+                'countries' =>
+                    $this->countries(
+                        (array) config(
+                            'tradex_integrations.nowpayments.countries',
+                            []
+                        )
+                    ),
+
+                'environment' =>
+                    strtoupper(trim(
+                        (string) config(
+                            'tradex_integrations.nowpayments.environment',
+                            'SANDBOX'
+                        )
+                    )),
+            ],
+
+            default => null,
+        };
+    }
+
+    private function configured(
+        string $provider
+    ): bool {
+        return match ($provider) {
+            'PAYPAL' =>
+                $this->paypalConfiguration
+                    ->configured(),
+
+            'STRIPE' =>
+                $this->stripeConfiguration
+                    ->configured(),
+
+            'NOWPAYMENTS' =>
+                filled(config(
+                    'tradex_integrations.nowpayments.api_key'
+                ))
+                && filled(config(
+                    'tradex_integrations.nowpayments.ipn_secret'
+                ))
+                && filled(config(
+                    'tradex_integrations.nowpayments.success_url'
+                ))
+                && filled(config(
+                    'tradex_integrations.nowpayments.cancel_url'
+                )),
+
             default => false,
         };
     }
@@ -96,20 +208,47 @@ class PaymentProviderRuntimeGate
         string $country,
         array $values
     ): bool {
-        $countries = $this->countries($values);
+        $countries = $this->countries(
+            $values
+        );
 
-        return in_array('*', $countries, true)
-            || in_array($country, $countries, true);
+        return in_array(
+            '*',
+            $countries,
+            true
+        )
+            || in_array(
+                $country,
+                $countries,
+                true
+            );
     }
 
-    private function countries(array $values): array
-    {
-        return array_values(array_unique(array_filter(array_map(
-            static fn (mixed $value): string => strtoupper(trim((string) $value)),
-            $values
-        ), static fn (string $value): bool =>
-            $value === '*'
-            || preg_match('/^[A-Z]{2}$/', $value) === 1
-        )));
+    private function countries(
+        array $values
+    ): array {
+        return array_values(
+            array_unique(
+                array_filter(
+                    array_map(
+                        static fn (
+                            mixed $value
+                        ): string =>
+                            strtoupper(trim(
+                                (string) $value
+                            )),
+                        $values
+                    ),
+                    static fn (
+                        string $value
+                    ): bool =>
+                        $value === '*'
+                        || preg_match(
+                            '/^[A-Z]{2}$/',
+                            $value
+                        ) === 1
+                )
+            )
+        );
     }
 }

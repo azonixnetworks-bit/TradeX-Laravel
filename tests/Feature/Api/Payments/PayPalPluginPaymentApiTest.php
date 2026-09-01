@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\Payments;
 
+use App\Models\IntegrationProviderState;
 use App\Models\Payment;
 use App\Models\PaymentOrder;
 use App\Models\UserEntitlement;
@@ -273,6 +274,36 @@ class PayPalPluginPaymentApiTest extends TestCase
         );
 
         config()->set(
+            'tradex_payments.paypal.environment',
+            'sandbox'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.webhook_id',
+            'paypal-plugin-webhook-id'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.sandbox_base_url',
+            'https://api-m.sandbox.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.live_base_url',
+            'https://api-m.paypal.com'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.return_url',
+            'https://app.tradex.test/payments/paypal/return'
+        );
+
+        config()->set(
+            'tradex_payments.paypal.cancel_url',
+            'https://app.tradex.test/payments/paypal/cancel'
+        );
+
+        config()->set(
             'tradex_payments.product.education_premium.paypal.amount_minor',
             7900
         );
@@ -296,5 +327,26 @@ class PayPalPluginPaymentApiTest extends TestCase
             'paypal.sandbox.client_secret',
             'sandbox-client-secret'
         );
+
+        IntegrationProviderState::query()
+            ->create([
+                'provider_code' =>
+                    PaymentOrder::PROVIDER_PAYPAL,
+
+                'is_enabled' =>
+                    true,
+
+                'environment' =>
+                    'SANDBOX',
+
+                'countries' =>
+                    ['LK', 'IN'],
+
+                'eligibility_confirmed' =>
+                    true,
+
+                'version' =>
+                    1,
+            ]);
     }
 }
