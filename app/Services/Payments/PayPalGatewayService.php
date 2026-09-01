@@ -250,6 +250,14 @@ class PayPalGatewayService
                 'Prefer' =>
                     'return=representation',
             ])
+            /*
+             * PayPal Capture requires a syntactically valid JSON body.
+             * Sending no JSON body is rejected as MALFORMED_REQUEST_JSON.
+             */
+            ->withBody(
+                '{}',
+                'application/json'
+            )
             ->post(
                 '/v2/checkout/orders/'
                 .rawurlencode(
