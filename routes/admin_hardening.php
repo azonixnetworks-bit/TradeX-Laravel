@@ -1,11 +1,47 @@
 <?php
 
+use App\Http\Controllers\Admin\Auth\ForgotPasswordController;
+use App\Http\Controllers\Admin\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\Auth\TotpController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('admin')
     ->name('admin.')
     ->group(function (): void {
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Password Recovery
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get(
+            '/forgot-password',
+            [ForgotPasswordController::class, 'show']
+        )
+            ->middleware('throttle:30,1')
+            ->name('password.request');
+
+        Route::post(
+            '/forgot-password',
+            [ForgotPasswordController::class, 'send']
+        )
+            ->middleware('throttle:5,1')
+            ->name('password.email');
+
+        Route::get(
+            '/reset-password/{token}',
+            [ResetPasswordController::class, 'show']
+        )
+            ->middleware('throttle:30,1')
+            ->name('password.reset');
+
+        Route::post(
+            '/reset-password',
+            [ResetPasswordController::class, 'reset']
+        )
+            ->middleware('throttle:10,1')
+            ->name('password.update');
+
         /*
         |--------------------------------------------------------------------------
         | Short-Lived Public Second-Factor Challenge

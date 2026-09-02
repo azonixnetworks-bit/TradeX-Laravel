@@ -536,6 +536,13 @@
                     >
                     Remember me
                 </label>
+
+                <a
+                    href="{{ route('admin.password.request') }}"
+                    style="color: var(--gold-light); font-size: 13px; font-weight: 700; text-decoration: none;"
+                >
+                    Forgot password?
+                </a>
             </div>
 
             <button

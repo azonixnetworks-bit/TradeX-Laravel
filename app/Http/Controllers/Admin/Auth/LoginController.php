@@ -236,6 +236,7 @@ class LoginController extends Controller
                 'tradex_admin_hardening.totp.required',
                 false
             )
+            || $admin->hasConfirmedTotp()
         ) {
             if (
                 ! $admin->hasConfirmedTotp()
