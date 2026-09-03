@@ -248,6 +248,44 @@
         @endif
 
 
+        @if($admin->hasPermission('investments.view'))
+
+            <div class="nav-section-title">
+                INVESTMENTS
+            </div>
+
+            <a
+                href="{{ route('admin.investments.dashboard') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.investments.dashboard') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◈</span>
+                <span>Investment Dashboard</span>
+            </a>
+
+            <a
+                href="{{ route('admin.investments.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.investments.index') || request()->routeIs('admin.investments.show') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">▤</span>
+                <span>All Investments</span>
+            </a>
+
+            @if($admin->hasPermission('investments.create'))
+                <a
+                    href="{{ route('admin.investments.create') }}"
+                    class="nav-link
+                    {{ request()->routeIs('admin.investments.create') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">＋</span>
+                    <span>Add Investment</span>
+                </a>
+            @endif
+
+        @endif
+
+
         @if($admin->hasPermission('affiliates.view'))
 
             <a

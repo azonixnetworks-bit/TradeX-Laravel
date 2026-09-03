@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             AffiliateStageSeeder::class,
             ProductSeeder::class,
+            InvestmentProductSeeder::class,
         ]);
     }
 }
