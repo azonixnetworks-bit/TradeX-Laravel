@@ -46,7 +46,7 @@ return [
         'max_signed_document_kb' => 10240,
         'production_activation_requires_approved_template' => env(
             'TRADEX_INVESTMENT_REQUIRE_APPROVED_TEMPLATE_IN_PRODUCTION',
-            true
+            env('APP_ENV') === 'production'
         ),
         'approved_template_status' => 'APPROVED',
     ],

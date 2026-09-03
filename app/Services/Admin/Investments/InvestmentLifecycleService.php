@@ -603,6 +603,23 @@ class InvestmentLifecycleService
             && $agreement->risk_disclosure_version
                 === $riskVersion;
 
+        $productionLegalGateRequired =
+            (bool) config(
+                'tradex_investments.agreement.production_activation_requires_approved_template',
+                false
+            );
+
+        $agreementTemplateApproved =
+            ! $productionLegalGateRequired
+            || (
+                $agreement instanceof InvestmentAgreement
+                && $agreement->template_status
+                    === (string) config(
+                        'tradex_investments.agreement.approved_template_status',
+                        'APPROVED'
+                    )
+            );
+
         $walletVerified =
             $investment->payout_wallet_verified_at !== null;
 
@@ -610,11 +627,14 @@ class InvestmentLifecycleService
             'deposit_verified' => $verifiedDeposit,
             'risk_accepted' => $riskAccepted,
             'agreement_verified' => $agreementVerified,
+            'agreement_template_approved' =>
+                $agreementTemplateApproved,
             'wallet_verified' => $walletVerified,
             'ready' =>
                 $verifiedDeposit
                 && $riskAccepted
                 && $agreementVerified
+                && $agreementTemplateApproved
                 && $walletVerified,
             'risk_version' => $riskVersion,
             'agreement' => $agreement,
@@ -630,24 +650,6 @@ class InvestmentLifecycleService
             $admin->hasPermission('investments.activate'),
             403
         );
-
-        if (
-            app()->environment('production')
-            && (bool) config(
-                'tradex_investments.agreement.production_activation_requires_approved_template',
-                true
-            )
-            && (string) config(
-                'tradex_investments.agreement.template_status'
-            ) !== (string) config(
-                'tradex_investments.agreement.approved_template_status',
-                'APPROVED'
-            )
-        ) {
-            throw new DomainException(
-                'Production activation is blocked until the investment agreement template is marked APPROVED after qualified legal review.'
-            );
-        }
 
         return DB::transaction(
             function () use (
@@ -703,6 +705,16 @@ class InvestmentLifecycleService
                 $readiness = $this->readiness($locked);
 
                 if (! $readiness['ready']) {
+                    if (
+                        ! $readiness[
+                            'agreement_template_approved'
+                        ]
+                    ) {
+                        throw new DomainException(
+                            'Production activation is blocked because the verified signed agreement was generated from a template that was not APPROVED after qualified legal review.'
+                        );
+                    }
+
                     throw new DomainException(
                         'Activation gates are incomplete: verified deposit, current risk acceptance, verified signed agreement and verified TRC20 payout wallet are all required.'
                     );

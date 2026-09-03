@@ -418,6 +418,91 @@ class AdminInvestmentPhase2LifecycleTest extends TestCase
         );
     }
 
+    public function test_production_activation_uses_signed_agreement_template_snapshot_for_legal_gate(): void
+    {
+        config([
+            'tradex_investments.agreement.template_status'
+                => 'DRAFT_REQUIRES_LEGAL_REVIEW',
+        ]);
+
+        [$admin, $investment] =
+            $this->readyForAgreement('9');
+
+        $this->actingAs($admin, 'admin')
+            ->post(
+                route(
+                    'admin.investments.wallet.verify',
+                    $investment
+                )
+            )
+            ->assertRedirect();
+
+        $this->actingAs($admin, 'admin')
+            ->post(
+                route(
+                    'admin.investments.agreements.generate',
+                    $investment
+                )
+            )
+            ->assertRedirect();
+
+        $agreement =
+            InvestmentAgreement::query()
+                ->firstOrFail();
+
+        $this->assertSame(
+            'DRAFT_REQUIRES_LEGAL_REVIEW',
+            $agreement->template_status
+        );
+
+        $this->actingAs($admin, 'admin')
+            ->post(
+                route(
+                    'admin.investments.agreements.signed.upload',
+                    [$investment, $agreement]
+                ),
+                [
+                    'signed_document' =>
+                        $this->signedPdf(),
+                    'signed_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertRedirect();
+
+        $agreement->refresh();
+
+        $this->actingAs($admin, 'admin')
+            ->post(
+                route(
+                    'admin.investments.agreements.verify',
+                    [$investment, $agreement]
+                )
+            )
+            ->assertRedirect();
+
+        config([
+            'tradex_investments.agreement.template_status'
+                => 'APPROVED',
+            'tradex_investments.agreement.production_activation_requires_approved_template'
+                => true,
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->post(
+                route(
+                    'admin.investments.activate',
+                    $investment
+                )
+            )
+            ->assertSessionHasErrors('activation');
+
+        $this->assertNotSame(
+            Investment::STATUS_ACTIVE,
+            $investment->fresh()->status
+        );
+    }
+
     public function test_activation_remains_blocked_without_verified_agreement_and_wallet(): void
     {
         [$admin, $investment] =
