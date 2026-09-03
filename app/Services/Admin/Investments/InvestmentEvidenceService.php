@@ -8,6 +8,7 @@ use App\Models\Investment;
 use App\Models\InvestmentApprovedCost;
 use App\Models\InvestmentEvidence;
 use App\Models\InvestmentProfitPeriod;
+use App\Models\InvestmentSettlement;
 use App\Models\InvestmentTrade;
 use DomainException;
 use Illuminate\Http\Request;
@@ -193,6 +194,17 @@ class InvestmentEvidenceService
         AdminUser $admin,
         Request $request
     ): InvestmentEvidence {
+        if (
+            InvestmentSettlement::query()
+                ->where('investment_id', $investment->getKey())
+                ->whereNotNull('approved_at')
+                ->exists()
+        ) {
+            throw new DomainException(
+                'The terminal settlement has Finance approval. New financial evidence can no longer mutate the settlement source ledger.'
+            );
+        }
+
         if ($period?->approved_at !== null) {
             throw new DomainException(
                 'An approved/finalized profit period is immutable. New evidence cannot be attached to it.'

@@ -138,6 +138,7 @@ class InvestmentController extends Controller
                 fn ($query) => $query->orderBy('sequence'),
             'assetAllocations' =>
                 fn ($query) => $query->latest('id')->limit(20),
+            'latestSettlement.assets',
         ]);
 
         $verifiedDeposit =
@@ -225,6 +226,18 @@ class InvestmentController extends Controller
                 'transactions_view' =>
                     $admin->hasPermission(
                         'investments.transactions.view'
+                    ),
+                'settlements_view' =>
+                    $admin->hasPermission(
+                        'investments.settlements.view'
+                    ),
+                'settlements_prepare' =>
+                    $admin->hasPermission(
+                        'investments.settlements.prepare'
+                    ),
+                'early_termination_review' =>
+                    $admin->hasPermission(
+                        'investments.early_termination.review'
                     ),
             ],
         ]);

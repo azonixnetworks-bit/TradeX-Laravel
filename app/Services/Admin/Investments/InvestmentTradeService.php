@@ -12,6 +12,7 @@ use App\Models\InvestmentEvidence;
 use App\Models\InvestmentFinancialAdjustment;
 use App\Models\InvestmentTrade;
 use App\Support\FixedDecimal;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,6 +36,18 @@ class InvestmentTradeService
 
         if ($investment->status !== Investment::STATUS_ACTIVE) {
             throw new DomainException('Spot trades can be recorded only for an active investment.');
+        }
+
+        $executedAt = CarbonImmutable::parse((string) $data['executed_at']);
+        if (
+            $investment->maturity_date
+            && $executedAt->gt(
+                CarbonImmutable::parse($investment->maturity_date)->endOfDay()
+            )
+        ) {
+            throw new DomainException(
+                'Spot trades cannot be recorded after the investment maturity cutoff.'
+            );
         }
 
         $period = $this->periodResolver->forTimestamp(
