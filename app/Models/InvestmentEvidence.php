@@ -11,6 +11,7 @@ class InvestmentEvidence extends Model
 
     public const TYPE_TRADE_SCREENSHOT = 'TRADE_SCREENSHOT';
     public const TYPE_PNL_STATEMENT = 'PNL_STATEMENT';
+    public const TYPE_TERMINAL_PNL_STATEMENT = 'TERMINAL_PNL_STATEMENT';
     public const TYPE_COST_DOCUMENT = 'COST_DOCUMENT';
 
     public const STATUS_PENDING = 'PENDING_VERIFICATION';
@@ -21,6 +22,7 @@ class InvestmentEvidence extends Model
         'uuid',
         'investment_id',
         'investment_profit_period_id',
+        'investment_settlement_id',
         'investment_trade_id',
         'investment_approved_cost_id',
         'evidence_type',
@@ -60,6 +62,14 @@ class InvestmentEvidence extends Model
         return $this->belongsTo(
             InvestmentProfitPeriod::class,
             'investment_profit_period_id'
+        );
+    }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(
+            InvestmentSettlement::class,
+            'investment_settlement_id'
         );
     }
 

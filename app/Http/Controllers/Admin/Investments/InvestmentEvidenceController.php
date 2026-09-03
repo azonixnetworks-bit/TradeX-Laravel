@@ -5,11 +5,13 @@ namespace App\Http\Controllers\Admin\Investments;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Investments\RejectInvestmentEvidenceRequest;
 use App\Http\Requests\Admin\Investments\UploadInvestmentEvidenceRequest;
+use App\Http\Requests\Admin\Investments\UploadInvestmentTerminalPnlEvidenceRequest;
 use App\Models\AdminUser;
 use App\Models\Investment;
 use App\Models\InvestmentApprovedCost;
 use App\Models\InvestmentEvidence;
 use App\Models\InvestmentProfitPeriod;
+use App\Models\InvestmentSettlement;
 use App\Models\InvestmentTrade;
 use App\Services\Admin\Investments\InvestmentEvidenceService;
 use DomainException;
@@ -60,6 +62,33 @@ class InvestmentEvidenceController extends Controller
             return back()->withErrors(['evidence' => $exception->getMessage()]);
         }
         return back()->with('success', 'P&L statement/screenshot uploaded for Finance verification.');
+    }
+
+    public function terminalStore(
+        UploadInvestmentTerminalPnlEvidenceRequest $request,
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        InvestmentEvidenceService $service
+    ): RedirectResponse {
+        try {
+            $service->storeForTerminalSettlement(
+                $investment,
+                $settlement,
+                $request->file('document'),
+                $request->validated(),
+                $this->admin(),
+                $request
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'evidence' => $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            'Early-termination cutoff P&L evidence uploaded for Finance verification.'
+        );
     }
 
     public function costStore(

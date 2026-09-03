@@ -64,7 +64,6 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
     {
         [$manager, $finance, $investment, $period] = $this->activeFixture();
         $trade = $this->verifiedBuy($investment, $period, 'BTC', '1.000000000000000000', '5000.00000000');
-        $this->verifiedPnlEvidence($investment, $period, 'EARLY-ZERO');
 
         $this->actingAs($manager, 'admin')
             ->post(route('admin.investments.settlements.early.initiate', $investment), [
@@ -88,6 +87,13 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
             ->assertSessionHasErrors('trade');
 
         $settlement = InvestmentSettlement::firstOrFail();
+        $this->verifiedTerminalPnlEvidence(
+            $manager,
+            $finance,
+            $investment,
+            $settlement,
+            'EARLY-ZERO'
+        );
 
         $this->actingAs($manager, 'admin')
             ->post(route('admin.investments.settlements.prepare', [$investment, $settlement]))
@@ -135,7 +141,6 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
     {
         [$manager, $finance, $investment, $period] = $this->activeFixture();
         $this->verifiedBuy($investment, $period, 'BTC', '1.000000000000000000', '5000.00000000');
-        $this->verifiedPnlEvidence($investment, $period, 'FLOW');
 
         $this->actingAs($manager, 'admin')->post(
             route('admin.investments.settlements.early.initiate', $investment),
@@ -143,6 +148,13 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         );
 
         $settlement = InvestmentSettlement::firstOrFail();
+        $this->verifiedTerminalPnlEvidence(
+            $manager,
+            $finance,
+            $investment,
+            $settlement,
+            'FLOW'
+        );
         $this->actingAs($manager, 'admin')->post(
             route('admin.investments.settlements.prepare', [$investment, $settlement])
         );
@@ -227,9 +239,8 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
 
     public function test_early_termination_terminal_realized_profit_uses_loss_recovery_and_eighty_twenty_split(): void
     {
-        [$manager, , $investment, $period] = $this->activeFixture();
+        [$manager, $finance, $investment, $period] = $this->activeFixture();
         $this->verifiedSellProfit($investment, $period, '1000.00000000');
-        $this->verifiedPnlEvidence($investment, $period, 'TERMINAL-PROFIT');
 
         $this->actingAs($manager, 'admin')->post(
             route('admin.investments.settlements.early.initiate', $investment),
@@ -237,6 +248,13 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         );
 
         $settlement = InvestmentSettlement::firstOrFail();
+        $this->verifiedTerminalPnlEvidence(
+            $manager,
+            $finance,
+            $investment,
+            $settlement,
+            'TERMINAL-PROFIT'
+        );
         $this->actingAs($manager, 'admin')
             ->post(route('admin.investments.settlements.prepare', [$investment, $settlement]))
             ->assertRedirect();
@@ -252,6 +270,11 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
     {
         [$manager, , $investment, $period] = $this->activeFixture();
         $this->verifiedSellProfit($investment, $period, '500.00000000');
+        $this->verifiedPnlEvidence(
+            $investment,
+            $period,
+            'GENERIC-DOES-NOT-SATISFY-CUTOFF'
+        );
 
         $this->actingAs($manager, 'admin')->post(
             route('admin.investments.settlements.early.initiate', $investment),
@@ -281,6 +304,171 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         $this->assertDatabaseCount('investment_trades', 0);
     }
 
+    public function test_post_approval_payouts_cannot_be_backdated_and_terminal_profit_cannot_be_recorded_twice(): void
+    {
+        [$manager, $finance, $investment, $period] = $this->activeFixture();
+        $this->verifiedSellProfit(
+            $investment,
+            $period,
+            '1000.00000000'
+        );
+
+        $this->actingAs($manager, 'admin')->post(
+            route(
+                'admin.investments.settlements.early.initiate',
+                $investment
+            ),
+            [
+                'reason' =>
+                    'Customer requested early termination for payout chronology test.',
+            ]
+        );
+
+        $settlement = InvestmentSettlement::firstOrFail();
+
+        $this->verifiedTerminalPnlEvidence(
+            $manager,
+            $finance,
+            $investment,
+            $settlement,
+            'PAYOUT-GUARD'
+        );
+
+        $this->actingAs($manager, 'admin')->post(
+            route(
+                'admin.investments.settlements.prepare',
+                [$investment, $settlement]
+            )
+        );
+
+        $settlement->refresh();
+
+        foreach ($settlement->assets()->orderBy('id')->get() as $asset) {
+            $network = $asset->asset_network ?: 'TRC20';
+            $wallet = strcasecmp($network, 'TRC20') === 0
+                ? 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE'
+                : 'verified-wallet-'.$asset->id;
+
+            $this->actingAs($manager, 'admin')->post(
+                route(
+                    'admin.investments.settlements.wallet.record',
+                    [$investment, $settlement, $asset]
+                ),
+                [
+                    'payout_network' => $network,
+                    'destination_wallet' => $wallet,
+                    'wallet_reference' =>
+                        'PAYOUT-GUARD-'.$asset->id,
+                ]
+            );
+
+            $this->actingAs($finance, 'admin')->post(
+                route(
+                    'admin.investments.settlements.wallet.verify',
+                    [$investment, $settlement, $asset]
+                )
+            );
+        }
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.approve',
+                    [$investment, $settlement]
+                )
+            )
+            ->assertRedirect();
+
+        $settlement->refresh();
+        $backdated = $settlement->approved_at
+            ->copy()
+            ->subMinute()
+            ->toDateTimeString();
+
+        $firstAsset = $settlement->assets()
+            ->orderBy('id')
+            ->firstOrFail();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.asset_payout.record',
+                    [
+                        $investment,
+                        $settlement,
+                        $firstAsset,
+                    ]
+                ),
+                [
+                    'network_fee_asset_symbol' =>
+                        $firstAsset->asset_symbol,
+                    'network_fee_units' => '0',
+                    'txid' =>
+                        'backdated-asset-'
+                        .Str::lower(Str::random(24)),
+                    'occurred_at' => $backdated,
+                ]
+            )
+            ->assertSessionHasErrors('payment');
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_profit.record',
+                    [$investment, $settlement]
+                ),
+                [
+                    'txid' =>
+                        str_repeat('e', 64),
+                    'occurred_at' => $backdated,
+                ]
+            )
+            ->assertSessionHasErrors('payment');
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_profit.record',
+                    [$investment, $settlement]
+                ),
+                [
+                    'txid' =>
+                        str_repeat('f', 64),
+                    'occurred_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertRedirect();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_profit.record',
+                    [$investment, $settlement]
+                ),
+                [
+                    'txid' =>
+                        str_repeat('a', 64),
+                    'occurred_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertSessionHasErrors('payment');
+
+        $this->assertSame(
+            1,
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'type',
+                    InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                )
+                ->count()
+        );
+    }
     private function activeFixture(): array
     {
         $manager = $this->adminWithRole('INVESTMENT_ADMIN', 'phase4-manager');
@@ -500,6 +688,57 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         ]);
     }
 
+    private function verifiedTerminalPnlEvidence(
+        AdminUser $manager,
+        AdminUser $finance,
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        string $suffix
+    ): InvestmentEvidence {
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_pnl_evidence.store',
+                    [$investment, $settlement]
+                ),
+                [
+                    'document' =>
+                        UploadedFile::fake()->create(
+                            'terminal-'.$suffix.'.pdf',
+                            10,
+                            'application/pdf'
+                        ),
+                    'account_reference' =>
+                        'ACCOUNT-'.$suffix,
+                    'source_reference' =>
+                        'SOURCE-'.$suffix,
+                ]
+            )
+            ->assertRedirect();
+
+        $evidence = InvestmentEvidence::query()
+            ->where(
+                'investment_settlement_id',
+                $settlement->getKey()
+            )
+            ->where(
+                'evidence_type',
+                InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT
+            )
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.evidence.verify',
+                    [$investment, $evidence]
+                )
+            )
+            ->assertRedirect();
+
+        return $evidence->fresh();
+    }
     private function verifiedPnlEvidence(
         Investment $investment,
         InvestmentProfitPeriod $period,

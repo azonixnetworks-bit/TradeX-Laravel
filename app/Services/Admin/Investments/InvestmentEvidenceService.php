@@ -10,6 +10,7 @@ use App\Models\InvestmentEvidence;
 use App\Models\InvestmentProfitPeriod;
 use App\Models\InvestmentSettlement;
 use App\Models\InvestmentTrade;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -63,6 +64,160 @@ class InvestmentEvidenceService
             data: $data,
             admin: $admin,
             request: $request
+        );
+    }
+
+    public function storeForTerminalSettlement(
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        UploadedFile $file,
+        array $data,
+        AdminUser $admin,
+        Request $request
+    ): InvestmentEvidence {
+        abort_unless(
+            $admin->hasPermission('investments.evidence.manage'),
+            403
+        );
+
+        abort_unless(
+            $settlement->investment_id
+                === $investment->getKey(),
+            404
+        );
+
+        if (
+            $settlement->type
+            !== InvestmentSettlement::TYPE_EARLY_TERMINATION
+        ) {
+            throw new DomainException(
+                'Cutoff P&L evidence applies only to early termination.'
+            );
+        }
+
+        if (
+            in_array(
+                $settlement->status,
+                [
+                    InvestmentSettlement::STATUS_APPROVED,
+                    InvestmentSettlement::STATUS_IN_PROGRESS,
+                    InvestmentSettlement::STATUS_SETTLED,
+                ],
+                true
+            )
+        ) {
+            throw new DomainException(
+                'Approved terminal settlement evidence is immutable.'
+            );
+        }
+
+        if (
+            ! filled($data['account_reference'] ?? null)
+            || ! filled($data['source_reference'] ?? null)
+        ) {
+            throw new DomainException(
+                'Terminal P&L evidence requires both account reference and source/reference identifiers.'
+            );
+        }
+
+        $cutoff = CarbonImmutable::parse(
+            $settlement->cutoff_at
+        );
+
+        $lastFinalized = $investment->profitPeriods()
+            ->whereDate(
+                'period_end',
+                '<=',
+                $cutoff->toDateString()
+            )
+            ->whereIn(
+                'status',
+                [
+                    InvestmentProfitPeriod::STATUS_SETTLED,
+                    InvestmentProfitPeriod::STATUS_NO_DISTRIBUTION,
+                    InvestmentProfitPeriod::STATUS_LOSS_CARRIED_FORWARD,
+                    InvestmentProfitPeriod::STATUS_PAID,
+                    InvestmentProfitPeriod::STATUS_NO_PROFIT,
+                ]
+            )
+            ->orderByDesc('sequence')
+            ->first();
+
+        $windowStart = $lastFinalized
+            ? CarbonImmutable::parse(
+                $lastFinalized->period_end
+            )->addDay()->startOfDay()
+            : CarbonImmutable::parse(
+                $investment->start_date
+            )->startOfDay();
+
+        if ($windowStart->gt($cutoff)) {
+            throw new DomainException(
+                'No open terminal profit window exists for this cutoff.'
+            );
+        }
+
+        $period = $investment->profitPeriods()
+            ->whereDate(
+                'period_start',
+                '<=',
+                $cutoff->toDateString()
+            )
+            ->whereDate(
+                'period_end',
+                '>=',
+                $cutoff->toDateString()
+            )
+            ->first();
+
+        if (! $period instanceof InvestmentProfitPeriod) {
+            throw new DomainException(
+                'Unable to resolve the profit-review period for the terminal cutoff evidence.'
+            );
+        }
+
+        $activeEvidenceExists =
+            InvestmentEvidence::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'evidence_type',
+                    InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT
+                )
+                ->whereIn(
+                    'status',
+                    [
+                        InvestmentEvidence::STATUS_PENDING,
+                        InvestmentEvidence::STATUS_VERIFIED,
+                    ]
+                )
+                ->exists();
+
+        if ($activeEvidenceExists) {
+            throw new DomainException(
+                'A pending or verified terminal cutoff P&L evidence record already exists for this settlement.'
+            );
+        }
+
+        $data['period_start_override'] =
+            $windowStart->toDateString();
+        $data['period_end_override'] =
+            $cutoff->toDateString();
+
+        return $this->store(
+            investment: $investment,
+            period: $period,
+            trade: null,
+            cost: null,
+            type:
+                InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT,
+            file: $file,
+            data: $data,
+            admin: $admin,
+            request: $request,
+            settlement: $settlement
         );
     }
 
@@ -192,7 +347,8 @@ class InvestmentEvidenceService
         UploadedFile $file,
         array $data,
         AdminUser $admin,
-        Request $request
+        Request $request,
+        ?InvestmentSettlement $settlement = null
     ): InvestmentEvidence {
         if (
             InvestmentSettlement::query()
@@ -231,13 +387,19 @@ class InvestmentEvidenceService
                 'uuid' => $uuid,
                 'investment_id' => $investment->getKey(),
                 'investment_profit_period_id' => $period?->getKey(),
+                'investment_settlement_id' =>
+                    $settlement?->getKey(),
                 'investment_trade_id' => $trade?->getKey(),
                 'investment_approved_cost_id' => $cost?->getKey(),
                 'evidence_type' => $type,
                 'account_reference' => $data['account_reference'] ?? null,
                 'source_reference' => $data['source_reference'] ?? null,
-                'period_start' => $period?->period_start?->toDateString(),
-                'period_end' => $period?->period_end?->toDateString(),
+                'period_start' =>
+                    $data['period_start_override']
+                    ?? $period?->period_start?->toDateString(),
+                'period_end' =>
+                    $data['period_end_override']
+                    ?? $period?->period_end?->toDateString(),
                 'document_disk' => $disk,
                 'document_path' => $path,
                 'document_mime_type' => $file->getMimeType() ?: 'application/octet-stream',
@@ -319,6 +481,8 @@ class InvestmentEvidenceService
             newValues: array_merge([
                 'investment_id' => $evidence->investment_id,
                 'profit_period_id' => $evidence->investment_profit_period_id,
+                'settlement_id' =>
+                    $evidence->investment_settlement_id,
                 'trade_id' => $evidence->investment_trade_id,
                 'cost_id' => $evidence->investment_approved_cost_id,
                 'status' => $evidence->status,

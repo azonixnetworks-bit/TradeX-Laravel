@@ -67,6 +67,7 @@ class InvestmentSettlementProfitService
 
         $this->assertTerminalLedgerReady(
             $investment,
+            $settlement,
             $currentPeriod,
             $windowStart,
             $cutoff
@@ -180,9 +181,18 @@ class InvestmentSettlementProfitService
         );
 
         $pnlEvidence = InvestmentEvidence::query()
-            ->where('investment_profit_period_id', $currentPeriod->getKey())
-            ->where('evidence_type', InvestmentEvidence::TYPE_PNL_STATEMENT)
-            ->where('status', InvestmentEvidence::STATUS_VERIFIED)
+            ->where(
+                'investment_settlement_id',
+                $settlement->getKey()
+            )
+            ->where(
+                'evidence_type',
+                InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT
+            )
+            ->where(
+                'status',
+                InvestmentEvidence::STATUS_VERIFIED
+            )
             ->orderBy('id')
             ->get();
 
@@ -302,6 +312,7 @@ class InvestmentSettlementProfitService
 
     private function assertTerminalLedgerReady(
         Investment $investment,
+        InvestmentSettlement $settlement,
         InvestmentProfitPeriod $currentPeriod,
         CarbonImmutable $windowStart,
         CarbonImmutable $cutoff
@@ -369,18 +380,43 @@ class InvestmentSettlementProfitService
         }
 
         $pnlEvidence = InvestmentEvidence::query()
-            ->where('investment_profit_period_id', $currentPeriod->getKey())
-            ->where('evidence_type', InvestmentEvidence::TYPE_PNL_STATEMENT)
-            ->where('status', InvestmentEvidence::STATUS_VERIFIED)
+            ->where(
+                'investment_settlement_id',
+                $settlement->getKey()
+            )
+            ->where(
+                'evidence_type',
+                InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT
+            )
+            ->where(
+                'status',
+                InvestmentEvidence::STATUS_VERIFIED
+            )
+            ->orderBy('id')
             ->get();
 
         if ($pnlEvidence->isEmpty()) {
             throw new DomainException(
-                'A Finance-verified P&L statement/screenshot is required for the early-termination cutoff window.'
+                'A Finance-verified settlement-specific P&L statement/screenshot is required for the exact early-termination cutoff window.'
             );
         }
 
         foreach ($pnlEvidence as $evidence) {
+            if (
+                ! filled($evidence->account_reference)
+                || ! filled($evidence->source_reference)
+                || ! $evidence->period_start
+                || ! $evidence->period_end
+                || $evidence->period_start->toDateString()
+                    !== $windowStart->toDateString()
+                || $evidence->period_end->toDateString()
+                    !== $cutoff->toDateString()
+            ) {
+                throw new DomainException(
+                    'Terminal P&L evidence metadata does not match the exact cutoff window/account/reference requirements.'
+                );
+            }
+
             $this->assertEvidenceIntegrity($evidence);
         }
     }

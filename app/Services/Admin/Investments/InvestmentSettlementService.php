@@ -678,6 +678,28 @@ class InvestmentSettlementService
             );
         }
 
+        if (! $settlement->approved_at) {
+            throw new DomainException(
+                'Settlement Finance approval timestamp is missing.'
+            );
+        }
+
+        $occurredAt = CarbonImmutable::parse(
+            (string) $data['occurred_at']
+        );
+
+        if (
+            $occurredAt->lt(
+                CarbonImmutable::parse(
+                    $settlement->approved_at
+                )
+            )
+        ) {
+            throw new DomainException(
+                'Settlement payout cannot be backdated before Finance approval.'
+            );
+        }
+
         $feeAsset = strtoupper(
             trim(
                 (string) (
@@ -758,6 +780,7 @@ class InvestmentSettlementService
                     $data,
                     $admin,
                     $request,
+                    $occurredAt,
                     $feeAsset,
                     $feeUnits,
                     $deduct,
@@ -788,9 +811,15 @@ class InvestmentSettlementService
                             ],
                             true
                         )
+                        || ! $lockedSettlement->approved_at
+                        || $occurredAt->lt(
+                            CarbonImmutable::parse(
+                                $lockedSettlement->approved_at
+                            )
+                        )
                     ) {
                         throw new DomainException(
-                            'Settlement state changed before payment recording.'
+                            'Settlement state/approval chronology changed before payment recording.'
                         );
                     }
 
@@ -989,13 +1018,30 @@ class InvestmentSettlementService
                 );
 
                 if (
-                    $lockedAsset->status
+                    ! in_array(
+                        $lockedSettlement->status,
+                        [
+                            InvestmentSettlement::STATUS_APPROVED,
+                            InvestmentSettlement::STATUS_IN_PROGRESS,
+                        ],
+                        true
+                    )
+                    || ! $lockedSettlement->approved_at
+                    || $lockedAsset->status
                         !== InvestmentSettlementAsset::STATUS_PAYMENT_RECORDED
                     || $lockedTransaction->status
                         !== InvestmentTransaction::STATUS_PENDING
+                    || ! $lockedTransaction->occurred_at
+                    || CarbonImmutable::parse(
+                        $lockedTransaction->occurred_at
+                    )->lt(
+                        CarbonImmutable::parse(
+                            $lockedSettlement->approved_at
+                        )
+                    )
                 ) {
                     throw new DomainException(
-                        'Only a pending recorded settlement asset payment can be verified.'
+                        'Only a post-approval pending settlement asset payment can be verified.'
                     );
                 }
 
@@ -1092,151 +1138,206 @@ class InvestmentSettlementService
             $settlement
         );
 
-        if (
-            $settlement->type
-            !== InvestmentSettlement::TYPE_EARLY_TERMINATION
-        ) {
-            throw new DomainException(
-                'Terminal accrued-profit payout applies only to early termination.'
-            );
-        }
-
-        if (
-            ! in_array(
-                $settlement->status,
-                [
-                    InvestmentSettlement::STATUS_APPROVED,
-                    InvestmentSettlement::STATUS_IN_PROGRESS,
-                ],
-                true
-            )
-        ) {
-            throw new DomainException(
-                'Terminal profit payout can be recorded only after settlement approval.'
-            );
-        }
-
-        $amount = FixedDecimal::normalize(
-            (string) $settlement
-                ->customer_profit_share_usdt
+        $occurredAt = CarbonImmutable::parse(
+            (string) $data['occurred_at']
         );
-
-        if (! FixedDecimal::isPositive($amount)) {
-            throw new DomainException(
-                'This early-termination settlement has no customer terminal profit to pay.'
-            );
-        }
-
-        if (
-            ! $investment->payout_wallet_verified_at
-            || $investment->payout_wallet_network
-                !== 'TRC20'
-            || ! filled(
-                $investment->payout_wallet_address
-            )
-        ) {
-            throw new DomainException(
-                'The customer verified USDT TRC20 payout wallet is required for terminal profit payout.'
-            );
-        }
-
-        $existing = InvestmentTransaction::query()
-            ->where(
-                'investment_settlement_id',
-                $settlement->getKey()
-            )
-            ->where(
-                'type',
-                InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
-            )
-            ->whereIn(
-                'status',
-                [
-                    InvestmentTransaction::STATUS_PENDING,
-                    InvestmentTransaction::STATUS_VERIFIED,
-                ]
-            )
-            ->exists();
-
-        if ($existing) {
-            throw new DomainException(
-                'A terminal profit payout already exists for this settlement.'
-            );
-        }
 
         $txid = strtolower(
             trim((string) $data['txid'])
         );
 
-        if (
-            InvestmentTransaction::query()
-                ->where('network', 'TRC20')
-                ->where('txid', $txid)
-                ->exists()
-        ) {
-            throw new DomainException(
-                'This TRC20 transaction ID is already recorded.'
-            );
-        }
-
         try {
-            $transaction =
-                InvestmentTransaction::query()
-                    ->create([
-                        'uuid' =>
-                            Str::uuid()->toString(),
-                        'investment_id' =>
-                            $investment->getKey(),
-                        'investment_settlement_id' =>
-                            $settlement->getKey(),
-                        'investment_settlement_asset_id' =>
-                            null,
-                        'direction' =>
-                            InvestmentTransaction::DIRECTION_OUT,
-                        'type' =>
-                            InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT,
-                        'asset_symbol' => 'USDT',
-                        'amount' => $amount,
-                        'usdt_equivalent' => $amount,
-                        'network' => 'TRC20',
-                        'from_address' =>
-                            $data['from_address']
-                            ?? null,
-                        'to_address' =>
-                            $investment
-                                ->payout_wallet_address,
-                        'txid' => $txid,
+            return DB::transaction(
+                function () use (
+                    $investment,
+                    $settlement,
+                    $data,
+                    $admin,
+                    $request,
+                    $occurredAt,
+                    $txid
+                ): InvestmentTransaction {
+                    $lockedInvestment =
+                        Investment::query()
+                            ->lockForUpdate()
+                            ->findOrFail(
+                                $investment->getKey()
+                            );
+
+                    $lockedSettlement =
+                        InvestmentSettlement::query()
+                            ->lockForUpdate()
+                            ->findOrFail(
+                                $settlement->getKey()
+                            );
+
+                    $this->assertSettlement(
+                        $lockedInvestment,
+                        $lockedSettlement
+                    );
+
+                    if (
+                        $lockedSettlement->type
+                        !== InvestmentSettlement::TYPE_EARLY_TERMINATION
+                    ) {
+                        throw new DomainException(
+                            'Terminal accrued-profit payout applies only to early termination.'
+                        );
+                    }
+
+                    if (
+                        ! in_array(
+                            $lockedSettlement->status,
+                            [
+                                InvestmentSettlement::STATUS_APPROVED,
+                                InvestmentSettlement::STATUS_IN_PROGRESS,
+                            ],
+                            true
+                        )
+                        || ! $lockedSettlement->approved_at
+                    ) {
+                        throw new DomainException(
+                            'Terminal profit payout can be recorded only after Finance settlement approval.'
+                        );
+                    }
+
+                    if (
+                        $occurredAt->lt(
+                            CarbonImmutable::parse(
+                                $lockedSettlement->approved_at
+                            )
+                        )
+                    ) {
+                        throw new DomainException(
+                            'Terminal profit payout cannot be backdated before Finance approval.'
+                        );
+                    }
+
+                    $amount = FixedDecimal::normalize(
+                        (string) $lockedSettlement
+                            ->customer_profit_share_usdt
+                    );
+
+                    if (! FixedDecimal::isPositive($amount)) {
+                        throw new DomainException(
+                            'This early-termination settlement has no customer terminal profit to pay.'
+                        );
+                    }
+
+                    if (
+                        ! $lockedInvestment
+                            ->payout_wallet_verified_at
+                        || $lockedInvestment
+                            ->payout_wallet_network
+                            !== 'TRC20'
+                        || ! filled(
+                            $lockedInvestment
+                                ->payout_wallet_address
+                        )
+                    ) {
+                        throw new DomainException(
+                            'The customer verified USDT TRC20 payout wallet is required for terminal profit payout.'
+                        );
+                    }
+
+                    $existing =
+                        InvestmentTransaction::query()
+                            ->where(
+                                'investment_settlement_id',
+                                $lockedSettlement->getKey()
+                            )
+                            ->where(
+                                'type',
+                                InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                            )
+                            ->whereIn(
+                                'status',
+                                [
+                                    InvestmentTransaction::STATUS_PENDING,
+                                    InvestmentTransaction::STATUS_VERIFIED,
+                                ]
+                            )
+                            ->exists();
+
+                    if ($existing) {
+                        throw new DomainException(
+                            'A terminal profit payout already exists for this settlement.'
+                        );
+                    }
+
+                    if (
+                        InvestmentTransaction::query()
+                            ->where('network', 'TRC20')
+                            ->where('txid', $txid)
+                            ->exists()
+                    ) {
+                        throw new DomainException(
+                            'This TRC20 transaction ID is already recorded.'
+                        );
+                    }
+
+                    $transaction =
+                        InvestmentTransaction::query()
+                            ->create([
+                                'uuid' =>
+                                    Str::uuid()->toString(),
+                                'investment_id' =>
+                                    $lockedInvestment
+                                        ->getKey(),
+                                'investment_settlement_id' =>
+                                    $lockedSettlement
+                                        ->getKey(),
+                                'investment_settlement_asset_id' =>
+                                    null,
+                                'direction' =>
+                                    InvestmentTransaction::DIRECTION_OUT,
+                                'type' =>
+                                    InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT,
+                                'asset_symbol' => 'USDT',
+                                'amount' => $amount,
+                                'usdt_equivalent' => $amount,
+                                'network' => 'TRC20',
+                                'from_address' =>
+                                    $data['from_address']
+                                    ?? null,
+                                'to_address' =>
+                                    $lockedInvestment
+                                        ->payout_wallet_address,
+                                'txid' => $txid,
+                                'status' =>
+                                    InvestmentTransaction::STATUS_PENDING,
+                                'occurred_at' =>
+                                    $occurredAt,
+                                'recorded_by_admin_id' =>
+                                    $admin->getKey(),
+                                'notes' =>
+                                    $data['notes']
+                                    ?? null,
+                            ]);
+
+                    $lockedSettlement->forceFill([
                         'status' =>
-                            InvestmentTransaction::STATUS_PENDING,
-                        'occurred_at' =>
-                            $data['occurred_at'],
-                        'recorded_by_admin_id' =>
-                            $admin->getKey(),
-                        'notes' =>
-                            $data['notes']
-                            ?? null,
-                    ]);
+                            InvestmentSettlement::STATUS_IN_PROGRESS,
+                    ])->save();
 
-            $settlement->forceFill([
-                'status' =>
-                    InvestmentSettlement::STATUS_IN_PROGRESS,
-            ])->save();
+                    $this->audit(
+                        $admin,
+                        $request,
+                        'INVESTMENT_TERMINAL_PROFIT_PAYOUT_RECORDED',
+                        $lockedSettlement,
+                        [
+                            'transaction_id' =>
+                                $transaction->getKey(),
+                            'amount_usdt' => $amount,
+                            'network' => 'TRC20',
+                            'txid' => $txid,
+                        ]
+                    );
 
-            $this->audit(
-                $admin,
-                $request,
-                'INVESTMENT_TERMINAL_PROFIT_PAYOUT_RECORDED',
-                $settlement,
-                [
-                    'transaction_id' =>
-                        $transaction->getKey(),
-                    'amount_usdt' => $amount,
-                    'network' => 'TRC20',
-                    'txid' => $txid,
-                ]
+                    return $transaction;
+                },
+                3
             );
-
-            return $transaction;
         } catch (QueryException $exception) {
             if (
                 str_contains(
@@ -1254,7 +1355,6 @@ class InvestmentSettlementService
             throw $exception;
         }
     }
-
     public function verifyTerminalProfitPayout(
         Investment $investment,
         InvestmentSettlement $settlement,
@@ -1289,6 +1389,13 @@ class InvestmentSettlementService
                 $admin,
                 $request
             ): void {
+                $lockedInvestment =
+                    Investment::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $investment->getKey()
+                        );
+
                 $lockedSettlement =
                     InvestmentSettlement::query()
                         ->lockForUpdate()
@@ -1304,10 +1411,61 @@ class InvestmentSettlementService
                         );
 
                 $this->assertTerminalProfitTransaction(
-                    $investment,
+                    $lockedInvestment,
                     $lockedSettlement,
                     $lockedTransaction
                 );
+
+                if (
+                    ! in_array(
+                        $lockedSettlement->status,
+                        [
+                            InvestmentSettlement::STATUS_APPROVED,
+                            InvestmentSettlement::STATUS_IN_PROGRESS,
+                        ],
+                        true
+                    )
+                    || ! $lockedSettlement->approved_at
+                    || ! $lockedTransaction->occurred_at
+                    || CarbonImmutable::parse(
+                        $lockedTransaction->occurred_at
+                    )->lt(
+                        CarbonImmutable::parse(
+                            $lockedSettlement->approved_at
+                        )
+                    )
+                ) {
+                    throw new DomainException(
+                        'Terminal profit payout is not in a valid post-approval verification state.'
+                    );
+                }
+
+                $anotherVerified =
+                    InvestmentTransaction::query()
+                        ->where(
+                            'investment_settlement_id',
+                            $lockedSettlement->getKey()
+                        )
+                        ->where(
+                            'type',
+                            InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                        )
+                        ->where(
+                            'status',
+                            InvestmentTransaction::STATUS_VERIFIED
+                        )
+                        ->where(
+                            'id',
+                            '<>',
+                            $lockedTransaction->getKey()
+                        )
+                        ->exists();
+
+                if ($anotherVerified) {
+                    throw new DomainException(
+                        'Another terminal profit payout is already verified for this settlement.'
+                    );
+                }
 
                 $expected = FixedDecimal::normalize(
                     (string) $lockedSettlement
@@ -1325,9 +1483,18 @@ class InvestmentSettlementService
                         (string) $lockedTransaction
                             ->amount
                     ) !== $expected
+                    || ! $lockedInvestment
+                        ->payout_wallet_verified_at
+                    || $lockedInvestment
+                        ->payout_wallet_network
+                        !== 'TRC20'
+                    || ! filled(
+                        $lockedInvestment
+                            ->payout_wallet_address
+                    )
                     || (string) $lockedTransaction
                         ->to_address
-                        !== (string) $investment
+                        !== (string) $lockedInvestment
                             ->payout_wallet_address
                     || ! filled(
                         $lockedTransaction->txid
@@ -1362,7 +1529,7 @@ class InvestmentSettlementService
                 );
 
                 $this->finalizeIfComplete(
-                    $investment,
+                    $lockedInvestment,
                     $lockedSettlement,
                     $admin,
                     $request
@@ -1371,7 +1538,6 @@ class InvestmentSettlementService
             3
         );
     }
-
     public function close(
         Investment $investment,
         InvestmentSettlement $settlement,

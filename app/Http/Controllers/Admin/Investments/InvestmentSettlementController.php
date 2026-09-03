@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\Investments\StoreInvestmentSettlementWalletRequest;
 use App\Http\Requests\Admin\Investments\StoreInvestmentTerminalProfitPayoutRequest;
 use App\Models\AdminUser;
 use App\Models\Investment;
+use App\Models\InvestmentEvidence;
 use App\Models\InvestmentSettlement;
 use App\Models\InvestmentSettlementAsset;
 use App\Models\InvestmentTransaction;
@@ -105,6 +106,19 @@ class InvestmentSettlementController extends Controller
                     InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
                 );
 
+        $terminalPnlEvidence =
+            InvestmentEvidence::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'evidence_type',
+                    InvestmentEvidence::TYPE_TERMINAL_PNL_STATEMENT
+                )
+                ->latest('id')
+                ->first();
+
         return view(
             'admin.investments.settlements.show',
             [
@@ -112,6 +126,8 @@ class InvestmentSettlementController extends Controller
                 'settlement' => $settlement,
                 'terminalProfitPayout' =>
                     $terminalProfitPayout,
+                'terminalPnlEvidence' =>
+                    $terminalPnlEvidence,
                 'permissions' => [
                     'prepare' =>
                         $admin->hasPermission(
@@ -142,6 +158,18 @@ class InvestmentSettlementController extends Controller
                         )
                         && $admin->hasPermission(
                             'investments.transactions.verify'
+                        ),
+                    'evidence_manage' =>
+                        $admin->hasPermission(
+                            'investments.evidence.manage'
+                        ),
+                    'evidence_verify' =>
+                        $admin->hasPermission(
+                            'investments.evidence.verify'
+                        ),
+                    'evidence_view' =>
+                        $admin->hasPermission(
+                            'investments.evidence.view'
                         ),
                     'close' =>
                         $admin->hasPermission(

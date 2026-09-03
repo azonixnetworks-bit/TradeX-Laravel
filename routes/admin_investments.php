@@ -207,6 +207,8 @@ Route::prefix('admin/investments')
             ->whereNumber('investment')->name('settlements.early.initiate');
         Route::post('/{investment}/settlements/maturity/prepare', [InvestmentSettlementController::class, 'prepareMaturity'])
             ->whereNumber('investment')->name('settlements.maturity.prepare');
+        Route::post('/{investment}/settlements/{settlement}/terminal-pnl-evidence', [InvestmentEvidenceController::class, 'terminalStore'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.terminal_pnl_evidence.store');
         Route::post('/{investment}/settlements/{settlement}/prepare', [InvestmentSettlementController::class, 'prepare'])
             ->whereNumber('investment')->whereNumber('settlement')->name('settlements.prepare');
         Route::post('/{investment}/settlements/{settlement}/approve', [InvestmentSettlementController::class, 'approve'])

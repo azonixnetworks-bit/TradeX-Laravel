@@ -14,7 +14,11 @@ class StoreInvestmentTerminalProfitPayoutRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'txid' => ['required', 'string', 'min:6', 'max:190'],
+            'txid' => [
+                'required',
+                'string',
+                'regex:/^[A-Fa-f0-9]{64}$/',
+            ],
             'from_address' => ['nullable', 'string', 'max:255'],
             'occurred_at' => ['required', 'date', 'before_or_equal:now'],
             'notes' => ['nullable', 'string', 'max:2000'],

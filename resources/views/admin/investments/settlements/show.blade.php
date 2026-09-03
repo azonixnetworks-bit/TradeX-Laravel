@@ -32,6 +32,120 @@
     <div class="user-stat-card"><span>Principal State</span><strong>{{ $investment->principal_settlement_status }}</strong></div>
 </div>
 
+@if($settlement->type === \App\Models\InvestmentSettlement::TYPE_EARLY_TERMINATION)
+<section class="panel users-panel" style="margin-bottom:18px;">
+    <div class="panel-header">
+        <div>
+            <div class="panel-eyebrow">CUTOFF EVIDENCE</div>
+            <h2>Early-Termination P&L Evidence</h2>
+        </div>
+    </div>
+    <div style="padding:20px;">
+        <p>
+            The evidence must cover the exact terminal window through
+            <strong>{{ $settlement->cutoff_at?->format('Y-m-d H:i') }}</strong>,
+            include the trading account/reference, and be Finance verified.
+            A normal scheduled-period P&L document does not satisfy this gate.
+        </p>
+
+        @if($terminalPnlEvidence)
+            <p>
+                <strong>Status:</strong> {{ $terminalPnlEvidence->status }}<br>
+                <strong>Window:</strong>
+                {{ $terminalPnlEvidence->period_start?->toDateString() }}
+                →
+                {{ $terminalPnlEvidence->period_end?->toDateString() }}<br>
+                <strong>Account:</strong>
+                {{ $terminalPnlEvidence->account_reference }}<br>
+                <strong>Source:</strong>
+                {{ $terminalPnlEvidence->source_reference }}<br>
+                <strong>SHA-256:</strong>
+                <code>{{ $terminalPnlEvidence->document_sha256 }}</code>
+            </p>
+
+            @if($permissions['evidence_view'])
+                <a
+                    class="secondary-btn"
+                    href="{{ route('admin.investments.evidence.download', [$investment, $terminalPnlEvidence]) }}"
+                >Download Cutoff Evidence</a>
+            @endif
+
+            @if(
+                $permissions['evidence_verify']
+                && $terminalPnlEvidence->status
+                    === \App\Models\InvestmentEvidence::STATUS_PENDING
+            )
+                <form
+                    method="POST"
+                    action="{{ route('admin.investments.evidence.verify', [$investment, $terminalPnlEvidence]) }}"
+                    style="margin-top:12px;"
+                >
+                    @csrf
+                    <button class="primary-btn" type="submit">
+                        Finance Verify Cutoff Evidence
+                    </button>
+                </form>
+            @endif
+        @endif
+
+        @if(
+            $permissions['evidence_manage']
+            && in_array(
+                $settlement->status,
+                [
+                    \App\Models\InvestmentSettlement::STATUS_DRAFT,
+                    \App\Models\InvestmentSettlement::STATUS_PREPARED,
+                ],
+                true
+            )
+            && (
+                ! $terminalPnlEvidence
+                || $terminalPnlEvidence->status
+                    === \App\Models\InvestmentEvidence::STATUS_REJECTED
+            )
+        )
+            <form
+                method="POST"
+                enctype="multipart/form-data"
+                action="{{ route('admin.investments.settlements.terminal_pnl_evidence.store', [$investment, $settlement]) }}"
+                style="margin-top:16px;"
+            >
+                @csrf
+                <div class="filter-item">
+                    <label>Trading Account / Account Reference</label>
+                    <input
+                        type="text"
+                        name="account_reference"
+                        required
+                        maxlength="191"
+                    >
+                </div>
+                <div class="filter-item">
+                    <label>Statement / Broker / Source Reference</label>
+                    <input
+                        type="text"
+                        name="source_reference"
+                        required
+                        maxlength="191"
+                    >
+                </div>
+                <div class="filter-item">
+                    <label>Cutoff P&L Statement / Screenshot</label>
+                    <input
+                        type="file"
+                        name="document"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf,.csv,.txt"
+                        required
+                    >
+                </div>
+                <button class="primary-btn" type="submit">
+                    Upload Cutoff P&L Evidence
+                </button>
+            </form>
+        @endif
+    </div>
+</section>
+@endif
 <section class="panel users-panel" style="margin-bottom:18px;">
     <div class="panel-header"><div><div class="panel-eyebrow">IMMUTABLE SNAPSHOT</div><h2>Terminal Calculation</h2></div></div>
     <div style="padding:20px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;">
