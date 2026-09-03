@@ -314,18 +314,6 @@
                 <span>Activation Queue</span>
             </a>
 
-            @if($admin->hasPermission('investments.profit_periods.view'))
-                {{-- ADMIN-24-PHASE3-V3-SIDEBAR --}}
-                <a
-                    href="{{ route('admin.investments.profit_periods.index') }}"
-                    class="nav-link
-                    {{ request()->routeIs('admin.investments.profit_periods.*') ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">%</span>
-                    <span>Profit Engine</span>
-                </a>
-            @endif
-
         @endif
 
 

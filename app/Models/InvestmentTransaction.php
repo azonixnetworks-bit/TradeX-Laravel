@@ -11,7 +11,6 @@ class InvestmentTransaction extends Model
     public const DIRECTION_OUT = 'OUT';
 
     public const TYPE_INVESTMENT_DEPOSIT = 'INVESTMENT_DEPOSIT';
-    public const TYPE_TOP_UP = 'TOP_UP'; // ADMIN-24 Phase 3
     public const TYPE_PROFIT_PAYOUT = 'PROFIT_PAYOUT';
     public const TYPE_PRINCIPAL_RETURN = 'PRINCIPAL_RETURN';
     public const TYPE_EARLY_EXIT_IN_KIND = 'EARLY_EXIT_IN_KIND';
