@@ -7,7 +7,9 @@ use App\Http\Requests\Admin\Investments\StoreInvestmentRequest;
 use App\Models\AdminUser;
 use App\Models\Investment;
 use App\Models\InvestmentProduct;
+use App\Models\InvestmentTransaction;
 use App\Services\Admin\Investments\InvestmentAdminService;
+use App\Services\Admin\Investments\InvestmentLifecycleService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -110,9 +112,12 @@ class InvestmentController extends Controller
             );
     }
 
-    public function show(Investment $investment): View
-    {
+    public function show(
+        Investment $investment,
+        InvestmentLifecycleService $lifecycle
+    ): View {
         $admin = $this->admin();
+
         abort_unless(
             $admin->hasPermission('investments.view'),
             403
@@ -123,28 +128,105 @@ class InvestmentController extends Controller
             'user.latestKycSubmission',
             'product',
             'latestAgreement',
+            'agreements' =>
+                fn ($query) => $query->latest('version'),
+            'riskAcceptances' =>
+                fn ($query) => $query->latest('id'),
             'transactions' =>
-                fn ($query) => $query->latest('id')->limit(20),
+                fn ($query) => $query->latest('id')->limit(30),
             'profitPeriods' =>
                 fn ($query) => $query->orderBy('sequence'),
             'assetAllocations' =>
                 fn ($query) => $query->latest('id')->limit(20),
         ]);
 
+        $verifiedDeposit =
+            $investment->transactions
+                ->first(
+                    fn ($transaction) =>
+                        $transaction->type
+                            === InvestmentTransaction::TYPE_INVESTMENT_DEPOSIT
+                        && $transaction->status
+                            === InvestmentTransaction::STATUS_VERIFIED
+                );
+
+        $pendingDeposit =
+            $investment->transactions
+                ->first(
+                    fn ($transaction) =>
+                        $transaction->type
+                            === InvestmentTransaction::TYPE_INVESTMENT_DEPOSIT
+                        && $transaction->status
+                            === InvestmentTransaction::STATUS_PENDING
+                );
+
+        $riskVersion = (string) config(
+            'tradex_investments.risk.version'
+        );
+
+        $currentRiskAcceptance =
+            $investment->riskAcceptances
+                ->firstWhere(
+                    'disclosure_version',
+                    $riskVersion
+                );
+
         return view('admin.investments.show', [
             'investment' => $investment,
-            'canViewCustomer' =>
-                $admin->hasPermission(
-                    'investments.customers.view'
+            'verifiedDeposit' => $verifiedDeposit,
+            'pendingDeposit' => $pendingDeposit,
+            'currentRiskAcceptance' =>
+                $currentRiskAcceptance,
+            'riskVersion' => $riskVersion,
+            'riskStatements' =>
+                (array) config(
+                    'tradex_investments.risk.statements',
+                    []
                 ),
-            'canManageAgreements' =>
-                $admin->hasPermission(
-                    'investments.agreements.manage'
-                ),
-            'canViewTransactions' =>
-                $admin->hasPermission(
-                    'investments.transactions.view'
-                ),
+            'readiness' =>
+                $lifecycle->readiness($investment),
+            'permissions' => [
+                'view_customer' =>
+                    $admin->hasPermission(
+                        'investments.customers.view'
+                    ),
+                'deposit_record' =>
+                    $admin->hasPermission(
+                        'investments.deposits.record'
+                    ),
+                'deposit_verify' =>
+                    $admin->hasPermission(
+                        'investments.deposits.verify'
+                    ),
+                'risk_record' =>
+                    $admin->hasPermission(
+                        'investments.risk_acceptance.record'
+                    ),
+                'agreements_view' =>
+                    $admin->hasPermission(
+                        'investments.agreements.view'
+                    ),
+                'agreements_manage' =>
+                    $admin->hasPermission(
+                        'investments.agreements.manage'
+                    ),
+                'agreements_verify' =>
+                    $admin->hasPermission(
+                        'investments.agreements.verify'
+                    ),
+                'wallet_verify' =>
+                    $admin->hasPermission(
+                        'investments.wallets.verify'
+                    ),
+                'activate' =>
+                    $admin->hasPermission(
+                        'investments.activate'
+                    ),
+                'transactions_view' =>
+                    $admin->hasPermission(
+                        'investments.transactions.view'
+                    ),
+            ],
         ]);
     }
 

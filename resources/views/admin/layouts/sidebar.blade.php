@@ -283,6 +283,37 @@
                 </a>
             @endif
 
+            @if($admin->hasPermission('investments.deposits.view'))
+                <a
+                    href="{{ route('admin.investments.deposits.index') }}"
+                    class="nav-link
+                    {{ request()->routeIs('admin.investments.deposits.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">◉</span>
+                    <span>Deposit Verification</span>
+                </a>
+            @endif
+
+            @if($admin->hasPermission('investments.agreements.view'))
+                <a
+                    href="{{ route('admin.investments.agreements.index') }}"
+                    class="nav-link
+                    {{ request()->routeIs('admin.investments.agreements.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">§</span>
+                    <span>Agreements</span>
+                </a>
+            @endif
+
+            <a
+                href="{{ route('admin.investments.activation.index') }}"
+                class="nav-link
+                {{ request()->routeIs('admin.investments.activation.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">✓</span>
+                <span>Activation Queue</span>
+            </a>
+
         @endif
 
 
