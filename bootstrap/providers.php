@@ -5,6 +5,7 @@ use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\CopyTradingServiceProvider;
 use App\Providers\DashboardServiceProvider;
+use App\Providers\InvestmentServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\LegalPolicyApiServiceProvider;
 use App\Providers\MobileBootstrapApiServiceProvider;
@@ -21,6 +22,7 @@ use App\Providers\SocialAuthApiServiceProvider;
 return [
     AppServiceProvider::class,
     DashboardServiceProvider::class,
+    InvestmentServiceProvider::class,
     AffiliateApiServiceProvider::class,
     NotificationApiServiceProvider::class,
     AccountSettingsApiServiceProvider::class,

@@ -46,6 +46,13 @@ class AdminRoleSeeder extends Seeder
                 'is_active' => true,
             ],
             [
+                'code' => 'INVESTMENT_ADMIN',
+                'name' => 'Investment Admin',
+                'description' => 'Investment onboarding, agreements, deposit verification, profit preparation and investment operations. Final outgoing payout approval remains separated.',
+                'is_system' => true,
+                'is_active' => true,
+            ],
+            [
                 'code' => 'FINANCE_ADMIN',
                 'name' => 'Finance Admin',
                 'description' => 'Payments, deposits, commissions, payouts and financial reports.',
