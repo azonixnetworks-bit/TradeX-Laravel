@@ -9,6 +9,7 @@ use App\Models\InvestmentApprovedCost;
 use App\Models\InvestmentAssetAllocation;
 use App\Models\InvestmentAssetMovement;
 use App\Models\InvestmentFinancialAdjustment;
+use App\Models\InvestmentProfitPeriod;
 use App\Models\InvestmentTrade;
 use App\Support\FixedDecimal;
 use DomainException;
@@ -151,6 +152,8 @@ class InvestmentAdjustmentService
                 throw new DomainException('Only a verified trade can be corrected by reversal/adjustment.');
             }
 
+            $this->assertTargetPeriodOpen((int) $trade->investment_profit_period_id);
+
             if ($type === InvestmentFinancialAdjustment::TYPE_REVERSAL) {
                 $fee = FixedDecimal::sum(
                     InvestmentApprovedCost::query()
@@ -198,6 +201,8 @@ class InvestmentAdjustmentService
                 throw new DomainException('Only a verified cost can be corrected by reversal/adjustment.');
             }
 
+            $this->assertTargetPeriodOpen((int) $cost->investment_profit_period_id);
+
             return [
                 $cost->investment_profit_period_id,
                 FixedDecimal::normalize('0'),
@@ -208,6 +213,17 @@ class InvestmentAdjustmentService
         }
 
         throw new DomainException('Unsupported financial adjustment target.');
+    }
+
+    private function assertTargetPeriodOpen(int $periodId): void
+    {
+        $period = InvestmentProfitPeriod::query()->findOrFail($periodId);
+
+        if ($period->approved_at !== null) {
+            throw new DomainException(
+                'The original financial period is already approved/finalized and is immutable. Post-approval corrections require a later open-period correction workflow.'
+            );
+        }
     }
 
     private function reverseAssetMovements(

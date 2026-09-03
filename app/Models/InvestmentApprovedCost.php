@@ -10,7 +10,6 @@ class InvestmentApprovedCost extends Model
 {
     public const TYPE_BROKER_COMMISSION = 'BROKER_COMMISSION';
     public const TYPE_EXCHANGE_TRADING_FEE = 'EXCHANGE_TRADING_FEE';
-    public const TYPE_FUNDING_FEE = 'FUNDING_FEE';
     public const TYPE_BLOCKCHAIN_NETWORK_FEE = 'BLOCKCHAIN_NETWORK_FEE';
     public const TYPE_DIRECT_CUSTODY_TRANSACTION_FEE = 'DIRECT_CUSTODY_TRANSACTION_FEE';
 
@@ -49,7 +48,6 @@ class InvestmentApprovedCost extends Model
         return [
             self::TYPE_BROKER_COMMISSION,
             self::TYPE_EXCHANGE_TRADING_FEE,
-            self::TYPE_FUNDING_FEE,
             self::TYPE_BLOCKCHAIN_NETWORK_FEE,
             self::TYPE_DIRECT_CUSTODY_TRANSACTION_FEE,
         ];

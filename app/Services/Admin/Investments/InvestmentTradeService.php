@@ -15,6 +15,7 @@ use App\Support\FixedDecimal;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class InvestmentTradeService
@@ -40,6 +41,12 @@ class InvestmentTradeService
             $investment,
             (string) $data['executed_at']
         );
+
+        if ($period->approved_at !== null) {
+            throw new DomainException(
+                'An approved/finalized profit period is immutable. Record the correction in an open period instead.'
+            );
+        }
 
         $action = strtoupper((string) $data['action']);
         $realizedPnl = $action === InvestmentTrade::ACTION_SELL
@@ -102,15 +109,20 @@ class InvestmentTradeService
                 throw new DomainException('Only a pending spot trade can be verified.');
             }
 
-            $hasVerifiedEvidence = InvestmentEvidence::query()
+            $verifiedEvidences = InvestmentEvidence::query()
                 ->where('investment_trade_id', $lockedTrade->getKey())
                 ->where('status', InvestmentEvidence::STATUS_VERIFIED)
-                ->exists();
+                ->orderBy('id')
+                ->get();
 
-            if (! $hasVerifiedEvidence) {
+            if ($verifiedEvidences->isEmpty()) {
                 throw new DomainException(
                     'Finance must verify at least one screenshot/image or document evidence before the trade can enter the official ledger.'
                 );
+            }
+
+            foreach ($verifiedEvidences as $evidence) {
+                $this->assertEvidenceIntegrity($evidence);
             }
 
             if ($lockedTrade->instrument_type !== InvestmentTrade::INSTRUMENT_SPOT) {
@@ -194,6 +206,7 @@ class InvestmentTradeService
             'source_trade_id' => $trade->getKey(),
             'asset_symbol' => $trade->asset_symbol,
             'network' => $trade->network,
+            'contract_address' => $trade->contract_address,
             'original_units' => FixedDecimal::normalize((string) $trade->quantity, 18),
             'remaining_units' => FixedDecimal::normalize((string) $trade->quantity, 18),
             'allocated_cost_usdt' => FixedDecimal::add(
@@ -231,6 +244,14 @@ class InvestmentTradeService
 
         if ($trade->network !== null) {
             $query->where('network', $trade->network);
+        } else {
+            $query->whereNull('network');
+        }
+
+        if ($trade->contract_address !== null) {
+            $query->where('contract_address', $trade->contract_address);
+        } else {
+            $query->whereNull('contract_address');
         }
 
         $allocations = $query->get();
@@ -283,6 +304,29 @@ class InvestmentTradeService
             ]);
 
             $remainingToSell = FixedDecimal::sub($remainingToSell, $take, 18);
+        }
+    }
+
+    private function assertEvidenceIntegrity(InvestmentEvidence $evidence): void
+    {
+        if (
+            ! $evidence->document_disk
+            || ! $evidence->document_path
+            || ! $evidence->document_sha256
+            || ! Storage::disk($evidence->document_disk)->exists($evidence->document_path)
+        ) {
+            throw new DomainException('Verified investment evidence is unavailable.');
+        }
+
+        $bytes = Storage::disk($evidence->document_disk)->get($evidence->document_path);
+
+        if (
+            ! is_string($bytes)
+            || ! hash_equals($evidence->document_sha256, hash('sha256', $bytes))
+        ) {
+            throw new DomainException(
+                'Verified investment evidence integrity mismatch detected. Finance verification is blocked.'
+            );
         }
     }
 

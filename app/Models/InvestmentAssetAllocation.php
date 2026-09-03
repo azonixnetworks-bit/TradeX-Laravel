@@ -17,6 +17,7 @@ class InvestmentAssetAllocation extends Model
         'source_trade_id',
         'asset_symbol',
         'network',
+        'contract_address',
         'original_units',
         'remaining_units',
         'allocated_cost_usdt',

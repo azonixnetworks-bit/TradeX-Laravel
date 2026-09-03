@@ -19,6 +19,7 @@ class StoreInvestmentApprovedCostRequest extends FormRequest
             'cost_type' => [
                 'required',
                 Rule::in(InvestmentApprovedCost::allowedTypes()),
+                'not_in:FUNDING_FEE',
             ],
             'amount_usdt' => ['required', 'numeric', 'gt:0', 'decimal:0,8'],
             'occurred_at' => ['required', 'date', 'before_or_equal:now'],

@@ -193,6 +193,12 @@ class InvestmentEvidenceService
         AdminUser $admin,
         Request $request
     ): InvestmentEvidence {
+        if ($period?->approved_at !== null) {
+            throw new DomainException(
+                'An approved/finalized profit period is immutable. New evidence cannot be attached to it.'
+            );
+        }
+
         $bytes = file_get_contents($file->getRealPath());
         if ($bytes === false) {
             throw new DomainException('Unable to read investment evidence.');

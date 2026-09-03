@@ -39,6 +39,12 @@ class InvestmentCostService
             (string) $data['occurred_at']
         );
 
+        if ($period->approved_at !== null) {
+            throw new DomainException(
+                'An approved/finalized profit period is immutable. Record the correction in an open period instead.'
+            );
+        }
+
         $cost = InvestmentApprovedCost::query()->create([
             'uuid' => Str::uuid()->toString(),
             'investment_id' => $investment->getKey(),

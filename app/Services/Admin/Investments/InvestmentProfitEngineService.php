@@ -16,6 +16,7 @@ use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class InvestmentProfitEngineService
 {
@@ -71,6 +72,16 @@ class InvestmentProfitEngineService
             $locked = InvestmentProfitPeriod::query()
                 ->lockForUpdate()
                 ->findOrFail($period->getKey());
+
+            if ($locked->approved_at !== null || in_array($locked->status, [
+                InvestmentProfitPeriod::STATUS_APPROVED,
+                InvestmentProfitPeriod::STATUS_PAYMENT_RECORDED,
+                InvestmentProfitPeriod::STATUS_SETTLED,
+                InvestmentProfitPeriod::STATUS_NO_DISTRIBUTION,
+                InvestmentProfitPeriod::STATUS_LOSS_CARRIED_FORWARD,
+            ], true)) {
+                throw new DomainException('An approved/finalized profit period is immutable.');
+            }
 
             $sourceHash = $this->sourceHash($investment, $locked);
             $numbers = $this->calculate($investment, $locked, $previous);
@@ -415,6 +426,39 @@ class InvestmentProfitEngineService
                     'A Finance-verified P&L statement/screenshot is required to finalize a no-trade period.'
                 );
             }
+        }
+
+        $verifiedEvidence = InvestmentEvidence::query()
+            ->where('investment_profit_period_id', $period->getKey())
+            ->where('status', InvestmentEvidence::STATUS_VERIFIED)
+            ->orderBy('id')
+            ->get();
+
+        foreach ($verifiedEvidence as $evidence) {
+            $this->assertEvidenceIntegrity($evidence);
+        }
+    }
+
+    private function assertEvidenceIntegrity(InvestmentEvidence $evidence): void
+    {
+        if (
+            ! $evidence->document_disk
+            || ! $evidence->document_path
+            || ! $evidence->document_sha256
+            || ! Storage::disk($evidence->document_disk)->exists($evidence->document_path)
+        ) {
+            throw new DomainException('Verified investment evidence is unavailable.');
+        }
+
+        $bytes = Storage::disk($evidence->document_disk)->get($evidence->document_path);
+
+        if (
+            ! is_string($bytes)
+            || ! hash_equals($evidence->document_sha256, hash('sha256', $bytes))
+        ) {
+            throw new DomainException(
+                'Verified investment evidence integrity mismatch detected. Profit approval is blocked.'
+            );
         }
     }
 

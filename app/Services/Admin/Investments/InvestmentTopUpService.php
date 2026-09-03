@@ -5,7 +5,9 @@ namespace App\Services\Admin\Investments;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Investment;
+use App\Models\InvestmentProfitPeriod;
 use App\Models\InvestmentTransaction;
+use Carbon\CarbonImmutable;
 use App\Support\FixedDecimal;
 use DomainException;
 use Illuminate\Database\QueryException;
@@ -29,6 +31,11 @@ class InvestmentTopUpService
 
         $amount = FixedDecimal::normalize((string) $data['amount']);
         $txid = strtolower(trim((string) $data['txid']));
+
+        $this->assertOccurredWithinActiveWindow(
+            $investment,
+            (string) $data['occurred_at']
+        );
 
         if (InvestmentTransaction::query()->where('network', 'TRC20')->where('txid', $txid)->exists()) {
             throw new DomainException('This TRC20 transaction ID is already recorded.');
@@ -76,6 +83,15 @@ class InvestmentTopUpService
             $lockedInvestment = Investment::query()->lockForUpdate()->findOrFail($investment->getKey());
             $lockedTransaction = InvestmentTransaction::query()->lockForUpdate()->findOrFail($transaction->getKey());
             $this->assertTopUp($lockedInvestment, $lockedTransaction);
+
+            if ($lockedInvestment->status !== Investment::STATUS_ACTIVE) {
+                throw new DomainException('A top-up can be verified only while the investment is active.');
+            }
+
+            $this->assertOccurredWithinActiveWindow(
+                $lockedInvestment,
+                (string) $lockedTransaction->occurred_at
+            );
 
             if ($lockedTransaction->status !== InvestmentTransaction::STATUS_PENDING) {
                 throw new DomainException('Only a pending top-up can be verified.');
@@ -129,6 +145,46 @@ class InvestmentTopUpService
         $this->audit($admin, $request, 'INVESTMENT_TOP_UP_REJECTED', $transaction, [
             'reason' => trim($reason),
         ]);
+    }
+
+    private function assertOccurredWithinActiveWindow(
+        Investment $investment,
+        string $occurredAt
+    ): void {
+        $occurred = CarbonImmutable::parse($occurredAt);
+
+        $start = $investment->activated_at
+            ? CarbonImmutable::parse($investment->activated_at)
+            : CarbonImmutable::parse($investment->start_date)->startOfDay();
+
+        if ($occurred->lt($start)) {
+            throw new DomainException(
+                'A verified top-up cannot be backdated before investment activation.'
+            );
+        }
+
+        if ($investment->maturity_date) {
+            $maturity = CarbonImmutable::parse($investment->maturity_date)->endOfDay();
+            if ($occurred->gt($maturity)) {
+                throw new DomainException(
+                    'A verified top-up cannot occur after investment maturity.'
+                );
+            }
+        }
+
+        $date = $occurred->toDateString();
+        $finalizedPeriodExists = InvestmentProfitPeriod::query()
+            ->where('investment_id', $investment->getKey())
+            ->whereDate('period_start', '<=', $date)
+            ->whereDate('period_end', '>=', $date)
+            ->whereNotNull('approved_at')
+            ->exists();
+
+        if ($finalizedPeriodExists) {
+            throw new DomainException(
+                'A top-up cannot be backdated into an approved/finalized profit period.'
+            );
+        }
     }
 
     private function assertTopUp(Investment $investment, InvestmentTransaction $transaction): void

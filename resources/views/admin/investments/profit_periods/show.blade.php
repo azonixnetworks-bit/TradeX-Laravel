@@ -39,7 +39,7 @@
 <section class="panel users-panel" style="margin-bottom:18px;">
     <div class="panel-header"><div><div class="panel-eyebrow">SPOT ONLY</div><h2>Trading Ledger</h2></div></div>
     <div style="padding:18px;">
-        @if($permissions['trade_record'] && $investment->status === \App\Models\Investment::STATUS_ACTIVE)
+        @if($permissions['trade_record'] && $investment->status === \App\Models\Investment::STATUS_ACTIVE && $period->approved_at === null)
         <form method="POST" action="{{ route('admin.investments.trades.store', $investment) }}" style="margin-bottom:24px;">
             @csrf
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
@@ -106,7 +106,7 @@
 <section class="panel users-panel" style="margin-bottom:18px;">
     <div class="panel-header"><div><div class="panel-eyebrow">DIRECT TRADING COSTS ONLY</div><h2>Approved Costs</h2></div></div>
     <div style="padding:18px;">
-        @if($permissions['cost_record'])
+        @if($permissions['cost_record'] && $period->approved_at === null)
         <form method="POST" action="{{ route('admin.investments.costs.store', $investment) }}" style="margin-bottom:20px;">@csrf
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
                 <div class="filter-item"><label>Cost Type</label><select name="cost_type" required>@foreach($approvedCostTypes as $type)<option value="{{ $type }}">{{ $type }}</option>@endforeach</select></div>
@@ -134,7 +134,7 @@
 <section class="panel users-panel" style="margin-bottom:18px;">
     <div class="panel-header"><div><div class="panel-eyebrow">PERIOD EVIDENCE</div><h2>P&amp;L Statement / Screenshot</h2></div></div>
     <div style="padding:18px;">
-        @if($permissions['evidence_manage'])
+        @if($permissions['evidence_manage'] && $period->approved_at === null)
         <form method="POST" enctype="multipart/form-data" action="{{ route('admin.investments.evidence.period.store', [$investment, $period]) }}">@csrf
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
                 <div class="filter-item"><label>Image / PDF / CSV</label><input type="file" name="document" required></div>
@@ -155,7 +155,7 @@
 <section class="panel users-panel" style="margin-bottom:18px;">
     <div class="panel-header"><div><div class="panel-eyebrow">IMMUTABLE CORRECTIONS</div><h2>Reversal / Adjustment</h2></div></div>
     <div style="padding:18px;">
-        @if($permissions['adjustment_record'])
+        @if($permissions['adjustment_record'] && $period->approved_at === null)
         <form method="POST" action="{{ route('admin.investments.adjustments.store', $investment) }}">@csrf
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
                 <div class="filter-item"><label>Target</label><select name="target_type"><option>TRADE</option><option>COST</option></select></div>

@@ -109,6 +109,7 @@ class AdminInvestmentPhase3ProfitEngineTest extends TestCase
             'investment_id' => $investment->getKey(),
             'source_trade_id' => $trade->getKey(),
             'asset_symbol' => 'PEPE',
+            'contract_address' => '0x'.str_repeat('1', 40),
             'status' => InvestmentAssetAllocation::STATUS_ACTIVE,
         ]);
     }
@@ -123,6 +124,14 @@ class AdminInvestmentPhase3ProfitEngineTest extends TestCase
                 'amount_usdt' => '100',
                 'occurred_at' => now()->subDays(2)->toDateTimeString(),
                 'source_reference' => 'SALARY-001',
+            ])->assertSessionHasErrors('cost_type');
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.costs.store', $investment), [
+                'cost_type' => 'FUNDING_FEE',
+                'amount_usdt' => '25',
+                'occurred_at' => now()->subDays(2)->toDateTimeString(),
+                'source_reference' => 'FUNDING-001',
             ])->assertSessionHasErrors('cost_type');
 
         $this->assertDatabaseCount('investment_approved_costs', 0);
@@ -282,6 +291,89 @@ class AdminInvestmentPhase3ProfitEngineTest extends TestCase
         $this->assertSame(InvestmentTransaction::STATUS_VERIFIED, $payout->fresh()->status);
         $this->assertSame(InvestmentProfitPeriod::STATUS_SETTLED, $period->fresh()->status);
         $this->assertNotNull($period->fresh()->paid_at);
+    }
+
+    public function test_tampered_verified_evidence_blocks_profit_period_preparation(): void
+    {
+        [$manager, , $investment, $period] = $this->fixture();
+        $this->verifiedTrade($investment, $period, '1000', 'TAMPER');
+
+        $evidence = InvestmentEvidence::query()
+            ->where('investment_profit_period_id', $period->getKey())
+            ->where('status', InvestmentEvidence::STATUS_VERIFIED)
+            ->firstOrFail();
+
+        Storage::disk('private')->put(
+            $evidence->document_path,
+            'tampered-after-finance-verification'
+        );
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.profit_periods.prepare', [$investment, $period]))
+            ->assertSessionHasErrors('profit_period');
+
+        $this->assertNull($period->fresh()->prepared_at);
+    }
+
+    public function test_finalized_period_rejects_new_ledger_inputs_and_backdated_top_up(): void
+    {
+        [$manager, $finance, $investment, $period] = $this->fixture();
+        $trade = $this->verifiedTrade($investment, $period, '100', 'FINALIZED');
+
+        $period->forceFill([
+            'status' => InvestmentProfitPeriod::STATUS_NO_DISTRIBUTION,
+            'distribution_outcome' => InvestmentProfitPeriod::OUTCOME_NO_DISTRIBUTION,
+            'approved_by_admin_id' => $finance->getKey(),
+            'approved_at' => now(),
+        ])->save();
+
+        $tradeCount = InvestmentTrade::count();
+        $evidenceCount = InvestmentEvidence::count();
+
+        $payload = $this->tradePayload('BUY', 'LATE', '0');
+        $payload['executed_at'] = $period->period_end->copy()->subDay()->toDateTimeString();
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.trades.store', $investment), $payload)
+            ->assertSessionHasErrors('trade');
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.costs.store', $investment), [
+                'cost_type' => InvestmentApprovedCost::TYPE_BROKER_COMMISSION,
+                'amount_usdt' => '10',
+                'occurred_at' => $period->period_end->copy()->subDay()->toDateTimeString(),
+                'source_reference' => 'LATE-COST-001',
+            ])->assertSessionHasErrors('cost');
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.evidence.period.store', [$investment, $period]), [
+                'document' => UploadedFile::fake()->createWithContent(
+                    'late.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=')
+                ),
+            ])->assertSessionHasErrors('evidence');
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.adjustments.store', $investment), [
+                'target_type' => 'TRADE',
+                'target_id' => $trade->getKey(),
+                'adjustment_type' => 'REVERSAL',
+                'reason' => 'Attempt correction after final approval.',
+            ])->assertSessionHasErrors('adjustment');
+
+        $this->actingAs($manager, 'admin')
+            ->post(route('admin.investments.topups.store', $investment), [
+                'amount' => '100',
+                'txid' => str_repeat('c', 64),
+                'receiving_address' => 'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
+                'occurred_at' => $period->period_end->copy()->subDay()->toDateTimeString(),
+            ])->assertSessionHasErrors('top_up');
+
+        $this->assertSame($tradeCount, InvestmentTrade::count());
+        $this->assertSame($evidenceCount, InvestmentEvidence::count());
+        $this->assertDatabaseCount('investment_approved_costs', 0);
+        $this->assertDatabaseCount('investment_financial_adjustments', 0);
+        $this->assertDatabaseCount('investment_transactions', 0);
     }
 
     private function fixture(string $lossCarry = '0.00000000'): array
