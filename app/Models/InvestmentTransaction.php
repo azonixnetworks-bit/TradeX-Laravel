@@ -71,4 +71,20 @@ class InvestmentTransaction extends Model
             'investment_profit_period_id'
         );
     }
+
+    public function recordedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(
+            AdminUser::class,
+            'recorded_by_admin_id'
+        );
+    }
+
+    public function verifiedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(
+            AdminUser::class,
+            'verified_by_admin_id'
+        );
+    }
 }

@@ -20,6 +20,10 @@ class InvestmentAgreement extends Model
         'investment_id',
         'version',
         'status',
+        'template_version',
+        'template_status',
+        'risk_disclosure_version',
+        'terms_snapshot',
         'document_disk',
         'document_path',
         'document_mime_type',
@@ -42,6 +46,7 @@ class InvestmentAgreement extends Model
     {
         return [
             'version' => 'integer',
+            'terms_snapshot' => 'array',
             'document_size_bytes' => 'integer',
             'signed_document_size_bytes' => 'integer',
             'generated_at' => 'datetime',
