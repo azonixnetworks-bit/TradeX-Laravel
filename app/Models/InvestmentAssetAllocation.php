@@ -14,8 +14,10 @@ class InvestmentAssetAllocation extends Model
     protected $fillable = [
         'investment_id',
         'source_transaction_id',
+        'source_trade_id',
         'asset_symbol',
         'network',
+        'contract_address',
         'original_units',
         'remaining_units',
         'allocated_cost_usdt',
