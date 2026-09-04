@@ -3,6 +3,7 @@
 namespace App\Services\Auth\Registration;
 
 use App\Exceptions\AuthApiException;
+use App\Support\Security\BrandedEmailOtp;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -47,8 +48,10 @@ class RegistrationOtpDeliveryService
         }
 
         try {
+            $displayCode = BrandedEmailOtp::format($code);
+
             Mail::raw(
-                "Your TradeX OS verification code is {$code}. "
+                "Your TradeX OS verification code is {$displayCode}. "
                 ."This code expires soon. Do not share it with anyone.",
                 function ($message) use (
                     $email

@@ -5,6 +5,7 @@ namespace App\Services\Auth\PasswordRecovery;
 use App\Exceptions\AuthApiException;
 use App\Models\PasswordRecoveryOtpChallenge;
 use App\Models\PasswordRecoverySession;
+use App\Support\Security\BrandedEmailOtp;
 use Illuminate\Support\Facades\DB;
 
 class PasswordRecoveryOtpService
@@ -74,7 +75,9 @@ class PasswordRecoveryOtpService
             );
         }
 
-        $code = $this->generateCode();
+        $code = $this->generateCode(
+            $channel
+        );
 
         DB::transaction(function () use ($session, $channel, $code): void {
             PasswordRecoveryOtpChallenge::query()
@@ -246,8 +249,40 @@ class PasswordRecoveryOtpService
         );
     }
 
-    private function generateCode(): string
-    {
+    private function generateCode(
+        string $channel
+    ): string {
+        if (
+            $channel
+            === PasswordRecoveryOtpChallenge::CHANNEL_EMAIL
+        ) {
+            $fixedEmail = config(
+                'tradex_password_recovery.testing.fixed_email_otp'
+            );
+
+            if (
+                app()->environment('testing')
+                && is_string($fixedEmail)
+                && preg_match('/^\d{8}$/', $fixedEmail)
+            ) {
+                return $fixedEmail;
+            }
+
+            $legacyFixed = config(
+                'tradex_password_recovery.testing.fixed_otp'
+            );
+
+            if (
+                app()->environment('testing')
+                && is_string($legacyFixed)
+                && preg_match('/^\d{6}$/', $legacyFixed)
+            ) {
+                return $legacyFixed;
+            }
+
+            return BrandedEmailOtp::generate();
+        }
+
         $digits = max(
             4,
             min(

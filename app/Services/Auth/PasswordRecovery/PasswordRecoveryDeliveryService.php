@@ -4,6 +4,7 @@ namespace App\Services\Auth\PasswordRecovery;
 
 use App\Exceptions\AuthApiException;
 use App\Models\PasswordRecoverySession;
+use App\Support\Security\BrandedEmailOtp;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -33,8 +34,10 @@ class PasswordRecoveryDeliveryService
         }
 
         try {
+            $displayCode = BrandedEmailOtp::format($code);
+
             Mail::raw(
-                "Your TradeX OS password recovery code is {$code}. "
+                "Your TradeX OS password recovery code is {$displayCode}. "
                 ."This code expires soon. Do not share it with anyone.",
                 function ($message) use ($email): void {
                     $message

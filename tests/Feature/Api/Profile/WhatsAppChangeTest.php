@@ -20,8 +20,8 @@ class WhatsAppChangeTest extends TestCase
             'tradex_profile.contact_change.email_driver' =>
                 'log',
 
-            'tradex_profile.testing.fixed_otp' =>
-                '654321',
+            'tradex_profile.testing.fixed_email_otp' =>
+                '65432109',
         ]);
     }
 
@@ -82,7 +82,7 @@ class WhatsAppChangeTest extends TestCase
                         ),
 
                     'otp_code' =>
-                        '654321',
+                        'TRX-65 43 21 09',
                 ]
             )
             ->assertOk()

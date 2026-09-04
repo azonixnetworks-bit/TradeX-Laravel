@@ -29,6 +29,11 @@ return [
     ],
 
     'testing' => [
+        'fixed_email_otp' =>
+            env(
+                'TRADEX_PROFILE_TEST_FIXED_EMAIL_OTP'
+            ),
+
         'fixed_otp' =>
             env(
                 'TRADEX_PROFILE_TEST_FIXED_OTP'

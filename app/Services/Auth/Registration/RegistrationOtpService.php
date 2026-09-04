@@ -6,6 +6,7 @@ use App\Exceptions\AuthApiException;
 use App\Models\AuditLog;
 use App\Models\UserRegistrationOtpChallenge;
 use App\Models\UserRegistrationSession;
+use App\Support\Security\BrandedEmailOtp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -220,7 +221,9 @@ class RegistrationOtpService
         }
 
         $code =
-            $this->generateCode();
+            $this->generateCode(
+                $channel
+            );
 
         $challenge = DB::transaction(
             function () use (
@@ -455,8 +458,40 @@ class RegistrationOtpService
         ])->save();
     }
 
-    private function generateCode(): string
-    {
+    private function generateCode(
+        string $channel
+    ): string {
+        if (
+            $channel
+            === UserRegistrationOtpChallenge::CHANNEL_EMAIL
+        ) {
+            $fixedEmail = config(
+                'tradex_registration.testing.fixed_email_otp'
+            );
+
+            if (
+                app()->environment('testing')
+                && is_string($fixedEmail)
+                && preg_match('/^\d{8}$/', $fixedEmail)
+            ) {
+                return $fixedEmail;
+            }
+
+            $legacyFixed = config(
+                'tradex_registration.testing.fixed_otp'
+            );
+
+            if (
+                app()->environment('testing')
+                && is_string($legacyFixed)
+                && preg_match('/^\d{6}$/', $legacyFixed)
+            ) {
+                return $legacyFixed;
+            }
+
+            return BrandedEmailOtp::generate();
+        }
+
         $fixed =
             config(
                 'tradex_registration.testing.fixed_otp'

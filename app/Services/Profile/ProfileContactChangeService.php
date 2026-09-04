@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserProfile;
 use App\Models\UserProfileChangeChallenge;
 use App\Services\Auth\TotpService;
+use App\Support\Security\BrandedEmailOtp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -546,22 +547,33 @@ class ProfileContactChangeService
 
     private function generateOtp(): string
     {
-        $fixed =
+        $fixedEmail =
+            config(
+                'tradex_profile.testing.fixed_email_otp'
+            );
+
+        if (
+            app()->environment('testing')
+            && is_string($fixedEmail)
+            && preg_match('/^\d{8}$/', $fixedEmail)
+        ) {
+            return $fixedEmail;
+        }
+
+        $legacyFixed =
             config(
                 'tradex_profile.testing.fixed_otp'
             );
 
         if (
             app()->environment('testing')
-            && filled($fixed)
+            && is_string($legacyFixed)
+            && preg_match('/^\d{6}$/', $legacyFixed)
         ) {
-            return (string) $fixed;
+            return $legacyFixed;
         }
 
-        return (string) random_int(
-            100000,
-            999999
-        );
+        return BrandedEmailOtp::generate();
     }
 
     private function hmac(
