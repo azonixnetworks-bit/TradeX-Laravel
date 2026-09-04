@@ -59,6 +59,9 @@ return [
     ],
 
     'testing' => [
+        'fixed_email_otp' => env(
+            'TRADEX_PASSWORD_RECOVERY_TEST_FIXED_EMAIL_OTP'
+        ),
         'fixed_otp' => env('TRADEX_PASSWORD_RECOVERY_TEST_FIXED_OTP'),
         'fixed_reset_token' => env('TRADEX_PASSWORD_RECOVERY_TEST_FIXED_RESET_TOKEN'),
     ],

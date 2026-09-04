@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Auth\VerifyRegistrationOtpRequest;
+use App\Http\Requests\Api\Auth\VerifyRegistrationEmailOtpRequest;
 use App\Models\CustomerOnboardingInvitation;
 use App\Services\Auth\Registration\RegistrationOtpService;
 use App\Services\Auth\Registration\RegistrationSessionService;
@@ -12,7 +12,7 @@ use Illuminate\Http\JsonResponse;
 class VerifyRegistrationEmailController extends Controller
 {
     public function __invoke(
-        VerifyRegistrationOtpRequest $request,
+        VerifyRegistrationEmailOtpRequest $request,
         RegistrationSessionService $registrations,
         RegistrationOtpService $otp
     ): JsonResponse {

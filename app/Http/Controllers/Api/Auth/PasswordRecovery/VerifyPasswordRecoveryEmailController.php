@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api\Auth\PasswordRecovery;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Auth\PasswordRecovery\VerifyPasswordRecoveryOtpRequest;
+use App\Http\Requests\Api\Auth\PasswordRecovery\VerifyPasswordRecoveryEmailOtpRequest;
 use App\Services\Auth\PasswordRecovery\PasswordRecoveryFlowService;
 use Illuminate\Http\JsonResponse;
 
 class VerifyPasswordRecoveryEmailController extends Controller
 {
     public function __invoke(
-        VerifyPasswordRecoveryOtpRequest $request,
+        VerifyPasswordRecoveryEmailOtpRequest $request,
         PasswordRecoveryFlowService $service
     ): JsonResponse {
         $data = $request->validated();
