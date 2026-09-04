@@ -280,6 +280,81 @@
             text-align: center;
         }
 
+        .email-otp-entry {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.email-otp-prefix {
+    min-height: 56px;
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 auto;
+    padding: 0 14px;
+    border: 1px solid rgba(220,174,69,.22);
+    border-radius: 13px;
+    color: var(--gold-light);
+    background: #06101c;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 1.5px;
+    user-select: none;
+}
+
+.email-otp-boxes {
+    min-width: 0;
+    width: 100%;
+    max-width: 500px;
+    display: grid;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 8px;
+}
+
+input.email-otp-digit {
+    min-width: 0;
+    width: 100%;
+    height: 56px;
+    padding: 0;
+    text-align: center;
+    border-radius: 12px;
+    font-size: 22px;
+    font-weight: 850;
+    letter-spacing: 0;
+}
+
+input.email-otp-digit:not(:placeholder-shown) {
+    border-color: rgba(220,174,69,.42);
+    background: #0b1b2d;
+}
+
+@media (max-width: 560px) {
+    .email-otp-entry {
+        gap: 7px;
+    }
+
+    .email-otp-prefix {
+        min-height: 50px;
+        padding: 0 9px;
+        border-radius: 11px;
+        font-size: 16px;
+        letter-spacing: .8px;
+    }
+
+    .email-otp-boxes {
+        gap: 4px;
+    }
+
+    input.email-otp-digit {
+        height: 50px;
+        border-radius: 9px;
+        font-size: 18px;
+    }
+}
+
+
         .row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -774,34 +849,201 @@
     }
 
     function renderEmailOtp() {
-        app.innerHTML = `
-            <div class="step-kicker">Step 1 · Identity</div>
-            <h2>Verify your email</h2>
-            <p class="subtitle">Enter the six-digit verification code sent to the email address on your TradeX invitation.</p>
-            <form id="emailForm">
-                <label for="emailOtp">Email verification code</label>
-                <input id="emailOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
-                <div class="actions">
-                    <button class="btn btn-primary" type="submit">Verify Email</button>
-                    <button id="resendEmail" class="btn btn-secondary" type="button">Resend Code</button>
-                </div>
-            </form>
-            <div id="inlineNotice"></div>
-        `;
+    app.innerHTML = `
+        <div class="step-kicker">Step 1 · Identity</div>
+        <h2>Verify your email</h2>
+        <p class="subtitle">Enter the eight-digit verification code sent to the email address on your TradeX invitation.</p>
+        <form id="emailForm">
+            <label id="emailOtpLabel">Email verification code</label>
 
-        document.getElementById('emailForm').addEventListener('submit', async event => {
+            <div
+                class="email-otp-entry"
+                role="group"
+                aria-labelledby="emailOtpLabel"
+            >
+                <span
+                    class="email-otp-prefix"
+                    data-email-otp-prefix="TRX-"
+                    aria-hidden="true"
+                >TRX-</span>
+
+                <div class="email-otp-boxes">
+                    <input class="email-otp-digit" data-email-otp-digit data-index="0" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 1" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="1" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 2" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="2" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 3" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="3" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 4" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="4" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 5" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="5" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 6" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="6" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 7" placeholder=" " required>
+                    <input class="email-otp-digit" data-email-otp-digit data-index="7" type="text" inputmode="numeric" autocomplete="off" maxlength="1" pattern="[0-9]" aria-label="Email verification digit 8" placeholder=" " required>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button class="btn btn-primary" type="submit">Verify Email</button>
+                <button id="resendEmail" class="btn btn-secondary" type="button">Resend Code</button>
+            </div>
+        </form>
+
+        <div id="inlineNotice"></div>
+    `;
+
+    const digitInputs = [
+        ...document.querySelectorAll('[data-email-otp-digit]')
+    ];
+
+    const focusDigit = index => {
+        const input = digitInputs[index];
+
+        if (! input) {
+            return;
+        }
+
+        input.focus();
+        input.select();
+    };
+
+    const fillEmailOtp = rawValue => {
+        const digits = String(rawValue ?? '')
+            .replace(/\D/g, '')
+            .slice(0, 8);
+
+        digitInputs.forEach((input, index) => {
+            input.value = digits[index] || '';
+        });
+
+        if (digits.length >= 8) {
+            focusDigit(7);
+            return;
+        }
+
+        focusDigit(digits.length);
+    };
+
+    digitInputs.forEach((input, index) => {
+        input.addEventListener('input', event => {
+            const digits = String(event.target.value || '')
+                .replace(/\D/g, '');
+
+            if (digits.length > 1) {
+                fillEmailOtp(digits);
+                return;
+            }
+
+            event.target.value = digits.slice(-1);
+
+            if (event.target.value && index < digitInputs.length - 1) {
+                focusDigit(index + 1);
+            }
+        });
+
+        input.addEventListener('keydown', event => {
+            if (event.key === 'Backspace') {
+                if (! input.value && index > 0) {
+                    event.preventDefault();
+                    digitInputs[index - 1].value = '';
+                    focusDigit(index - 1);
+                }
+
+                return;
+            }
+
+            if (event.key === 'ArrowLeft' && index > 0) {
+                event.preventDefault();
+                focusDigit(index - 1);
+                return;
+            }
+
+            if (
+                event.key === 'ArrowRight'
+                && index < digitInputs.length - 1
+            ) {
+                event.preventDefault();
+                focusDigit(index + 1);
+            }
+        });
+
+        input.addEventListener('paste', event => {
+            const pasted = event.clipboardData?.getData('text') || '';
+            const digits = pasted.replace(/\D/g, '');
+
+            if (! digits) {
+                return;
+            }
+
             event.preventDefault();
-            const code = document.getElementById('emailOtp').value.trim();
-            await submitStep(
-                '/api/v1/auth/register/email/verify',
-                sessionPayload({ otp_code: code })
+
+            if (digits.length >= 8) {
+                fillEmailOtp(digits.slice(0, 8));
+                return;
+            }
+
+            let pointer = index;
+
+            digits.split('').forEach(digit => {
+                if (pointer >= digitInputs.length) {
+                    return;
+                }
+
+                digitInputs[pointer].value = digit;
+                pointer += 1;
+            });
+
+            focusDigit(
+                Math.min(pointer, digitInputs.length - 1)
             );
         });
+    });
 
-        document.getElementById('resendEmail').addEventListener('click', async () => {
-            await resend('/api/v1/auth/register/email/resend', 'A fresh email code was requested.');
-        });
-    }
+    document.getElementById('emailForm').addEventListener(
+        'submit',
+        async event => {
+            event.preventDefault();
+
+            const code = digitInputs
+                .map(input => input.value)
+                .join('');
+
+            if (! /^\d{8}$/.test(code)) {
+                inlineError(
+                    'Enter all eight digits from your TradeX email verification code.'
+                );
+
+                const firstEmptyIndex = digitInputs.findIndex(
+                    input => ! input.value
+                );
+
+                focusDigit(
+                    firstEmptyIndex >= 0
+                        ? firstEmptyIndex
+                        : 0
+                );
+
+                return;
+            }
+
+            await submitStep(
+                '/api/v1/auth/register/email/verify',
+                sessionPayload({
+                    otp_code: code,
+                })
+            );
+        }
+    );
+
+    document.getElementById('resendEmail').addEventListener(
+        'click',
+        async () => {
+            await resend(
+                '/api/v1/auth/register/email/resend',
+                'A fresh eight-digit TradeX email code was requested.'
+            );
+        }
+    );
+
+    focusDigit(0);
+}
+
 
     function renderWhatsAppOtp() {
         app.innerHTML = `
