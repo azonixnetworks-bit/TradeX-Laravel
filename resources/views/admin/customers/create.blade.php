@@ -104,27 +104,62 @@
             </div>
 
             <div class="form-group">
-                <label for="country_code">Country</label>
-                <select
-                    id="country_code"
-                    name="country_code"
-                    required
+                <label for="country_search">Country</label>
+
+                @php
+                    $selectedCountryCode = old('country_code');
+                    $selectedCountryName = $selectedCountryCode
+                        ? ($countries[$selectedCountryCode] ?? '')
+                        : '';
+                @endphp
+
+                <div
+                    class="country-combobox"
+                    id="countryCombobox"
+                    data-country-combobox
                 >
-                    <option value="">Select country</option>
-                    @foreach([
-                        'LK' => 'Sri Lanka',
-                        'IN' => 'India',
-                        'AE' => 'United Arab Emirates',
-                        'MY' => 'Malaysia',
-                    ] as $code => $label)
-                        <option
-                            value="{{ $code }}"
-                            @selected(old('country_code') === $code)
+                    <div class="country-search-shell">
+                        <input
+                            id="country_search"
+                            class="country-search-input"
+                            type="text"
+                            value="{{ $selectedCountryName }}"
+                            placeholder="Type a country name or code"
+                            autocomplete="off"
+                            role="combobox"
+                            aria-autocomplete="list"
+                            aria-controls="countrySearchResults"
+                            aria-expanded="false"
+                            aria-haspopup="listbox"
+                            required
                         >
-                            {{ $label }} ({{ $code }})
-                        </option>
-                    @endforeach
-                </select>
+
+                        <span
+                            class="country-search-chevron"
+                            aria-hidden="true"
+                        >⌄</span>
+                    </div>
+
+                    <input
+                        id="country_code"
+                        type="hidden"
+                        name="country_code"
+                        value="{{ $selectedCountryCode }}"
+                    >
+
+                    <div
+                        id="countrySearchResults"
+                        class="country-search-results"
+                        role="listbox"
+                        aria-label="Country search results"
+                        hidden
+                    ></div>
+                </div>
+
+                <small class="form-help">
+                    Start typing, for example “Sri”, “India”, “United” or an ISO country code.
+                </small>
+
                 @error('country_code')
                     <small class="form-error">{{ $message }}</small>
                 @enderror
@@ -212,3 +247,266 @@
     </form>
 </section>
 @endsection
+
+@push('styles')
+<style>
+    .country-combobox {
+        position: relative;
+    }
+
+    .country-search-shell {
+        position: relative;
+    }
+
+    .country-search-input {
+        width: 100%;
+        padding-right: 44px !important;
+    }
+
+    .country-search-chevron {
+        position: absolute;
+        top: 50%;
+        right: 16px;
+        transform: translateY(-50%);
+        color: var(--text-muted, #7890a8);
+        pointer-events: none;
+        font-size: 18px;
+        line-height: 1;
+    }
+
+    .country-search-results {
+        position: absolute;
+        z-index: 70;
+        top: calc(100% + 8px);
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: 6px;
+        border: 1px solid rgba(125, 162, 196, 0.22);
+        border-radius: 12px;
+        background: #071726;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.36);
+    }
+
+    .country-search-results[hidden] {
+        display: none;
+    }
+
+    .country-search-option {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 11px 12px;
+        border: 0;
+        border-radius: 9px;
+        background: transparent;
+        color: #d9e6f2;
+        text-align: left;
+        cursor: pointer;
+        font: inherit;
+    }
+
+    .country-search-option:hover,
+    .country-search-option.is-active {
+        background: rgba(23, 112, 255, 0.16);
+    }
+
+    .country-search-option-code {
+        flex: 0 0 auto;
+        color: #7e98ad;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+    }
+
+    .country-search-empty {
+        padding: 12px;
+        color: #7e98ad;
+        font-size: 13px;
+    }
+</style>
+@endpush
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const root = document.querySelector('[data-country-combobox]');
+
+    if (!root) {
+        return;
+    }
+
+    const input = root.querySelector('#country_search');
+    const hidden = root.querySelector('#country_code');
+    const results = root.querySelector('#countrySearchResults');
+
+    const countries = {{ \Illuminate\Support\Js::from($countryOptions) }};
+
+    let filtered = [];
+    let activeIndex = -1;
+
+    const normalize = (value) => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+    const closeResults = () => {
+        results.hidden = true;
+        input.setAttribute('aria-expanded', 'false');
+        activeIndex = -1;
+    };
+
+    const selectCountry = (country) => {
+        input.value = country.name;
+        hidden.value = country.code;
+        closeResults();
+    };
+
+    const render = () => {
+        const query = normalize(input.value);
+
+        filtered = countries.filter((country) => {
+            const name = normalize(country.name);
+            const code = normalize(country.code);
+
+            return query === ''
+                || name.includes(query)
+                || code.includes(query);
+        }).slice(0, 14);
+
+        results.innerHTML = '';
+        activeIndex = -1;
+
+        if (filtered.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'country-search-empty';
+            empty.textContent = 'No matching country found.';
+            results.appendChild(empty);
+        } else {
+            filtered.forEach((country, index) => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'country-search-option';
+                option.setAttribute('role', 'option');
+                option.dataset.index = String(index);
+
+                const name = document.createElement('span');
+                name.textContent = country.name;
+
+                const code = document.createElement('span');
+                code.className = 'country-search-option-code';
+                code.textContent = country.code;
+
+                option.appendChild(name);
+                option.appendChild(code);
+
+                option.addEventListener('mousedown', (event) => {
+                    event.preventDefault();
+                });
+
+                option.addEventListener('click', () => {
+                    selectCountry(country);
+                });
+
+                results.appendChild(option);
+            });
+        }
+
+        results.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+    };
+
+    const moveActive = (direction) => {
+        if (results.hidden || filtered.length === 0) {
+            render();
+        }
+
+        if (filtered.length === 0) {
+            return;
+        }
+
+        activeIndex += direction;
+
+        if (activeIndex < 0) {
+            activeIndex = filtered.length - 1;
+        }
+
+        if (activeIndex >= filtered.length) {
+            activeIndex = 0;
+        }
+
+        results
+            .querySelectorAll('.country-search-option')
+            .forEach((option, index) => {
+                option.classList.toggle(
+                    'is-active',
+                    index === activeIndex
+                );
+            });
+    };
+
+    input.addEventListener('focus', render);
+
+    input.addEventListener('input', () => {
+        hidden.value = '';
+        render();
+    });
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            moveActive(1);
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            moveActive(-1);
+            return;
+        }
+
+        if (
+            event.key === 'Enter'
+            && activeIndex >= 0
+            && filtered[activeIndex]
+        ) {
+            event.preventDefault();
+            selectCountry(filtered[activeIndex]);
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            closeResults();
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        const typed = normalize(input.value);
+
+        if (typed !== '') {
+            const exact = countries.find((country) =>
+                normalize(country.name) === typed
+                || normalize(country.code) === typed
+            );
+
+            if (exact) {
+                selectCountry(exact);
+                return;
+            }
+        }
+
+        window.setTimeout(closeResults, 120);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!root.contains(event.target)) {
+            closeResults();
+        }
+    });
+});
+</script>
+@endpush
