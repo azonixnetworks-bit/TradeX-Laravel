@@ -1,0 +1,66 @@
+/* TradeX Admin sidebar collapse + section dropdown enhancements */
+
+.admin-main {
+    transition: margin-left .25s ease;
+}
+
+.sidebar {
+    transition:
+        transform .25s ease;
+}
+
+.sidebar-toggle {
+    display: grid !important;
+    place-items: center;
+}
+
+body.sidebar-collapsed .sidebar {
+    transform: translateX(-100%);
+}
+
+body.sidebar-collapsed .admin-main {
+    margin-left: 0;
+}
+
+.nav-section-title.sidebar-section-toggle {
+    width: calc(100% - 28px);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    user-select: none;
+    text-align: left;
+    transition: color .18s ease;
+}
+
+.nav-section-title.sidebar-section-toggle:hover,
+.nav-section-title.sidebar-section-toggle:focus-visible {
+    color: var(--gold-light);
+    outline: none;
+}
+
+.sidebar-section-chevron {
+    flex: 0 0 auto;
+    font-size: 14px;
+    line-height: 1;
+    transition: transform .18s ease;
+}
+
+.nav-section-title.sidebar-section-toggle[aria-expanded="false"]
+.sidebar-section-chevron {
+    transform: rotate(-90deg);
+}
+
+@media (max-width: 1000px) {
+    body.sidebar-collapsed .sidebar {
+        transform: none;
+    }
+
+    body.sidebar-collapsed .admin-main {
+        margin-left: 0;
+    }
+}

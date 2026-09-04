@@ -35,6 +35,11 @@
 
     <link
         rel="stylesheet"
+        href="{{ asset('admin/css/sidebar-enhancements.css') }}"
+    >
+
+    <link
+        rel="stylesheet"
         href="{{ asset('admin/css/branding.css') }}"
     >
 
@@ -121,6 +126,10 @@
 
 <script
     src="{{ asset('admin/js/sidebar.js') }}">
+</script>
+
+<script
+    src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
 
 <script
