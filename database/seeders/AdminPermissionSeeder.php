@@ -107,6 +107,13 @@ class AdminPermissionSeeder extends Seeder
             ['investments.transactions.verify', 'Verify Investment Transactions', 'INVESTMENTS'],
             ['investments.principal_settlement.approve', 'Approve Principal Settlement', 'INVESTMENTS'],
             ['investments.early_termination.review', 'Review Early Investment Termination', 'INVESTMENTS'],
+            ['investments.settlements.view', 'View Investment Terminal Settlements', 'INVESTMENTS'],
+            ['investments.settlements.prepare', 'Prepare Investment Terminal Settlements', 'INVESTMENTS'],
+            ['investments.settlements.wallets.record', 'Record Investment Settlement Destination Wallets', 'INVESTMENTS'],
+            ['investments.settlements.wallets.verify', 'Verify Investment Settlement Destination Wallets', 'INVESTMENTS'],
+            ['investments.settlements.payments.record', 'Record Investment Settlement Asset Transfers', 'INVESTMENTS'],
+            ['investments.settlements.payments.verify', 'Verify Investment Settlement Asset Transfers', 'INVESTMENTS'],
+            ['investments.settlements.close', 'Close Fully Settled Investments', 'INVESTMENTS'],
             ['investments.reports.view', 'View Investment Reports', 'INVESTMENTS'],
 
             ['finance.view', 'View Finance Dashboard', 'FINANCE'],

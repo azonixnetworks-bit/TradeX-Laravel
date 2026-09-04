@@ -344,6 +344,46 @@
 </section>
 @endif
 
+@if($permissions['settlements_view'])
+<section class="panel users-panel" style="margin-bottom:18px;">
+    <div class="panel-header">
+        <div><div class="panel-eyebrow">PHASE 4</div><h2>Maturity / Early-Termination Settlement</h2></div>
+    </div>
+    <div style="padding:20px;">
+        @php($terminalSettlement = $investment->latestSettlement)
+
+        @if($terminalSettlement)
+            <p><strong>Type:</strong> {{ $terminalSettlement->type }}</p>
+            <p><strong>Status:</strong> {{ $terminalSettlement->status }}</p>
+            <p><strong>Cutoff:</strong> {{ $terminalSettlement->cutoff_at?->format('Y-m-d H:i') }}</p>
+            <p><strong>Underlying return rule:</strong> {{ number_format($terminalSettlement->return_bps / 100, 2) }}%</p>
+            <a class="primary-btn" href="{{ route('admin.investments.settlements.show', [$investment, $terminalSettlement]) }}">Open Terminal Settlement</a>
+        @else
+            <p><strong>Maturity:</strong> {{ $investment->maturity_date?->toDateString() ?? 'NOT ACTIVE' }}</p>
+            <p><strong>Principal settlement:</strong> {{ $investment->principal_settlement_date?->toDateString() ?? '—' }} · {{ $investment->principal_settlement_status }}</p>
+
+            @if($permissions['settlements_prepare'] && $investment->maturity_date && today()->gte($investment->maturity_date) && in_array($investment->status, [\App\Models\Investment::STATUS_ACTIVE, \App\Models\Investment::STATUS_MATURED], true))
+                <form method="POST" action="{{ route('admin.investments.settlements.maturity.prepare', $investment) }}" style="margin-bottom:18px;">
+                    @csrf
+                    <button class="primary-btn" type="submit">Prepare 100% In-Kind Maturity Settlement</button>
+                </form>
+            @endif
+
+            @if($permissions['early_termination_review'] && $investment->status === \App\Models\Investment::STATUS_ACTIVE && (!$investment->maturity_date || today()->lt($investment->maturity_date)))
+                <p>Early termination returns 80% of attributable underlying spot-crypto units in kind. Original USDT value is not guaranteed. Accrued eligible realized profit is calculated separately under the 80/20 performance-share rule.</p>
+                <form method="POST" action="{{ route('admin.investments.settlements.early.initiate', $investment) }}">
+                    @csrf
+                    <div class="filter-item">
+                        <label>Early-Termination Reason / Customer Request Reference</label>
+                        <textarea name="reason" required minlength="10" maxlength="2000">{{ old('reason') }}</textarea>
+                    </div>
+                    <button class="secondary-btn" type="submit">Freeze Early-Termination Cutoff</button>
+                </form>
+            @endif
+        @endif
+    </div>
+</section>
+@endif
 @if($permissions['transactions_view'])
 <section class="panel users-panel">
     <div class="panel-header">

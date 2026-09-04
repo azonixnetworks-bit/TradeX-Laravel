@@ -10,6 +10,7 @@ use App\Models\InvestmentAssetAllocation;
 use App\Models\InvestmentAssetMovement;
 use App\Models\InvestmentFinancialAdjustment;
 use App\Models\InvestmentProfitPeriod;
+use App\Models\InvestmentSettlement;
 use App\Models\InvestmentTrade;
 use App\Support\FixedDecimal;
 use DomainException;
@@ -26,6 +27,7 @@ class InvestmentAdjustmentService
         Request $request
     ): InvestmentFinancialAdjustment {
         abort_unless($admin->hasPermission('investments.adjustments.record'), 403);
+        $this->assertTerminalSettlementMutable($investment);
 
         $targetType = strtoupper((string) $data['target_type']);
         $targetId = (int) $data['target_id'];
@@ -82,6 +84,7 @@ class InvestmentAdjustmentService
     ): void {
         abort_unless($admin->hasPermission('investments.adjustments.verify'), 403);
         $this->assertAdjustment($investment, $adjustment);
+        $this->assertTerminalSettlementMutable($investment);
 
         DB::transaction(function () use ($investment, $adjustment, $admin, $request): void {
             $locked = InvestmentFinancialAdjustment::query()
@@ -213,6 +216,20 @@ class InvestmentAdjustmentService
         }
 
         throw new DomainException('Unsupported financial adjustment target.');
+    }
+
+    private function assertTerminalSettlementMutable(Investment $investment): void
+    {
+        if (
+            InvestmentSettlement::query()
+                ->where('investment_id', $investment->getKey())
+                ->whereNotNull('approved_at')
+                ->exists()
+        ) {
+            throw new DomainException(
+                'The terminal settlement has Finance approval. Financial adjustments are now immutable.'
+            );
+        }
     }
 
     private function assertTargetPeriodOpen(int $periodId): void

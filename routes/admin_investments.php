@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\Investments\InvestmentCostController;
 use App\Http\Controllers\Admin\Investments\InvestmentEvidenceController;
 use App\Http\Controllers\Admin\Investments\InvestmentProfitPayoutController;
 use App\Http\Controllers\Admin\Investments\InvestmentProfitPeriodController;
+use App\Http\Controllers\Admin\Investments\InvestmentSettlementController;
 use App\Http\Controllers\Admin\Investments\InvestmentTopUpController;
 use App\Http\Controllers\Admin\Investments\InvestmentTradeController;
 use Illuminate\Support\Facades\Route;
@@ -197,6 +198,39 @@ Route::prefix('admin/investments')
         Route::post('/{investment}/profit-periods/{period}/payout/{transaction}/reject', [InvestmentProfitPayoutController::class, 'reject'])
             ->whereNumber('investment')->whereNumber('period')->whereNumber('transaction')->name('profit_payouts.reject');
 
+        // ADMIN-24 Phase 4 — maturity and early-termination in-kind settlement.
+        Route::get('/settlements', [InvestmentSettlementController::class, 'index'])
+            ->name('settlements.index');
+        Route::get('/{investment}/settlements/{settlement}', [InvestmentSettlementController::class, 'show'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.show');
+        Route::post('/{investment}/early-termination', [InvestmentSettlementController::class, 'initiateEarlyTermination'])
+            ->whereNumber('investment')->name('settlements.early.initiate');
+        Route::post('/{investment}/settlements/maturity/prepare', [InvestmentSettlementController::class, 'prepareMaturity'])
+            ->whereNumber('investment')->name('settlements.maturity.prepare');
+        Route::post('/{investment}/settlements/{settlement}/terminal-pnl-evidence', [InvestmentEvidenceController::class, 'terminalStore'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.terminal_pnl_evidence.store');
+        Route::post('/{investment}/settlements/{settlement}/prepare', [InvestmentSettlementController::class, 'prepare'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.prepare');
+        Route::post('/{investment}/settlements/{settlement}/approve', [InvestmentSettlementController::class, 'approve'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.approve');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/wallet', [InvestmentSettlementController::class, 'recordWallet'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->name('settlements.wallet.record');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/wallet/verify', [InvestmentSettlementController::class, 'verifyWallet'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->name('settlements.wallet.verify');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/payout', [InvestmentSettlementController::class, 'recordAssetPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->name('settlements.asset_payout.record');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/payout/{transaction}/verify', [InvestmentSettlementController::class, 'verifyAssetPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->whereNumber('transaction')->name('settlements.asset_payout.verify');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/payout/{transaction}/reject', [InvestmentSettlementController::class, 'rejectAssetPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->whereNumber('transaction')->name('settlements.asset_payout.reject');
+        Route::post('/{investment}/settlements/{settlement}/terminal-profit', [InvestmentSettlementController::class, 'recordTerminalProfitPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.terminal_profit.record');
+        Route::post('/{investment}/settlements/{settlement}/terminal-profit/{transaction}/verify', [InvestmentSettlementController::class, 'verifyTerminalProfitPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('transaction')->name('settlements.terminal_profit.verify');
+        Route::post('/{investment}/settlements/{settlement}/terminal-profit/{transaction}/reject', [InvestmentSettlementController::class, 'rejectTerminalProfitPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('transaction')->name('settlements.terminal_profit.reject');
+        Route::post('/{investment}/settlements/{settlement}/close', [InvestmentSettlementController::class, 'close'])
+            ->whereNumber('investment')->whereNumber('settlement')->name('settlements.close');
         Route::get(
             '/{investment}',
             [InvestmentController::class, 'show']

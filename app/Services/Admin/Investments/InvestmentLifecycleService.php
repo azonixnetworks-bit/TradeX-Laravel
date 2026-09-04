@@ -754,6 +754,12 @@ class InvestmentLifecycleService
                         );
                     }
 
+                    if ($custom->lessThan($maturity)) {
+                        throw new DomainException(
+                            'Normal principal settlement cannot be scheduled before maturity. Use the early-termination workflow for an earlier exit.'
+                        );
+                    }
+
                     $principalSettlement = $custom;
                 }
 

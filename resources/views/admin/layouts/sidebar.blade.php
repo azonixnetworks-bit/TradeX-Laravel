@@ -326,6 +326,16 @@
                 </a>
             @endif
 
+            @if($admin->hasPermission('investments.settlements.view'))
+                <a
+                    href="{{ route('admin.investments.settlements.index') }}"
+                    class="nav-link
+                    {{ request()->routeIs('admin.investments.settlements.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">⇄</span>
+                    <span>Settlements</span>
+                </a>
+            @endif
         @endif
 
 

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Investment extends Model
 {
@@ -128,6 +129,16 @@ class Investment extends Model
     public function assetAllocations(): HasMany
     {
         return $this->hasMany(InvestmentAssetAllocation::class);
+    }
+
+    public function settlements(): HasMany
+    {
+        return $this->hasMany(InvestmentSettlement::class);
+    }
+
+    public function latestSettlement(): HasOne
+    {
+        return $this->hasOne(InvestmentSettlement::class)->latestOfMany();
     }
 
     public function createdByAdmin(): BelongsTo

@@ -15,6 +15,7 @@ class InvestmentTransaction extends Model
     public const TYPE_PROFIT_PAYOUT = 'PROFIT_PAYOUT';
     public const TYPE_PRINCIPAL_RETURN = 'PRINCIPAL_RETURN';
     public const TYPE_EARLY_EXIT_IN_KIND = 'EARLY_EXIT_IN_KIND';
+    public const TYPE_TERMINAL_PROFIT_PAYOUT = 'TERMINAL_PROFIT_PAYOUT';
     public const TYPE_ADJUSTMENT = 'ADJUSTMENT';
 
     public const STATUS_PENDING = 'PENDING';
@@ -26,6 +27,8 @@ class InvestmentTransaction extends Model
         'uuid',
         'investment_id',
         'investment_profit_period_id',
+        'investment_settlement_id',
+        'investment_settlement_asset_id',
         'direction',
         'type',
         'asset_symbol',
@@ -70,6 +73,22 @@ class InvestmentTransaction extends Model
         return $this->belongsTo(
             InvestmentProfitPeriod::class,
             'investment_profit_period_id'
+        );
+    }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(
+            InvestmentSettlement::class,
+            'investment_settlement_id'
+        );
+    }
+
+    public function settlementAsset(): BelongsTo
+    {
+        return $this->belongsTo(
+            InvestmentSettlementAsset::class,
+            'investment_settlement_asset_id'
         );
     }
 
