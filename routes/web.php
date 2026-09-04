@@ -6,6 +6,18 @@ Route::get('/', function () {
     return redirect()->route('admin.login');
 });
 
+Route::view(
+    '/payments/paypal/return',
+    'payments.paypal-result',
+    ['result' => 'return']
+)->name('payments.paypal.return');
+
+Route::view(
+    '/payments/paypal/cancel',
+    'payments.paypal-result',
+    ['result' => 'cancel']
+)->name('payments.paypal.cancel');
+
 require __DIR__ . '/customer_onboarding.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/admin_video_playback.php';
