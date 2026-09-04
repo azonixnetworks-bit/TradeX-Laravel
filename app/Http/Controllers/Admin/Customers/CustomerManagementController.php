@@ -162,9 +162,33 @@ class CustomerManagementController extends Controller
             ['en']
         );
 
+        $countries = config(
+            'tradex_countries',
+            []
+        );
+
+        $countryOptions = collect(
+            $countries
+        )
+            ->map(
+                fn (
+                    string $name,
+                    string $code
+                ): array => [
+                    'code' => $code,
+                    'name' => $name,
+                ]
+            )
+            ->values()
+            ->all();
+
         return view(
             'admin.customers.create',
-            compact('languages')
+            compact(
+                'languages',
+                'countries',
+                'countryOptions'
+            )
         );
     }
 

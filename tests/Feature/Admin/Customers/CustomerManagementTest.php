@@ -106,6 +106,102 @@ class CustomerManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_add_customer_renders_full_searchable_country_dataset(): void
+    {
+        $admin =
+            $this->adminWithPermissions([
+                'users.invite',
+            ]);
+
+        $response =
+            $this->actingAs(
+                $admin,
+                'admin'
+            )
+                ->get(
+                    route(
+                        'admin.customers.create'
+                    )
+                )
+                ->assertOk();
+
+        $response
+            ->assertSee('data-country-combobox', false)
+            ->assertSee('Sri Lanka')
+            ->assertSee('India')
+            ->assertSee('Japan')
+            ->assertSee('United States')
+            ->assertSee('United Arab Emirates');
+
+        $this->assertGreaterThanOrEqual(
+            240,
+            count(
+                config(
+                    'tradex_countries',
+                    []
+                )
+            )
+        );
+    }
+
+    public function test_customer_invitation_rejects_unknown_country_and_accepts_valid_iso_country(): void
+    {
+        $admin =
+            $this->adminWithPermissions([
+                'users.invite',
+            ]);
+
+        $this->actingAs(
+            $admin,
+            'admin'
+        )
+            ->post(
+                route(
+                    'admin.customers.store'
+                ),
+                $this->invitationPayload([
+                    'country_code' => 'ZZ',
+                ])
+            )
+            ->assertSessionHasErrors(
+                'country_code'
+            );
+
+        $this->assertDatabaseCount(
+            'customer_onboarding_invitations',
+            0
+        );
+
+        $this->actingAs(
+            $admin,
+            'admin'
+        )
+            ->post(
+                route(
+                    'admin.customers.store'
+                ),
+                $this->invitationPayload([
+                    'country_code' => 'JP',
+                    'email' =>
+                        'japan.customer@example.test',
+                    'whatsapp_number' =>
+                        '+819012345678',
+                ])
+            )
+            ->assertRedirect(
+                route(
+                    'admin.customers.onboarding'
+                )
+            );
+
+        $this->assertDatabaseHas(
+            'customer_onboarding_invitations',
+            [
+                'country_code' => 'JP',
+            ]
+        );
+    }
+
     public function test_authorized_admin_creates_pre_onboarding_invitation_not_user(): void
     {
         $admin =

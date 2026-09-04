@@ -46,6 +46,14 @@ class StoreCustomerOnboardingInvitationRequest extends FormRequest
                 'string',
                 'size:2',
                 'alpha',
+                Rule::in(
+                    array_keys(
+                        config(
+                            'tradex_countries',
+                            []
+                        )
+                    )
+                ),
             ],
 
             'language_code' => [
