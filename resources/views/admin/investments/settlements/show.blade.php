@@ -241,6 +241,15 @@
                                 @csrf
                                 <button class="primary-btn" type="submit">Finance Verify TxID</button>
                             </form>
+
+                            <form method="POST" action="{{ route('admin.investments.settlements.asset_payout.reject', [$investment, $settlement, $asset, $assetTx]) }}" style="margin-top:10px;">
+                                @csrf
+                                <div class="filter-item">
+                                    <label>Reject / Correction Reason</label>
+                                    <input type="text" name="reason" minlength="10" maxlength="1000" required>
+                                </div>
+                                <button class="secondary-btn" type="submit">Reject Pending Transfer</button>
+                            </form>
                         @endif
                     </td>
                 </tr>
@@ -271,7 +280,7 @@
             <p><strong>Status:</strong> {{ $terminalProfitPayout->status }} · <strong>TxID:</strong> <code>{{ $terminalProfitPayout->txid }}</code></p>
         @endif
 
-        @if($permissions['payment_record'] && in_array($settlement->status, [\App\Models\InvestmentSettlement::STATUS_APPROVED, \App\Models\InvestmentSettlement::STATUS_IN_PROGRESS], true) && !$terminalProfitPayout)
+        @if($permissions['payment_record'] && in_array($settlement->status, [\App\Models\InvestmentSettlement::STATUS_APPROVED, \App\Models\InvestmentSettlement::STATUS_IN_PROGRESS], true) && !$activeTerminalProfitPayout)
             <form method="POST" action="{{ route('admin.investments.settlements.terminal_profit.record', [$investment, $settlement]) }}">
                 @csrf
                 <div class="filter-item"><label>USDT TRC20 TxID</label><input type="text" name="txid" required></div>
@@ -285,6 +294,15 @@
             <form method="POST" action="{{ route('admin.investments.settlements.terminal_profit.verify', [$investment, $settlement, $terminalProfitPayout]) }}">
                 @csrf
                 <button class="primary-btn" type="submit">Finance Verify Profit TxID</button>
+            </form>
+
+            <form method="POST" action="{{ route('admin.investments.settlements.terminal_profit.reject', [$investment, $settlement, $terminalProfitPayout]) }}" style="margin-top:10px;">
+                @csrf
+                <div class="filter-item">
+                    <label>Reject / Correction Reason</label>
+                    <input type="text" name="reason" minlength="10" maxlength="1000" required>
+                </div>
+                <button class="secondary-btn" type="submit">Reject Pending Profit Payout</button>
             </form>
         @endif
     </div>

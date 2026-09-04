@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Investments;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Investments\RejectInvestmentSettlementPayoutRequest;
 use App\Http\Requests\Admin\Investments\StartInvestmentEarlyTerminationRequest;
 use App\Http\Requests\Admin\Investments\StoreInvestmentSettlementAssetPayoutRequest;
 use App\Http\Requests\Admin\Investments\StoreInvestmentSettlementWalletRequest;
@@ -106,6 +107,22 @@ class InvestmentSettlementController extends Controller
                     InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
                 );
 
+        $activeTerminalProfitPayout =
+            $settlement->transactions
+                ->first(
+                    fn (InvestmentTransaction $transaction): bool =>
+                        $transaction->type
+                            === InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                        && in_array(
+                            $transaction->status,
+                            [
+                                InvestmentTransaction::STATUS_PENDING,
+                                InvestmentTransaction::STATUS_VERIFIED,
+                            ],
+                            true
+                        )
+                );
+
         $terminalPnlEvidence =
             InvestmentEvidence::query()
                 ->where(
@@ -126,6 +143,8 @@ class InvestmentSettlementController extends Controller
                 'settlement' => $settlement,
                 'terminalProfitPayout' =>
                     $terminalProfitPayout,
+                'activeTerminalProfitPayout' =>
+                    $activeTerminalProfitPayout,
                 'terminalPnlEvidence' =>
                     $terminalPnlEvidence,
                 'permissions' => [
@@ -417,6 +436,37 @@ class InvestmentSettlementController extends Controller
         );
     }
 
+    public function rejectAssetPayout(
+        RejectInvestmentSettlementPayoutRequest $request,
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        InvestmentSettlementAsset $asset,
+        InvestmentTransaction $transaction,
+        InvestmentSettlementService $service
+    ): RedirectResponse {
+        try {
+            $service->rejectAssetPayout(
+                $investment,
+                $settlement,
+                $asset,
+                $transaction,
+                (string) $request->validated('reason'),
+                $this->admin(),
+                $request
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'payment' =>
+                    $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            'Pending settlement asset payout rejected. The immutable rejected transaction remains in history and the asset can be re-recorded with a new TxID.'
+        );
+    }
+
     public function recordTerminalProfitPayout(
         StoreInvestmentTerminalProfitPayoutRequest $request,
         Investment $investment,
@@ -469,6 +519,35 @@ class InvestmentSettlementController extends Controller
         return back()->with(
             'success',
             'Early-termination customer profit payout verified.'
+        );
+    }
+
+    public function rejectTerminalProfitPayout(
+        RejectInvestmentSettlementPayoutRequest $request,
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        InvestmentTransaction $transaction,
+        InvestmentSettlementService $service
+    ): RedirectResponse {
+        try {
+            $service->rejectTerminalProfitPayout(
+                $investment,
+                $settlement,
+                $transaction,
+                (string) $request->validated('reason'),
+                $this->admin(),
+                $request
+            );
+        } catch (DomainException $exception) {
+            return back()->withErrors([
+                'payment' =>
+                    $exception->getMessage(),
+            ]);
+        }
+
+        return back()->with(
+            'success',
+            'Pending terminal profit payout rejected. Re-record using the correct new transaction ID.'
         );
     }
 

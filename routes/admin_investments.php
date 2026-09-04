@@ -221,10 +221,14 @@ Route::prefix('admin/investments')
             ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->name('settlements.asset_payout.record');
         Route::post('/{investment}/settlements/{settlement}/assets/{asset}/payout/{transaction}/verify', [InvestmentSettlementController::class, 'verifyAssetPayout'])
             ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->whereNumber('transaction')->name('settlements.asset_payout.verify');
+        Route::post('/{investment}/settlements/{settlement}/assets/{asset}/payout/{transaction}/reject', [InvestmentSettlementController::class, 'rejectAssetPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('asset')->whereNumber('transaction')->name('settlements.asset_payout.reject');
         Route::post('/{investment}/settlements/{settlement}/terminal-profit', [InvestmentSettlementController::class, 'recordTerminalProfitPayout'])
             ->whereNumber('investment')->whereNumber('settlement')->name('settlements.terminal_profit.record');
         Route::post('/{investment}/settlements/{settlement}/terminal-profit/{transaction}/verify', [InvestmentSettlementController::class, 'verifyTerminalProfitPayout'])
             ->whereNumber('investment')->whereNumber('settlement')->whereNumber('transaction')->name('settlements.terminal_profit.verify');
+        Route::post('/{investment}/settlements/{settlement}/terminal-profit/{transaction}/reject', [InvestmentSettlementController::class, 'rejectTerminalProfitPayout'])
+            ->whereNumber('investment')->whereNumber('settlement')->whereNumber('transaction')->name('settlements.terminal_profit.reject');
         Route::post('/{investment}/settlements/{settlement}/close', [InvestmentSettlementController::class, 'close'])
             ->whereNumber('investment')->whereNumber('settlement')->name('settlements.close');
         Route::get(

@@ -304,6 +304,171 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         $this->assertDatabaseCount('investment_trades', 0);
     }
 
+    public function test_early_termination_preflight_blocks_unfinished_prior_period_inflight_cutoff_period_and_pending_topup(): void
+    {
+        $manager = $this->adminWithRole(
+            'INVESTMENT_ADMIN',
+            'phase4-preflight-manager'
+        );
+        $finance = $this->adminWithRole(
+            'FINANCE_ADMIN',
+            'phase4-preflight-finance'
+        );
+
+        $investment = $this->investment(
+            $manager,
+            now()->subMonths(4),
+            now()->addMonths(8)
+        );
+
+        $prior = $this->period(
+            $investment,
+            1,
+            now()->subMonths(4),
+            now()->subDay()
+        );
+
+        $current = $this->period(
+            $investment,
+            2,
+            now()->startOfDay(),
+            now()->addMonths(2)
+        );
+
+        $this->verifiedDeposit(
+            $investment,
+            $manager,
+            now()->subMonths(4)->addDay()
+        );
+
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.early.initiate',
+                    $investment
+                ),
+                [
+                    'reason' =>
+                        'Preflight must block an unfinished earlier review period.',
+                ]
+            )
+            ->assertSessionHasErrors('settlement');
+
+        $this->assertSame(
+            Investment::STATUS_ACTIVE,
+            $investment->fresh()->status
+        );
+        $this->assertDatabaseCount(
+            'investment_settlements',
+            0
+        );
+
+        $prior->forceFill([
+            'status' =>
+                InvestmentProfitPeriod::STATUS_NO_DISTRIBUTION,
+            'distribution_outcome' =>
+                InvestmentProfitPeriod::OUTCOME_NO_DISTRIBUTION,
+            'approved_by_admin_id' =>
+                $finance->getKey(),
+            'approved_at' => now()->subHour(),
+        ])->save();
+
+        $current->forceFill([
+            'status' =>
+                InvestmentProfitPeriod::STATUS_APPROVAL_PENDING,
+            'prepared_by_admin_id' =>
+                $manager->getKey(),
+            'prepared_at' => now()->subMinutes(20),
+        ])->save();
+
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.early.initiate',
+                    $investment
+                ),
+                [
+                    'reason' =>
+                        'Preflight must block an in-flight cutoff-period distribution workflow.',
+                ]
+            )
+            ->assertSessionHasErrors('settlement');
+
+        $current->forceFill([
+            'status' =>
+                InvestmentProfitPeriod::STATUS_UPCOMING,
+            'prepared_by_admin_id' => null,
+            'prepared_at' => null,
+        ])->save();
+
+        $pendingTopUp =
+            InvestmentTransaction::query()->create([
+                'uuid' => Str::uuid()->toString(),
+                'investment_id' =>
+                    $investment->getKey(),
+                'direction' =>
+                    InvestmentTransaction::DIRECTION_IN,
+                'type' =>
+                    InvestmentTransaction::TYPE_TOP_UP,
+                'asset_symbol' => 'USDT',
+                'amount' =>
+                    '100.000000000000000000',
+                'usdt_equivalent' =>
+                    '100.00000000',
+                'network' => 'TRC20',
+                'to_address' =>
+                    'TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE',
+                'txid' => str_repeat('b', 64),
+                'status' =>
+                    InvestmentTransaction::STATUS_PENDING,
+                'occurred_at' => now()->subMinute(),
+                'recorded_by_admin_id' =>
+                    $manager->getKey(),
+            ]);
+
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.early.initiate',
+                    $investment
+                ),
+                [
+                    'reason' =>
+                        'Preflight must block a pending pre-cutoff top-up.',
+                ]
+            )
+            ->assertSessionHasErrors('settlement');
+
+        $pendingTopUp->forceFill([
+            'status' =>
+                InvestmentTransaction::STATUS_REJECTED,
+            'verified_by_admin_id' =>
+                $finance->getKey(),
+            'verified_at' => now(),
+        ])->save();
+
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.early.initiate',
+                    $investment
+                ),
+                [
+                    'reason' =>
+                        'All prior review and top-up preflight gates are now clear.',
+                ]
+            )
+            ->assertRedirect();
+
+        $this->assertSame(
+            Investment::STATUS_EARLY_TERMINATION_REVIEW,
+            $investment->fresh()->status
+        );
+        $this->assertDatabaseCount(
+            'investment_settlements',
+            1
+        );
+    }
     public function test_post_approval_payouts_cannot_be_backdated_and_terminal_profit_cannot_be_recorded_twice(): void
     {
         [$manager, $finance, $investment, $period] = $this->activeFixture();
@@ -428,6 +593,88 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
         $this->actingAs($finance, 'admin')
             ->post(
                 route(
+                    'admin.investments.settlements.asset_payout.record',
+                    [
+                        $investment,
+                        $settlement,
+                        $firstAsset,
+                    ]
+                ),
+                [
+                    'network_fee_asset_symbol' =>
+                        $firstAsset->asset_symbol,
+                    'network_fee_units' => '0',
+                    'txid' =>
+                        'asset-reject-'
+                        .Str::lower(Str::random(32)),
+                    'occurred_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertRedirect();
+
+        $firstAssetTransaction =
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_settlement_asset_id',
+                    $firstAsset->getKey()
+                )
+                ->latest('id')
+                ->firstOrFail();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.asset_payout.reject',
+                    [
+                        $investment,
+                        $settlement,
+                        $firstAsset,
+                        $firstAssetTransaction,
+                    ]
+                ),
+                [
+                    'reason' =>
+                        'Finance rejected the pending transfer because the recorded transaction reference was incorrect.',
+                ]
+            )
+            ->assertRedirect();
+
+        $this->assertSame(
+            InvestmentTransaction::STATUS_REJECTED,
+            $firstAssetTransaction->fresh()->status
+        );
+        $this->assertSame(
+            InvestmentSettlementAsset::STATUS_READY,
+            $firstAsset->fresh()->status
+        );
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.asset_payout.record',
+                    [
+                        $investment,
+                        $settlement,
+                        $firstAsset,
+                    ]
+                ),
+                [
+                    'network_fee_asset_symbol' =>
+                        $firstAsset->asset_symbol,
+                    'network_fee_units' => '0',
+                    'txid' =>
+                        'asset-retry-'
+                        .Str::lower(Str::random(32)),
+                    'occurred_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertRedirect();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
                     'admin.investments.settlements.terminal_profit.record',
                     [$investment, $settlement]
                 ),
@@ -468,6 +715,110 @@ class AdminInvestmentPhase4SettlementTest extends TestCase
                 )
                 ->count()
         );
+
+        $terminalProfitTransaction =
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'type',
+                    InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                )
+                ->latest('id')
+                ->firstOrFail();
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_profit.reject',
+                    [
+                        $investment,
+                        $settlement,
+                        $terminalProfitTransaction,
+                    ]
+                ),
+                [
+                    'reason' =>
+                        'Finance rejected the pending terminal profit payout because the transaction reference requires correction.',
+                ]
+            )
+            ->assertRedirect();
+
+        $this->assertSame(
+            InvestmentTransaction::STATUS_REJECTED,
+            $terminalProfitTransaction->fresh()->status
+        );
+
+        $this->actingAs($finance, 'admin')
+            ->post(
+                route(
+                    'admin.investments.settlements.terminal_profit.record',
+                    [$investment, $settlement]
+                ),
+                [
+                    'txid' =>
+                        str_repeat('c', 64),
+                    'occurred_at' =>
+                        now()->toDateTimeString(),
+                ]
+            )
+            ->assertRedirect();
+
+        $this->assertSame(
+            2,
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'type',
+                    InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                )
+                ->count()
+        );
+
+        $this->assertSame(
+            1,
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_settlement_id',
+                    $settlement->getKey()
+                )
+                ->where(
+                    'type',
+                    InvestmentTransaction::TYPE_TERMINAL_PROFIT_PAYOUT
+                )
+                ->where(
+                    'status',
+                    InvestmentTransaction::STATUS_PENDING
+                )
+                ->count()
+        );
+    }
+    public function test_spot_trade_requires_network_for_exact_terminal_asset_identity(): void
+    {
+        [$manager, , $investment] =
+            $this->activeFixture();
+
+        $payload = $this->tradePayload(
+            'BUY',
+            'ETH',
+            '0'
+        );
+        unset($payload['network']);
+
+        $this->actingAs($manager, 'admin')
+            ->post(
+                route(
+                    'admin.investments.trades.store',
+                    $investment
+                ),
+                $payload
+            )
+            ->assertSessionHasErrors('network');
     }
     private function activeFixture(): array
     {

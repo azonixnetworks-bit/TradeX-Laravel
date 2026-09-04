@@ -250,9 +250,28 @@ class InvestmentSettlementProfitService
                     fn (InvestmentEvidence $evidence) => [
                         'id' => $evidence->getKey(),
                         'uuid' => $evidence->uuid,
-                        'document_sha256' => $evidence->document_sha256,
-                        'document_size_bytes' => $evidence->document_size_bytes,
-                        'verified_at' => $evidence->verified_at?->toIso8601String(),
+                        'investment_settlement_id' =>
+                            $evidence->investment_settlement_id,
+                        'account_reference' =>
+                            $evidence->account_reference,
+                        'source_reference' =>
+                            $evidence->source_reference,
+                        'period_start' =>
+                            $evidence->period_start?->toDateString(),
+                        'period_end' =>
+                            $evidence->period_end?->toDateString(),
+                        'document_mime_type' =>
+                            $evidence->document_mime_type,
+                        'document_sha256' =>
+                            $evidence->document_sha256,
+                        'document_size_bytes' =>
+                            $evidence->document_size_bytes,
+                        'uploaded_by_admin_id' =>
+                            $evidence->uploaded_by_admin_id,
+                        'verified_by_admin_id' =>
+                            $evidence->verified_by_admin_id,
+                        'verified_at' =>
+                            $evidence->verified_at?->toIso8601String(),
                     ]
                 )->all(),
             ],
@@ -426,7 +445,7 @@ class InvestmentSettlementProfitService
         CarbonImmutable $cutoff
     ): void {
         $periods = $investment->profitPeriods()
-            ->whereDate('period_end', '<=', $cutoff->toDateString())
+            ->whereDate('period_end', '<', $cutoff->toDateString())
             ->orderBy('sequence')
             ->get();
 

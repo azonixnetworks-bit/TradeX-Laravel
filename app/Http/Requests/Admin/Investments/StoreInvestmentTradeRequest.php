@@ -23,7 +23,7 @@ class StoreInvestmentTradeRequest extends FormRequest
                 'max:30',
                 'regex:/^[A-Za-z0-9._-]+$/',
             ],
-            'network' => ['nullable', 'string', 'max:60'],
+            'network' => ['required', 'string', 'min:2', 'max:60'],
             'contract_address' => ['nullable', 'string', 'max:191'],
             'exchange_broker' => ['required', 'string', 'max:120'],
             'quantity' => ['required', 'numeric', 'gt:0', 'decimal:0,18'],

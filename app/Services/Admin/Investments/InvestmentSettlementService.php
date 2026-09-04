@@ -91,6 +91,11 @@ class InvestmentSettlementService
 
                 $cutoff = now();
 
+                $this->assertEarlyTerminationFreezeReady(
+                    $locked,
+                    CarbonImmutable::parse($cutoff)
+                );
+
                 $settlement = InvestmentSettlement::query()->create([
                     'uuid' => Str::uuid()->toString(),
                     'investment_id' => $locked->getKey(),
@@ -127,6 +132,124 @@ class InvestmentSettlementService
             },
             3
         );
+    }
+
+    private function assertEarlyTerminationFreezeReady(
+        Investment $investment,
+        CarbonImmutable $cutoff
+    ): void {
+        $finalStatuses = $this->finalProfitPeriodStatuses();
+
+        $blockingPriorPeriod =
+            InvestmentProfitPeriod::query()
+                ->where(
+                    'investment_id',
+                    $investment->getKey()
+                )
+                ->whereDate(
+                    'period_end',
+                    '<',
+                    $cutoff->toDateString()
+                )
+                ->whereNotIn(
+                    'status',
+                    $finalStatuses
+                )
+                ->orderBy('sequence')
+                ->lockForUpdate()
+                ->first();
+
+        if ($blockingPriorPeriod) {
+            throw new DomainException(
+                'Finalize every earlier profit-review period before freezing early termination.'
+            );
+        }
+
+        $cutoffPeriod =
+            InvestmentProfitPeriod::query()
+                ->where(
+                    'investment_id',
+                    $investment->getKey()
+                )
+                ->whereDate(
+                    'period_start',
+                    '<=',
+                    $cutoff->toDateString()
+                )
+                ->whereDate(
+                    'period_end',
+                    '>=',
+                    $cutoff->toDateString()
+                )
+                ->orderBy('sequence')
+                ->lockForUpdate()
+                ->first();
+
+        if (! $cutoffPeriod) {
+            throw new DomainException(
+                'The profit-review schedule does not contain the early-termination cutoff date.'
+            );
+        }
+
+        $allowedCutoffStates = array_merge(
+            [
+                InvestmentProfitPeriod::STATUS_UPCOMING,
+                InvestmentProfitPeriod::STATUS_DUE,
+            ],
+            $finalStatuses
+        );
+
+        if (
+            ! in_array(
+                $cutoffPeriod->status,
+                $allowedCutoffStates,
+                true
+            )
+        ) {
+            throw new DomainException(
+                'Complete or unwind the in-flight scheduled profit-review workflow before freezing early termination.'
+            );
+        }
+
+        $pendingTopUp =
+            InvestmentTransaction::query()
+                ->where(
+                    'investment_id',
+                    $investment->getKey()
+                )
+                ->where(
+                    'type',
+                    InvestmentTransaction::TYPE_TOP_UP
+                )
+                ->where(
+                    'status',
+                    InvestmentTransaction::STATUS_PENDING
+                )
+                ->where(
+                    'occurred_at',
+                    '<=',
+                    $cutoff
+                )
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->first();
+
+        if ($pendingTopUp) {
+            throw new DomainException(
+                'Verify or reject every pending pre-cutoff top-up before freezing early termination.'
+            );
+        }
+    }
+
+    private function finalProfitPeriodStatuses(): array
+    {
+        return [
+            InvestmentProfitPeriod::STATUS_SETTLED,
+            InvestmentProfitPeriod::STATUS_NO_DISTRIBUTION,
+            InvestmentProfitPeriod::STATUS_LOSS_CARRIED_FORWARD,
+            InvestmentProfitPeriod::STATUS_PAID,
+            InvestmentProfitPeriod::STATUS_NO_PROFIT,
+        ];
     }
 
     public function prepareMaturity(
@@ -1113,6 +1236,144 @@ class InvestmentSettlementService
         );
     }
 
+    public function rejectAssetPayout(
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        InvestmentSettlementAsset $asset,
+        InvestmentTransaction $transaction,
+        string $reason,
+        AdminUser $admin,
+        Request $request
+    ): void {
+        abort_unless(
+            $admin->hasPermission(
+                'investments.settlements.payments.verify'
+            ),
+            403
+        );
+        abort_unless(
+            $admin->hasPermission(
+                'investments.transactions.verify'
+            ),
+            403
+        );
+
+        $this->assertAsset(
+            $investment,
+            $settlement,
+            $asset
+        );
+        $this->assertAssetTransaction(
+            $investment,
+            $settlement,
+            $asset,
+            $transaction
+        );
+
+        DB::transaction(
+            function () use (
+                $investment,
+                $settlement,
+                $asset,
+                $transaction,
+                $reason,
+                $admin,
+                $request
+            ): void {
+                $lockedSettlement =
+                    InvestmentSettlement::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $settlement->getKey()
+                        );
+
+                $lockedAsset =
+                    InvestmentSettlementAsset::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $asset->getKey()
+                        );
+
+                $lockedTransaction =
+                    InvestmentTransaction::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $transaction->getKey()
+                        );
+
+                $this->assertAssetTransaction(
+                    $investment,
+                    $lockedSettlement,
+                    $lockedAsset,
+                    $lockedTransaction
+                );
+
+                if (
+                    ! in_array(
+                        $lockedSettlement->status,
+                        [
+                            InvestmentSettlement::STATUS_APPROVED,
+                            InvestmentSettlement::STATUS_IN_PROGRESS,
+                        ],
+                        true
+                    )
+                    || $lockedAsset->status
+                        !== InvestmentSettlementAsset::STATUS_PAYMENT_RECORDED
+                    || $lockedTransaction->status
+                        !== InvestmentTransaction::STATUS_PENDING
+                ) {
+                    throw new DomainException(
+                        'Only a pending recorded settlement asset payout can be rejected.'
+                    );
+                }
+
+                $lockedTransaction->forceFill([
+                    'status' =>
+                        InvestmentTransaction::STATUS_REJECTED,
+                    'verified_by_admin_id' =>
+                        $admin->getKey(),
+                    'verified_at' => now(),
+                    'notes' => trim(
+                        (
+                            $lockedTransaction->notes
+                                ? $lockedTransaction->notes."\n"
+                                : ''
+                        )
+                        .'REJECTED: '.trim($reason)
+                    ),
+                ])->save();
+
+                $lockedAsset->forceFill([
+                    'network_fee_asset_symbol' => null,
+                    'network_fee_units' =>
+                        '0.000000000000000000',
+                    'network_fee_deducted_from_customer' =>
+                        false,
+                    'net_transfer_units' => null,
+                    'status' =>
+                        InvestmentSettlementAsset::STATUS_READY,
+                ])->save();
+
+                $this->audit(
+                    $admin,
+                    $request,
+                    'INVESTMENT_SETTLEMENT_ASSET_PAYMENT_REJECTED',
+                    $lockedSettlement,
+                    [
+                        'settlement_asset_id' =>
+                            $lockedAsset->getKey(),
+                        'transaction_id' =>
+                            $lockedTransaction->getKey(),
+                        'txid' =>
+                            $lockedTransaction->txid,
+                        'reason' => trim($reason),
+                    ]
+                );
+            },
+            3
+        );
+    }
+
     public function recordTerminalProfitPayout(
         Investment $investment,
         InvestmentSettlement $settlement,
@@ -1538,6 +1799,113 @@ class InvestmentSettlementService
             3
         );
     }
+    public function rejectTerminalProfitPayout(
+        Investment $investment,
+        InvestmentSettlement $settlement,
+        InvestmentTransaction $transaction,
+        string $reason,
+        AdminUser $admin,
+        Request $request
+    ): void {
+        abort_unless(
+            $admin->hasPermission(
+                'investments.settlements.payments.verify'
+            ),
+            403
+        );
+        abort_unless(
+            $admin->hasPermission(
+                'investments.transactions.verify'
+            ),
+            403
+        );
+
+        $this->assertTerminalProfitTransaction(
+            $investment,
+            $settlement,
+            $transaction
+        );
+
+        DB::transaction(
+            function () use (
+                $investment,
+                $settlement,
+                $transaction,
+                $reason,
+                $admin,
+                $request
+            ): void {
+                $lockedSettlement =
+                    InvestmentSettlement::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $settlement->getKey()
+                        );
+
+                $lockedTransaction =
+                    InvestmentTransaction::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $transaction->getKey()
+                        );
+
+                $this->assertTerminalProfitTransaction(
+                    $investment,
+                    $lockedSettlement,
+                    $lockedTransaction
+                );
+
+                if (
+                    ! in_array(
+                        $lockedSettlement->status,
+                        [
+                            InvestmentSettlement::STATUS_APPROVED,
+                            InvestmentSettlement::STATUS_IN_PROGRESS,
+                        ],
+                        true
+                    )
+                    || $lockedTransaction->status
+                        !== InvestmentTransaction::STATUS_PENDING
+                ) {
+                    throw new DomainException(
+                        'Only a pending terminal profit payout can be rejected.'
+                    );
+                }
+
+                $lockedTransaction->forceFill([
+                    'status' =>
+                        InvestmentTransaction::STATUS_REJECTED,
+                    'verified_by_admin_id' =>
+                        $admin->getKey(),
+                    'verified_at' => now(),
+                    'notes' => trim(
+                        (
+                            $lockedTransaction->notes
+                                ? $lockedTransaction->notes."\n"
+                                : ''
+                        )
+                        .'REJECTED: '.trim($reason)
+                    ),
+                ])->save();
+
+                $this->audit(
+                    $admin,
+                    $request,
+                    'INVESTMENT_TERMINAL_PROFIT_PAYOUT_REJECTED',
+                    $lockedSettlement,
+                    [
+                        'transaction_id' =>
+                            $lockedTransaction->getKey(),
+                        'txid' =>
+                            $lockedTransaction->txid,
+                        'reason' => trim($reason),
+                    ]
+                );
+            },
+            3
+        );
+    }
+
     public function close(
         Investment $investment,
         InvestmentSettlement $settlement,
@@ -2288,6 +2656,12 @@ class InvestmentSettlementService
                 ->get();
 
         foreach ($allocations as $allocation) {
+            if (! filled($allocation->network)) {
+                throw new DomainException(
+                    'An attributable asset allocation is missing its network identity. Reconcile the ledger before terminal settlement.'
+                );
+            }
+
             $this->appendAssetGroup(
                 $groups,
                 (string) $allocation
