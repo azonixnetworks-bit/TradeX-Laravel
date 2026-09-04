@@ -25,7 +25,38 @@ class CustomerActivationPageTest extends TestCase
                 'data-tradex-customer-activation-ui="v1"',
                 false
             )
+            ->assertSee(
+                'data-email-otp-prefix="TRX-"',
+                false
+            )
+            ->assertSee(
+                'Enter the eight-digit verification code sent to the email address on your TradeX invitation.',
+                false
+            )
+            ->assertDontSee(
+                'Enter the six-digit verification code sent to the email address on your TradeX invitation.',
+                false
+            )
             ->assertDontSee($secret, false);
+
+        $content = (string) $response->getContent();
+$this->assertSame(
+    8,
+    substr_count(
+        $content,
+        'class="email-otp-digit" data-email-otp-digit'
+    )
+);
+
+        $this->assertStringContainsString(
+            "replace(/\\D/g, '')",
+            $content
+        );
+
+        $this->assertStringContainsString(
+            "! /^\\d{8}$/.test(code)",
+            $content
+        );
 
         $cacheControl = (string) $response->headers->get(
             'Cache-Control'
