@@ -128,6 +128,14 @@
     src="{{ asset('admin/js/sidebar.js') }}">
 </script>
 
+@if(auth('admin')->user()?->hasPermission('dashboard.view'))
+<script
+    src="{{ asset('admin/js/market-clock-nav.js') }}"
+    data-dashboard-url="{{ route('admin.dashboard') }}"
+    data-market-clock-url="{{ route('admin.market_clock.index') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
