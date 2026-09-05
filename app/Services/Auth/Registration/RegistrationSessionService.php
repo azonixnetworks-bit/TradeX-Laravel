@@ -48,7 +48,16 @@ class RegistrationSessionService
                 )
                 ->first();
 
-            if (! $referrer) {
+            /*
+             * A referral code is actionable only while the referrer has the
+             * authoritative active EDUCATION_PREMIUM entitlement. This prevents
+             * pre-payment, revoked, or otherwise non-premium accounts from using
+             * a manually reconstructed affiliate URL.
+             */
+            if (
+                ! $referrer
+                || ! $referrer->canAccessPremium()
+            ) {
                 throw new AuthApiException(
                     422,
                     'INVALID_REFERRAL_CODE',

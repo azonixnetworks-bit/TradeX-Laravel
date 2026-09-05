@@ -22,11 +22,23 @@ class DashboardController extends Controller
             'Unauthenticated.'
         );
 
+        $data = $service->dashboard(
+            $user
+        );
+
+        /*
+         * Affiliate referral URLs are a premium entitlement benefit.
+         * Keep the permanent internal referral code stable for compatibility,
+         * but do not expose an actionable affiliate URL until the authoritative
+         * EDUCATION_PREMIUM entitlement is active.
+         */
+        if (! $user->canAccessPremium()) {
+            $data['referral']['url'] = null;
+        }
+
         return response()->json([
             'success' => true,
-            'data' => $service->dashboard(
-                $user
-            ),
+            'data' => $data,
         ]);
     }
 }
