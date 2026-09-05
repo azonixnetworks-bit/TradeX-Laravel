@@ -37,6 +37,18 @@ require __DIR__ . '/admin_trade_ideas.php';
 
 /*
 |--------------------------------------------------------------------------
+| Global Market Clock
+|--------------------------------------------------------------------------
+|
+| Read-only UTC-based, IANA-timezone and DST-aware global trading-centre
+| session visualisation for the administration dashboard.
+|
+*/
+
+require __DIR__ . '/admin_market_clock.php';
+
+/*
+|--------------------------------------------------------------------------
 | ADMIN-06 — Affiliate Management
 |--------------------------------------------------------------------------
 |
