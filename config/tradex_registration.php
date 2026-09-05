@@ -88,6 +88,18 @@ return [
                     'META_WHATSAPP_OTP_TEMPLATE_LANGUAGE',
                     'en_US'
                 ),
+
+            'timeout_seconds' =>
+                (int) env(
+                    'META_WHATSAPP_TIMEOUT_SECONDS',
+                    10
+                ),
+
+            'connect_timeout_seconds' =>
+                (int) env(
+                    'META_WHATSAPP_CONNECT_TIMEOUT_SECONDS',
+                    5
+                ),
         ],
     ],
 

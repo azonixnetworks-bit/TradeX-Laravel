@@ -11,6 +11,12 @@ use Throwable;
 
 class RegistrationOtpDeliveryService
 {
+    public function __construct(
+        private readonly WhatsAppMetaConfigurationSafety
+            $metaConfiguration
+    ) {
+    }
+
     public function sendEmail(
         string $email,
         string $code
@@ -77,9 +83,11 @@ class RegistrationOtpDeliveryService
         string $code
     ): void {
         $driver = strtolower(
-            (string) config(
-                'tradex_registration.delivery.whatsapp_driver',
-                'log'
+            trim(
+                (string) config(
+                    'tradex_registration.delivery.whatsapp_driver',
+                    'log'
+                )
             )
         );
 
@@ -108,78 +116,90 @@ class RegistrationOtpDeliveryService
             );
         }
 
-        $graphVersion = (string) config(
-            'tradex_registration.delivery.meta.graph_version'
-        );
+        $this->metaConfiguration
+            ->assertConfigured();
 
-        $phoneNumberId = (string) config(
-            'tradex_registration.delivery.meta.phone_number_id'
+        $recipient = ltrim(
+            trim($whatsappNumber),
+            '+'
         );
-
-        $accessToken = (string) config(
-            'tradex_registration.delivery.meta.access_token'
-        );
-
-        $templateName = (string) config(
-            'tradex_registration.delivery.meta.otp_template_name'
-        );
-
-        $templateLanguage = (string) config(
-            'tradex_registration.delivery.meta.otp_template_language',
-            'en_US'
-        );
-
-        if (
-            ! preg_match(
-                '/^v\d+\.\d+$/',
-                $graphVersion
-            )
-            || blank($phoneNumberId)
-            || blank($accessToken)
-            || blank($templateName)
-        ) {
-            throw new AuthApiException(
-                503,
-                'WHATSAPP_OTP_NOT_CONFIGURED',
-                'WhatsApp OTP provider credentials are incomplete.'
-            );
-        }
 
         try {
+            /*
+             * Do not automatically retry this POST. A request can be accepted
+             * by Meta even if the client loses the response, so an automatic
+             * retry could deliver the same OTP more than once. TradeX's
+             * existing controlled resend/cooldown flow remains authoritative.
+             */
             $response = Http::withToken(
-                $accessToken
+                $this->metaConfiguration
+                    ->accessToken()
             )
                 ->acceptJson()
                 ->asJson()
-                ->timeout(10)
+                ->connectTimeout(
+                    $this->metaConfiguration
+                        ->connectTimeoutSeconds()
+                )
+                ->timeout(
+                    $this->metaConfiguration
+                        ->timeoutSeconds()
+                )
                 ->post(
-                    "https://graph.facebook.com/{$graphVersion}/{$phoneNumberId}/messages",
+                    $this->metaConfiguration
+                        ->endpoint(),
                     [
                         'messaging_product' =>
                             'whatsapp',
 
                         'to' =>
-                            ltrim(
-                                $whatsappNumber,
-                                '+'
-                            ),
+                            $recipient,
 
                         'type' =>
                             'template',
 
                         'template' => [
                             'name' =>
-                                $templateName,
+                                $this->metaConfiguration
+                                    ->templateName(),
 
                             'language' => [
                                 'code' =>
-                                    $templateLanguage,
+                                    $this->metaConfiguration
+                                        ->templateLanguage(),
                             ],
 
+                            /*
+                             * Meta AUTHENTICATION templates place the OTP in
+                             * the body and in the OTP button parameter. The
+                             * button is represented as a URL subtype when the
+                             * approved authentication template is sent.
+                             */
                             'components' => [
                                 [
                                     'type' =>
                                         'body',
+
+                                    'parameters' => [
+                                        [
+                                            'type' =>
+                                                'text',
+
+                                            'text' =>
+                                                $code,
+                                        ],
+                                    ],
+                                ],
+
+                                [
+                                    'type' =>
+                                        'button',
+
+                                    'sub_type' =>
+                                        'url',
+
+                                    'index' =>
+                                        '0',
 
                                     'parameters' => [
                                         [
@@ -197,6 +217,26 @@ class RegistrationOtpDeliveryService
                 );
 
             if ($response->failed()) {
+                throw new AuthApiException(
+                    503,
+                    'WHATSAPP_OTP_DELIVERY_FAILED',
+                    'WhatsApp verification code could not be delivered.'
+                );
+            }
+
+            $payload = $response->json();
+
+            $messageId =
+                is_array($payload)
+                    ? trim(
+                        (string) data_get(
+                            $payload,
+                            'messages.0.id'
+                        )
+                    )
+                    : '';
+
+            if ($messageId === '') {
                 throw new AuthApiException(
                     503,
                     'WHATSAPP_OTP_DELIVERY_FAILED',
