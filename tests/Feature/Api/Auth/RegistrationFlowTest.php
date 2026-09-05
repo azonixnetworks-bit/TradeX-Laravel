@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Api\Auth;
 
+use App\Models\Product;
 use App\Models\User;
+use App\Models\UserEntitlement;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -62,11 +64,28 @@ class RegistrationFlowTest extends TestCase
                     'en',
 
                 'account_type' =>
-                    'FREE',
+                    'PREMIUM',
 
                 'status' =>
                     'ACTIVE',
+
+                'premium_activated_at' =>
+                    now(),
             ]);
+
+        UserEntitlement::query()->create([
+            'user_id' =>
+                $referrer->getKey(),
+
+            'product_code' =>
+                Product::CODE_EDUCATION_PREMIUM,
+
+            'status' =>
+                UserEntitlement::STATUS_ACTIVE,
+
+            'activated_at' =>
+                now(),
+        ]);
 
         $start = $this
             ->postJson(

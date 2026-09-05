@@ -225,11 +225,26 @@ class SocialOnboardingService
 
     private function resolveReferrer(?string $code): ?User
     {
-        if (blank($code)) { return null; }
-        $user = User::query()->where('referral_code', $code)->where('status', 'ACTIVE')->first();
-        if (! $user) {
-            throw new AuthApiException(422, 'INVALID_REFERRAL_CODE', 'The referral code is invalid or unavailable.');
+        if (blank($code)) {
+            return null;
         }
+
+        $user = User::query()
+            ->where('referral_code', $code)
+            ->where('status', 'ACTIVE')
+            ->first();
+
+        if (
+            ! $user
+            || ! $user->canAccessPremium()
+        ) {
+            throw new AuthApiException(
+                422,
+                'INVALID_REFERRAL_CODE',
+                'The referral code is invalid or unavailable.'
+            );
+        }
+
         return $user;
     }
 
@@ -237,7 +252,9 @@ class SocialOnboardingService
     {
         for ($attempt = 0; $attempt < 20; $attempt++) {
             $code = 'TX'.Str::upper(Str::random(10));
-            if (! User::withTrashed()->where('referral_code', $code)->exists()) { return $code; }
+            if (! User::withTrashed()->where('referral_code', $code)->exists()) {
+                return $code;
+            }
         }
         throw new AuthApiException(503, 'REFERRAL_CODE_GENERATION_FAILED', 'A referral code could not be generated.');
     }
