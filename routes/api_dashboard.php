@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Dashboard\DashboardController;
+use App\Http\Controllers\Api\MarketClock\MarketClockController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,4 +36,13 @@ Route::middleware([
                 'throttle:api-dashboard-read'
             )
             ->name('dashboard.show');
+
+        Route::get(
+            '/market-clock',
+            MarketClockController::class
+        )
+            ->middleware(
+                'throttle:api-dashboard-read'
+            )
+            ->name('market-clock.show');
     });
