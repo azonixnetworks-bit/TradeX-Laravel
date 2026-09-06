@@ -69,18 +69,19 @@ class DerivMarketDataProvider implements MarketDataProvider
             return [];
         }
 
-        $granularity = (int) $interval;
-
-        if ($granularity < 1 || $granularity > 86400) {
-            throw new ScreenerProviderException(
-                'SCREENER_PROVIDER_INVALID_REQUEST',
-                'Deriv screener timeframe is not supported.'
-            );
-        }
+        $granularity = $this->granularity(
+            $interval
+        );
 
         $count = max(
             2,
-            min(5000, $outputSize)
+            min(
+                5000,
+                (int) config(
+                    'tradex_screener.providers.deriv.output_size',
+                    $outputSize
+                )
+            )
         );
 
         $requests = [];
@@ -215,6 +216,31 @@ class DerivMarketDataProvider implements MarketDataProvider
             'base_host' => $this->transport->endpointHost(),
             'authentication_required' => false,
         ];
+    }
+
+    private function granularity(string $interval): int
+    {
+        $normalised = strtolower(trim($interval));
+
+        $granularity = match ($normalised) {
+            '5min', '5m' => 300,
+            '15min', '15m' => 900,
+            '1h' => 3600,
+            '4h' => 14400,
+            '1day', '1d' => 86400,
+            default => ctype_digit($normalised)
+                ? (int) $normalised
+                : 0,
+        };
+
+        if ($granularity < 1 || $granularity > 86400) {
+            throw new ScreenerProviderException(
+                'SCREENER_PROVIDER_INVALID_REQUEST',
+                'Deriv screener timeframe is not supported.'
+            );
+        }
+
+        return $granularity;
     }
 
     /**
