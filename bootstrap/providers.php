@@ -11,6 +11,7 @@ use App\Providers\LegalPolicyApiServiceProvider;
 use App\Providers\MobileBootstrapApiServiceProvider;
 use App\Providers\MobileSecurityApiServiceProvider;
 use App\Providers\NotificationApiServiceProvider;
+use App\Providers\NotificationAutomationServiceProvider;
 use App\Providers\PasswordRecoveryApiServiceProvider;
 use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
@@ -26,6 +27,7 @@ return [
     InvestmentServiceProvider::class,
     AffiliateApiServiceProvider::class,
     NotificationApiServiceProvider::class,
+    NotificationAutomationServiceProvider::class,
     AccountSettingsApiServiceProvider::class,
     PaymentApiServiceProvider::class,
     ProductServiceProvider::class,
