@@ -6,6 +6,8 @@ use InvalidArgumentException;
 
 class StocksScreenerEngine extends ScreenerEngine
 {
+    private ?string $activeStockTimeframe = null;
+
     /**
      * @return array<string, array<string, mixed>>
      */
@@ -52,9 +54,30 @@ class StocksScreenerEngine extends ScreenerEngine
                 'tradex_screener_stocks.symbols',
                 []
             ),
-            static fn (mixed $symbol): bool =>
-                is_array($symbol)
-                && (bool) ($symbol['enabled'] ?? false)
+            function (mixed $symbol): bool {
+                if (
+                    ! is_array($symbol)
+                    || ! (bool) ($symbol['enabled'] ?? false)
+                ) {
+                    return false;
+                }
+
+                if ($this->activeStockTimeframe === null) {
+                    return true;
+                }
+
+                $supported = array_map(
+                    'strtoupper',
+                    (array) ($symbol['supported_timeframes'] ?? [])
+                );
+
+                return $supported === []
+                    || in_array(
+                        $this->activeStockTimeframe,
+                        $supported,
+                        true
+                    );
+            }
         ));
     }
 
@@ -101,7 +124,14 @@ class StocksScreenerEngine extends ScreenerEngine
             }
         }
 
-        $data = parent::screen($filters);
+        $this->activeStockTimeframe = $timeframe;
+
+        try {
+            $data = parent::screen($filters);
+        } finally {
+            $this->activeStockTimeframe = null;
+        }
+
         $registry = [];
 
         foreach ($this->symbols('STOCKS') as $symbol) {
