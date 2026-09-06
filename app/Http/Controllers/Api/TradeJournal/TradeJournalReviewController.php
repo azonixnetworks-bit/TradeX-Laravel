@@ -12,7 +12,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 class TradeJournalReviewController extends Controller
@@ -41,7 +40,7 @@ class TradeJournalReviewController extends Controller
                 'period_start' => $start->toDateString(),
                 'period_end' => $end->toDateString(),
                 'timezone' => $timezone,
-                'summary' => $analytics->summary($user, $start, $end),
+                'summary' => $this->summary($analytics, $user, $type, $timezone, $start, $end),
                 'review' => $review ? $this->serialize($review) : null,
             ],
         ])->header('Cache-Control', 'private, no-store');
@@ -58,7 +57,7 @@ class TradeJournalReviewController extends Controller
         $timezone = $this->timezone($request, $journal);
         [$start, $end] = $this->period($request, $type, $timezone);
         $data = $request->validate($this->rules($type));
-        $summary = $analytics->summary($user, $start, $end);
+        $summary = $this->summary($analytics, $user, $type, $timezone, $start, $end);
 
         $review = DB::transaction(function () use ($user, $type, $start, $end, $timezone, $data, $summary): TradeJournalReview {
             $review = TradeJournalReview::withTrashed()
@@ -92,6 +91,36 @@ class TradeJournalReviewController extends Controller
             'success' => true,
             'data' => $this->serialize($review),
         ])->header('Cache-Control', 'private, no-store');
+    }
+
+    private function summary(
+        TradeJournalAnalyticsService $analytics,
+        User $user,
+        string $type,
+        string $timezone,
+        CarbonImmutable $start,
+        CarbonImmutable $end
+    ): array {
+        $summary = $analytics->summary($user, $start, $end);
+
+        if ($type !== 'monthly') {
+            return $summary;
+        }
+
+        $full = $analytics->analytics(
+            $user,
+            $timezone,
+            'custom',
+            $start->toDateString(),
+            $end->toDateString()
+        );
+        $weeks = collect($full['performance']['weekly_pnl'] ?? [])
+            ->filter(fn (array $row): bool => $row['net_pnl'] !== null);
+
+        $summary['best_week'] = $weeks->sortByDesc('net_pnl')->first();
+        $summary['worst_week'] = $weeks->sortBy('net_pnl')->first();
+
+        return $summary;
     }
 
     private function period(Request $request, string $type, string $timezone): array
