@@ -63,7 +63,7 @@ class ScreenerApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath(
                 'data.phase',
-                'SCREENER-03'
+                'SCREENER-04'
             )
             ->assertJsonPath(
                 'data.markets.0.key',
@@ -87,6 +87,14 @@ class ScreenerApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.markets.2.status',
+                'ACTIVE'
+            )
+            ->assertJsonPath(
+                'data.markets.3.key',
+                'STOCKS'
+            )
+            ->assertJsonPath(
+                'data.markets.3.status',
                 'ACTIVE'
             );
 
@@ -234,18 +242,18 @@ class ScreenerApiTest extends TestCase
         );
     }
 
-    public function test_inactive_roadmap_market_is_rejected(): void
+    public function test_non_stock_market_rejects_stock_region_filter(): void
     {
         $user = $this->createApiUser();
         $token = $this->issueBoundToken($user);
 
         $this->withToken($token)
             ->getJson(
-                '/api/v1/screener/results?market=STOCKS&timeframe=H1'
+                '/api/v1/screener/results?market=FOREX&region=INDIA&timeframe=H1'
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors(
-                'market'
+                'region'
             );
     }
 
