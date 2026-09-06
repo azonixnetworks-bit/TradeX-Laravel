@@ -7,6 +7,7 @@ use App\Services\Screener\IndicatorEngine;
 use App\Services\Screener\Providers\BinanceCryptoProvider;
 use App\Services\Screener\Providers\DerivMarketDataProvider;
 use App\Services\Screener\Providers\TwelveDataForexProvider;
+use App\Services\Screener\Providers\TwelveDataStocksProvider;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\Transports\NativeDerivWebSocketTransport;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -29,6 +30,7 @@ class ScreenerServiceProvider extends ServiceProvider
                 TwelveDataForexProvider::class,
                 BinanceCryptoProvider::class,
                 DerivMarketDataProvider::class,
+                TwelveDataStocksProvider::class,
             ],
             'tradex.screener.providers'
         );
