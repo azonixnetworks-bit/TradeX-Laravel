@@ -31,7 +31,7 @@ class TradeJournalContractTest extends TestCase
 
         $this->assertStringContainsString("Schema::create('trade_journal_entries'", $migration);
         $this->assertStringContainsString("Schema::create('trade_journal_reviews'", $migration);
-        $this->assertStringContainsString("$table->softDeletes()", $migration);
+        $this->assertStringContainsString('$table->softDeletes()', $migration);
 
         $this->assertFileDoesNotExist(base_path('routes/admin_trade_journal.php'));
     }
