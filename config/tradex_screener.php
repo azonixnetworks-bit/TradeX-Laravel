@@ -7,9 +7,10 @@ return [
     |--------------------------------------------------------------------------
     |
     | SCREENER-01 introduced the provider-independent core and Forex adapter.
-    | SCREENER-02 activates Crypto through Binance public Spot market data.
-    | Deriv and Stocks remain COMING_SOON until their dedicated adapters are
-    | implemented and tested.
+    | SCREENER-02 activated Crypto through Binance public Spot market data.
+    | SCREENER-03 activates Deriv synthetic-index market data through Deriv's
+    | public WebSocket API. Stocks remain COMING_SOON until their dedicated
+    | regional adapters are implemented and tested.
     |
     | Provider timestamps remain canonical UTC. User interfaces may localise
     | UTC timestamps through the existing IANA-timezone architecture.
@@ -34,8 +35,8 @@ return [
         ],
         'DERIV' => [
             'label' => 'Deriv',
-            'enabled' => false,
-            'status' => 'COMING_SOON',
+            'enabled' => true,
+            'status' => 'ACTIVE',
         ],
         'STOCKS' => [
             'label' => 'Stocks',
@@ -49,26 +50,31 @@ return [
             'label' => '5 Minutes',
             'provider_interval' => '5min',
             'binance_interval' => '5m',
+            'deriv_granularity' => 300,
         ],
         'M15' => [
             'label' => '15 Minutes',
             'provider_interval' => '15min',
             'binance_interval' => '15m',
+            'deriv_granularity' => 900,
         ],
         'H1' => [
             'label' => '1 Hour',
             'provider_interval' => '1h',
             'binance_interval' => '1h',
+            'deriv_granularity' => 3600,
         ],
         'H4' => [
             'label' => '4 Hours',
             'provider_interval' => '4h',
             'binance_interval' => '4h',
+            'deriv_granularity' => 14400,
         ],
         'D1' => [
             'label' => '1 Day',
             'provider_interval' => '1day',
             'binance_interval' => '1d',
+            'deriv_granularity' => 86400,
         ],
     ],
 
@@ -242,6 +248,91 @@ return [
         ],
     ],
 
+    'deriv' => [
+        'symbols' => [
+            [
+                'symbol' => 'R_10',
+                'provider_symbol' => 'R_10',
+                'name' => 'Volatility 10 Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'R_25',
+                'provider_symbol' => 'R_25',
+                'name' => 'Volatility 25 Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'R_50',
+                'provider_symbol' => 'R_50',
+                'name' => 'Volatility 50 Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'R_75',
+                'provider_symbol' => 'R_75',
+                'name' => 'Volatility 75 Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'R_100',
+                'provider_symbol' => 'R_100',
+                'name' => 'Volatility 100 Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => '1HZ10V',
+                'provider_symbol' => '1HZ10V',
+                'name' => 'Volatility 10 (1s) Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => '1HZ25V',
+                'provider_symbol' => '1HZ25V',
+                'name' => 'Volatility 25 (1s) Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => '1HZ50V',
+                'provider_symbol' => '1HZ50V',
+                'name' => 'Volatility 50 (1s) Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => '1HZ75V',
+                'provider_symbol' => '1HZ75V',
+                'name' => 'Volatility 75 (1s) Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => '1HZ100V',
+                'provider_symbol' => '1HZ100V',
+                'name' => 'Volatility 100 (1s) Index',
+                'base_currency' => '',
+                'quote_currency' => '',
+                'enabled' => true,
+            ],
+        ],
+    ],
+
     'providers' => [
         'twelve_data' => [
             'enabled' => env(
@@ -294,6 +385,33 @@ return [
                 'TRADEX_BINANCE_MARKET_DATA_OUTPUT_SIZE',
                 260
             ),
+        ],
+        'deriv' => [
+            'enabled' => env(
+                'TRADEX_DERIV_MARKET_DATA_ENABLED',
+                true
+            ),
+            'websocket_url' => env(
+                'TRADEX_DERIV_MARKET_DATA_WEBSOCKET_URL',
+                'wss://api.derivws.com/trading/v1/options/ws/public'
+            ),
+            'allowed_hosts' => [
+                'api.derivws.com',
+            ],
+            'timeout_seconds' => env(
+                'TRADEX_DERIV_MARKET_DATA_TIMEOUT_SECONDS',
+                10
+            ),
+            'connect_timeout_seconds' => env(
+                'TRADEX_DERIV_MARKET_DATA_CONNECT_TIMEOUT_SECONDS',
+                5
+            ),
+            'output_size' => env(
+                'TRADEX_DERIV_MARKET_DATA_OUTPUT_SIZE',
+                260
+            ),
+            'max_handshake_bytes' => 16384,
+            'max_response_bytes' => 4194304,
         ],
     ],
 
