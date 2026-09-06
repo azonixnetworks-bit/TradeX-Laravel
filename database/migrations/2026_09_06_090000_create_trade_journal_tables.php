@@ -44,6 +44,7 @@ return new class extends Migration
             $table->decimal('planned_rr', 24, 8)->nullable();
 
             $table->string('emotion_before', 40)->nullable()->index();
+            $table->string('emotion_before_other', 160)->nullable();
             $table->unsignedTinyInteger('confidence_before')->nullable();
             $table->text('mental_state_note')->nullable();
             $table->json('checklist')->nullable();
@@ -56,13 +57,14 @@ return new class extends Migration
             $table->decimal('gross_pnl', 24, 8)->nullable();
             $table->decimal('fees', 24, 8)->nullable();
             $table->decimal('net_pnl', 24, 8)->nullable();
-            $table->string('pnl_currency', 16)->nullable();
+            $table->string('pnl_currency', 16)->nullable()->index();
             $table->decimal('pnl_percent', 12, 6)->nullable();
             $table->decimal('realized_r', 24, 8)->nullable();
 
             $table->string('after_screenshot_path', 500)->nullable();
             $table->string('after_screenshot_mime', 96)->nullable();
             $table->string('emotion_after', 40)->nullable();
+            $table->string('emotion_after_other', 160)->nullable();
             $table->string('followed_plan_after', 16)->nullable()->index();
             $table->json('mistake_tags')->nullable();
             $table->text('went_well')->nullable();
@@ -106,7 +108,10 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->unique(['user_id', 'period_type', 'period_start'], 'trade_journal_reviews_period_unique');
+            $table->unique(
+                ['user_id', 'period_type', 'period_start'],
+                'trade_journal_reviews_period_unique'
+            );
             $table->index(['user_id', 'period_type', 'period_start']);
         });
     }
