@@ -14,15 +14,9 @@ use InvalidArgumentException;
 
 class ScreenerController extends Controller
 {
-    public function meta(
-        Request $request,
-        ScreenerEngine $engine
-    ): JsonResponse {
-        abort_unless(
-            $request->user() instanceof User,
-            401,
-            'Unauthenticated.'
-        );
+    public function meta(Request $request, ScreenerEngine $engine): JsonResponse
+    {
+        $this->requireUser($request);
 
         $markets = $engine->markets();
 
@@ -37,20 +31,9 @@ class ScreenerController extends Controller
             'markets' => array_values($markets),
             'timeframes' => $engine->timeframes(),
             'filters' => [
-                'trend' => [
-                    'BULLISH',
-                    'BEARISH',
-                    'SIDEWAYS',
-                ],
-                'ema_alignment' => [
-                    'BULLISH',
-                    'BEARISH',
-                    'MIXED',
-                ],
-                'rsi_range' => [
-                    'min' => 0,
-                    'max' => 100,
-                ],
+                'trend' => ['BULLISH', 'BEARISH', 'SIDEWAYS'],
+                'ema_alignment' => ['BULLISH', 'BEARISH', 'MIXED'],
+                'rsi_range' => ['min' => 0, 'max' => 100],
                 'sort' => [
                     'symbol',
                     'change_percent',
@@ -59,44 +42,25 @@ class ScreenerController extends Controller
                     'trend',
                 ],
             ],
-            'phase' => 'SCREENER-01',
+            'phase' => 'SCREENER-02',
         ]);
     }
 
-    public function symbols(
-        Request $request,
-        ScreenerEngine $engine
-    ): JsonResponse {
-        abort_unless(
-            $request->user() instanceof User,
-            401,
-            'Unauthenticated.'
-        );
+    public function symbols(Request $request, ScreenerEngine $engine): JsonResponse
+    {
+        $this->requireUser($request);
 
-        $market = strtoupper(
-            trim(
-                (string) $request->query(
-                    'market',
-                    'FOREX'
-                )
-            )
-        );
+        $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
 
-        $validator = Validator::make(
+        Validator::make(
             ['market' => $market],
             [
                 'market' => [
                     'required',
-                    Rule::in(
-                        array_keys(
-                            $engine->markets()
-                        )
-                    ),
+                    Rule::in(array_keys($engine->markets())),
                 ],
             ]
-        );
-
-        $validator->validate();
+        )->validate();
 
         return $this->json([
             'market' => $market,
@@ -104,55 +68,17 @@ class ScreenerController extends Controller
         ]);
     }
 
-    public function results(
-        Request $request,
-        ScreenerEngine $engine
-    ): JsonResponse {
-        abort_unless(
-            $request->user() instanceof User,
-            401,
-            'Unauthenticated.'
-        );
-
-        $filters = $this->validatedFilters(
-            $request,
-            $engine
-        );
+    public function results(Request $request, ScreenerEngine $engine): JsonResponse
+    {
+        $this->requireUser($request);
+        $filters = $this->validatedFilters($request, $engine);
 
         try {
-            return $this->json(
-                $engine->screen($filters)
-            );
+            return $this->json($engine->screen($filters));
         } catch (ScreenerProviderException $exception) {
-            return response()
-                ->json([
-                    'success' => false,
-                    'error' => [
-                        'code' =>
-                            $exception->providerCode,
-                        'message' =>
-                            $exception->getMessage(),
-                    ],
-                ], 503)
-                ->header(
-                    'Cache-Control',
-                    'private, no-store'
-                );
+            return $this->providerError($exception);
         } catch (InvalidArgumentException $exception) {
-            return response()
-                ->json([
-                    'success' => false,
-                    'error' => [
-                        'code' =>
-                            'SCREENER_UNSUPPORTED_REQUEST',
-                        'message' =>
-                            $exception->getMessage(),
-                    ],
-                ], 422)
-                ->header(
-                    'Cache-Control',
-                    'private, no-store'
-                );
+            return $this->unsupportedError($exception);
         }
     }
 
@@ -161,56 +87,34 @@ class ScreenerController extends Controller
         string $symbol,
         ScreenerEngine $engine
     ): JsonResponse {
-        abort_unless(
-            $request->user() instanceof User,
-            401,
-            'Unauthenticated.'
-        );
+        $this->requireUser($request);
 
         $request->query->set(
             'symbols',
             strtoupper(trim($symbol))
         );
 
-        $filters = $this->validatedFilters(
-            $request,
-            $engine
-        );
+        $filters = $this->validatedFilters($request, $engine);
 
         try {
             $data = $engine->screen($filters);
         } catch (ScreenerProviderException $exception) {
-            return response()
-                ->json([
-                    'success' => false,
-                    'error' => [
-                        'code' =>
-                            $exception->providerCode,
-                        'message' =>
-                            $exception->getMessage(),
-                    ],
-                ], 503)
-                ->header(
-                    'Cache-Control',
-                    'private, no-store'
-                );
+            return $this->providerError($exception);
+        } catch (InvalidArgumentException $exception) {
+            return $this->unsupportedError($exception);
         }
 
         $row = $data['results'][0] ?? null;
 
         if (! is_array($row)) {
-            abort(
-                404,
-                'Screener symbol was not found.'
-            );
+            abort(404, 'Screener symbol was not found.');
         }
 
         return $this->json([
             'market' => $data['market'],
             'timeframe' => $data['timeframe'],
             'provider' => $data['provider'],
-            'generated_at_utc' =>
-                $data['generated_at_utc'],
+            'generated_at_utc' => $data['generated_at_utc'],
             'cache' => $data['cache'],
             'symbol' => $row,
         ]);
@@ -223,96 +127,37 @@ class ScreenerController extends Controller
         Request $request,
         ScreenerEngine $engine
     ): array {
-        $market = strtoupper(
-            trim(
-                (string) $request->query(
-                    'market',
-                    'FOREX'
-                )
-            )
-        );
-
-        $timeframe = strtoupper(
-            trim(
-                (string) $request->query(
-                    'timeframe',
-                    'H1'
-                )
-            )
-        );
-
-        $symbolsInput = $request->query(
-            'symbols',
-            []
-        );
+        $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
+        $timeframe = strtoupper(trim((string) $request->query('timeframe', 'H1')));
+        $symbolsInput = $request->query('symbols', []);
 
         $symbols = is_array($symbolsInput)
             ? $symbolsInput
-            : explode(
-                ',',
-                (string) $symbolsInput
-            );
+            : explode(',', (string) $symbolsInput);
 
         $symbols = array_values(array_filter(
             array_map(
-                static fn (mixed $symbol): string =>
-                    strtoupper(
-                        trim((string) $symbol)
-                    ),
+                static fn (mixed $symbol): string => strtoupper(trim((string) $symbol)),
                 $symbols
             ),
-            static fn (string $symbol): bool =>
-                $symbol !== ''
+            static fn (string $symbol): bool => $symbol !== ''
         ));
 
         $availableSymbols = array_map(
-            static fn (array $symbol): string =>
-                (string) $symbol['symbol'],
-            $engine->symbols('FOREX')
+            static fn (array $symbol): string => (string) $symbol['symbol'],
+            $engine->symbols($market)
         );
 
         $payload = [
             'market' => $market,
             'timeframe' => $timeframe,
             'symbols' => $symbols,
-            'trend' => strtoupper(
-                trim(
-                    (string) $request->query(
-                        'trend',
-                        ''
-                    )
-                )
-            ),
-            'ema_alignment' => strtoupper(
-                trim(
-                    (string) $request->query(
-                        'ema_alignment',
-                        ''
-                    )
-                )
-            ),
-            'rsi_min' => $request->query(
-                'rsi_min'
-            ),
-            'rsi_max' => $request->query(
-                'rsi_max'
-            ),
-            'sort' => strtolower(
-                trim(
-                    (string) $request->query(
-                        'sort',
-                        'symbol'
-                    )
-                )
-            ),
-            'order' => strtolower(
-                trim(
-                    (string) $request->query(
-                        'order',
-                        'asc'
-                    )
-                )
-            ),
+            'trend' => strtoupper(trim((string) $request->query('trend', ''))),
+            'ema_alignment' => strtoupper(trim((string) $request->query('ema_alignment', ''))),
+            'rsi_min' => $request->query('rsi_min'),
+            'rsi_max' => $request->query('rsi_max'),
+            'sort' => strtolower(trim((string) $request->query('sort', 'symbol'))),
+            'order' => strtolower(trim((string) $request->query('order', 'asc'))),
         ];
 
         $validator = Validator::make(
@@ -320,58 +165,24 @@ class ScreenerController extends Controller
             [
                 'market' => [
                     'required',
-                    Rule::in(
-                        array_keys(
-                            $engine->markets()
-                        )
-                    ),
+                    Rule::in(array_keys($engine->markets())),
                 ],
                 'timeframe' => [
                     'required',
-                    Rule::in(
-                        array_keys(
-                            $engine->timeframes()
-                        )
-                    ),
+                    Rule::in(array_keys($engine->timeframes())),
                 ],
-                'symbols' => [
-                    'array',
-                    'max:20',
-                ],
-                'symbols.*' => [
-                    'string',
-                    Rule::in(
-                        $availableSymbols
-                    ),
-                ],
+                'symbols' => ['array', 'max:20'],
+                'symbols.*' => ['string', Rule::in($availableSymbols)],
                 'trend' => [
                     'nullable',
-                    Rule::in([
-                        '',
-                        'BULLISH',
-                        'BEARISH',
-                        'SIDEWAYS',
-                    ]),
+                    Rule::in(['', 'BULLISH', 'BEARISH', 'SIDEWAYS']),
                 ],
                 'ema_alignment' => [
                     'nullable',
-                    Rule::in([
-                        '',
-                        'BULLISH',
-                        'BEARISH',
-                        'MIXED',
-                    ]),
+                    Rule::in(['', 'BULLISH', 'BEARISH', 'MIXED']),
                 ],
-                'rsi_min' => [
-                    'nullable',
-                    'numeric',
-                    'between:0,100',
-                ],
-                'rsi_max' => [
-                    'nullable',
-                    'numeric',
-                    'between:0,100',
-                ],
+                'rsi_min' => ['nullable', 'numeric', 'between:0,100'],
+                'rsi_max' => ['nullable', 'numeric', 'between:0,100'],
                 'sort' => [
                     'required',
                     Rule::in([
@@ -382,23 +193,16 @@ class ScreenerController extends Controller
                         'trend',
                     ]),
                 ],
-                'order' => [
-                    'required',
-                    Rule::in([
-                        'asc',
-                        'desc',
-                    ]),
-                ],
+                'order' => ['required', Rule::in(['asc', 'desc'])],
             ]
         );
 
         $validator->after(
-            static function ($validator) use ($payload): void {
+            static function ($validator) use ($payload, $engine): void {
                 if (
                     $payload['rsi_min'] !== null
                     && $payload['rsi_max'] !== null
-                    && (float) $payload['rsi_min']
-                        > (float) $payload['rsi_max']
+                    && (float) $payload['rsi_min'] > (float) $payload['rsi_max']
                 ) {
                     $validator->errors()->add(
                         'rsi_min',
@@ -406,16 +210,58 @@ class ScreenerController extends Controller
                     );
                 }
 
-                if ($payload['market'] !== 'FOREX') {
+                $marketConfig = $engine->markets()[(string) $payload['market']] ?? null;
+
+                if (
+                    ! is_array($marketConfig)
+                    || ! (bool) ($marketConfig['enabled'] ?? false)
+                ) {
                     $validator->errors()->add(
                         'market',
-                        'This screener phase currently supports FOREX only.'
+                        'This screener market is not active yet.'
                     );
                 }
             }
         );
 
         return $validator->validate();
+    }
+
+    private function requireUser(Request $request): void
+    {
+        abort_unless(
+            $request->user() instanceof User,
+            401,
+            'Unauthenticated.'
+        );
+    }
+
+    private function providerError(
+        ScreenerProviderException $exception
+    ): JsonResponse {
+        return response()
+            ->json([
+                'success' => false,
+                'error' => [
+                    'code' => $exception->providerCode,
+                    'message' => $exception->getMessage(),
+                ],
+            ], 503)
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    private function unsupportedError(
+        InvalidArgumentException $exception
+    ): JsonResponse {
+        return response()
+            ->json([
+                'success' => false,
+                'error' => [
+                    'code' => 'SCREENER_UNSUPPORTED_REQUEST',
+                    'message' => $exception->getMessage(),
+                ],
+            ], 422)
+            ->header('Cache-Control', 'private, no-store');
     }
 
     /**
@@ -428,9 +274,6 @@ class ScreenerController extends Controller
                 'success' => true,
                 'data' => $data,
             ])
-            ->header(
-                'Cache-Control',
-                'private, max-age=15'
-            );
+            ->header('Cache-Control', 'private, max-age=15');
     }
 }

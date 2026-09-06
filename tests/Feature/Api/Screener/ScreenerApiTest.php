@@ -63,7 +63,7 @@ class ScreenerApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath(
                 'data.phase',
-                'SCREENER-01'
+                'SCREENER-02'
             )
             ->assertJsonPath(
                 'data.markets.0.key',
@@ -71,6 +71,14 @@ class ScreenerApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.markets.0.status',
+                'ACTIVE'
+            )
+            ->assertJsonPath(
+                'data.markets.1.key',
+                'CRYPTO'
+            )
+            ->assertJsonPath(
+                'data.markets.1.status',
                 'ACTIVE'
             );
 
@@ -218,14 +226,14 @@ class ScreenerApiTest extends TestCase
         );
     }
 
-    public function test_phase_one_rejects_non_forex_results_but_exposes_roadmap_market(): void
+    public function test_inactive_roadmap_market_is_rejected(): void
     {
         $user = $this->createApiUser();
         $token = $this->issueBoundToken($user);
 
         $this->withToken($token)
             ->getJson(
-                '/api/v1/screener/results?market=CRYPTO&timeframe=H1'
+                '/api/v1/screener/results?market=DERIV&timeframe=H1'
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors(

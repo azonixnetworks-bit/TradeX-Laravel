@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use App\Contracts\Screener\MarketDataProvider;
+use App\Services\Screener\IndicatorEngine;
+use App\Services\Screener\Providers\BinanceCryptoProvider;
 use App\Services\Screener\Providers\TwelveDataForexProvider;
+use App\Services\Screener\ScreenerEngine;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -14,9 +16,22 @@ class ScreenerServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(
-            MarketDataProvider::class,
-            TwelveDataForexProvider::class
+        $this->app->tag(
+            [
+                TwelveDataForexProvider::class,
+                BinanceCryptoProvider::class,
+            ],
+            'tradex.screener.providers'
+        );
+
+        $this->app->singleton(
+            ScreenerEngine::class,
+            fn ($app): ScreenerEngine => new ScreenerEngine(
+                $app->tagged(
+                    'tradex.screener.providers'
+                ),
+                $app->make(IndicatorEngine::class)
+            )
         );
     }
 

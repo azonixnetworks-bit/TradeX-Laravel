@@ -6,11 +6,12 @@ return [
     | TradeX Multi-Screener
     |--------------------------------------------------------------------------
     |
-    | SCREENER-01 enables the provider-independent core and Forex adapter.
-    | Crypto, Deriv and Stocks are intentionally advertised as COMING_SOON
-    | until their dedicated adapters are implemented and tested.
+    | SCREENER-01 introduced the provider-independent core and Forex adapter.
+    | SCREENER-02 activates Crypto through Binance public Spot market data.
+    | Deriv and Stocks remain COMING_SOON until their dedicated adapters are
+    | implemented and tested.
     |
-    | Provider timestamps are requested in UTC. User interfaces may localise
+    | Provider timestamps remain canonical UTC. User interfaces may localise
     | UTC timestamps through the existing IANA-timezone architecture.
     |
     */
@@ -28,8 +29,8 @@ return [
         ],
         'CRYPTO' => [
             'label' => 'Crypto',
-            'enabled' => false,
-            'status' => 'COMING_SOON',
+            'enabled' => true,
+            'status' => 'ACTIVE',
         ],
         'DERIV' => [
             'label' => 'Deriv',
@@ -47,22 +48,27 @@ return [
         'M5' => [
             'label' => '5 Minutes',
             'provider_interval' => '5min',
+            'binance_interval' => '5m',
         ],
         'M15' => [
             'label' => '15 Minutes',
             'provider_interval' => '15min',
+            'binance_interval' => '15m',
         ],
         'H1' => [
             'label' => '1 Hour',
             'provider_interval' => '1h',
+            'binance_interval' => '1h',
         ],
         'H4' => [
             'label' => '4 Hours',
             'provider_interval' => '4h',
+            'binance_interval' => '4h',
         ],
         'D1' => [
             'label' => '1 Day',
             'provider_interval' => '1day',
+            'binance_interval' => '1d',
         ],
     ],
 
@@ -151,6 +157,91 @@ return [
         ],
     ],
 
+    'crypto' => [
+        'symbols' => [
+            [
+                'symbol' => 'BTCUSDT',
+                'provider_symbol' => 'BTCUSDT',
+                'name' => 'Bitcoin / Tether',
+                'base_currency' => 'BTC',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'ETHUSDT',
+                'provider_symbol' => 'ETHUSDT',
+                'name' => 'Ethereum / Tether',
+                'base_currency' => 'ETH',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'BNBUSDT',
+                'provider_symbol' => 'BNBUSDT',
+                'name' => 'BNB / Tether',
+                'base_currency' => 'BNB',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'SOLUSDT',
+                'provider_symbol' => 'SOLUSDT',
+                'name' => 'Solana / Tether',
+                'base_currency' => 'SOL',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'XRPUSDT',
+                'provider_symbol' => 'XRPUSDT',
+                'name' => 'XRP / Tether',
+                'base_currency' => 'XRP',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'ADAUSDT',
+                'provider_symbol' => 'ADAUSDT',
+                'name' => 'Cardano / Tether',
+                'base_currency' => 'ADA',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'DOGEUSDT',
+                'provider_symbol' => 'DOGEUSDT',
+                'name' => 'Dogecoin / Tether',
+                'base_currency' => 'DOGE',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'AVAXUSDT',
+                'provider_symbol' => 'AVAXUSDT',
+                'name' => 'Avalanche / Tether',
+                'base_currency' => 'AVAX',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'LINKUSDT',
+                'provider_symbol' => 'LINKUSDT',
+                'name' => 'Chainlink / Tether',
+                'base_currency' => 'LINK',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+            [
+                'symbol' => 'TRXUSDT',
+                'provider_symbol' => 'TRXUSDT',
+                'name' => 'TRON / Tether',
+                'base_currency' => 'TRX',
+                'quote_currency' => 'USDT',
+                'enabled' => true,
+            ],
+        ],
+    ],
+
     'providers' => [
         'twelve_data' => [
             'enabled' => env(
@@ -179,6 +270,28 @@ return [
             ),
             'output_size' => env(
                 'TRADEX_TWELVE_DATA_OUTPUT_SIZE',
+                260
+            ),
+        ],
+        'binance' => [
+            'enabled' => env(
+                'TRADEX_BINANCE_MARKET_DATA_ENABLED',
+                true
+            ),
+            'base_url' => env(
+                'TRADEX_BINANCE_MARKET_DATA_BASE_URL',
+                'https://data-api.binance.vision'
+            ),
+            'timeout_seconds' => env(
+                'TRADEX_BINANCE_MARKET_DATA_TIMEOUT_SECONDS',
+                10
+            ),
+            'connect_timeout_seconds' => env(
+                'TRADEX_BINANCE_MARKET_DATA_CONNECT_TIMEOUT_SECONDS',
+                5
+            ),
+            'output_size' => env(
+                'TRADEX_BINANCE_MARKET_DATA_OUTPUT_SIZE',
                 260
             ),
         ],
