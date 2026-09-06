@@ -9,10 +9,24 @@ use InvalidArgumentException;
 
 class ScreenerEngine
 {
+    /**
+     * @var array<string, MarketDataProvider>
+     */
+    private array $providers = [];
+
     public function __construct(
-        private readonly MarketDataProvider $provider,
+        iterable $providers,
         private readonly IndicatorEngine $indicatorEngine
     ) {
+        foreach ($providers as $provider) {
+            if (! $provider instanceof MarketDataProvider) {
+                continue;
+            }
+
+            $this->providers[
+                strtoupper($provider->market())
+            ] = $provider;
+        }
     }
 
     /**
@@ -43,14 +57,17 @@ class ScreenerEngine
     public function symbols(string $market): array
     {
         $market = strtoupper(trim($market));
+        $marketConfig = $this->markets()[$market] ?? null;
 
-        if ($market !== 'FOREX') {
+        if (! is_array($marketConfig)) {
             return [];
         }
 
+        $configKey = strtolower($market);
+
         return array_values(array_filter(
             (array) config(
-                'tradex_screener.forex.symbols',
+                'tradex_screener.'.$configKey.'.symbols',
                 []
             ),
             static fn (mixed $symbol): bool =>
@@ -71,11 +88,20 @@ class ScreenerEngine
             )
         );
 
-        if ($market !== 'FOREX') {
+        $marketConfig = $this->markets()[$market] ?? null;
+
+        if (
+            ! is_array($marketConfig)
+            || ! (bool) ($marketConfig['enabled'] ?? false)
+        ) {
             throw new InvalidArgumentException(
-                'This screener phase currently supports FOREX only.'
+                'This screener market is not active yet.'
             );
         }
+
+        $provider = $this->providerForMarket(
+            $market
+        );
 
         $timeframe = strtoupper(
             trim(
@@ -94,7 +120,8 @@ class ScreenerEngine
         $dataset = $this->dataset(
             $market,
             $timeframe,
-            $timeframeConfig
+            $timeframeConfig,
+            $provider
         );
 
         $rows = $this->applyFilters(
@@ -108,13 +135,15 @@ class ScreenerEngine
             (string) ($filters['order'] ?? 'asc')
         );
 
+        $health = $provider->health();
+
         return [
             'market' => $market,
             'timeframe' => $timeframe,
-            'provider' => $this->provider->name(),
+            'provider' => $provider->name(),
             'provider_health' => [
                 'status' =>
-                    $this->provider->health()['status']
+                    $health['status']
                     ?? 'UNKNOWN',
             ],
             'generated_at_utc' =>
@@ -132,9 +161,25 @@ class ScreenerEngine
         ];
     }
 
-    public function health(): array
+    public function health(string $market = 'FOREX'): array
     {
-        return $this->provider->health();
+        return $this->providerForMarket(
+            strtoupper(trim($market))
+        )->health();
+    }
+
+    private function providerForMarket(
+        string $market
+    ): MarketDataProvider {
+        $provider = $this->providers[$market] ?? null;
+
+        if (! $provider instanceof MarketDataProvider) {
+            throw new InvalidArgumentException(
+                'No market data provider is registered for this screener market.'
+            );
+        }
+
+        return $provider;
     }
 
     /**
@@ -149,7 +194,8 @@ class ScreenerEngine
     private function dataset(
         string $market,
         string $timeframe,
-        array $timeframeConfig
+        array $timeframeConfig,
+        MarketDataProvider $provider
     ): array {
         $freshKey = sprintf(
             'tradex:screener:fresh:v1:%s:%s',
@@ -182,12 +228,16 @@ class ScreenerEngine
                 $symbolConfigs
             ));
 
-            $series = $this->provider->timeSeries(
+            $interval = $this->providerInterval(
+                $provider,
+                $timeframeConfig
+            );
+
+            $series = $provider->timeSeries(
                 $providerSymbols,
-                (string) $timeframeConfig['provider_interval'],
-                (int) config(
-                    'tradex_screener.providers.twelve_data.output_size',
-                    260
+                $interval,
+                $this->providerOutputSize(
+                    $provider
                 )
             );
 
@@ -225,7 +275,7 @@ class ScreenerEngine
             if ($rows === []) {
                 throw new ScreenerProviderException(
                     'SCREENER_PROVIDER_NO_DATA',
-                    'Forex market data provider returned no usable data.'
+                    'Market data provider returned no usable screener data.'
                 );
             }
 
@@ -277,6 +327,56 @@ class ScreenerEngine
 
             throw $exception;
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $timeframeConfig
+     */
+    private function providerInterval(
+        MarketDataProvider $provider,
+        array $timeframeConfig
+    ): string {
+        $interval = $provider->name() === 'BINANCE'
+            ? ($timeframeConfig['binance_interval'] ?? null)
+            : ($timeframeConfig['provider_interval'] ?? null);
+
+        $interval = trim((string) $interval);
+
+        if ($interval === '') {
+            throw new InvalidArgumentException(
+                'This timeframe is not supported by the selected market provider.'
+            );
+        }
+
+        return $interval;
+    }
+
+    private function providerOutputSize(
+        MarketDataProvider $provider
+    ): int {
+        if ($provider->name() === 'BINANCE') {
+            return max(
+                2,
+                min(
+                    1000,
+                    (int) config(
+                        'tradex_screener.providers.binance.output_size',
+                        260
+                    )
+                )
+            );
+        }
+
+        return max(
+            2,
+            min(
+                5000,
+                (int) config(
+                    'tradex_screener.providers.twelve_data.output_size',
+                    260
+                )
+            )
+        );
     }
 
     /**
