@@ -18,6 +18,7 @@ use App\Providers\PayoutApiServiceProvider;
 use App\Providers\ProductServiceProvider;
 use App\Providers\PushNotificationApiServiceProvider;
 use App\Providers\RuntimeTranslationApiServiceProvider;
+use App\Providers\ScreenerServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
 use App\Providers\TradeJournalServiceProvider;
 
@@ -42,4 +43,5 @@ return [
     PushNotificationApiServiceProvider::class,
     CopyTradingServiceProvider::class,
     TradeJournalServiceProvider::class,
+    ScreenerServiceProvider::class,
 ];
