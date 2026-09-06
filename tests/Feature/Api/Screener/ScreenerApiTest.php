@@ -63,7 +63,7 @@ class ScreenerApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath(
                 'data.phase',
-                'SCREENER-02'
+                'SCREENER-03'
             )
             ->assertJsonPath(
                 'data.markets.0.key',
@@ -79,6 +79,14 @@ class ScreenerApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.markets.1.status',
+                'ACTIVE'
+            )
+            ->assertJsonPath(
+                'data.markets.2.key',
+                'DERIV'
+            )
+            ->assertJsonPath(
+                'data.markets.2.status',
                 'ACTIVE'
             );
 
@@ -233,7 +241,7 @@ class ScreenerApiTest extends TestCase
 
         $this->withToken($token)
             ->getJson(
-                '/api/v1/screener/results?market=DERIV&timeframe=H1'
+                '/api/v1/screener/results?market=STOCKS&timeframe=H1'
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors(
