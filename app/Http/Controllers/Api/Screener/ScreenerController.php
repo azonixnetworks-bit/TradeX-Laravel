@@ -42,7 +42,7 @@ class ScreenerController extends Controller
                     'trend',
                 ],
             ],
-            'phase' => 'SCREENER-02',
+            'phase' => 'SCREENER-03',
         ]);
     }
 
