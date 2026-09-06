@@ -68,6 +68,8 @@ class TradeJournalService
         $payload = $this->basePayload($data, $timezone, $tradeAt, $session);
         $payload['uuid'] = (string) Str::uuid();
         $payload['status'] = $status;
+        $payload['symbol'] = $this->upper($data['symbol']);
+        $payload['risk_currency'] = $this->upperNullable($data['risk_currency'] ?? null);
         $payload['current_sl'] = $data['current_sl'] ?? $data['planned_sl'] ?? null;
         $payload['current_tp'] = $data['current_tp'] ?? $data['planned_tp'] ?? null;
         $payload['planned_rr'] = $this->plannedRr(
@@ -111,23 +113,46 @@ class TradeJournalService
                 'broker', 'account_label', 'setup_strategy', 'timeframes',
                 'entry_reason', 'notes_before', 'planned_entry', 'planned_sl',
                 'planned_tp', 'position_size', 'risk_amount', 'risk_currency',
-                'risk_percent', 'emotion_before', 'confidence_before',
-                'mental_state_note', 'checklist',
+                'risk_percent', 'emotion_before', 'emotion_before_other',
+                'confidence_before', 'mental_state_note', 'checklist',
             ]
             : [
                 'session_label', 'broker', 'account_label', 'setup_strategy',
                 'timeframes', 'notes_before', 'current_sl', 'current_tp',
                 'position_size', 'risk_amount', 'risk_currency', 'risk_percent',
-                'execution_note', 'emotion_before', 'confidence_before',
-                'mental_state_note', 'checklist',
+                'execution_note', 'emotion_before', 'emotion_before_other',
+                'confidence_before', 'mental_state_note', 'checklist',
             ];
 
         $entry->fill(array_intersect_key($data, array_flip($allowed)));
 
-        if (array_key_exists('session_label', $data) && filled($data['session_label'])) {
-            $entry->session_label = trim((string) $data['session_label']);
-            $entry->session_keys = [];
-            $entry->session_source = 'manual';
+        if (array_key_exists('symbol', $data)) {
+            $entry->symbol = $this->upper($data['symbol']);
+        }
+
+        if (array_key_exists('risk_currency', $data)) {
+            $entry->risk_currency = $this->upperNullable($data['risk_currency']);
+        }
+
+        if (($data['emotion_before'] ?? $entry->emotion_before) !== 'other') {
+            $entry->emotion_before_other = null;
+        }
+
+        if (array_key_exists('session_label', $data)) {
+            if (filled($data['session_label'])) {
+                $entry->session_label = trim((string) $data['session_label']);
+                $entry->session_keys = [];
+                $entry->session_source = 'manual';
+            } else {
+                $session = $this->resolveSession(
+                    $entry->user_timezone,
+                    $entry->opened_at ?: $entry->trade_at,
+                    null
+                );
+                $entry->session_label = $session['label'];
+                $entry->session_keys = $session['keys'];
+                $entry->session_source = 'auto';
+            }
         }
 
         if ($entry->status === 'planned') {
@@ -176,11 +201,20 @@ class TradeJournalService
             'status' => 'open',
             'actual_entry' => $data['actual_entry'],
             'opened_at' => $openedAt,
+            'user_timezone' => $timezone,
             'current_sl' => $data['current_sl'] ?? $entry->planned_sl,
             'current_tp' => $data['current_tp'] ?? $entry->planned_tp,
             'position_size' => $data['position_size'] ?? $entry->position_size,
             'execution_note' => $data['execution_note'] ?? null,
         ]);
+
+        if ($entry->session_source !== 'manual') {
+            $session = $this->resolveSession($timezone, $openedAt, null);
+            $entry->session_label = $session['label'];
+            $entry->session_keys = $session['keys'];
+            $entry->session_source = 'auto';
+        }
+
         $entry->save();
 
         return [
@@ -229,10 +263,13 @@ class TradeJournalService
             'gross_pnl' => $gross === null ? null : $this->decimal($gross),
             'fees' => array_key_exists('fees', $data) ? $this->decimal($fees) : null,
             'net_pnl' => $net === null ? null : $this->decimal($net),
-            'pnl_currency' => $data['pnl_currency'] ?? null,
+            'pnl_currency' => $this->upperNullable($data['pnl_currency'] ?? null),
             'pnl_percent' => $data['pnl_percent'] ?? null,
             'realized_r' => $this->realizedR($entry, $data['exit_price']),
             'emotion_after' => $data['emotion_after'] ?? null,
+            'emotion_after_other' => ($data['emotion_after'] ?? null) === 'other'
+                ? ($data['emotion_after_other'] ?? null)
+                : null,
             'followed_plan_after' => $data['followed_plan_after'],
             'mistake_tags' => $data['mistake_tags'] ?? [],
             'went_well' => $data['went_well'] ?? null,
@@ -318,6 +355,7 @@ class TradeJournalService
             ],
             'psychology_before' => [
                 'emotion' => $entry->emotion_before,
+                'other' => $entry->emotion_before_other,
                 'confidence' => $entry->confidence_before,
                 'note' => $entry->mental_state_note,
             ],
@@ -335,6 +373,7 @@ class TradeJournalService
             ],
             'review' => [
                 'emotion_after' => $entry->emotion_after,
+                'emotion_after_other' => $entry->emotion_after_other,
                 'followed_plan' => $entry->followed_plan_after,
                 'mistake_tags' => $entry->mistake_tags ?? [],
                 'went_well' => $entry->went_well,
@@ -420,8 +459,8 @@ class TradeJournalService
             'account_label', 'setup_strategy', 'timeframes', 'entry_reason',
             'notes_before', 'planned_entry', 'actual_entry', 'planned_sl',
             'planned_tp', 'position_size', 'risk_amount', 'risk_currency',
-            'risk_percent', 'emotion_before', 'confidence_before',
-            'mental_state_note', 'checklist', 'execution_note',
+            'risk_percent', 'emotion_before', 'emotion_before_other',
+            'confidence_before', 'mental_state_note', 'checklist', 'execution_note',
         ];
 
         return array_merge(
@@ -523,6 +562,16 @@ class TradeJournalService
     private function decimal(float $value): string
     {
         return number_format($value, 8, '.', '');
+    }
+
+    private function upper(string $value): string
+    {
+        return Str::upper(trim($value));
+    }
+
+    private function upperNullable(mixed $value): ?string
+    {
+        return filled($value) ? $this->upper((string) $value) : null;
     }
 
     private function assertOwner(User $user, TradeJournalEntry $entry): void
