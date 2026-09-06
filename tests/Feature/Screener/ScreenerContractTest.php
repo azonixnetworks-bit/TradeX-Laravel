@@ -6,29 +6,35 @@ use Tests\TestCase;
 
 class ScreenerContractTest extends TestCase
 {
-    public function test_screener_phase_one_is_provider_independent_and_mobile_hardened(): void
+    public function test_screener_phase_two_is_provider_independent_and_mobile_hardened(): void
     {
         $providers = file_get_contents(
-            base_path(
-                'bootstrap/providers.php'
-            )
+            base_path('bootstrap/providers.php')
         );
 
         $routes = file_get_contents(
-            base_path(
-                'routes/api_screener.php'
-            )
+            base_path('routes/api_screener.php')
         );
 
         $config = file_get_contents(
+            base_path('config/tradex_screener.php')
+        );
+
+        $forexProvider = file_get_contents(
             base_path(
-                'config/tradex_screener.php'
+                'app/Services/Screener/Providers/TwelveDataForexProvider.php'
             )
         );
 
-        $provider = file_get_contents(
+        $cryptoProvider = file_get_contents(
             base_path(
-                'app/Services/Screener/Providers/TwelveDataForexProvider.php'
+                'app/Services/Screener/Providers/BinanceCryptoProvider.php'
+            )
+        );
+
+        $serviceProvider = file_get_contents(
+            base_path(
+                'app/Providers/ScreenerServiceProvider.php'
             )
         );
 
@@ -63,32 +69,54 @@ class ScreenerContractTest extends TestCase
         );
 
         $this->assertStringContainsString(
+            "'binance_interval' => '4h'",
+            $config
+        );
+
+        $this->assertStringContainsString(
             "'provider_interval' => '4h'",
             $config
         );
 
         $this->assertStringContainsString(
             "'timezone' => 'UTC'",
-            $provider
+            $forexProvider
+        );
+
+        $this->assertStringContainsString(
+            "return 'CRYPTO';",
+            $cryptoProvider
+        );
+
+        $this->assertStringContainsString(
+            "'/api/v3/klines'",
+            $cryptoProvider
+        );
+
+        $this->assertStringContainsString(
+            'tradex.screener.providers',
+            $serviceProvider
         );
 
         $this->assertStringNotContainsString(
             'tradingview.com/screener',
-            strtolower($provider)
+            strtolower($forexProvider.$cryptoProvider)
         );
     }
 
-    public function test_screener_api_key_is_environment_only(): void
+    public function test_screener_provider_credentials_are_safe_by_contract(): void
     {
         $config = file_get_contents(
-            base_path(
-                'config/tradex_screener.php'
-            )
+            base_path('config/tradex_screener.php')
         );
 
         $env = file_get_contents(
+            base_path('.env.example')
+        );
+
+        $cryptoProvider = file_get_contents(
             base_path(
-                '.env.example'
+                'app/Services/Screener/Providers/BinanceCryptoProvider.php'
             )
         );
 
@@ -100,6 +128,21 @@ class ScreenerContractTest extends TestCase
         $this->assertStringContainsString(
             'TRADEX_TWELVE_DATA_API_KEY=',
             $env
+        );
+
+        $this->assertStringContainsString(
+            'TRADEX_BINANCE_MARKET_DATA_BASE_URL=https://data-api.binance.vision',
+            $env
+        );
+
+        $this->assertStringNotContainsString(
+            'TRADEX_BINANCE_API_KEY',
+            $env
+        );
+
+        $this->assertStringNotContainsString(
+            'X-MBX-APIKEY',
+            $cryptoProvider
         );
 
         $this->assertStringNotContainsString(
