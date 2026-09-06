@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Services\Payments\PaymentMoney;
 use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -99,6 +100,7 @@ class DashboardController extends Controller
      * Resolve the configured IANA timezone once for the whole dashboard.
      * Persisted application timestamps remain canonical UTC; this timezone is
      * presentation-only and automatically follows DST rules where applicable.
+     * Fixed-offset labels are intentionally rejected.
      *
      * @return array{0: string, 1: CarbonImmutable}
      */
@@ -109,7 +111,17 @@ class DashboardController extends Controller
             config('app.timezone', 'UTC')
         ));
 
-        if ($systemTimezone === '') {
+        if (
+            $systemTimezone === ''
+            || (
+                $systemTimezone !== 'UTC'
+                && ! in_array(
+                    $systemTimezone,
+                    DateTimeZone::listIdentifiers(),
+                    true
+                )
+            )
+        ) {
             $systemTimezone = 'UTC';
         }
 
