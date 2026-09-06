@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\TradeJournal\TradeJournalController;
+use App\Http\Controllers\Api\TradeJournal\TradeJournalMetaController;
 use App\Http\Controllers\Api\TradeJournal\TradeJournalReviewController;
 use App\Http\Controllers\Api\TradeJournal\TradeJournalScreenshotController;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,10 @@ Route::prefix('v1')
         Route::prefix('trade-journal')
             ->name('trade-journal.')
             ->group(function (): void {
+                Route::get('/meta', TradeJournalMetaController::class)
+                    ->middleware('throttle:api-trade-journal-read')
+                    ->name('meta');
+
                 Route::get('/home', [TradeJournalController::class, 'home'])
                     ->middleware('throttle:api-trade-journal-read')
                     ->name('home');
