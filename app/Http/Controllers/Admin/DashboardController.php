@@ -10,7 +10,10 @@ use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\Payments\PaymentMoney;
+use Carbon\CarbonImmutable;
+use DateTimeZone;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Throwable;
@@ -24,6 +27,15 @@ class DashboardController extends Controller
         $admin = auth('admin')->user();
         abort_unless($admin instanceof AdminUser, 401);
         $admin->load('roles');
+
+        [$systemTimezone, $systemTime] = $this->systemClock();
+
+        $auditDayStartUtc = $systemTime
+            ->startOfDay()
+            ->utc();
+        $auditDayEndUtc = $systemTime
+            ->endOfDay()
+            ->utc();
 
         $stats = [
             'admins' => AdminUser::count(),
@@ -40,9 +52,9 @@ class DashboardController extends Controller
 
             'permissions' => AdminPermission::count(),
 
-            'audit_events_today' => AuditLog::whereDate(
+            'audit_events_today' => AuditLog::whereBetween(
                 'created_at',
-                today()
+                [$auditDayStartUtc, $auditDayEndUtc]
             )->count(),
         ];
 
@@ -56,22 +68,6 @@ class DashboardController extends Controller
             ? $this->activityRecords($activityType, $perPage)
             : null;
 
-        $systemTimezone = trim((string) config(
-            'tradex_reporting.audit_timezone',
-            config('app.timezone', 'UTC')
-        ));
-
-        if ($systemTimezone === '') {
-            $systemTimezone = 'UTC';
-        }
-
-        try {
-            $systemTime = now($systemTimezone);
-        } catch (Throwable) {
-            $systemTimezone = 'UTC';
-            $systemTime = now('UTC');
-        }
-
         return view('admin.dashboard.index', [
             'admin' => $admin,
             'stats' => $stats,
@@ -79,11 +75,130 @@ class DashboardController extends Controller
             'activityTabs' => $activityTabs,
             'activityType' => $activityType,
             'activityRecords' => $activityRecords,
+            'activityTimestampDisplays' => $this->activityTimestampDisplays(
+                $activityType,
+                $activityRecords,
+                $systemTimezone
+            ),
             'perPage' => $perPage,
             'systemTimezone' => $systemTimezone,
             'systemTimeIso' => $systemTime->toIso8601String(),
             'systemTimeDisplay' => $systemTime->format('d M Y H:i:s'),
+            'systemDateDisplay' => $systemTime->format('d M Y'),
+            'lastLoginDisplay' => $admin->last_login_at !== null
+                ? $this->formatUtcAttribute(
+                    $admin,
+                    'last_login_at',
+                    $systemTimezone,
+                    'd M Y H:i'
+                )
+                : 'First Session',
         ]);
+    }
+
+    /**
+     * Resolve the configured IANA timezone once for the whole dashboard.
+     * Persisted application timestamps remain canonical UTC; this timezone is
+     * presentation-only and automatically follows DST rules where applicable.
+     * Fixed-offset labels are intentionally rejected.
+     *
+     * @return array{0: string, 1: CarbonImmutable}
+     */
+    private function systemClock(): array
+    {
+        $systemTimezone = trim((string) config(
+            'tradex_reporting.audit_timezone',
+            config('app.timezone', 'UTC')
+        ));
+
+        if (
+            $systemTimezone === ''
+            || (
+                $systemTimezone !== 'UTC'
+                && ! in_array(
+                    $systemTimezone,
+                    DateTimeZone::listIdentifiers(),
+                    true
+                )
+            )
+        ) {
+            $systemTimezone = 'UTC';
+        }
+
+        try {
+            return [
+                $systemTimezone,
+                CarbonImmutable::now($systemTimezone),
+            ];
+        } catch (Throwable) {
+            return [
+                'UTC',
+                CarbonImmutable::now('UTC'),
+            ];
+        }
+    }
+
+    /**
+     * Database datetime values are stored as UTC. Read the raw value so the
+     * conversion never depends on Laravel's application/display timezone.
+     */
+    private function formatUtcAttribute(
+        Model $model,
+        string $attribute,
+        string $timezone,
+        string $format
+    ): string {
+        $raw = $model->getRawOriginal($attribute);
+
+        if ($raw === null || trim((string) $raw) === '') {
+            return '—';
+        }
+
+        try {
+            return CarbonImmutable::parse((string) $raw, 'UTC')
+                ->setTimezone($timezone)
+                ->format($format);
+        } catch (Throwable) {
+            return '—';
+        }
+    }
+
+    private function activityTimestampDisplays(
+        ?string $activityType,
+        ?LengthAwarePaginator $activityRecords,
+        string $timezone
+    ): array {
+        if ($activityType === null || $activityRecords === null) {
+            return [];
+        }
+
+        [$attribute, $format] = match ($activityType) {
+            'customers' => ['created_at', 'd M Y H:i'],
+            'payments' => ['cleared_at', 'd M Y H:i'],
+            'audit' => ['created_at', 'd M Y H:i:s'],
+            default => [null, null],
+        };
+
+        if ($attribute === null || $format === null) {
+            return [];
+        }
+
+        $timestamps = [];
+
+        foreach ($activityRecords as $record) {
+            if (! $record instanceof Model) {
+                continue;
+            }
+
+            $timestamps[(string) $record->getKey()] = $this->formatUtcAttribute(
+                $record,
+                $attribute,
+                $timezone,
+                $format
+            );
+        }
+
+        return $timestamps;
     }
 
     private function activityTabs(AdminUser $admin): array
