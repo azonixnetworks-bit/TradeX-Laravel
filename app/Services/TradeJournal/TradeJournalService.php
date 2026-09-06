@@ -59,7 +59,12 @@ class TradeJournalService
             ]);
         }
 
-        $session = $this->resolveSession($timezone, $tradeAt, $data['session_label'] ?? null);
+        $session = $this->resolveSession(
+            $timezone,
+            $tradeAt,
+            $data['session_label'] ?? null
+        );
+
         $payload = $this->basePayload($data, $timezone, $tradeAt, $session);
         $payload['uuid'] = (string) Str::uuid();
         $payload['status'] = $status;
@@ -80,10 +85,14 @@ class TradeJournalService
             $entry = new TradeJournalEntry($payload);
             $entry->user()->associate($user);
             $entry->save();
+
             return $entry->fresh();
         });
 
-        return ['entry' => $entry, 'warnings' => $this->disciplineWarnings($user, $entry)];
+        return [
+            'entry' => $entry,
+            'warnings' => $this->disciplineWarnings($user, $entry),
+        ];
     }
 
     public function update(User $user, TradeJournalEntry $entry, array $data): array
@@ -98,19 +107,28 @@ class TradeJournalService
 
         $allowed = $entry->status === 'planned'
             ? [
-                'market', 'stock_region', 'symbol', 'direction', 'broker', 'account_label',
-                'setup_strategy', 'timeframes', 'entry_reason', 'notes_before', 'planned_entry',
-                'planned_sl', 'planned_tp', 'position_size', 'risk_amount', 'risk_currency',
-                'risk_percent', 'emotion_before', 'confidence_before', 'mental_state_note', 'checklist',
+                'market', 'stock_region', 'symbol', 'direction', 'session_label',
+                'broker', 'account_label', 'setup_strategy', 'timeframes',
+                'entry_reason', 'notes_before', 'planned_entry', 'planned_sl',
+                'planned_tp', 'position_size', 'risk_amount', 'risk_currency',
+                'risk_percent', 'emotion_before', 'confidence_before',
+                'mental_state_note', 'checklist',
             ]
             : [
-                'broker', 'account_label', 'setup_strategy', 'timeframes', 'notes_before',
-                'current_sl', 'current_tp', 'position_size', 'risk_amount', 'risk_currency',
-                'risk_percent', 'execution_note', 'emotion_before', 'confidence_before',
+                'session_label', 'broker', 'account_label', 'setup_strategy',
+                'timeframes', 'notes_before', 'current_sl', 'current_tp',
+                'position_size', 'risk_amount', 'risk_currency', 'risk_percent',
+                'execution_note', 'emotion_before', 'confidence_before',
                 'mental_state_note', 'checklist',
             ];
 
         $entry->fill(array_intersect_key($data, array_flip($allowed)));
+
+        if (array_key_exists('session_label', $data) && filled($data['session_label'])) {
+            $entry->session_label = trim((string) $data['session_label']);
+            $entry->session_keys = [];
+            $entry->session_source = 'manual';
+        }
 
         if ($entry->status === 'planned') {
             $entry->current_sl = $data['planned_sl'] ?? $entry->planned_sl;
@@ -125,20 +143,33 @@ class TradeJournalService
 
         $entry->save();
 
-        return ['entry' => $entry->fresh(), 'warnings' => $this->disciplineWarnings($user, $entry)];
+        return [
+            'entry' => $entry->fresh(),
+            'warnings' => $this->disciplineWarnings($user, $entry),
+        ];
     }
 
     public function open(User $user, TradeJournalEntry $entry, array $data): array
     {
         $this->assertOwner($user, $entry);
+
         if (! $entry->isPlanned()) {
-            throw ValidationException::withMessages(['status' => ['Only a planned trade can be opened.']]);
+            throw ValidationException::withMessages([
+                'status' => ['Only a planned trade can be opened.'],
+            ]);
         }
 
         $timezone = $this->timezone($data['timezone'] ?? $entry->user_timezone);
-        $openedAt = $this->localToUtc($data['entry_date'], $data['entry_time'], $timezone);
+        $openedAt = $this->localToUtc(
+            $data['entry_date'],
+            $data['entry_time'],
+            $timezone
+        );
+
         if ($openedAt->isFuture()) {
-            throw ValidationException::withMessages(['entry_time' => ['Entry time cannot be in the future.']]);
+            throw ValidationException::withMessages([
+                'entry_time' => ['Entry time cannot be in the future.'],
+            ]);
         }
 
         $entry->fill([
@@ -152,18 +183,28 @@ class TradeJournalService
         ]);
         $entry->save();
 
-        return ['entry' => $entry->fresh(), 'warnings' => $this->disciplineWarnings($user, $entry)];
+        return [
+            'entry' => $entry->fresh(),
+            'warnings' => $this->disciplineWarnings($user, $entry),
+        ];
     }
 
     public function close(User $user, TradeJournalEntry $entry, array $data): TradeJournalEntry
     {
         $this->assertOwner($user, $entry);
+
         if (! $entry->isOpen()) {
-            throw ValidationException::withMessages(['status' => ['Only an open trade can be closed.']]);
+            throw ValidationException::withMessages([
+                'status' => ['Only an open trade can be closed.'],
+            ]);
         }
 
         $timezone = $this->timezone($data['timezone'] ?? $entry->user_timezone);
-        $exitAt = $this->localToUtc($data['exit_date'], $data['exit_time'], $timezone);
+        $exitAt = $this->localToUtc(
+            $data['exit_date'],
+            $data['exit_time'],
+            $timezone
+        );
         $openedAt = $entry->opened_at ?: $entry->trade_at;
 
         if ($exitAt->isFuture() || $exitAt->lessThan($openedAt)) {
@@ -173,9 +214,11 @@ class TradeJournalService
         }
 
         $gross = array_key_exists('gross_pnl', $data) && $data['gross_pnl'] !== null
-            ? (float) $data['gross_pnl'] : null;
+            ? (float) $data['gross_pnl']
+            : null;
         $fees = array_key_exists('fees', $data) && $data['fees'] !== null
-            ? (float) $data['fees'] : 0.0;
+            ? (float) $data['fees']
+            : 0.0;
         $net = $gross === null ? null : $gross - $fees;
 
         $entry->fill([
@@ -204,11 +247,17 @@ class TradeJournalService
         return $entry->fresh();
     }
 
-    public function cancel(User $user, TradeJournalEntry $entry, ?string $reason): TradeJournalEntry
-    {
+    public function cancel(
+        User $user,
+        TradeJournalEntry $entry,
+        ?string $reason
+    ): TradeJournalEntry {
         $this->assertOwner($user, $entry);
+
         if (! $entry->isPlanned()) {
-            throw ValidationException::withMessages(['status' => ['Only a planned trade can be cancelled.']]);
+            throw ValidationException::withMessages([
+                'status' => ['Only a planned trade can be cancelled.'],
+            ]);
         }
 
         $entry->fill([
@@ -220,10 +269,14 @@ class TradeJournalService
         return $entry->fresh();
     }
 
-    public function serialize(TradeJournalEntry $entry, ?string $displayTimezone = null): array
-    {
+    public function serialize(
+        TradeJournalEntry $entry,
+        ?string $displayTimezone = null
+    ): array {
         $timezone = $this->timezone($displayTimezone ?: $entry->user_timezone);
-        $local = fn ($date) => $date ? $date->setTimezone($timezone)->toIso8601String() : null;
+        $local = fn ($date) => $date
+            ? $date->setTimezone($timezone)->toIso8601String()
+            : null;
 
         return [
             'uuid' => $entry->uuid,
@@ -320,53 +373,80 @@ class TradeJournalService
             ->where(function ($query) use ($from, $to): void {
                 $query->whereBetween('opened_at', [$from, $to])
                     ->orWhere(function ($nested) use ($from, $to): void {
-                        $nested->whereNull('opened_at')->whereBetween('trade_at', [$from, $to]);
+                        $nested
+                            ->whereNull('opened_at')
+                            ->whereBetween('trade_at', [$from, $to]);
                     });
             })
             ->get();
 
         $warnings = [];
-        if ($dayEntries->count() > (int) config('trade_journal.discipline.max_trades_per_day', 3)) {
+
+        if ($dayEntries->count() > (int) config(
+            'trade_journal.discipline.max_trades_per_day',
+            3
+        )) {
             $warnings[] = 'daily_trade_limit_exceeded';
         }
 
         $winsBefore = $dayEntries
-            ->filter(fn (TradeJournalEntry $item): bool => $item->status === 'closed'
+            ->filter(fn (TradeJournalEntry $item): bool =>
+                $item->status === 'closed'
                 && $item->result === 'win'
                 && $item->getKey() !== $entry->getKey()
-                && ($item->opened_at ?: $item->trade_at)->lessThanOrEqualTo($entry->opened_at ?: $entry->trade_at))
+                && ($item->opened_at ?: $item->trade_at)
+                    ->lessThanOrEqualTo($entry->opened_at ?: $entry->trade_at)
+            )
             ->count();
 
-        if ($winsBefore >= (int) config('trade_journal.discipline.stop_after_wins', 2)) {
+        if ($winsBefore >= (int) config(
+            'trade_journal.discipline.stop_after_wins',
+            2
+        )) {
             $warnings[] = 'trade_recorded_after_two_wins';
         }
 
         return array_values(array_unique($warnings));
     }
 
-    private function basePayload(array $data, string $timezone, CarbonImmutable $tradeAt, array $session): array
-    {
+    private function basePayload(
+        array $data,
+        string $timezone,
+        CarbonImmutable $tradeAt,
+        array $session
+    ): array {
         $keys = [
-            'market', 'stock_region', 'symbol', 'direction', 'broker', 'account_label',
-            'setup_strategy', 'timeframes', 'entry_reason', 'notes_before', 'planned_entry',
-            'actual_entry', 'planned_sl', 'planned_tp', 'position_size', 'risk_amount',
-            'risk_currency', 'risk_percent', 'emotion_before', 'confidence_before',
+            'market', 'stock_region', 'symbol', 'direction', 'broker',
+            'account_label', 'setup_strategy', 'timeframes', 'entry_reason',
+            'notes_before', 'planned_entry', 'actual_entry', 'planned_sl',
+            'planned_tp', 'position_size', 'risk_amount', 'risk_currency',
+            'risk_percent', 'emotion_before', 'confidence_before',
             'mental_state_note', 'checklist', 'execution_note',
         ];
 
-        return array_merge(array_intersect_key($data, array_flip($keys)), [
-            'trade_at' => $tradeAt,
-            'user_timezone' => $timezone,
-            'session_label' => $session['label'],
-            'session_keys' => $session['keys'],
-            'session_source' => $session['source'],
-        ]);
+        return array_merge(
+            array_intersect_key($data, array_flip($keys)),
+            [
+                'trade_at' => $tradeAt,
+                'user_timezone' => $timezone,
+                'session_label' => $session['label'],
+                'session_keys' => $session['keys'],
+                'session_source' => $session['source'],
+            ]
+        );
     }
 
-    private function resolveSession(string $timezone, CarbonImmutable $tradeAt, ?string $manual): array
-    {
+    private function resolveSession(
+        string $timezone,
+        CarbonImmutable $tradeAt,
+        ?string $manual
+    ): array {
         if (filled($manual)) {
-            return ['label' => trim((string) $manual), 'keys' => [], 'source' => 'manual'];
+            return [
+                'label' => trim((string) $manual),
+                'keys' => [],
+                'source' => 'manual',
+            ];
         }
 
         $snapshot = $this->marketClock->snapshot($timezone, $tradeAt);
@@ -375,18 +455,28 @@ class TradeJournalService
         $keys = array_values(array_filter(array_column($active, 'key')));
 
         if ($names === []) {
-            return ['label' => 'Outside Main Sessions', 'keys' => [], 'source' => 'auto'];
+            return [
+                'label' => 'Outside Main Sessions',
+                'keys' => [],
+                'source' => 'auto',
+            ];
         }
 
         return [
-            'label' => count($names) > 1 ? implode(' / ', $names).' Overlap' : $names[0],
+            'label' => count($names) > 1
+                ? implode(' / ', $names).' Overlap'
+                : $names[0],
             'keys' => $keys,
             'source' => 'auto',
         ];
     }
 
-    private function plannedRr(string $direction, mixed $entry, mixed $sl, mixed $tp): ?string
-    {
+    private function plannedRr(
+        string $direction,
+        mixed $entry,
+        mixed $sl,
+        mixed $tp
+    ): ?string {
         if ($entry === null || $sl === null || $tp === null) {
             return null;
         }
@@ -394,16 +484,23 @@ class TradeJournalService
         $entry = (float) $entry;
         $sl = (float) $sl;
         $tp = (float) $tp;
-        $risk = strtolower($direction) === 'buy' ? $entry - $sl : $sl - $entry;
-        $reward = strtolower($direction) === 'buy' ? $tp - $entry : $entry - $tp;
+        $risk = strtolower($direction) === 'buy'
+            ? $entry - $sl
+            : $sl - $entry;
+        $reward = strtolower($direction) === 'buy'
+            ? $tp - $entry
+            : $entry - $tp;
 
-        return $risk > 0 && $reward > 0 ? $this->decimal($reward / $risk) : null;
+        return $risk > 0 && $reward > 0
+            ? $this->decimal($reward / $risk)
+            : null;
     }
 
     private function realizedR(TradeJournalEntry $entry, mixed $exit): ?string
     {
         $actualEntry = $entry->actual_entry ?? $entry->planned_entry;
         $sl = $entry->planned_sl ?? $entry->current_sl;
+
         if ($actualEntry === null || $sl === null || $exit === null) {
             return null;
         }
@@ -411,10 +508,16 @@ class TradeJournalService
         $actualEntry = (float) $actualEntry;
         $sl = (float) $sl;
         $exit = (float) $exit;
-        $risk = $entry->direction === 'buy' ? $actualEntry - $sl : $sl - $actualEntry;
-        $move = $entry->direction === 'buy' ? $exit - $actualEntry : $actualEntry - $exit;
+        $risk = $entry->direction === 'buy'
+            ? $actualEntry - $sl
+            : $sl - $actualEntry;
+        $move = $entry->direction === 'buy'
+            ? $exit - $actualEntry
+            : $actualEntry - $exit;
 
-        return $risk > 0 ? $this->decimal($move / $risk) : null;
+        return $risk > 0
+            ? $this->decimal($move / $risk)
+            : null;
     }
 
     private function decimal(float $value): string
@@ -424,6 +527,9 @@ class TradeJournalService
 
     private function assertOwner(User $user, TradeJournalEntry $entry): void
     {
-        abort_unless((int) $entry->user_id === (int) $user->getKey(), 404);
+        abort_unless(
+            (int) $entry->user_id === (int) $user->getKey(),
+            404
+        );
     }
 }
