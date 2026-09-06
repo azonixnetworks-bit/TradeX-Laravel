@@ -22,10 +22,7 @@ class TradeJournalController extends Controller
         $user = $this->user($request);
         $timezone = $this->queryTimezone($request, $journal);
 
-        return response()->json([
-            'success' => true,
-            'data' => $analytics->home($user, $timezone),
-        ])->header('Cache-Control', 'private, no-store');
+        return $this->ok($analytics->home($user, $timezone));
     }
 
     public function analytics(
@@ -41,16 +38,13 @@ class TradeJournalController extends Controller
             'to' => ['required_if:period,custom', 'nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        return response()->json([
-            'success' => true,
-            'data' => $analytics->analytics(
-                $user,
-                $timezone,
-                $validated['period'] ?? 'month',
-                $validated['from'] ?? null,
-                $validated['to'] ?? null
-            ),
-        ])->header('Cache-Control', 'private, no-store');
+        return $this->ok($analytics->analytics(
+            $user,
+            $timezone,
+            $validated['period'] ?? 'month',
+            $validated['from'] ?? null,
+            $validated['to'] ?? null
+        ));
     }
 
     public function index(Request $request, TradeJournalService $journal): JsonResponse
@@ -80,7 +74,7 @@ class TradeJournalController extends Controller
         $query = TradeJournalEntry::query()->where('user_id', $user->getKey());
 
         if (filled($validated['search'] ?? null)) {
-            $search = '%'.str_replace(['%', '_'], ['\\%', '\\_'], $validated['search']).'%';
+            $search = '%'.$validated['search'].'%';
             $query->where(function ($nested) use ($search): void {
                 $nested->where('symbol', 'like', $search)
                     ->orWhere('setup_strategy', 'like', $search)
@@ -90,10 +84,18 @@ class TradeJournalController extends Controller
         }
 
         foreach ([
-            'market' => 'market', 'stock_region' => 'stock_region', 'symbol' => 'symbol',
-            'direction' => 'direction', 'status' => 'status', 'result' => 'result',
-            'session' => 'session_label', 'setup' => 'setup_strategy', 'emotion' => 'emotion_before',
-            'followed_plan' => 'followed_plan_after', 'account' => 'account_label', 'broker' => 'broker',
+            'market' => 'market',
+            'stock_region' => 'stock_region',
+            'symbol' => 'symbol',
+            'direction' => 'direction',
+            'status' => 'status',
+            'result' => 'result',
+            'session' => 'session_label',
+            'setup' => 'setup_strategy',
+            'emotion' => 'emotion_before',
+            'followed_plan' => 'followed_plan_after',
+            'account' => 'account_label',
+            'broker' => 'broker',
         ] as $input => $column) {
             if (filled($validated[$input] ?? null)) {
                 $query->where($column, $validated[$input]);
@@ -143,10 +145,7 @@ class TradeJournalController extends Controller
         $entry = $journal->owned($user, $uuid);
         $timezone = $this->queryTimezone($request, $journal, $entry->user_timezone);
 
-        return response()->json([
-            'success' => true,
-            'data' => $journal->serialize($entry, $timezone),
-        ])->header('Cache-Control', 'private, no-store');
+        return $this->ok($journal->serialize($entry, $timezone));
     }
 
     public function update(Request $request, string $uuid, TradeJournalService $journal): JsonResponse
@@ -172,7 +171,7 @@ class TradeJournalController extends Controller
             'actual_entry' => ['required', 'numeric', 'gt:0'],
             'entry_date' => ['required', 'date_format:Y-m-d'],
             'entry_time' => ['required', 'date_format:H:i'],
-            'timezone' => ['required', 'string', 'max:96'],
+            'timezone' => ['required', 'string', 'timezone', 'max:96'],
             'current_sl' => ['nullable', 'numeric', 'gt:0'],
             'current_tp' => ['nullable', 'numeric', 'gt:0'],
             'position_size' => ['nullable', 'numeric', 'gt:0'],
@@ -196,7 +195,7 @@ class TradeJournalController extends Controller
             'exit_price' => ['required', 'numeric', 'gt:0'],
             'exit_date' => ['required', 'date_format:Y-m-d'],
             'exit_time' => ['required', 'date_format:H:i'],
-            'timezone' => ['required', 'string', 'max:96'],
+            'timezone' => ['required', 'string', 'timezone', 'max:96'],
             'result' => ['required', Rule::in(config('trade_journal.results', []))],
             'gross_pnl' => ['nullable', 'numeric'],
             'fees' => ['nullable', 'numeric', 'min:0'],
@@ -214,10 +213,7 @@ class TradeJournalController extends Controller
         ]);
         $closed = $journal->close($user, $entry, $data);
 
-        return response()->json([
-            'success' => true,
-            'data' => $journal->serialize($closed, $data['timezone']),
-        ])->header('Cache-Control', 'private, no-store');
+        return $this->ok($journal->serialize($closed, $data['timezone']));
     }
 
     public function cancel(Request $request, string $uuid, TradeJournalService $journal): JsonResponse
@@ -230,10 +226,7 @@ class TradeJournalController extends Controller
         ]);
         $cancelled = $journal->cancel($user, $entry, $data['reason'] ?? null);
 
-        return response()->json([
-            'success' => true,
-            'data' => $journal->serialize($cancelled),
-        ])->header('Cache-Control', 'private, no-store');
+        return $this->ok($journal->serialize($cancelled));
     }
 
     public function destroy(Request $request, string $uuid, TradeJournalService $journal): JsonResponse
@@ -251,7 +244,7 @@ class TradeJournalController extends Controller
             'status' => ['required', Rule::in(['planned', 'open'])],
             'trade_date' => ['required', 'date_format:Y-m-d'],
             'trade_time' => ['required', 'date_format:H:i'],
-            'timezone' => ['required', 'string', 'max:96'],
+            'timezone' => ['required', 'string', 'timezone', 'max:96'],
             'actual_entry' => ['required_if:status,open', 'nullable', 'numeric', 'gt:0'],
         ]);
     }
@@ -275,7 +268,7 @@ class TradeJournalController extends Controller
         return [
             'user_id' => ['prohibited'],
             'market' => [$required ? 'required' : 'sometimes', Rule::in(config('trade_journal.markets', []))],
-            'stock_region' => ['nullable', Rule::in(config('trade_journal.stock_regions', []))],
+            'stock_region' => ['required_if:market,stocks', 'nullable', Rule::in(config('trade_journal.stock_regions', []))],
             'symbol' => [$required ? 'required' : 'sometimes', 'string', 'max:64'],
             'direction' => [$required ? 'required' : 'sometimes', Rule::in(config('trade_journal.directions', []))],
             'session_label' => ['nullable', 'string', 'max:160'],
@@ -292,7 +285,7 @@ class TradeJournalController extends Controller
             'position_size' => ['nullable', 'numeric', 'gt:0'],
             'risk_amount' => ['nullable', 'numeric', 'min:0'],
             'risk_currency' => ['required_with:risk_amount', 'nullable', 'string', 'max:16'],
-            'risk_percent' => ['nullable', 'numeric', 'gt:0', 'lte:100'],
+            'risk_percent' => ['nullable', 'numeric', 'gt:0', 'max:100'],
             'emotion_before' => ['nullable', Rule::in(config('trade_journal.emotions_before', []))],
             'confidence_before' => ['nullable', 'integer', 'between:1,5'],
             'mental_state_note' => ['nullable', 'string', 'max:5000'],
@@ -321,5 +314,13 @@ class TradeJournalController extends Controller
         $user = $request->user();
         abort_unless($user instanceof User, 401, 'Unauthenticated.');
         return $user;
+    }
+
+    private function ok(array $data): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ])->header('Cache-Control', 'private, no-store');
     }
 }
