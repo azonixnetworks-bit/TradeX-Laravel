@@ -18,6 +18,7 @@ use App\Providers\ProductServiceProvider;
 use App\Providers\PushNotificationApiServiceProvider;
 use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
+use App\Providers\TradeJournalServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -38,4 +39,5 @@ return [
     MobileBootstrapApiServiceProvider::class,
     PushNotificationApiServiceProvider::class,
     CopyTradingServiceProvider::class,
+    TradeJournalServiceProvider::class,
 ];
