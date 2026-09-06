@@ -26,7 +26,7 @@
             >
         </div>
 
-        <div class="page-date">{{ now()->format('d M Y') }}</div>
+        <div class="page-date">{{ $systemDateDisplay }}</div>
     </div>
 </div>
 
@@ -185,12 +185,7 @@
 
         <div class="security-status-row">
             <span>Last Login</span>
-            <strong>
-                {{ $admin->last_login_at
-                    ? $admin->last_login_at->format('d M Y H:i')
-                    : 'First Session'
-                }}
-            </strong>
+            <strong title="{{ $systemTimezone }}">{{ $lastLoginDisplay }}</strong>
         </div>
 
         <div class="security-status-row">
@@ -273,7 +268,7 @@
                                 </td>
                                 <td>{{ $customer->account_type ?? '—' }}</td>
                                 <td><span class="activity-status">{{ $customer->status ?? '—' }}</span></td>
-                                <td>{{ $customer->created_at?->format('d M Y H:i') ?? '—' }}</td>
+                                <td title="{{ $systemTimezone }}">{{ $activityTimestampDisplays[(string) $customer->getKey()] ?? '—' }}</td>
                                 <td>
                                     <a class="secondary-btn activity-view-link" href="{{ route('admin.users.show', $customer) }}">View</a>
                                 </td>
@@ -315,7 +310,7 @@
                                 <td>{{ $providerLabel }}</td>
                                 <td>{{ $amount['currency'] }} {{ $amount['amount'] }}</td>
                                 <td><span class="activity-status">{{ $payment->status }}</span></td>
-                                <td>{{ $payment->cleared_at?->format('d M Y H:i') ?? '—' }}</td>
+                                <td title="{{ $systemTimezone }}">{{ $activityTimestampDisplays[(string) $payment->getKey()] ?? '—' }}</td>
                                 <td>{{ $payment->order?->uuid ?? '—' }}</td>
                                 <td>
                                     @if($payment->order)
@@ -356,7 +351,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $activity->ip_address ?? '—' }}</td>
-                                <td>{{ $activity->created_at?->format('d M Y H:i:s') ?? '—' }}</td>
+                                <td title="{{ $systemTimezone }}">{{ $activityTimestampDisplays[(string) $activity->getKey()] ?? '—' }}</td>
                                 <td>
                                     <a class="secondary-btn activity-view-link" href="{{ route('admin.audit.show', $activity) }}">View</a>
                                 </td>
