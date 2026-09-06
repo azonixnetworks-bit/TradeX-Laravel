@@ -28,16 +28,14 @@ class TwelveDataStocksProvider implements MarketDataProvider
     public function configured(): bool
     {
         return (bool) config('tradex_screener.enabled', true)
+            && (bool) config('tradex_screener_stocks.enabled', true)
+            && (bool) config('tradex_screener_stocks.provider.enabled', false)
             && (bool) config(
-                'tradex_screener.providers.twelve_data_stocks.enabled',
-                false
-            )
-            && (bool) config(
-                'tradex_screener.providers.twelve_data_stocks.external_display_approved',
+                'tradex_screener_stocks.provider.external_display_approved',
                 false
             )
             && trim((string) config(
-                'tradex_screener.providers.twelve_data_stocks.api_key',
+                'tradex_screener_stocks.provider.api_key',
                 ''
             )) !== '';
     }
@@ -148,12 +146,12 @@ class TwelveDataStocksProvider implements MarketDataProvider
             'provider' => $this->name(),
             'market' => $this->market(),
             'enabled' => (bool) config(
-                'tradex_screener.providers.twelve_data_stocks.enabled',
+                'tradex_screener_stocks.provider.enabled',
                 false
             ),
             'configured' => $configured,
             'external_display_approved' => (bool) config(
-                'tradex_screener.providers.twelve_data_stocks.external_display_approved',
+                'tradex_screener_stocks.provider.external_display_approved',
                 false
             ),
             'status' => $configured
@@ -165,7 +163,7 @@ class TwelveDataStocksProvider implements MarketDataProvider
             'last_latency_ms' => $cached['last_latency_ms'] ?? null,
             'base_host' => parse_url(
                 (string) config(
-                    'tradex_screener.providers.twelve_data_stocks.base_url',
+                    'tradex_screener_stocks.provider.base_url',
                     'https://api.twelvedata.com'
                 ),
                 PHP_URL_HOST
@@ -180,7 +178,7 @@ class TwelveDataStocksProvider implements MarketDataProvider
     {
         $registry = [];
 
-        foreach ((array) config('tradex_screener.stocks.symbols', []) as $symbol) {
+        foreach ((array) config('tradex_screener_stocks.symbols', []) as $symbol) {
             if (! is_array($symbol) || ! (bool) ($symbol['enabled'] ?? false)) {
                 continue;
             }
@@ -206,19 +204,19 @@ class TwelveDataStocksProvider implements MarketDataProvider
     ): array {
         $baseUrl = rtrim(
             (string) config(
-                'tradex_screener.providers.twelve_data_stocks.base_url',
+                'tradex_screener_stocks.provider.base_url',
                 'https://api.twelvedata.com'
             ),
             '/'
         );
 
         $timeout = max(2, min(30, (int) config(
-            'tradex_screener.providers.twelve_data_stocks.timeout_seconds',
+            'tradex_screener_stocks.provider.timeout_seconds',
             10
         )));
 
         $connectTimeout = max(1, min($timeout, (int) config(
-            'tradex_screener.providers.twelve_data_stocks.connect_timeout_seconds',
+            'tradex_screener_stocks.provider.connect_timeout_seconds',
             5
         )));
 
@@ -229,7 +227,7 @@ class TwelveDataStocksProvider implements MarketDataProvider
             'order' => 'ASC',
             'timezone' => 'UTC',
             'apikey' => (string) config(
-                'tradex_screener.providers.twelve_data_stocks.api_key'
+                'tradex_screener_stocks.provider.api_key'
             ),
         ];
 
