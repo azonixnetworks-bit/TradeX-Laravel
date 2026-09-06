@@ -283,6 +283,27 @@ class User extends Authenticatable
 
     /*
     |--------------------------------------------------------------------------
+    | Trade Journal Relationships
+    |--------------------------------------------------------------------------
+    */
+
+    public function tradeJournalEntries(): HasMany
+    {
+        return $this->hasMany(
+            TradeJournalEntry::class
+        );
+    }
+
+    public function tradeJournalReviews(): HasMany
+    {
+        return $this->hasMany(
+            TradeJournalReview::class
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Account Type Helpers
     |--------------------------------------------------------------------------
     */
