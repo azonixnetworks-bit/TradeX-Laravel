@@ -37,9 +37,21 @@ class TradeJournalScreenshotApiTest extends TestCase
 
         $uuid = (string) $created->json('data.uuid');
 
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+            true
+        );
+
+        $this->assertIsString($png);
+
         $upload = $this->withToken($ownerToken)->post(
             '/api/v1/trade-journal/'.$uuid.'/screenshots/before',
-            ['image' => UploadedFile::fake()->image('before.png', 640, 360)]
+            [
+                'image' => UploadedFile::fake()->createWithContent(
+                    'before.png',
+                    $png
+                ),
+            ]
         );
 
         $upload->assertCreated()->assertJsonPath('data.available', true);
