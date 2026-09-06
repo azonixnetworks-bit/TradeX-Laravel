@@ -27,9 +27,22 @@ class ScreenerController extends Controller
         }
         unset($market);
 
+        $stockRegions = (array) config(
+            'tradex_screener_stocks.regions',
+            []
+        );
+
+        foreach ($stockRegions as $key => &$region) {
+            if (is_array($region)) {
+                $region['key'] = $key;
+            }
+        }
+        unset($region);
+
         return $this->json([
             'markets' => array_values($markets),
             'timeframes' => $engine->timeframes(),
+            'stock_regions' => array_values($stockRegions),
             'filters' => [
                 'trend' => ['BULLISH', 'BEARISH', 'SIDEWAYS'],
                 'ema_alignment' => ['BULLISH', 'BEARISH', 'MIXED'],
@@ -42,7 +55,7 @@ class ScreenerController extends Controller
                     'trend',
                 ],
             ],
-            'phase' => 'SCREENER-03',
+            'phase' => 'SCREENER-04',
         ]);
     }
 
@@ -51,20 +64,82 @@ class ScreenerController extends Controller
         $this->requireUser($request);
 
         $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
+        $region = strtoupper(trim((string) $request->query('region', '')));
+        $exchange = strtoupper(trim((string) $request->query('exchange', '')));
 
-        Validator::make(
-            ['market' => $market],
+        $validator = Validator::make(
+            [
+                'market' => $market,
+                'region' => $region,
+                'exchange' => $exchange,
+            ],
             [
                 'market' => [
                     'required',
                     Rule::in(array_keys($engine->markets())),
                 ],
+                'region' => ['nullable', 'string', 'max:32'],
+                'exchange' => ['nullable', 'string', 'max:32'],
             ]
-        )->validate();
+        );
+
+        $validator->after(function ($validator) use ($market, $region): void {
+            if ($market !== 'STOCKS' && $region !== '') {
+                $validator->errors()->add(
+                    'region',
+                    'The region filter is available for stocks only.'
+                );
+
+                return;
+            }
+
+            if (
+                $market === 'STOCKS'
+                && $region !== ''
+                && ! array_key_exists(
+                    $region,
+                    (array) config('tradex_screener_stocks.regions', [])
+                )
+            ) {
+                $validator->errors()->add(
+                    'region',
+                    'Unsupported stocks region.'
+                );
+            }
+        });
+
+        $validator->validate();
+
+        $symbols = $engine->symbols($market);
+
+        if ($market === 'STOCKS') {
+            $symbols = array_values(array_filter(
+                $symbols,
+                static function (array $symbol) use ($region, $exchange): bool {
+                    if (
+                        $region !== ''
+                        && strtoupper((string) ($symbol['region'] ?? '')) !== $region
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $exchange !== ''
+                        && strtoupper((string) ($symbol['exchange'] ?? '')) !== $exchange
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+        }
 
         return $this->json([
             'market' => $market,
-            'symbols' => $engine->symbols($market),
+            'region' => $market === 'STOCKS' ? $region : null,
+            'exchange' => $market === 'STOCKS' ? $exchange : null,
+            'symbols' => $symbols,
         ]);
     }
 
@@ -129,6 +204,8 @@ class ScreenerController extends Controller
     ): array {
         $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
         $timeframe = strtoupper(trim((string) $request->query('timeframe', 'H1')));
+        $region = strtoupper(trim((string) $request->query('region', '')));
+        $exchange = strtoupper(trim((string) $request->query('exchange', '')));
         $symbolsInput = $request->query('symbols', []);
 
         $symbols = is_array($symbolsInput)
@@ -143,14 +220,41 @@ class ScreenerController extends Controller
             static fn (string $symbol): bool => $symbol !== ''
         ));
 
+        $availableSymbolConfigs = $engine->symbols($market);
+
+        if ($market === 'STOCKS') {
+            $availableSymbolConfigs = array_values(array_filter(
+                $availableSymbolConfigs,
+                static function (array $symbol) use ($region, $exchange): bool {
+                    if (
+                        $region !== ''
+                        && strtoupper((string) ($symbol['region'] ?? '')) !== $region
+                    ) {
+                        return false;
+                    }
+
+                    if (
+                        $exchange !== ''
+                        && strtoupper((string) ($symbol['exchange'] ?? '')) !== $exchange
+                    ) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+        }
+
         $availableSymbols = array_map(
             static fn (array $symbol): string => (string) $symbol['symbol'],
-            $engine->symbols($market)
+            $availableSymbolConfigs
         );
 
         $payload = [
             'market' => $market,
             'timeframe' => $timeframe,
+            'region' => $region,
+            'exchange' => $exchange,
             'symbols' => $symbols,
             'trend' => strtoupper(trim((string) $request->query('trend', ''))),
             'ema_alignment' => strtoupper(trim((string) $request->query('ema_alignment', ''))),
@@ -171,6 +275,8 @@ class ScreenerController extends Controller
                     'required',
                     Rule::in(array_keys($engine->timeframes())),
                 ],
+                'region' => ['nullable', 'string', 'max:32'],
+                'exchange' => ['nullable', 'string', 'max:32'],
                 'symbols' => ['array', 'max:20'],
                 'symbols.*' => ['string', Rule::in($availableSymbols)],
                 'trend' => [
@@ -219,6 +325,66 @@ class ScreenerController extends Controller
                     $validator->errors()->add(
                         'market',
                         'This screener market is not active yet.'
+                    );
+                }
+
+                if ($payload['market'] !== 'STOCKS') {
+                    if ($payload['region'] !== '') {
+                        $validator->errors()->add(
+                            'region',
+                            'The region filter is available for stocks only.'
+                        );
+                    }
+
+                    if ($payload['exchange'] !== '') {
+                        $validator->errors()->add(
+                            'exchange',
+                            'The exchange filter is available for stocks only.'
+                        );
+                    }
+
+                    return;
+                }
+
+                $regions = (array) config('tradex_screener_stocks.regions', []);
+                $region = (string) $payload['region'];
+
+                if ($region === '') {
+                    return;
+                }
+
+                $regionConfig = $regions[$region] ?? null;
+
+                if (! is_array($regionConfig)) {
+                    $validator->errors()->add(
+                        'region',
+                        'Unsupported stocks region.'
+                    );
+
+                    return;
+                }
+
+                if (! (bool) ($regionConfig['enabled'] ?? false)) {
+                    $validator->errors()->add(
+                        'region',
+                        'This stocks region is waiting for an approved market-data provider.'
+                    );
+
+                    return;
+                }
+
+                $supported = array_map(
+                    'strtoupper',
+                    (array) ($regionConfig['supported_timeframes'] ?? [])
+                );
+
+                if (
+                    $supported !== []
+                    && ! in_array((string) $payload['timeframe'], $supported, true)
+                ) {
+                    $validator->errors()->add(
+                        'timeframe',
+                        'This stocks region does not support the selected timeframe.'
                     );
                 }
             }
