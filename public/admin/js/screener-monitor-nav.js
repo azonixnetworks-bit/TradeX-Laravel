@@ -34,7 +34,13 @@
 
     const currentPath = window.location.pathname.replace(/\/$/, '');
 
-    const buildLink = (url, label, iconText, ariaLabel) => {
+    const buildLink = (
+        url,
+        label,
+        iconText,
+        ariaLabel,
+        includeDescendants = true
+    ) => {
         const link = document.createElement('a');
         link.href = url;
         link.className = 'nav-link';
@@ -44,7 +50,10 @@
             .pathname
             .replace(/\/$/, '');
 
-        if (currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)) {
+        if (
+            currentPath === targetPath
+            || (includeDescendants && currentPath.startsWith(`${targetPath}/`))
+        ) {
             link.classList.add('active');
         }
 
@@ -72,7 +81,8 @@
             liveUrl,
             'Live Screener',
             '⌁',
-            'Open Live Screener'
+            'Open Live Screener',
+            true
         );
         anchor.insertAdjacentElement('afterend', liveLink);
         anchor = liveLink;
@@ -87,7 +97,8 @@
             monitorUrl,
             'Screener Monitor',
             '◉',
-            'Open Screener Monitor'
+            'Open Screener Monitor',
+            false
         );
         anchor.insertAdjacentElement('afterend', monitorLink);
     }
