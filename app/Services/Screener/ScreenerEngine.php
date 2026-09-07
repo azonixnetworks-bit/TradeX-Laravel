@@ -28,7 +28,20 @@ class ScreenerEngine
     /** @return array<string, array<string, mixed>> */
     public function markets(): array
     {
-        return (array) config('tradex_screener.markets', []);
+        $markets = (array) config('tradex_screener.markets', []);
+
+        if ((bool) config('tradex_screener_stocks.enabled', false)) {
+            $markets['STOCKS'] = array_merge(
+                (array) ($markets['STOCKS'] ?? []),
+                [
+                    'label' => (string) ($markets['STOCKS']['label'] ?? 'Stocks'),
+                    'enabled' => true,
+                    'status' => 'ACTIVE',
+                ]
+            );
+        }
+
+        return $markets;
     }
 
     /** @return array<string, array<string, mixed>> */
