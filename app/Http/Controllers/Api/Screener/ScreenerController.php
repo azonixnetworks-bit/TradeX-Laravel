@@ -6,6 +6,7 @@ use App\Exceptions\ScreenerProviderException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\Screener\ScreenerEngine;
+use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -55,8 +56,24 @@ class ScreenerController extends Controller
                     'trend',
                 ],
             ],
-            'phase' => 'SCREENER-04',
+            'capabilities' => [
+                'provider_health' => true,
+                'stale_fallback' => true,
+                'stock_regions' => true,
+            ],
+            'phase' => 'SCREENER-05',
         ]);
+    }
+
+    public function health(
+        Request $request,
+        ScreenerHealthService $healthService
+    ): JsonResponse {
+        $this->requireUser($request);
+
+        return $this->json(
+            $healthService->snapshot()
+        );
     }
 
     public function symbols(Request $request, ScreenerEngine $engine): JsonResponse
