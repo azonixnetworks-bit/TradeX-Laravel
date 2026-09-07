@@ -9,9 +9,7 @@ use InvalidArgumentException;
 
 class ScreenerEngine
 {
-    /**
-     * @var array<string, MarketDataProvider>
-     */
+    /** @var array<string, MarketDataProvider> */
     private array $providers = [];
 
     public function __construct(
@@ -23,37 +21,23 @@ class ScreenerEngine
                 continue;
             }
 
-            $this->providers[
-                strtoupper($provider->market())
-            ] = $provider;
+            $this->providers[strtoupper($provider->market())] = $provider;
         }
     }
 
-    /**
-     * @return array<string, array<string, mixed>>
-     */
+    /** @return array<string, array<string, mixed>> */
     public function markets(): array
     {
-        return (array) config(
-            'tradex_screener.markets',
-            []
-        );
+        return (array) config('tradex_screener.markets', []);
     }
 
-    /**
-     * @return array<string, array<string, mixed>>
-     */
+    /** @return array<string, array<string, mixed>> */
     public function timeframes(): array
     {
-        return (array) config(
-            'tradex_screener.timeframes',
-            []
-        );
+        return (array) config('tradex_screener.timeframes', []);
     }
 
-    /**
-     * @return array<int, array<string, mixed>>
-     */
+    /** @return array<int, array<string, mixed>> */
     public function symbols(string $market): array
     {
         $market = strtoupper(trim($market));
@@ -63,13 +47,15 @@ class ScreenerEngine
             return [];
         }
 
-        $configKey = strtolower($market);
+        $symbols = $market === 'STOCKS'
+            ? (array) config('tradex_screener_stocks.symbols', [])
+            : (array) config(
+                'tradex_screener.'.strtolower($market).'.symbols',
+                []
+            );
 
         return array_values(array_filter(
-            (array) config(
-                'tradex_screener.'.$configKey.'.symbols',
-                []
-            ),
+            $symbols,
             static fn (mixed $symbol): bool =>
                 is_array($symbol)
                 && (bool) ($symbol['enabled'] ?? false)
@@ -82,33 +68,17 @@ class ScreenerEngine
      */
     public function screen(array $filters): array
     {
-        $market = strtoupper(
-            trim(
-                (string) ($filters['market'] ?? 'FOREX')
-            )
-        );
-
+        $market = strtoupper(trim((string) ($filters['market'] ?? 'FOREX')));
         $marketConfig = $this->markets()[$market] ?? null;
 
-        if (
-            ! is_array($marketConfig)
-            || ! (bool) ($marketConfig['enabled'] ?? false)
-        ) {
+        if (! is_array($marketConfig) || ! (bool) ($marketConfig['enabled'] ?? false)) {
             throw new InvalidArgumentException(
                 'This screener market is not active yet.'
             );
         }
 
-        $provider = $this->providerForMarket(
-            $market
-        );
-
-        $timeframe = strtoupper(
-            trim(
-                (string) ($filters['timeframe'] ?? 'H1')
-            )
-        );
-
+        $provider = $this->providerForMarket($market);
+        $timeframe = strtoupper(trim((string) ($filters['timeframe'] ?? 'H1')));
         $timeframeConfig = $this->timeframes()[$timeframe] ?? null;
 
         if (! is_array($timeframeConfig)) {
@@ -124,11 +94,7 @@ class ScreenerEngine
             $provider
         );
 
-        $rows = $this->applyFilters(
-            $dataset['rows'],
-            $filters
-        );
-
+        $rows = $this->applyFilters($dataset['rows'], $filters);
         $rows = $this->sortRows(
             $rows,
             (string) ($filters['sort'] ?? 'symbol'),
@@ -142,12 +108,9 @@ class ScreenerEngine
             'timeframe' => $timeframe,
             'provider' => $provider->name(),
             'provider_health' => [
-                'status' =>
-                    $health['status']
-                    ?? 'UNKNOWN',
+                'status' => $health['status'] ?? 'UNKNOWN',
             ],
-            'generated_at_utc' =>
-                $dataset['generated_at_utc'],
+            'generated_at_utc' => $dataset['generated_at_utc'],
             'cache' => [
                 'hit' => $dataset['cache_hit'],
                 'stale' => $dataset['stale'],
@@ -168,9 +131,8 @@ class ScreenerEngine
         )->health();
     }
 
-    private function providerForMarket(
-        string $market
-    ): MarketDataProvider {
+    private function providerForMarket(string $market): MarketDataProvider
+    {
         $provider = $this->providers[$market] ?? null;
 
         if (! $provider instanceof MarketDataProvider) {
@@ -184,12 +146,7 @@ class ScreenerEngine
 
     /**
      * @param  array<string, mixed>  $timeframeConfig
-     * @return array{
-     *   generated_at_utc: string,
-     *   rows: array<int, array<string, mixed>>,
-     *   cache_hit: bool,
-     *   stale: bool
-     * }
+     * @return array{generated_at_utc: string, rows: array<int, array<string, mixed>>, cache_hit: bool, stale: bool}
      */
     private function dataset(
         string $market,
@@ -202,7 +159,6 @@ class ScreenerEngine
             $market,
             $timeframe
         );
-
         $staleKey = sprintf(
             'tradex:screener:stale:v1:%s:%s',
             $market,
@@ -220,7 +176,18 @@ class ScreenerEngine
         }
 
         try {
-            $symbolConfigs = $this->symbols($market);
+            $symbolConfigs = array_values(array_filter(
+                $this->symbols($market),
+                static function (array $symbol) use ($timeframe): bool {
+                    $supported = array_map(
+                        'strtoupper',
+                        (array) ($symbol['supported_timeframes'] ?? [])
+                    );
+
+                    return $supported === []
+                        || in_array($timeframe, $supported, true);
+                }
+            ));
 
             $providerSymbols = array_values(array_map(
                 static fn (array $symbol): string =>
@@ -228,17 +195,11 @@ class ScreenerEngine
                 $symbolConfigs
             ));
 
-            $interval = $this->providerInterval(
-                $provider,
-                $timeframeConfig
-            );
-
+            $interval = $this->providerInterval($provider, $timeframeConfig);
             $series = $provider->timeSeries(
                 $providerSymbols,
                 $interval,
-                $this->providerOutputSize(
-                    $provider
-                )
+                $this->providerOutputSize($provider)
             );
 
             $rows = [];
@@ -251,20 +212,19 @@ class ScreenerEngine
                     continue;
                 }
 
-                $analysis = $this->indicatorEngine
-                    ->analyse($candles);
+                $analysis = $this->indicatorEngine->analyse($candles);
 
                 $rows[] = [
-                    'symbol' =>
-                        (string) $symbolConfig['symbol'],
-                    'provider_symbol' =>
-                        $providerSymbol,
-                    'name' =>
-                        (string) ($symbolConfig['name'] ?? $symbolConfig['symbol']),
-                    'base_currency' =>
-                        (string) ($symbolConfig['base_currency'] ?? ''),
-                    'quote_currency' =>
-                        (string) ($symbolConfig['quote_currency'] ?? ''),
+                    'symbol' => (string) $symbolConfig['symbol'],
+                    'provider_symbol' => $providerSymbol,
+                    'name' => (string) ($symbolConfig['name'] ?? $symbolConfig['symbol']),
+                    'base_currency' => (string) ($symbolConfig['base_currency'] ?? ''),
+                    'quote_currency' => (string) ($symbolConfig['quote_currency'] ?? ''),
+                    'region' => (string) ($symbolConfig['region'] ?? ''),
+                    'exchange' => (string) ($symbolConfig['exchange'] ?? ''),
+                    'mic_code' => (string) ($symbolConfig['mic_code'] ?? ''),
+                    'currency' => (string) ($symbolConfig['currency'] ?? ''),
+                    'data_mode' => (string) ($symbolConfig['data_mode'] ?? ''),
                     ...$analysis,
                     'volatility' => $this->volatilityLabel(
                         $analysis['atr_percent'] ?? null
@@ -280,33 +240,26 @@ class ScreenerEngine
             }
 
             $dataset = [
-                'generated_at_utc' =>
-                    now('UTC')->toIso8601String(),
+                'generated_at_utc' => now('UTC')->toIso8601String(),
                 'rows' => $rows,
             ];
 
             Cache::put(
                 $freshKey,
                 $dataset,
-                max(
-                    5,
-                    (int) config(
-                        'tradex_screener.cache.fresh_seconds',
-                        60
-                    )
-                )
+                max(5, (int) config(
+                    'tradex_screener.cache.fresh_seconds',
+                    60
+                ))
             );
 
             Cache::put(
                 $staleKey,
                 $dataset,
-                max(
-                    60,
-                    (int) config(
-                        'tradex_screener.cache.stale_seconds',
-                        900
-                    )
-                )
+                max(60, (int) config(
+                    'tradex_screener.cache.stale_seconds',
+                    900
+                ))
             );
 
             return [
@@ -329,20 +282,15 @@ class ScreenerEngine
         }
     }
 
-    /**
-     * @param  array<string, mixed>  $timeframeConfig
-     */
+    /** @param  array<string, mixed>  $timeframeConfig */
     private function providerInterval(
         MarketDataProvider $provider,
         array $timeframeConfig
     ): string {
         $interval = match ($provider->name()) {
-            'BINANCE' =>
-                $timeframeConfig['binance_interval'] ?? null,
-            'DERIV' =>
-                $timeframeConfig['deriv_granularity'] ?? null,
-            default =>
-                $timeframeConfig['provider_interval'] ?? null,
+            'BINANCE' => $timeframeConfig['binance_interval'] ?? null,
+            'DERIV' => $timeframeConfig['deriv_granularity'] ?? null,
+            default => $timeframeConfig['provider_interval'] ?? null,
         };
 
         $interval = trim((string) $interval);
@@ -356,58 +304,33 @@ class ScreenerEngine
         return $interval;
     }
 
-    private function providerOutputSize(
-        MarketDataProvider $provider
-    ): int {
+    private function providerOutputSize(MarketDataProvider $provider): int
+    {
         if ($provider->name() === 'BINANCE') {
-            return max(
-                2,
-                min(
-                    1000,
-                    (int) config(
-                        'tradex_screener.providers.binance.output_size',
-                        260
-                    )
-                )
-            );
+            return max(2, min(1000, (int) config(
+                'tradex_screener.providers.binance.output_size',
+                260
+            )));
         }
 
         if ($provider->name() === 'DERIV') {
-            return max(
-                2,
-                min(
-                    5000,
-                    (int) config(
-                        'tradex_screener.providers.deriv.output_size',
-                        260
-                    )
-                )
-            );
+            return max(2, min(5000, (int) config(
+                'tradex_screener.providers.deriv.output_size',
+                260
+            )));
         }
 
         if ($provider->name() === 'TWELVE_DATA_STOCKS') {
-            return max(
-                2,
-                min(
-                    5000,
-                    (int) config(
-                        'tradex_screener_stocks.provider.output_size',
-                        260
-                    )
-                )
-            );
+            return max(2, min(5000, (int) config(
+                'tradex_screener_stocks.provider.output_size',
+                260
+            )));
         }
 
-        return max(
-            2,
-            min(
-                5000,
-                (int) config(
-                    'tradex_screener.providers.twelve_data.output_size',
-                    260
-                )
-            )
-        );
+        return max(2, min(5000, (int) config(
+            'tradex_screener.providers.twelve_data.output_size',
+            260
+        )));
     }
 
     /**
@@ -415,35 +338,19 @@ class ScreenerEngine
      * @param  array<string, mixed>  $filters
      * @return array<int, array<string, mixed>>
      */
-    private function applyFilters(
-        array $rows,
-        array $filters
-    ): array {
-        $symbols = array_values(array_filter(
-            array_map(
-                static fn (mixed $symbol): string =>
-                    strtoupper(trim((string) $symbol)),
-                (array) ($filters['symbols'] ?? [])
-            ),
-            static fn (string $symbol): bool =>
-                $symbol !== ''
-        ));
+    private function applyFilters(array $rows, array $filters): array
+    {
+        $symbols = array_values(array_filter(array_map(
+            static fn (mixed $symbol): string => strtoupper(trim((string) $symbol)),
+            (array) ($filters['symbols'] ?? [])
+        ), static fn (string $symbol): bool => $symbol !== ''));
 
-        $trend = strtoupper(
-            trim((string) ($filters['trend'] ?? ''))
-        );
-
-        $alignment = strtoupper(
-            trim((string) ($filters['ema_alignment'] ?? ''))
-        );
-
-        $rsiMin = isset($filters['rsi_min'])
-            ? (float) $filters['rsi_min']
-            : null;
-
-        $rsiMax = isset($filters['rsi_max'])
-            ? (float) $filters['rsi_max']
-            : null;
+        $trend = strtoupper(trim((string) ($filters['trend'] ?? '')));
+        $alignment = strtoupper(trim((string) ($filters['ema_alignment'] ?? '')));
+        $region = strtoupper(trim((string) ($filters['region'] ?? '')));
+        $exchange = strtoupper(trim((string) ($filters['exchange'] ?? '')));
+        $rsiMin = isset($filters['rsi_min']) ? (float) $filters['rsi_min'] : null;
+        $rsiMax = isset($filters['rsi_max']) ? (float) $filters['rsi_max'] : null;
 
         return array_values(array_filter(
             $rows,
@@ -451,49 +358,44 @@ class ScreenerEngine
                 $symbols,
                 $trend,
                 $alignment,
+                $region,
+                $exchange,
                 $rsiMin,
                 $rsiMax
             ): bool {
                 if (
                     $symbols !== []
-                    && ! in_array(
-                        strtoupper((string) $row['symbol']),
-                        $symbols,
-                        true
-                    )
+                    && ! in_array(strtoupper((string) $row['symbol']), $symbols, true)
                 ) {
                     return false;
                 }
 
-                if (
-                    $trend !== ''
-                    && strtoupper((string) $row['trend'])
-                        !== $trend
-                ) {
+                if ($region !== '' && strtoupper((string) ($row['region'] ?? '')) !== $region) {
+                    return false;
+                }
+
+                if ($exchange !== '' && strtoupper((string) ($row['exchange'] ?? '')) !== $exchange) {
+                    return false;
+                }
+
+                if ($trend !== '' && strtoupper((string) $row['trend']) !== $trend) {
                     return false;
                 }
 
                 if (
                     $alignment !== ''
-                    && strtoupper((string) $row['ema_alignment'])
-                        !== $alignment
+                    && strtoupper((string) $row['ema_alignment']) !== $alignment
                 ) {
                     return false;
                 }
 
                 $rsi = $row['rsi_14'] ?? null;
 
-                if (
-                    $rsiMin !== null
-                    && ($rsi === null || (float) $rsi < $rsiMin)
-                ) {
+                if ($rsiMin !== null && ($rsi === null || (float) $rsi < $rsiMin)) {
                     return false;
                 }
 
-                if (
-                    $rsiMax !== null
-                    && ($rsi === null || (float) $rsi > $rsiMax)
-                ) {
+                if ($rsiMax !== null && ($rsi === null || (float) $rsi > $rsiMax)) {
                     return false;
                 }
 
@@ -506,15 +408,10 @@ class ScreenerEngine
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>
      */
-    private function sortRows(
-        array $rows,
-        string $sort,
-        string $order
-    ): array {
+    private function sortRows(array $rows, string $sort, string $order): array
+    {
         $sort = strtolower(trim($sort));
-        $order = strtolower(trim($order)) === 'desc'
-            ? 'desc'
-            : 'asc';
+        $order = strtolower(trim($order)) === 'desc' ? 'desc' : 'asc';
 
         $field = match ($sort) {
             'change_percent' => 'change_percent',
@@ -526,13 +423,7 @@ class ScreenerEngine
 
         usort(
             $rows,
-            static function (
-                array $left,
-                array $right
-            ) use (
-                $field,
-                $order
-            ): int {
+            static function (array $left, array $right) use ($field, $order): int {
                 $leftValue = $left[$field] ?? null;
                 $rightValue = $right[$field] ?? null;
 
@@ -548,17 +439,11 @@ class ScreenerEngine
                     return -1;
                 }
 
-                $comparison = is_numeric($leftValue)
-                    && is_numeric($rightValue)
-                        ? ((float) $leftValue <=> (float) $rightValue)
-                        : strcasecmp(
-                            (string) $leftValue,
-                            (string) $rightValue
-                        );
+                $comparison = is_numeric($leftValue) && is_numeric($rightValue)
+                    ? ((float) $leftValue <=> (float) $rightValue)
+                    : strcasecmp((string) $leftValue, (string) $rightValue);
 
-                return $order === 'desc'
-                    ? -$comparison
-                    : $comparison;
+                return $order === 'desc' ? -$comparison : $comparison;
             }
         );
 
@@ -572,12 +457,10 @@ class ScreenerEngine
         }
 
         $atrPercent = (float) $atrPercent;
-
         $lowMax = (float) config(
             'tradex_screener.indicators.volatility.low_max_percent',
             0.35
         );
-
         $mediumMax = (float) config(
             'tradex_screener.indicators.volatility.medium_max_percent',
             0.80
