@@ -25,6 +25,14 @@ Route::prefix('v1')
                 )->name('meta');
 
                 Route::get(
+                    '/health',
+                    [
+                        ScreenerController::class,
+                        'health',
+                    ]
+                )->name('health');
+
+                Route::get(
                     '/symbols',
                     [
                         ScreenerController::class,
