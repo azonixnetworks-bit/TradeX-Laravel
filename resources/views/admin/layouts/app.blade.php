@@ -138,6 +138,7 @@
     src="{{ asset('admin/js/screener-monitor-nav.js') }}"
     data-dashboard-url="{{ route('admin.dashboard') }}"
     data-market-clock-url="{{ route('admin.market_clock.index') }}"
+    data-live-screener-url="{{ route('admin.screener.live') }}"
     data-screener-url="{{ route('admin.screener.index') }}"
 ></script>
 @endif
