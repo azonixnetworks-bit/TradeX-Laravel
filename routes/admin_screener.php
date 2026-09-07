@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\Screener\ScreenerLiveController;
 use App\Http\Controllers\Admin\Screener\ScreenerMonitorController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,5 +20,15 @@ Route::prefix('admin')
                     '/health',
                     [ScreenerMonitorController::class, 'health']
                 )->name('health');
+
+                Route::get(
+                    '/live',
+                    [ScreenerLiveController::class, 'index']
+                )->name('live');
+
+                Route::get(
+                    '/live/data',
+                    [ScreenerLiveController::class, 'data']
+                )->name('live_data');
             });
     });
