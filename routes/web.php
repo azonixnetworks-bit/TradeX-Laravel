@@ -49,6 +49,18 @@ require __DIR__ . '/admin_market_clock.php';
 
 /*
 |--------------------------------------------------------------------------
+| SCREENER-05 — Unified Screener Monitor
+|--------------------------------------------------------------------------
+|
+| Read-only provider, cache and market-data readiness for Forex, Crypto,
+| Deriv and Stocks. The monitor never exposes provider credentials.
+|
+*/
+
+require __DIR__ . '/admin_screener.php';
+
+/*
+|--------------------------------------------------------------------------
 | ADMIN-06 — Affiliate Management
 |--------------------------------------------------------------------------
 |

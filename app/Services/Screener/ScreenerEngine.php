@@ -336,9 +336,14 @@ class ScreenerEngine
         MarketDataProvider $provider,
         array $timeframeConfig
     ): string {
-        $interval = $provider->name() === 'BINANCE'
-            ? ($timeframeConfig['binance_interval'] ?? null)
-            : ($timeframeConfig['provider_interval'] ?? null);
+        $interval = match ($provider->name()) {
+            'BINANCE' =>
+                $timeframeConfig['binance_interval'] ?? null,
+            'DERIV' =>
+                $timeframeConfig['deriv_granularity'] ?? null,
+            default =>
+                $timeframeConfig['provider_interval'] ?? null,
+        };
 
         $interval = trim((string) $interval);
 
@@ -361,6 +366,32 @@ class ScreenerEngine
                     1000,
                     (int) config(
                         'tradex_screener.providers.binance.output_size',
+                        260
+                    )
+                )
+            );
+        }
+
+        if ($provider->name() === 'DERIV') {
+            return max(
+                2,
+                min(
+                    5000,
+                    (int) config(
+                        'tradex_screener.providers.deriv.output_size',
+                        260
+                    )
+                )
+            );
+        }
+
+        if ($provider->name() === 'TWELVE_DATA_STOCKS') {
+            return max(
+                2,
+                min(
+                    5000,
+                    (int) config(
+                        'tradex_screener_stocks.provider.output_size',
                         260
                     )
                 )

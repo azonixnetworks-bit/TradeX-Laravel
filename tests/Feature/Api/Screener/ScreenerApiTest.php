@@ -63,7 +63,11 @@ class ScreenerApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath(
                 'data.phase',
-                'SCREENER-04'
+                'SCREENER-05'
+            )
+            ->assertJsonPath(
+                'data.capabilities.provider_health',
+                true
             )
             ->assertJsonPath(
                 'data.markets.0.key',
