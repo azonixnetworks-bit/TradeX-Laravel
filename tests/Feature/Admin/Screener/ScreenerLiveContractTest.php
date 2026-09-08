@@ -60,6 +60,14 @@ class ScreenerLiveContractTest extends TestCase
         $this->assertStringContainsString('EMA 200', $view);
         $this->assertStringContainsString('MACD Hist.', $view);
         $this->assertStringContainsString('ATR %', $view);
+        $this->assertStringContainsString(
+            '@json($liveScreenerConfig)',
+            $view
+        );
+        $this->assertStringNotContainsString(
+            '@json([',
+            $view
+        );
         $this->assertStringContainsString('.live-screener-table', $css);
         $this->assertStringContainsString("cache: 'no-store'", $js);
         $this->assertStringContainsString('setInterval(loadData, 30000)', $js);
