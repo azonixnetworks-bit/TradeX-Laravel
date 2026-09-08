@@ -8,18 +8,22 @@
 @endpush
 
 @section('content')
+@php
+    $liveScreenerConfig = [
+        'markets' => $markets,
+        'timeframes' => $timeframes,
+        'stock_regions' => $stockRegions,
+        'health' => $health,
+    ];
+@endphp
+
 <div
     class="live-screener-page"
     id="liveScreenerApp"
     data-endpoint="{{ route('admin.screener.live_data') }}"
     data-monitor-url="{{ route('admin.screener.index') }}"
 >
-    <script type="application/json" id="liveScreenerConfig">@json([
-        'markets' => $markets,
-        'timeframes' => $timeframes,
-        'stock_regions' => $stockRegions,
-        'health' => $health,
-    ])</script>
+    <script type="application/json" id="liveScreenerConfig">@json($liveScreenerConfig)</script>
 
     <div class="page-header live-screener-header">
         <div>
