@@ -2,14 +2,16 @@
 
 namespace App\Providers;
 
+use App\Contracts\Screener\CTraderJsonTransport;
 use App\Contracts\Screener\DerivWebSocketTransport;
 use App\Services\Screener\IndicatorEngine;
 use App\Services\Screener\Providers\BinanceCryptoProvider;
+use App\Services\Screener\Providers\CTraderForexProvider;
 use App\Services\Screener\Providers\DerivMarketDataProvider;
-use App\Services\Screener\Providers\TwelveDataForexProvider;
 use App\Services\Screener\Providers\TwelveDataStocksProvider;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\StocksScreenerEngine;
+use App\Services\Screener\Transports\NativeCTraderJsonWebSocketTransport;
 use App\Services\Screener\Transports\NativeDerivWebSocketTransport;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -26,9 +28,14 @@ class ScreenerServiceProvider extends ServiceProvider
             NativeDerivWebSocketTransport::class
         );
 
+        $this->app->singleton(
+            CTraderJsonTransport::class,
+            NativeCTraderJsonWebSocketTransport::class
+        );
+
         $this->app->tag(
             [
-                TwelveDataForexProvider::class,
+                CTraderForexProvider::class,
                 BinanceCryptoProvider::class,
                 DerivMarketDataProvider::class,
                 TwelveDataStocksProvider::class,
