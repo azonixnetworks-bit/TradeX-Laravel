@@ -9,25 +9,31 @@
 
     const marketClockUrl = script.dataset.marketClockUrl;
     const dashboardUrl = script.dataset.dashboardUrl;
+    const nav = document.querySelector('.sidebar-nav');
 
-    if (!marketClockUrl || !dashboardUrl) {
+    if (!marketClockUrl || !nav) {
         return;
     }
 
-    const dashboardLink = Array.from(
-        document.querySelectorAll('.sidebar-nav .nav-link')
-    ).find((link) => link.getAttribute('href') === dashboardUrl);
+    const links = Array.from(nav.querySelectorAll('.nav-link'));
 
-    if (!dashboardLink) {
+    if (links.some((link) => link.getAttribute('href') === marketClockUrl)) {
         return;
     }
 
-    const existing = Array.from(
-        document.querySelectorAll('.sidebar-nav .nav-link')
-    ).find((link) => link.getAttribute('href') === marketClockUrl);
+    const dashboardLink = dashboardUrl
+        ? links.find((link) => link.getAttribute('href') === dashboardUrl)
+        : null;
 
-    if (existing) {
-        return;
+    let overviewTitle = Array.from(
+        nav.querySelectorAll('.nav-section-title')
+    ).find((title) => title.textContent.trim() === 'OVERVIEW');
+
+    if (!overviewTitle) {
+        overviewTitle = document.createElement('div');
+        overviewTitle.className = 'nav-section-title';
+        overviewTitle.textContent = 'OVERVIEW';
+        nav.prepend(overviewTitle);
     }
 
     const link = document.createElement('a');
@@ -52,5 +58,10 @@
     label.textContent = 'Market Clock';
 
     link.append(icon, label);
-    dashboardLink.insertAdjacentElement('afterend', link);
+
+    if (dashboardLink) {
+        dashboardLink.insertAdjacentElement('afterend', link);
+    } else {
+        overviewTitle.insertAdjacentElement('afterend', link);
+    }
 })();
