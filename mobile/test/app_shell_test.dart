@@ -3,12 +3,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tradex_mobile/app/tradex_app.dart';
 
 void main() {
-  testWidgets('bottom navigation preserves the frozen exact order', (tester) async {
+  testWidgets('bottom navigation preserves the frozen exact order', (
+    tester,
+  ) async {
     await tester.pumpWidget(const TradeXApp());
 
     final labels = ['Home', 'Learn', 'Trade Ideas', 'Affiliate', 'Profile'];
     for (final label in labels) {
-      expect(find.widgetWithText(NavigationDestination, label), findsOneWidget);
+      expect(
+        find.widgetWithText(NavigationDestination, label),
+        findsOneWidget,
+      );
     }
 
     final destinations = tester.widgetList<NavigationDestination>(
@@ -29,10 +34,18 @@ void main() {
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Learn'));
     await tester.pumpAndSettle();
-    expect(find.text('Education integration will use the frozen Laravel v1 API.'), findsOneWidget);
+    expect(
+      find.text('Education integration will use the frozen Laravel v1 API.'),
+      findsOneWidget,
+    );
 
     await tester.tap(find.widgetWithText(NavigationDestination, 'Profile'));
     await tester.pumpAndSettle();
-    expect(find.text('Profile and device security integration follows in later phases.'), findsOneWidget);
+    expect(
+      find.text(
+        'Profile and device security integration follows in later phases.',
+      ),
+      findsOneWidget,
+    );
   });
 }
