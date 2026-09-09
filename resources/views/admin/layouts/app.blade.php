@@ -128,12 +128,15 @@
     src="{{ asset('admin/js/sidebar.js') }}">
 </script>
 
-@if(auth('admin')->user()?->hasPermission('dashboard.view'))
+@if(auth('admin')->user()?->hasPermission('market_clock.view'))
 <script
     src="{{ asset('admin/js/market-clock-nav.js') }}"
     data-dashboard-url="{{ route('admin.dashboard') }}"
     data-market-clock-url="{{ route('admin.market_clock.index') }}"
 ></script>
+@endif
+
+@if(auth('admin')->user()?->hasPermission('screener.monitor.view'))
 <script
     src="{{ asset('admin/js/screener-monitor-nav.js') }}"
     data-dashboard-url="{{ route('admin.dashboard') }}"
