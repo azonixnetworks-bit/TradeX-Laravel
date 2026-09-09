@@ -38,7 +38,9 @@ jobs:
           cache: true
 
       - name: Generate native Android and iOS scaffolding for validation
-        run: flutter create --platforms=android,ios --project-name tradex_mobile --org com.tradex .
+        run: |
+          flutter create --platforms=android,ios --project-name tradex_mobile --org com.tradex .
+          rm -f test/widget_test.dart
 
       - name: Resolve packages
         run: flutter pub get
