@@ -11,18 +11,13 @@
         <p>{{ $adminUser->email }}</p>
     </div>
 
-    <a
-        class="secondary-btn"
-        href="{{ route('admin.administration.admins.index') }}"
-    >
-        Back
-    </a>
+    <a class="secondary-btn" href="{{ route('admin.administration.admins.index') }}">Back</a>
 </div>
 
 @if($protected)
 <section class="panel" style="padding:18px;margin-bottom:18px;">
     <strong>Protected Super Admin:</strong>
-    this seeded owner account is read-only in ADMIN-13. Its role, status and identity cannot be changed through these UI endpoints.
+    this seeded owner account is read-only. Its role, status, identity and deletion state cannot be changed through these UI endpoints.
 </section>
 @endif
 
@@ -47,42 +42,61 @@
     </div>
 </div>
 
+<section class="panel" style="padding:22px;margin-bottom:18px;">
+    <div class="panel-eyebrow">EMAIL DELIVERY AUDIT</div>
+    <h2>Security Email Status</h2>
+    <p>SENT means the configured Laravel mail transport accepted the message. Final inbox delivery remains UNCONFIRMED until a transactional provider webhook confirms it.</p>
+
+    <div class="users-table-wrap" style="margin-top:16px;">
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Dispatch</th>
+                    <th>Delivery</th>
+                    <th>Mailer</th>
+                    <th>Sent / Failed</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($emailDeliveries as $delivery)
+                <tr>
+                    <td>{{ $delivery->event_type }}</td>
+                    <td><strong>{{ $delivery->dispatch_status }}</strong></td>
+                    <td>{{ $delivery->delivery_status }}</td>
+                    <td>{{ $delivery->mailer }}</td>
+                    <td>{{ $delivery->sent_at?->format('Y-m-d H:i:s') ?? $delivery->failed_at?->format('Y-m-d H:i:s') ?? 'Pending' }}</td>
+                    <td>{{ $delivery->last_error_code ?: '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6">No security email has been recorded for this admin yet.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</section>
+
 @if($canUpdate)
 <section class="panel" style="padding:22px;margin-bottom:18px;">
     <h2>Admin Profile</h2>
-    <form
-        method="POST"
-        action="{{ route('admin.administration.admins.update', $adminUser) }}"
-    >
+    <form method="POST" action="{{ route('admin.administration.admins.update', $adminUser) }}">
         @csrf
         @method('PATCH')
 
         <div class="form-grid">
             <div class="form-group">
                 <label>Name</label>
-                <input
-                    name="name"
-                    maxlength="150"
-                    value="{{ old('name', $adminUser->name) }}"
-                    required
-                >
+                <input name="name" maxlength="150" value="{{ old('name', $adminUser->name) }}" required>
             </div>
             <div class="form-group">
                 <label>Email</label>
-                <input
-                    type="email"
-                    name="email"
-                    maxlength="190"
-                    value="{{ old('email', $adminUser->email) }}"
-                    required
-                >
+                <input type="email" name="email" maxlength="190" value="{{ old('email', $adminUser->email) }}" required>
             </div>
         </div>
 
         <div style="margin-top:18px;">
-            <button class="primary-btn" type="submit">
-                Save Profile
-            </button>
+            <button class="primary-btn" type="submit">Save Profile</button>
         </div>
     </form>
 </section>
@@ -91,20 +105,13 @@
 @if($canManageRoles)
 <section class="panel" style="padding:22px;margin-bottom:18px;">
     <h2>Role Assignments</h2>
-    <p>
-        Role changes alter effective permissions immediately. SUPER_ADMIN cannot be assigned here.
-    </p>
+    <p>Role changes alter effective permissions immediately. SUPER_ADMIN cannot be assigned here. TradeX sends a role-change security email after the update.</p>
 
-    <form
-        method="POST"
-        action="{{ route('admin.administration.admins.roles', $adminUser) }}"
-    >
+    <form method="POST" action="{{ route('admin.administration.admins.roles', $adminUser) }}">
         @csrf
         @method('PATCH')
 
-        @php
-            $selectedRoleIds = $adminUser->roles->pluck('id')->all();
-        @endphp
+        @php($selectedRoleIds = $adminUser->roles->pluck('id')->all())
 
         @foreach($assignableRoles as $role)
             <label style="display:block;margin:10px 0;">
@@ -115,31 +122,21 @@
                     @checked(in_array($role->id, old('role_ids', $selectedRoleIds)))
                 >
                 <strong>{{ $role->name }}</strong>
-                <small>
-                    {{ $role->code }}
-                    {{ $role->is_system ? '· SYSTEM' : '· CUSTOM' }}
-                </small>
+                <small>{{ $role->code }} {{ $role->is_system ? '· SYSTEM' : '· CUSTOM' }}</small>
             </label>
         @endforeach
 
-        <button class="primary-btn" type="submit">
-            Update Roles
-        </button>
+        <button class="primary-btn" type="submit">Update Roles</button>
     </form>
 </section>
 @endif
 
 @if($canManageStatus)
-<section class="panel" style="padding:22px;">
+<section class="panel" style="padding:22px;margin-bottom:18px;">
     <h2>Account Status</h2>
-    <p>
-        Disabling an admin blocks future password login. Existing browser-session invalidation is not added in ADMIN-13 and remains a separate hardening decision.
-    </p>
+    <p>Disabling an admin blocks future password login and sends a security email. Disable the account before owner deletion.</p>
 
-    <form
-        method="POST"
-        action="{{ route('admin.administration.admins.status', $adminUser) }}"
-    >
+    <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}">
         @csrf
         @method('PATCH')
 
@@ -154,18 +151,32 @@
 
             <div class="form-group">
                 <label>Reason</label>
-                <input
-                    name="reason"
-                    maxlength="500"
-                    required
-                    placeholder="Reason for this status decision"
-                >
+                <input name="reason" maxlength="500" required placeholder="Reason for this status decision">
             </div>
         </div>
 
-        <button class="primary-btn" type="submit">
-            Apply Status
-        </button>
+        <button class="primary-btn" type="submit">Apply Status</button>
+    </form>
+</section>
+@endif
+
+@if($canDelete)
+<section class="panel" style="padding:22px;border:1px solid rgba(239,68,68,.35);">
+    <div class="panel-eyebrow">OWNER-ONLY DESTRUCTIVE ACTION</div>
+    <h2>Delete Admin</h2>
+    <p>This is a soft delete for audit preservation. Only a disabled delegated admin can be deleted. The protected Super Admin and your own account cannot be deleted here.</p>
+
+    <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}" onsubmit="return confirm('Delete this disabled admin account? This removes active administration access.');">
+        @csrf
+        @method('PATCH')
+        <input type="hidden" name="status" value="DELETE">
+
+        <div class="form-group">
+            <label>Deletion Reason</label>
+            <input name="reason" maxlength="500" required placeholder="Reason for deleting this admin account">
+        </div>
+
+        <button class="secondary-btn" type="submit" style="margin-top:14px;">Delete Disabled Admin</button>
     </form>
 </section>
 @endif

@@ -102,8 +102,6 @@ class AdminRolePermissionSeeder extends Seeder
 
             'FINANCE_ADMIN' => [
                 'dashboard.view',
-                'users.view',
-                'users.view_details',
                 'products.view',
                 'products.manage',
                 'payments.view',

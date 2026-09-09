@@ -11,6 +11,8 @@ class AdminPermissionSeeder extends Seeder
     {
         $permissions = [
             ['dashboard.view', 'View Dashboard', 'DASHBOARD'],
+            ['market_clock.view', 'View Market Clock', 'MARKET_CLOCK'],
+            ['screener.monitor.view', 'View Screener Monitor', 'SCREENER'],
 
             ['users.view', 'View Users', 'USERS'],
             ['users.view_details', 'View User Details', 'USERS'],

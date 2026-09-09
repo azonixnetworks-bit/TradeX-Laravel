@@ -49,10 +49,8 @@ class ScreenerMonitorController extends Controller
             401
         );
 
-        // SCREENER-05 is an operational read-only monitor. Reuse the existing
-        // dashboard permission rather than widening frozen RBAC grants.
         abort_unless(
-            $admin->hasPermission('dashboard.view'),
+            $admin->hasPermission('screener.monitor.view'),
             403
         );
 

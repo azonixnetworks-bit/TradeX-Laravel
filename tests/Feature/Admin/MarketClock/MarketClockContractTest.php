@@ -10,18 +10,23 @@ class MarketClockContractTest extends TestCase
     {
         $webRoutes = file_get_contents(base_path('routes/web.php'));
         $marketRoutes = file_get_contents(base_path('routes/admin_market_clock.php'));
+        $controller = file_get_contents(base_path(
+            'app/Http/Controllers/Admin/MarketClock/MarketClockController.php'
+        ));
         $layout = file_get_contents(resource_path('views/admin/layouts/app.blade.php'));
         $view = file_get_contents(resource_path('views/admin/market_clock/index.blade.php'));
         $css = file_get_contents(public_path('admin/css/market-clock.css'));
         $navJs = file_get_contents(public_path('admin/js/market-clock-nav.js'));
         $clockJs = file_get_contents(public_path('admin/js/market-clock.js'));
 
-        foreach ([$webRoutes, $marketRoutes, $layout, $view, $css, $navJs, $clockJs] as $file) {
+        foreach ([$webRoutes, $marketRoutes, $controller, $layout, $view, $css, $navJs, $clockJs] as $file) {
             $this->assertIsString($file);
         }
 
         $this->assertStringContainsString('admin_market_clock.php', $webRoutes);
         $this->assertStringContainsString("name('market_clock.')", $marketRoutes);
+        $this->assertStringContainsString("hasPermission('market_clock.view')", $controller);
+        $this->assertStringContainsString("hasPermission('market_clock.view')", $layout);
         $this->assertStringContainsString('admin/js/market-clock-nav.js', $layout);
         $this->assertStringContainsString("route('admin.market_clock.index')", $layout);
         $this->assertStringContainsString('Market Clock', $navJs);

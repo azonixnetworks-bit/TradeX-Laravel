@@ -87,10 +87,8 @@ class MarketClockController extends Controller
             401
         );
 
-        // Market Clock is a read-only operational dashboard surface. Reusing
-        // dashboard.view avoids widening RBAC or changing frozen role grants.
         abort_unless(
-            $admin->hasPermission('dashboard.view'),
+            $admin->hasPermission('market_clock.view'),
             403
         );
 

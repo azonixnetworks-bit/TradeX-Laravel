@@ -305,14 +305,16 @@
                 </a>
             @endif
 
-            <a
-                href="{{ route('admin.investments.activation.index') }}"
-                class="nav-link
-                {{ request()->routeIs('admin.investments.activation.*') ? 'active' : '' }}"
-            >
-                <span class="nav-icon">✓</span>
-                <span>Activation Queue</span>
-            </a>
+            @if($admin->hasPermission('investments.activate'))
+                <a
+                    href="{{ route('admin.investments.activation.index') }}"
+                    class="nav-link
+                    {{ request()->routeIs('admin.investments.activation.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">✓</span>
+                    <span>Activation Queue</span>
+                </a>
+            @endif
 
             @if($admin->hasPermission('investments.profit_periods.view'))
                 {{-- ADMIN-24-PHASE3-V3-SIDEBAR --}}
