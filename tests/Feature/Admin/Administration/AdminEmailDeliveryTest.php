@@ -6,6 +6,7 @@ use App\Mail\AdminSecurityMail;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
+use App\Services\Admin\Administration\AdminEmailDeliveryService;
 use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\AdminRolePermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
@@ -154,12 +155,10 @@ class AdminEmailDeliveryTest extends TestCase
             )
             ->assertStatus(422);
 
-        $this->assertDatabaseMissing('admin_users', [
+        $this->assertDatabaseHas('admin_users', [
             'id' => $target->id,
-            'deleted_at' => now(),
+            'deleted_at' => null,
         ]);
-
-        $this->assertNotNull($target->fresh());
     }
 
     public function test_delegated_admin_cannot_use_owner_delete_action(): void
@@ -181,7 +180,10 @@ class AdminEmailDeliveryTest extends TestCase
             )
             ->assertForbidden();
 
-        $this->assertNotNull($target->fresh());
+        $this->assertDatabaseHas('admin_users', [
+            'id' => $target->id,
+            'deleted_at' => null,
+        ]);
     }
 
     public function test_admin_list_and_edit_show_email_delivery_audit(): void
@@ -189,7 +191,7 @@ class AdminEmailDeliveryTest extends TestCase
         $owner = $this->superAdmin();
         $target = $this->delegatedAdmin(true);
 
-        app(\App\Services\Admin\Administration\AdminEmailDeliveryService::class)
+        app(AdminEmailDeliveryService::class)
             ->send($target, 'ADMIN_INVITATION', [
                 'roles' => ['SUPPORT_ADMIN'],
             ]);
@@ -197,7 +199,7 @@ class AdminEmailDeliveryTest extends TestCase
         $this->actingAs($owner, 'admin')
             ->get(route('admin.administration.admins.index'))
             ->assertOk()
-            ->assertSee('EMAIL')
+            ->assertSee('Email status meaning')
             ->assertSee('ADMIN_INVITATION')
             ->assertSee('UNCONFIRMED');
 
