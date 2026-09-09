@@ -44,6 +44,8 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'finance.reports',
             'investments.view',
             'investments.profit_periods.approve',
+            'copy_trading.billing.view',
+            'commissions.view',
             'payouts.view',
         ] as $expected) {
             $this->assertContains($expected, $codes);
@@ -93,6 +95,9 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'Investment Dashboard',
             'Profit Engine',
             'Settlements',
+            'Copy Trade Billing',
+            'Billing Calendar',
+            'Commission Ledger',
         ] as $visible) {
             $this->assertStringContainsString($visible, $sidebar);
         }
@@ -106,9 +111,11 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'Long-Term Trade Ideas',
             'Daily Trade Ideas',
             'Broker Management',
-            'Affiliates',
+            'Broker Account Verification',
+            'Copy Trade Accounts',
+            'Affiliates</span>',
             'Notifications',
-            'KYC',
+            'KYC Verification',
             'Admin Users',
             'Activation Queue',
         ] as $hidden) {
@@ -123,6 +130,23 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'admin/js/screener-monitor-nav.js',
             $layout
         );
+    }
+
+    public function test_finance_admin_can_open_granted_finance_surfaces_directly(): void
+    {
+        $admin = $this->financeAdmin();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.copy_trading.billing.index'))
+            ->assertOk();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.copy_trading.billing.calendar.index'))
+            ->assertOk();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.affiliates.commissions.index'))
+            ->assertOk();
     }
 
     public function test_finance_admin_cannot_open_customer_or_operational_monitor_routes_directly(): void

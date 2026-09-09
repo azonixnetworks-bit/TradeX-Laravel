@@ -26,9 +26,15 @@ class DashboardController extends Controller
     ): View {
         $admin = auth('admin')->user();
         abort_unless($admin instanceof AdminUser, 401);
+        abort_unless($admin->hasPermission('dashboard.view'), 403);
+
         $admin->load('roles');
 
         [$systemTimezone, $systemTime] = $this->systemClock();
+
+        $canViewAdmins = $admin->hasPermission('admins.view');
+        $canViewRoles = $admin->hasPermission('roles.view');
+        $canViewAudit = $admin->hasPermission('audit.view');
 
         $auditDayStartUtc = $systemTime
             ->startOfDay()
@@ -38,24 +44,34 @@ class DashboardController extends Controller
             ->utc();
 
         $stats = [
-            'admins' => AdminUser::count(),
+            'admins' => $canViewAdmins
+                ? AdminUser::query()->count()
+                : null,
 
-            'active_admins' => AdminUser::where(
-                'is_active',
-                true
-            )->count(),
+            'active_admins' => $canViewAdmins
+                ? AdminUser::query()
+                    ->where('is_active', true)
+                    ->count()
+                : null,
 
-            'roles' => AdminRole::where(
-                'is_active',
-                true
-            )->count(),
+            'roles' => $canViewRoles
+                ? AdminRole::query()
+                    ->where('is_active', true)
+                    ->count()
+                : null,
 
-            'permissions' => AdminPermission::count(),
+            'permissions' => $canViewRoles
+                ? AdminPermission::query()->count()
+                : null,
 
-            'audit_events_today' => AuditLog::whereBetween(
-                'created_at',
-                [$auditDayStartUtc, $auditDayEndUtc]
-            )->count(),
+            'audit_events_today' => $canViewAudit
+                ? AuditLog::query()
+                    ->whereBetween(
+                        'created_at',
+                        [$auditDayStartUtc, $auditDayEndUtc]
+                    )
+                    ->count()
+                : null,
         ];
 
         $activityTabs = $this->activityTabs($admin);

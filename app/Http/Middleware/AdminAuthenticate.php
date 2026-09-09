@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AdminUser;
+use App\Support\Admin\AdminAccessMap;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,6 +30,20 @@ class AdminAuthenticate
             return redirect()
                 ->route('admin.login')
                 ->with('error', 'Your admin session is no longer available.');
+        }
+
+        /*
+         * ADMIN-RBAC-02: /admin is a neutral entry point, not a permission in
+         * itself. Route it to the first module this administrator can actually
+         * open so dashboard-less custom roles never bounce into a 403 page.
+         */
+        if (
+            $request->is('admin')
+            && $admin instanceof AdminUser
+        ) {
+            return redirect()->route(
+                AdminAccessMap::landingRouteName($admin)
+            );
         }
 
         return $next($request);

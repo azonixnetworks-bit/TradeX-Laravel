@@ -9,6 +9,7 @@ use App\Http\Requests\Admin\Auth\AdminTotpSetupRequest;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Services\Admin\Security\AdminTotpService;
+use App\Support\Admin\AdminAccessMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,11 +22,11 @@ class TotpController extends Controller
     public function challengePage(
         Request $request
     ): View|RedirectResponse {
-        if (
-            Auth::guard('admin')->check()
-        ) {
+        $authenticated = Auth::guard('admin')->user();
+
+        if ($authenticated instanceof AdminUser) {
             return redirect()->route(
-                'admin.dashboard'
+                AdminAccessMap::landingRouteName($authenticated)
             );
         }
 
@@ -229,7 +230,7 @@ class TotpController extends Controller
         return redirect()
             ->intended(
                 route(
-                    'admin.dashboard'
+                    AdminAccessMap::landingRouteName($admin)
                 )
             );
     }
@@ -363,7 +364,7 @@ class TotpController extends Controller
 
             return redirect()
                 ->route(
-                    'admin.dashboard'
+                    AdminAccessMap::landingRouteName($admin)
                 )
                 ->with(
                     'success',

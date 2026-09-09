@@ -30,43 +30,49 @@
     </div>
 </div>
 
+@if($admin->hasPermission('admins.view') || $admin->hasPermission('roles.view'))
 <div class="stat-grid">
-    <div class="stat-card">
-        <div class="stat-icon blue">◎</div>
-        <div class="stat-content">
-            <span>Admin Users</span>
-            <strong>{{ number_format($stats['admins']) }}</strong>
-            <small>Registered administrators</small>
+    @if($admin->hasPermission('admins.view'))
+        <div class="stat-card">
+            <div class="stat-icon blue">◎</div>
+            <div class="stat-content">
+                <span>Admin Users</span>
+                <strong>{{ number_format((int) $stats['admins']) }}</strong>
+                <small>Registered administrators</small>
+            </div>
         </div>
-    </div>
 
-    <div class="stat-card">
-        <div class="stat-icon green">✓</div>
-        <div class="stat-content">
-            <span>Active Admins</span>
-            <strong>{{ number_format($stats['active_admins']) }}</strong>
-            <small>Enabled accounts</small>
+        <div class="stat-card">
+            <div class="stat-icon green">✓</div>
+            <div class="stat-content">
+                <span>Active Admins</span>
+                <strong>{{ number_format((int) $stats['active_admins']) }}</strong>
+                <small>Enabled accounts</small>
+            </div>
         </div>
-    </div>
+    @endif
 
-    <div class="stat-card">
-        <div class="stat-icon gold">♛</div>
-        <div class="stat-content">
-            <span>Admin Roles</span>
-            <strong>{{ number_format($stats['roles']) }}</strong>
-            <small>RBAC roles configured</small>
+    @if($admin->hasPermission('roles.view'))
+        <div class="stat-card">
+            <div class="stat-icon gold">♛</div>
+            <div class="stat-content">
+                <span>Admin Roles</span>
+                <strong>{{ number_format((int) $stats['roles']) }}</strong>
+                <small>RBAC roles configured</small>
+            </div>
         </div>
-    </div>
 
-    <div class="stat-card">
-        <div class="stat-icon purple">⚿</div>
-        <div class="stat-content">
-            <span>Permissions</span>
-            <strong>{{ number_format($stats['permissions']) }}</strong>
-            <small>Security permissions</small>
+        <div class="stat-card">
+            <div class="stat-icon purple">⚿</div>
+            <div class="stat-content">
+                <span>Permissions</span>
+                <strong>{{ number_format((int) $stats['permissions']) }}</strong>
+                <small>Security permissions</small>
+            </div>
         </div>
-    </div>
+    @endif
 </div>
+@endif
 
 <div class="dashboard-grid">
     <section class="panel quick-panel">
@@ -212,7 +218,7 @@
             @if($activityRecords)
                 {{ number_format($activityRecords->total()) }} records
                 @if($activityType === 'audit')
-                    · Today {{ number_format($stats['audit_events_today']) }}
+                    · Today {{ number_format((int) $stats['audit_events_today']) }}
                 @endif
             @endif
         </div>

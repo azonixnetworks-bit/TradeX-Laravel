@@ -10,32 +10,37 @@
     const screenerUrl = script.dataset.screenerUrl;
     const dashboardUrl = script.dataset.dashboardUrl;
     const marketClockUrl = script.dataset.marketClockUrl;
+    const nav = document.querySelector('.sidebar-nav');
 
-    if (!screenerUrl || !dashboardUrl) {
+    if (!screenerUrl || !nav) {
         return;
     }
 
-    const links = Array.from(
-        document.querySelectorAll('.sidebar-nav .nav-link')
-    );
+    const links = Array.from(nav.querySelectorAll('.nav-link'));
 
     if (links.some((link) => link.getAttribute('href') === screenerUrl)) {
         return;
     }
 
-    const dashboardLink = links.find(
-        (link) => link.getAttribute('href') === dashboardUrl
-    );
-
-    if (!dashboardLink) {
-        return;
-    }
+    const dashboardLink = dashboardUrl
+        ? links.find((link) => link.getAttribute('href') === dashboardUrl)
+        : null;
 
     const marketClockLink = marketClockUrl
         ? links.find((link) => link.getAttribute('href') === marketClockUrl)
         : null;
 
-    const anchor = marketClockLink || dashboardLink;
+    let overviewTitle = Array.from(
+        nav.querySelectorAll('.nav-section-title')
+    ).find((title) => title.textContent.trim() === 'OVERVIEW');
+
+    if (!overviewTitle) {
+        overviewTitle = document.createElement('div');
+        overviewTitle.className = 'nav-section-title';
+        overviewTitle.textContent = 'OVERVIEW';
+        nav.prepend(overviewTitle);
+    }
+
     const link = document.createElement('a');
     link.href = screenerUrl;
     link.className = 'nav-link';
@@ -58,5 +63,7 @@
     label.textContent = 'Screener Monitor';
 
     link.append(icon, label);
+
+    const anchor = marketClockLink || dashboardLink || overviewTitle;
     anchor.insertAdjacentElement('afterend', link);
 })();

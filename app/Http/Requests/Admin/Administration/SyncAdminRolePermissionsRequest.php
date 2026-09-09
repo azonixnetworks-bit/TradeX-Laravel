@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests\Admin\Administration;
 
+use App\Models\AdminPermission;
 use App\Models\AdminUser;
+use App\Support\Admin\AdminAccessMap;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class SyncAdminRolePermissionsRequest extends FormRequest
 {
@@ -35,5 +38,36 @@ class SyncAdminRolePermissionsRequest extends FormRequest
                 ),
             ],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $permissionIds = collect(
+                (array) $this->input('permission_ids', [])
+            )
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values();
+
+            $permissionCodes = AdminPermission::query()
+                ->whereIn('id', $permissionIds)
+                ->pluck('code')
+                ->all();
+
+            foreach (
+                AdminAccessMap::missingDependencies($permissionCodes)
+                as $permission => $missing
+            ) {
+                $validator->errors()->add(
+                    'permission_ids',
+                    $permission.' requires '.implode(', ', $missing).'.'
+                );
+            }
+        });
     }
 }

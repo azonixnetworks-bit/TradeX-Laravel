@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Auth\AdminLoginRequest;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
+use App\Support\Admin\AdminAccessMap;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,8 +29,12 @@ class LoginController extends Controller
 
     public function show(): View|RedirectResponse
     {
-        if (Auth::guard('admin')->check()) {
-            return redirect()->route('admin.dashboard');
+        $admin = Auth::guard('admin')->user();
+
+        if ($admin instanceof AdminUser) {
+            return redirect()->route(
+                AdminAccessMap::landingRouteName($admin)
+            );
         }
 
         return view('admin.auth.login');
@@ -440,7 +445,9 @@ class LoginController extends Controller
 
         return redirect()
             ->intended(
-                route('admin.dashboard')
+                route(
+                    AdminAccessMap::landingRouteName($admin)
+                )
             );
     }
 
