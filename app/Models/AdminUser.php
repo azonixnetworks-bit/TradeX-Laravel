@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Notifications\AdminResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -51,21 +53,11 @@ class AdminUser extends Authenticatable
             'totp_setup_at' => 'datetime',
             'totp_confirmed_at' => 'datetime',
             'totp_last_used_step' => 'integer',
-
-            /*
-             * TOTP seed is encrypted at rest using Laravel's application key.
-             * It is also hidden from normal array/JSON serialization.
-             */
             'totp_secret' => 'encrypted',
-
-            // Automatically hashes plain password values.
             'password' => 'hashed',
         ];
     }
 
-    /**
-     * Roles assigned to this admin.
-     */
     public function roles(): BelongsToMany
     {
         return $this->belongsToMany(
@@ -76,9 +68,16 @@ class AdminUser extends Authenticatable
         )->withTimestamps();
     }
 
-    /**
-     * Check whether admin has a specific role.
-     */
+    public function emailDeliveries(): HasMany
+    {
+        return $this->hasMany(AdminEmailDelivery::class);
+    }
+
+    public function latestEmailDelivery(): HasOne
+    {
+        return $this->hasOne(AdminEmailDelivery::class)->latestOfMany();
+    }
+
     public function hasRole(string $roleCode): bool
     {
         return $this->roles()
@@ -87,20 +86,13 @@ class AdminUser extends Authenticatable
             ->exists();
     }
 
-    /**
-     * Check whether admin is Super Admin.
-     */
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('SUPER_ADMIN');
     }
 
-    /**
-     * Check whether admin has permission.
-     */
     public function hasPermission(string $permissionCode): bool
     {
-        // Super Admin automatically has full access.
         if ($this->isSuperAdmin()) {
             return true;
         }
@@ -116,18 +108,12 @@ class AdminUser extends Authenticatable
             ->exists();
     }
 
-    /**
-     * Check if admin account is currently locked.
-     */
     public function isLocked(): bool
     {
         return $this->locked_until !== null
             && $this->locked_until->isFuture();
     }
 
-    /**
-     * Check if admin can login.
-     */
     public function canLogin(): bool
     {
         return $this->is_active
@@ -137,10 +123,6 @@ class AdminUser extends Authenticatable
 
     public function hasConfirmedTotp(): bool
     {
-        /*
-         * Confirmation-state checks must not require decrypting the seed.
-         * Production release readiness separately verifies seed integrity.
-         */
         return filled(
             $this->getRawOriginal(
                 'totp_secret'
