@@ -45,8 +45,12 @@ class ScreenerMonitorContractTest extends TestCase
             $routes
         );
         $this->assertStringContainsString(
-            "hasPermission('dashboard.view')",
+            "hasPermission('screener.monitor.view')",
             $controller
+        );
+        $this->assertStringContainsString(
+            "hasPermission('screener.monitor.view')",
+            $layout
         );
         $this->assertStringContainsString(
             'private, no-store, no-cache',
