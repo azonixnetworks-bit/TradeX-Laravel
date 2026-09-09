@@ -127,14 +127,10 @@ class AdminUserController extends Controller
             ->get();
 
         $data['canDelete'] =
-            $admin->hasPermission('admins.delete')
+            $admin->isSuperAdmin()
             && ! $adminUser->isSuperAdmin()
             && $admin->getKey() !== $adminUser->getKey()
             && ! (bool) $adminUser->is_active;
-
-        $data['canResendInvitation'] =
-            $admin->hasPermission('admins.update')
-            && ! $adminUser->isSuperAdmin();
 
         return view('admin.admins.edit', $data);
     }
@@ -178,6 +174,7 @@ class AdminUserController extends Controller
         UpdateAdminUserStatusRequest $request,
         AdminUser $adminUser,
         AdminAdministrationService $service,
+        AdminAccountDeletionService $deletionService,
         AdminEmailDeliveryService $emailService
     ): RedirectResponse {
         $admin = $this->admin();
@@ -188,6 +185,37 @@ class AdminUserController extends Controller
         );
 
         $validated = $request->validated();
+
+        if ($validated['status'] === 'DELETE') {
+            abort_unless(
+                $admin->isSuperAdmin(),
+                403,
+                'Only the protected owner Super Admin can delete delegated admin accounts.'
+            );
+
+            $deleted = $deletionService->delete(
+                $admin,
+                $adminUser,
+                (string) $validated['reason'],
+                $request
+            );
+
+            $delivery = $emailService->send(
+                $deleted,
+                'ACCOUNT_DELETED',
+                [
+                    'reason' => $validated['reason'],
+                ]
+            );
+
+            return redirect()
+                ->route('admin.administration.admins.index')
+                ->with(
+                    'success',
+                    'Admin account deleted. Email dispatch: '
+                        .$delivery->dispatch_status.'.'
+                );
+        }
 
         $service->updateAdminStatus(
             $admin,
@@ -253,81 +281,6 @@ class AdminUserController extends Controller
             'success',
             'Admin role assignments updated.'
         );
-    }
-
-    public function resendInvitation(
-        AdminUser $adminUser,
-        AdminEmailDeliveryService $emailService
-    ): RedirectResponse {
-        $admin = $this->admin();
-
-        abort_unless(
-            $admin->hasPermission('admins.update'),
-            403
-        );
-
-        abort_if(
-            $adminUser->isSuperAdmin(),
-            403,
-            'The protected Super Admin invitation cannot be resent here.'
-        );
-
-        $adminUser->load('roles');
-
-        $delivery = $emailService->send(
-            $adminUser,
-            'ADMIN_INVITATION',
-            [
-                'roles' => $adminUser->roles->pluck('code')->all(),
-            ]
-        );
-
-        return back()->with(
-            'success',
-            'Invitation email dispatch: '
-                .$delivery->dispatch_status.'.'
-        );
-    }
-
-    public function destroy(
-        Request $request,
-        AdminUser $adminUser,
-        AdminAccountDeletionService $deletionService,
-        AdminEmailDeliveryService $emailService
-    ): RedirectResponse {
-        $admin = $this->admin();
-
-        abort_unless(
-            $admin->hasPermission('admins.delete'),
-            403
-        );
-
-        $validated = $request->validate([
-            'reason' => ['required', 'string', 'max:500'],
-        ]);
-
-        $deleted = $deletionService->delete(
-            $admin,
-            $adminUser,
-            (string) $validated['reason'],
-            $request
-        );
-
-        $delivery = $emailService->send(
-            $deleted,
-            'ACCOUNT_DELETED',
-            [
-                'reason' => $validated['reason'],
-            ]
-        );
-
-        return redirect()
-            ->route('admin.administration.admins.index')
-            ->with(
-                'success',
-                'Admin account deleted. Email dispatch: '
-                    .$delivery->dispatch_status.'.'
-            );
     }
 
     private function admin(): AdminUser
