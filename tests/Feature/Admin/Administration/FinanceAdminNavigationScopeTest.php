@@ -9,6 +9,7 @@ use Database\Seeders\AdminRolePermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Illuminate\Support\ViewErrorBag;
 use Tests\TestCase;
 
 class FinanceAdminNavigationScopeTest extends TestCase
@@ -74,7 +75,13 @@ class FinanceAdminNavigationScopeTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         $sidebar = view('admin.layouts.sidebar')->render();
-        $layout = view('admin.layouts.app')->render();
+
+        // This test renders the application layout directly instead of through
+        // Laravel's web middleware stack. Supply the empty view error bag that
+        // ShareErrorsFromSession normally injects for real HTTP requests.
+        $layout = view('admin.layouts.app', [
+            'errors' => new ViewErrorBag(),
+        ])->render();
 
         foreach ([
             'Dashboard',
