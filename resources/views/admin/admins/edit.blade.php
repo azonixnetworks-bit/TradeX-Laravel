@@ -43,20 +43,9 @@
 </div>
 
 <section class="panel" style="padding:22px;margin-bottom:18px;">
-    <div style="display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;">
-        <div>
-            <div class="panel-eyebrow">EMAIL DELIVERY AUDIT</div>
-            <h2>Security Email Status</h2>
-            <p>SENT means the configured Laravel mail transport accepted the message. Final inbox delivery remains UNCONFIRMED until a transactional provider webhook confirms it.</p>
-        </div>
-
-        @if($canResendInvitation)
-            <form method="POST" action="{{ route('admin.administration.admins.email.invitation.resend', $adminUser) }}">
-                @csrf
-                <button class="secondary-btn" type="submit">Resend Invitation</button>
-            </form>
-        @endif
-    </div>
+    <div class="panel-eyebrow">EMAIL DELIVERY AUDIT</div>
+    <h2>Security Email Status</h2>
+    <p>SENT means the configured Laravel mail transport accepted the message. Final inbox delivery remains UNCONFIRMED until a transactional provider webhook confirms it.</p>
 
     <div class="users-table-wrap" style="margin-top:16px;">
         <table class="users-table">
@@ -177,9 +166,10 @@
     <h2>Delete Admin</h2>
     <p>This is a soft delete for audit preservation. Only a disabled delegated admin can be deleted. The protected Super Admin and your own account cannot be deleted here.</p>
 
-    <form method="POST" action="{{ route('admin.administration.admins.destroy', $adminUser) }}" onsubmit="return confirm('Delete this disabled admin account? This removes active administration access.');">
+    <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}" onsubmit="return confirm('Delete this disabled admin account? This removes active administration access.');">
         @csrf
-        @method('DELETE')
+        @method('PATCH')
+        <input type="hidden" name="status" value="DELETE">
 
         <div class="form-group">
             <label>Deletion Reason</label>
