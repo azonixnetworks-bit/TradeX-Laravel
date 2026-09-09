@@ -11,10 +11,12 @@
         || $admin->hasPermission('our_channel.view')
         || $admin->hasPermission('notifications.view');
 
-    $hasCopyTradingNavigation =
+    $hasCopyTradingCoreNavigation =
         $admin->hasPermission('copy_trading.view')
-        || $admin->hasPermission('copy_trading.accounts.view')
-        || $admin->hasPermission('copy_trading.billing.view');
+        || $admin->hasPermission('copy_trading.accounts.view');
+
+    $hasCopyTradingNavigation =
+        $hasCopyTradingCoreNavigation;
 
     $hasInvestmentNavigation =
         $admin->hasPermission('investments.view')
@@ -26,15 +28,24 @@
         || $admin->hasPermission('investments.settlements.view');
 
     $hasAffiliateNavigation =
-        $admin->hasPermission('affiliates.view')
-        || $admin->hasPermission('commissions.view');
+        $admin->hasPermission('affiliates.view');
+
+    $showBillingInFinance =
+        $admin->hasPermission('copy_trading.billing.view')
+        && ! $hasCopyTradingCoreNavigation;
+
+    $showCommissionsInFinance =
+        $admin->hasPermission('commissions.view')
+        && ! $admin->hasPermission('affiliates.view');
 
     $hasFinanceNavigation =
         $admin->hasPermission('products.view')
         || $admin->hasPermission('payments.view')
         || $admin->hasPermission('payment_accounts.manage')
         || $admin->hasPermission('finance.view')
-        || $admin->hasPermission('payouts.view');
+        || $admin->hasPermission('payouts.view')
+        || $showBillingInFinance
+        || $showCommissionsInFinance;
 
     $hasSecurityNavigation =
         $admin->hasPermission('kyc.view')
@@ -343,15 +354,13 @@
         @if($hasAffiliateNavigation)
             <div class="nav-section-title">AFFILIATES</div>
 
-            @if($admin->hasPermission('affiliates.view'))
-                <a
-                    href="{{ route('admin.affiliates.index') }}"
-                    class="nav-link {{ request()->routeIs('admin.affiliates.index') || request()->routeIs('admin.affiliates.show') || request()->routeIs('admin.affiliates.tree') || request()->routeIs('admin.affiliates.analytics') || request()->routeIs('admin.affiliates.stages.*') ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">♢</span>
-                    <span>Affiliates</span>
-                </a>
-            @endif
+            <a
+                href="{{ route('admin.affiliates.index') }}"
+                class="nav-link {{ request()->routeIs('admin.affiliates.index') || request()->routeIs('admin.affiliates.show') || request()->routeIs('admin.affiliates.tree') || request()->routeIs('admin.affiliates.analytics') || request()->routeIs('admin.affiliates.stages.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">♢</span>
+                <span>Affiliates</span>
+            </a>
 
             @if($admin->hasPermission('commissions.view'))
                 <a
@@ -366,6 +375,34 @@
 
         @if($hasFinanceNavigation)
             <div class="nav-section-title">FINANCE</div>
+
+            @if($showBillingInFinance)
+                <a
+                    href="{{ route('admin.copy_trading.billing.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.copy_trading.billing.index') || request()->routeIs('admin.copy_trading.billing.accounts.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">$</span>
+                    <span>Copy Trade Billing</span>
+                </a>
+
+                <a
+                    href="{{ route('admin.copy_trading.billing.calendar.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.copy_trading.billing.calendar.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">◷</span>
+                    <span>Billing Calendar</span>
+                </a>
+            @endif
+
+            @if($showCommissionsInFinance)
+                <a
+                    href="{{ route('admin.affiliates.commissions.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.affiliates.commissions.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">%</span>
+                    <span>Commission Ledger</span>
+                </a>
+            @endif
 
             @if($admin->hasPermission('products.view'))
                 <a
