@@ -169,6 +169,37 @@ class StrictAccessDependencyAndLandingTest extends TestCase
             ->assertRedirect(route('admin.screener.index'));
     }
 
+    public function test_admin_root_redirects_to_first_granted_module(): void
+    {
+        $permission = AdminPermission::query()
+            ->where('code', 'market_clock.view')
+            ->firstOrFail();
+
+        $role = AdminRole::query()->create([
+            'code' => 'ROOT_MARKET_CLOCK_ONLY',
+            'name' => 'Root Market Clock Only',
+            'description' => 'Admin root landing regression role.',
+            'is_system' => false,
+            'is_active' => true,
+        ]);
+        $role->permissions()->sync([$permission->id]);
+
+        $admin = AdminUser::query()->create([
+            'uuid' => Str::uuid()->toString(),
+            'name' => 'Admin Root Test',
+            'email' => 'admin-root-'.Str::lower(Str::random(10)).'@example.test',
+            'email_verified_at' => now(),
+            'password' => 'AdminRoot#Password2026!',
+            'is_active' => true,
+            'failed_login_attempts' => 0,
+        ]);
+        $admin->roles()->sync([$role->id]);
+
+        $this->actingAs($admin, 'admin')
+            ->get('/admin')
+            ->assertRedirect(route('admin.market_clock.index'));
+    }
+
     private function superAdmin(): AdminUser
     {
         $admin = AdminUser::query()->create([
