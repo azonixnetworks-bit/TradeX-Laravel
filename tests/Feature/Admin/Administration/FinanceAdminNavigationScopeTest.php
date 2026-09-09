@@ -61,6 +61,7 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'kyc.view',
             'admins.view',
             'settings.view',
+            'investments.activate',
         ] as $forbidden) {
             $this->assertNotContains($forbidden, $codes);
         }
@@ -102,6 +103,7 @@ class FinanceAdminNavigationScopeTest extends TestCase
             'Notifications',
             'KYC',
             'Admin Users',
+            'Activation Queue',
         ] as $hidden) {
             $this->assertStringNotContainsString($hidden, $sidebar);
         }
