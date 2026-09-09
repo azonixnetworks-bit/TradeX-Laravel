@@ -24,6 +24,7 @@ class UpdateAdminUserStatusRequest extends FormRequest
                 Rule::in([
                     'ACTIVE',
                     'DISABLED',
+                    'DELETE',
                 ]),
             ],
 
