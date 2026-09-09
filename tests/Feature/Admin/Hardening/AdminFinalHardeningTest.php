@@ -791,11 +791,15 @@ class AdminFinalHardeningTest extends TestCase
             'admin'
         );
 
+        /*
+         * MFA promotion authenticates the session, but ADMIN-RBAC-02 must not
+         * grant Dashboard access to this role-less hardening fixture.
+         */
         $this->get(
             route(
                 'admin.dashboard'
             )
-        )->assertOk();
+        )->assertForbidden();
     }
 
     public function test_required_totp_password_stage_creates_pending_challenge_not_admin_session(): void
