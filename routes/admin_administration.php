@@ -12,86 +12,121 @@ Route::prefix('admin/administration')
         Route::prefix('admins')
             ->name('admins.')
             ->group(function (): void {
-                Route::get('/', [AdminUserController::class, 'index'])
+                Route::get(
+                    '/',
+                    [AdminUserController::class, 'index']
+                )
                     ->middleware('throttle:60,1')
                     ->name('index');
 
-                Route::get('/create', [AdminUserController::class, 'create'])
+                Route::get(
+                    '/create',
+                    [AdminUserController::class, 'create']
+                )
                     ->middleware('throttle:30,1')
                     ->name('create');
 
-                Route::post('/', [AdminUserController::class, 'store'])
+                Route::post(
+                    '/',
+                    [AdminUserController::class, 'store']
+                )
                     ->middleware('throttle:10,1')
                     ->name('store');
 
-                Route::get('/{adminUser}/edit', [AdminUserController::class, 'edit'])
+                Route::get(
+                    '/{adminUser}/edit',
+                    [AdminUserController::class, 'edit']
+                )
                     ->whereNumber('adminUser')
                     ->middleware('throttle:60,1')
                     ->name('edit');
 
-                Route::patch('/{adminUser}', [AdminUserController::class, 'update'])
+                Route::patch(
+                    '/{adminUser}',
+                    [AdminUserController::class, 'update']
+                )
                     ->whereNumber('adminUser')
                     ->middleware('throttle:20,1')
                     ->name('update');
 
-                Route::patch('/{adminUser}/status', [AdminUserController::class, 'updateStatus'])
+                Route::patch(
+                    '/{adminUser}/status',
+                    [AdminUserController::class, 'updateStatus']
+                )
                     ->whereNumber('adminUser')
                     ->middleware('throttle:10,1')
                     ->name('status');
 
-                Route::patch('/{adminUser}/roles', [AdminUserController::class, 'syncRoles'])
+                Route::patch(
+                    '/{adminUser}/roles',
+                    [AdminUserController::class, 'syncRoles']
+                )
                     ->whereNumber('adminUser')
                     ->middleware('throttle:10,1')
                     ->name('roles');
-
-                Route::post('/{adminUser}/email/invitation/resend', [AdminUserController::class, 'resendInvitation'])
-                    ->whereNumber('adminUser')
-                    ->middleware('throttle:5,1')
-                    ->name('email.invitation.resend');
-
-                Route::delete('/{adminUser}', [AdminUserController::class, 'destroy'])
-                    ->whereNumber('adminUser')
-                    ->middleware('throttle:5,1')
-                    ->name('destroy');
             });
 
         Route::prefix('roles')
             ->name('roles.')
             ->group(function (): void {
-                Route::get('/', [RoleController::class, 'index'])
+                Route::get(
+                    '/',
+                    [RoleController::class, 'index']
+                )
                     ->middleware('throttle:60,1')
                     ->name('index');
 
-                Route::get('/create', [RoleController::class, 'create'])
+                Route::get(
+                    '/create',
+                    [RoleController::class, 'create']
+                )
                     ->middleware('throttle:30,1')
                     ->name('create');
 
-                Route::post('/', [RoleController::class, 'store'])
+                Route::post(
+                    '/',
+                    [RoleController::class, 'store']
+                )
                     ->middleware('throttle:10,1')
                     ->name('store');
 
-                Route::get('/{adminRole}/permissions', [RoleController::class, 'permissions'])
+                Route::get(
+                    '/{adminRole}/permissions',
+                    [RoleController::class, 'permissions']
+                )
                     ->whereNumber('adminRole')
                     ->middleware('throttle:60,1')
                     ->name('permissions');
 
-                Route::patch('/{adminRole}', [RoleController::class, 'update'])
+                Route::patch(
+                    '/{adminRole}',
+                    [RoleController::class, 'update']
+                )
                     ->whereNumber('adminRole')
                     ->middleware('throttle:20,1')
                     ->name('update');
 
-                Route::patch('/{adminRole}/status', [RoleController::class, 'updateStatus'])
+                Route::patch(
+                    '/{adminRole}/status',
+                    [RoleController::class, 'updateStatus']
+                )
                     ->whereNumber('adminRole')
                     ->middleware('throttle:10,1')
                     ->name('status');
 
-                Route::patch('/{adminRole}/permissions', [RoleController::class, 'syncPermissions'])
+                Route::patch(
+                    '/{adminRole}/permissions',
+                    [RoleController::class, 'syncPermissions']
+                )
                     ->whereNumber('adminRole')
                     ->middleware('throttle:10,1')
                     ->name('permissions.update');
             });
 
-        Route::get('/permissions', [PermissionController::class, 'index'])
+        Route::get(
+            '/permissions',
+            [PermissionController::class, 'index']
+        )
             ->middleware('throttle:60,1')
             ->name('permissions.index');
     });
