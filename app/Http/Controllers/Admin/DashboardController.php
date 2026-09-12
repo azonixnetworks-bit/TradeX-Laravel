@@ -204,7 +204,7 @@ class DashboardController extends Controller
         [$attribute, $format] = match ($activityType) {
             'customers' => ['created_at', 'd M Y h:i A'],
             'payments' => ['cleared_at', 'd M Y h:i A'],
-            'audit' => ['created_at', 'd M Y h:i:s A'],
+            'audit' => ['created_at', 'd M Y H:i:s'],
             default => [null, null],
         };
 
