@@ -74,6 +74,8 @@
 </div>
 @endif
 
+@include('admin.dashboard.partials.security-summary')
+
 <div class="dashboard-grid">
     <section class="panel quick-panel">
         <div class="panel-header">
