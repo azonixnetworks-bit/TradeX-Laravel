@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Throwable;
 
 class AdminSession extends Model
 {
@@ -82,5 +84,29 @@ class AdminSession extends Model
         }
 
         return self::ACTIVITY_OFFLINE;
+    }
+
+    public function displayTimestamp(
+        string $attribute,
+        string $format = 'Y-m-d h:i:s A'
+    ): string {
+        $raw = $this->getRawOriginal($attribute);
+
+        if ($raw === null || trim((string) $raw) === '') {
+            return '—';
+        }
+
+        $timezone = trim((string) config(
+            'tradex_reporting.audit_timezone',
+            'Asia/Colombo'
+        ));
+
+        try {
+            return CarbonImmutable::parse((string) $raw, 'UTC')
+                ->setTimezone($timezone !== '' ? $timezone : 'Asia/Colombo')
+                ->format($format);
+        } catch (Throwable) {
+            return '—';
+        }
     }
 }
