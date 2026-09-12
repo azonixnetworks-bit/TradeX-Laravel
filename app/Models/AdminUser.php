@@ -68,6 +68,11 @@ class AdminUser extends Authenticatable
         )->withTimestamps();
     }
 
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(AdminSession::class, 'admin_user_id');
+    }
+
     public function emailDeliveries(): HasMany
     {
         return $this->hasMany(AdminEmailDelivery::class);
