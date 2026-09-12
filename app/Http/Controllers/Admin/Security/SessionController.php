@@ -102,6 +102,34 @@ class SessionController extends Controller
             );
     }
 
+    public function revokeAllAdminSessions(
+        Request $request,
+        AdminUser $adminUser,
+        AdminSessionService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission('security.manage'),
+            403
+        );
+
+        $count = $service->revokeAllForAdmin(
+            $adminUser,
+            $admin,
+            $request
+        );
+
+        return redirect()
+            ->route('admin.security.sessions')
+            ->with(
+                $count > 0 ? 'success' : 'error',
+                $count > 0
+                    ? "{$count} admin session(s) were signed out. The current browser session, if applicable, was preserved."
+                    : 'No other active sessions were available to sign out.'
+            );
+    }
+
     private function admin(): AdminUser
     {
         $admin = auth('admin')->user();
