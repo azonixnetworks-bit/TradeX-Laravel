@@ -31,6 +31,12 @@ return [
     |
     */
 
+    'display_timezone' =>
+        (string) env(
+            'TRADEX_ADMIN_TIMEZONE',
+            'Asia/Colombo'
+        ),
+
     'session' => [
         'idle_timeout_minutes' =>
             (int) env(
