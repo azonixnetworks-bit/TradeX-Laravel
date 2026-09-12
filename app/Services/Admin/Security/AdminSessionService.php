@@ -171,6 +171,59 @@ class AdminSessionService
         return true;
     }
 
+    public function revokeAllForAdmin(
+        AdminUser $target,
+        AdminUser $actor,
+        Request $request
+    ): int {
+        $currentUuid = (string) $request->session()->get(self::SESSION_KEY, '');
+
+        $query = AdminSession::query()
+            ->where('admin_user_id', $target->getKey())
+            ->whereNull('revoked_at')
+            ->whereNull('logged_out_at');
+
+        if ($currentUuid !== '') {
+            $query->where('uuid', '!=', $currentUuid);
+        }
+
+        $sessionUuids = $query
+            ->pluck('uuid')
+            ->all();
+
+        if ($sessionUuids === []) {
+            return 0;
+        }
+
+        $revokedAt = now();
+
+        $count = AdminSession::query()
+            ->whereIn('uuid', $sessionUuids)
+            ->whereNull('revoked_at')
+            ->whereNull('logged_out_at')
+            ->update([
+                'revoked_at' => $revokedAt,
+                'revoked_reason' => 'FORCE_LOGOUT_ALL_BY_ADMIN',
+                'updated_at' => $revokedAt,
+            ]);
+
+        AuditLog::record(
+            actorType: 'ADMIN',
+            actorId: $actor->getKey(),
+            action: 'ADMIN_SESSIONS_FORCE_REVOKED',
+            module: 'SECURITY',
+            newValues: [
+                'target_admin_id' => $target->getKey(),
+                'revoked_count' => $count,
+                'excluded_current_session' => $currentUuid !== '',
+            ],
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return $count;
+    }
+
     public function markLoggedOut(Request $request, ?AdminUser $admin): void
     {
         if (! $admin) {
