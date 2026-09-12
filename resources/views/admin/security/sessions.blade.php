@@ -5,16 +5,8 @@
 
 @section('content')
 <style>
-    .admin-session-table { table-layout: fixed; width: 100%; }
-    .admin-session-table th,
-    .admin-session-table td { vertical-align: top; word-break: break-word; }
-    .admin-session-table th:nth-child(1) { width: 18%; }
-    .admin-session-table th:nth-child(2) { width: 17%; }
-    .admin-session-table th:nth-child(3) { width: 12%; }
-    .admin-session-table th:nth-child(4) { width: 18%; }
-    .admin-session-table th:nth-child(5) { width: 14%; }
-    .admin-session-table th:nth-child(6) { width: 21%; }
-    .session-badge {
+    .session-badge,
+    .risk-badge {
         display:inline-flex;
         align-items:center;
         gap:6px;
@@ -31,11 +23,31 @@
     .session-recent { color:#f0b93a; }
     .session-offline { color:#8aa0b5; }
     .session-revoked { color:#ff6b6b; }
+    .risk-normal { color:#3ddc84; }
+    .risk-review { color:#f0b93a; }
+    .risk-suspicious { color:#ff6b6b; }
+    .session-meta { display:block;margin-top:4px;opacity:.72; }
+    .admin-session-list { display:grid;gap:12px; }
+    .admin-session-card {
+        display:grid;
+        grid-template-columns:minmax(170px,1.25fr) minmax(170px,1fr) minmax(110px,.65fr) minmax(150px,.9fr) minmax(145px,.8fr) minmax(185px,1fr);
+        gap:14px;
+        align-items:start;
+        padding:16px;
+        border:1px solid rgba(255,255,255,.07);
+        border-radius:14px;
+        background:rgba(255,255,255,.012);
+    }
+    .admin-session-field { min-width:0;word-break:break-word; }
+    .admin-session-label { display:block;margin-bottom:6px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;opacity:.55; }
     .session-actions { display:flex;gap:7px;flex-wrap:wrap; }
     .session-actions form { margin:0; }
-    .session-meta { display:block;margin-top:4px;opacity:.75; }
-    @media (max-width: 1180px) {
-        .admin-session-table { table-layout:auto; min-width:940px; }
+    .session-risk-signals { margin-top:6px;font-size:10px;opacity:.68;line-height:1.4; }
+    @media(max-width:1180px) {
+        .admin-session-card { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    }
+    @media(max-width:760px) {
+        .admin-session-card { grid-template-columns:1fr; }
     }
 </style>
 
@@ -62,7 +74,7 @@
 
 <section class="panel" style="padding:18px;margin-bottom:18px;">
     <strong>Admin session control:</strong>
-    Super Admin accounts are restricted to one active tracked session. ONLINE means seen within 2 minutes, RECENTLY ACTIVE within 15 minutes, and OFFLINE means no recent request. Security managers can force-log-out a single admin device or all other active sessions for that admin. The current browser session is always protected from these controls.
+    Super Admin accounts are restricted to one active tracked session. ONLINE means seen within 2 minutes, RECENTLY ACTIVE within 15 minutes, and OFFLINE means no recent request. Risk badges flag new IP, browser, platform or rapid IP/platform changes for review. These signals are indicators only, not proof of compromise.
 </section>
 
 <section class="panel user-filter-panel" style="margin-bottom:18px;">
@@ -108,20 +120,8 @@
         <div class="panel-count">{{ number_format($adminSessions->total()) }} records</div>
     </div>
 
-    <div class="users-table-wrap">
-        <table class="users-table admin-session-table">
-            <thead>
-                <tr>
-                    <th>Admin / Role</th>
-                    <th>Device / Browser</th>
-                    <th>IP Address</th>
-                    <th>Login / Last Seen</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-
-            <tbody>
+    <div style="padding:0 18px 18px;">
+        <div class="admin-session-list">
             @forelse($adminSessions as $adminSession)
                 @php
                     $isCurrent = $currentAdminSessionUuid !== ''
@@ -134,55 +134,77 @@
                         'RECENTLY_ACTIVE' => 'session-recent',
                         default => 'session-offline',
                     };
+                    $riskLevel = (string) ($adminSession->risk_level ?? 'NORMAL');
+                    $riskClass = match($riskLevel) {
+                        'SUSPICIOUS' => 'risk-suspicious',
+                        'REVIEW' => 'risk-review',
+                        default => 'risk-normal',
+                    };
+                    $riskSignals = collect($adminSession->risk_signals ?? [])
+                        ->map(fn ($signal) => str_replace('_', ' ', (string) $signal))
+                        ->implode(' · ');
                 @endphp
 
-                <tr>
-                    <td>
+                <div class="admin-session-card">
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">Admin / Role</span>
                         <strong>{{ $adminSession->admin?->name ?: 'Unknown Admin' }}</strong><br>
                         <small>{{ $adminSession->admin?->email ?: '—' }}</small>
                         <small class="session-meta">{{ $roles !== '' ? $roles : 'No role' }}</small>
-                    </td>
+                    </div>
 
-                    <td>
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">Device / Browser</span>
                         <strong>{{ $adminSession->device_name ?: 'Unknown device' }}</strong><br>
                         <small>{{ $adminSession->browser ?: 'Unknown browser' }} · {{ $adminSession->platform ?: 'Unknown OS' }}</small>
                         <small class="session-meta">{{ $adminSession->device_type ?: 'Unknown type' }}</small>
-                    </td>
+                    </div>
 
-                    <td>{{ $adminSession->ip_address ?: '—' }}</td>
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">IP Address</span>
+                        <strong>{{ $adminSession->ip_address ?: '—' }}</strong>
+                    </div>
 
-                    <td>
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">Login / Last Seen</span>
                         <strong>{{ $adminSession->login_at?->format('Y-m-d H:i:s') ?: '—' }}</strong>
                         @if($adminSession->last_seen_at)
                             <small class="session-meta">Last seen {{ $adminSession->last_seen_at->diffForHumans() }}</small>
                         @else
                             <small class="session-meta">No activity recorded</small>
                         @endif
-                    </td>
+                    </div>
 
-                    <td>
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">Status / Risk</span>
                         @if($lifecycle === 'ACTIVE')
                             <span class="session-badge {{ $activityClass }}">
                                 <span class="session-dot"></span>{{ str_replace('_', ' ', $activity) }}
                             </span>
-                            <small class="session-meta">ACTIVE SESSION</small>
                         @else
                             <span class="session-badge session-revoked">
                                 <span class="session-dot"></span>{{ str_replace('_', ' ', $lifecycle) }}
                             </span>
                         @endif
 
+                        <div style="margin-top:7px;">
+                            <span class="risk-badge {{ $riskClass }}">{{ $riskLevel }}</span>
+                        </div>
+
                         @if($isCurrent)
                             <small class="session-meta"><strong>CURRENT DEVICE</strong></small>
                         @endif
 
-                        @if($adminSession->revoked_reason)
-                            <small class="session-meta">{{ str_replace('_', ' ', $adminSession->revoked_reason) }}</small>
+                        @if($riskSignals !== '')
+                            <div class="session-risk-signals">{{ $riskSignals }}</div>
                         @endif
-                    </td>
+                    </div>
 
-                    <td>
+                    <div class="admin-session-field">
+                        <span class="admin-session-label">Actions</span>
                         <div class="session-actions">
+                            <a class="secondary-btn" href="{{ route('admin.security.admin-sessions.show', $adminSession) }}">Details</a>
+
                             @if($permissions['manage'] && !$isCurrent && $adminSession->isActive())
                                 <form method="POST" action="{{ route('admin.security.admin-sessions.revoke', $adminSession) }}" onsubmit="return confirm('Force logout this admin device session?');">
                                     @csrf
@@ -200,25 +222,16 @@
                                     </button>
                                 </form>
                             @endif
-
-                            @if(!$permissions['manage'])
-                                <small>Read only</small>
-                            @elseif(!$adminSession->isActive() && !$adminSession->admin)
-                                <small>No action</small>
-                            @endif
                         </div>
-                    </td>
-                </tr>
+                    </div>
+                </div>
             @empty
-                <tr>
-                    <td colspan="6">No admin sessions match the selected filters.</td>
-                </tr>
+                <div style="padding:18px;">No admin sessions match the selected filters.</div>
             @endforelse
-            </tbody>
-        </table>
+        </div>
     </div>
 
-    <div style="padding-top:18px;">{{ $adminSessions->links() }}</div>
+    <div style="padding:0 18px 18px;">{{ $adminSessions->links() }}</div>
 </section>
 
 <section class="panel user-filter-panel">
