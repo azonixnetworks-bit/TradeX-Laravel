@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminSession;
 use App\Models\AdminUser;
 use App\Services\Admin\Security\AdminSecurityService;
+use App\Services\Admin\Security\AdminSessionRiskService;
 use App\Services\Admin\Security\AdminSessionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,8 @@ class SessionController extends Controller
     public function index(
         Request $request,
         AdminSecurityService $service,
-        AdminSessionService $adminSessions
+        AdminSessionService $adminSessions,
+        AdminSessionRiskService $riskService
     ): View {
         $admin = $this->admin();
 
@@ -45,6 +47,18 @@ class SessionController extends Controller
             ])
         );
 
+        $data['adminSessions']->getCollection()->transform(
+            function (AdminSession $session) use ($riskService): AdminSession {
+                $risk = $riskService->analyze($session);
+
+                $session->setAttribute('risk_level', $risk['level']);
+                $session->setAttribute('risk_score', $risk['score']);
+                $session->setAttribute('risk_signals', $risk['signals']);
+
+                return $session;
+            }
+        );
+
         $data['currentAdminSessionUuid'] = (string) $request
             ->session()
             ->get(AdminSessionService::SESSION_KEY, '');
@@ -71,6 +85,40 @@ class SessionController extends Controller
         return view(
             'admin.security.sessions',
             $data
+        );
+    }
+
+    public function showAdminSession(
+        Request $request,
+        AdminSession $adminSession,
+        AdminSessionRiskService $riskService
+    ): View {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission('security.view'),
+            403
+        );
+
+        $adminSession->load([
+            'admin.roles' => fn ($query) => $query
+                ->select('admin_roles.id', 'admin_roles.name', 'admin_roles.code')
+                ->orderBy('admin_roles.name'),
+        ]);
+
+        $risk = $riskService->analyze($adminSession);
+
+        return view(
+            'admin.security.admin-session-show',
+            [
+                'adminSession' => $adminSession,
+                'risk' => $risk,
+                'riskService' => $riskService,
+                'currentAdminSessionUuid' => (string) $request
+                    ->session()
+                    ->get(AdminSessionService::SESSION_KEY, ''),
+                'canManage' => $admin->hasPermission('security.manage'),
+            ]
         );
     }
 
