@@ -5,6 +5,7 @@
 
 @section('content')
 @php
+    $displayTimezone = (string) config('tradex_admin_hardening.display_timezone', 'Asia/Colombo');
     $isCurrent = $currentAdminSessionUuid !== ''
         && hash_equals($currentAdminSessionUuid, (string) $adminSession->uuid);
     $roles = $adminSession->admin?->roles?->pluck('name')->filter()->implode(', ');
@@ -29,7 +30,7 @@
     <div>
         <div class="page-eyebrow">SECURITY OPERATIONS</div>
         <h1>Admin Session <span>Details</span></h1>
-        <p>Review device, network, activity and risk signals for this tracked admin session.</p>
+        <p>Review device, network, activity and risk signals for this tracked admin session. Display timezone: {{ $displayTimezone }}.</p>
     </div>
 </div>
 
@@ -64,10 +65,10 @@
         <div class="session-detail-card"><small>Browser / OS</small><strong>{{ $adminSession->browser ?: 'Unknown' }} · {{ $adminSession->platform ?: 'Unknown' }}</strong></div>
         <div class="session-detail-card"><small>IP Address</small><strong>{{ $adminSession->ip_address ?: '—' }}</strong></div>
         <div class="session-detail-card"><small>Lifecycle</small><strong>{{ str_replace('_', ' ', $lifecycle) }} / {{ str_replace('_', ' ', $activity) }}</strong></div>
-        <div class="session-detail-card"><small>Login Time</small><strong>{{ $adminSession->login_at?->format('Y-m-d H:i:s') ?: '—' }}</strong></div>
-        <div class="session-detail-card"><small>Last Seen</small><strong>{{ $adminSession->last_seen_at?->format('Y-m-d H:i:s') ?: '—' }} @if($adminSession->last_seen_at) · {{ $adminSession->last_seen_at->diffForHumans() }} @endif</strong></div>
-        <div class="session-detail-card"><small>Logged Out</small><strong>{{ $adminSession->logged_out_at?->format('Y-m-d H:i:s') ?: '—' }}</strong></div>
-        <div class="session-detail-card"><small>Revoked</small><strong>{{ $adminSession->revoked_at?->format('Y-m-d H:i:s') ?: '—' }}</strong></div>
+        <div class="session-detail-card"><small>Login Time ({{ $displayTimezone }})</small><strong>{{ $adminSession->login_at?->copy()->timezone($displayTimezone)->format('Y-m-d h:i:s A') ?: '—' }}</strong></div>
+        <div class="session-detail-card"><small>Last Seen ({{ $displayTimezone }})</small><strong>{{ $adminSession->last_seen_at?->copy()->timezone($displayTimezone)->format('Y-m-d h:i:s A') ?: '—' }} @if($adminSession->last_seen_at) · {{ $adminSession->last_seen_at->diffForHumans() }} @endif</strong></div>
+        <div class="session-detail-card"><small>Logged Out ({{ $displayTimezone }})</small><strong>{{ $adminSession->logged_out_at?->copy()->timezone($displayTimezone)->format('Y-m-d h:i:s A') ?: '—' }}</strong></div>
+        <div class="session-detail-card"><small>Revoked ({{ $displayTimezone }})</small><strong>{{ $adminSession->revoked_at?->copy()->timezone($displayTimezone)->format('Y-m-d h:i:s A') ?: '—' }}</strong></div>
         <div class="session-detail-card"><small>Revocation Reason</small><strong>{{ $adminSession->revoked_reason ? str_replace('_', ' ', $adminSession->revoked_reason) : '—' }}</strong></div>
         <div class="session-detail-card"><small>Session Reference</small><strong>{{ substr((string) $adminSession->uuid, 0, 8) }}…{{ substr((string) $adminSession->uuid, -6) }}</strong></div>
     </div>
