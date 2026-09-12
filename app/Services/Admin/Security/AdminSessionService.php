@@ -14,6 +14,11 @@ class AdminSessionService
 {
     public const SESSION_KEY = 'tradex_admin_session_uuid';
 
+    public function __construct(
+        private readonly AdminSessionRiskService $risk
+    ) {
+    }
+
     public function ensureTracked(
         Request $request,
         AdminUser $admin
@@ -83,6 +88,36 @@ class AdminSessionService
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
             );
+
+            $risk = $this->risk->analyze($tracked);
+            $riskLevel = (string) ($risk['level'] ?? AdminSessionRiskService::RISK_NORMAL);
+
+            if (in_array($riskLevel, [
+                AdminSessionRiskService::RISK_REVIEW,
+                AdminSessionRiskService::RISK_SUSPICIOUS,
+            ], true)) {
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->getKey(),
+                    action: $riskLevel === AdminSessionRiskService::RISK_SUSPICIOUS
+                        ? 'ADMIN_SUSPICIOUS_LOGIN_DETECTED'
+                        : 'ADMIN_LOGIN_RISK_DETECTED',
+                    module: 'SECURITY',
+                    newValues: [
+                        'risk_level' => $riskLevel,
+                        'risk_score' => (int) ($risk['score'] ?? 0),
+                        'signals' => array_values((array) ($risk['signals'] ?? [])),
+                        'session_uuid' => $tracked->uuid,
+                        'admin_email' => $admin->email,
+                        'device_name' => $tracked->device_name,
+                        'browser' => $tracked->browser,
+                        'platform' => $tracked->platform,
+                        'ip_address' => $tracked->ip_address,
+                    ],
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
+                );
+            }
 
             return $tracked;
         }, 3);
