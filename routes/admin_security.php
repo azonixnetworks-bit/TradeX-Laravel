@@ -29,6 +29,14 @@ Route::prefix('admin/security')
             ->middleware('throttle:60,1')
             ->name('sessions');
 
+        Route::patch(
+            '/admin-sessions/{adminSession}/revoke',
+            [SessionController::class, 'revokeAdminSession']
+        )
+            ->whereNumber('adminSession')
+            ->middleware('throttle:20,1')
+            ->name('admin-sessions.revoke');
+
         Route::get(
             '/content-protection',
             [ContentProtectionController::class, 'index']
