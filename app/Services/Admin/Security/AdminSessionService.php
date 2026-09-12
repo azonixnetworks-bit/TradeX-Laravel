@@ -72,23 +72,6 @@ class AdminSessionService
 
             $session->put(self::SESSION_KEY, $tracked->uuid);
 
-            AuditLog::record(
-                actorType: 'ADMIN',
-                actorId: $admin->getKey(),
-                action: 'ADMIN_DEVICE_SESSION_CREATED',
-                module: 'AUTH',
-                newValues: [
-                    'session_uuid' => $tracked->uuid,
-                    'device_name' => $tracked->device_name,
-                    'device_type' => $tracked->device_type,
-                    'browser' => $tracked->browser,
-                    'platform' => $tracked->platform,
-                    'super_admin_single_session' => $admin->isSuperAdmin(),
-                ],
-                ipAddress: $request->ip(),
-                userAgent: $request->userAgent()
-            );
-
             $risk = $this->risk->analyze($tracked);
             $riskLevel = (string) ($risk['level'] ?? AdminSessionRiskService::RISK_NORMAL);
 
