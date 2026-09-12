@@ -9,6 +9,7 @@ use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\Admin\Security\AdminDashboardSecurityService;
 use App\Services\Payments\PaymentMoney;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
@@ -22,7 +23,8 @@ class DashboardController extends Controller
 {
     public function index(
         Request $request,
-        PaymentMoney $money
+        PaymentMoney $money,
+        AdminDashboardSecurityService $dashboardSecurity
     ): View {
         $admin = auth('admin')->user();
         abort_unless($admin instanceof AdminUser, 401);
@@ -35,6 +37,7 @@ class DashboardController extends Controller
         $canViewAdmins = $admin->hasPermission('admins.view');
         $canViewRoles = $admin->hasPermission('roles.view');
         $canViewAudit = $admin->hasPermission('audit.view');
+        $canViewSecurity = $admin->hasPermission('security.view');
 
         $auditDayStartUtc = $systemTime
             ->startOfDay()
@@ -74,6 +77,24 @@ class DashboardController extends Controller
                 : null,
         ];
 
+        $securitySummary = $canViewSecurity
+            ? $dashboardSecurity->summary()
+            : null;
+
+        $securityAlerts = $canViewSecurity
+            ? $dashboardSecurity->recentAlerts(5)
+            : collect();
+
+        $securityAlertTimes = [];
+
+        foreach ($securityAlerts as $alert) {
+            $securityAlertTimes[(string) $alert->getKey()] =
+                $dashboardSecurity->alertTimeDisplay(
+                    $alert,
+                    $systemTimezone
+                );
+        }
+
         $activityTabs = $this->activityTabs($admin);
         $activityType = $this->activityType(
             $request,
@@ -106,20 +127,16 @@ class DashboardController extends Controller
                     $admin,
                     'last_login_at',
                     $systemTimezone,
-                    'd M Y H:i'
+                    'd M Y h:i A'
                 )
                 : 'First Session',
+            'securitySummary' => $securitySummary,
+            'securityAlerts' => $securityAlerts,
+            'securityAlertTimes' => $securityAlertTimes,
+            'canViewSecurity' => $canViewSecurity,
         ]);
     }
 
-    /**
-     * Resolve the configured IANA timezone once for the whole dashboard.
-     * Persisted application timestamps remain canonical UTC; this timezone is
-     * presentation-only and automatically follows DST rules where applicable.
-     * Fixed-offset labels are intentionally rejected.
-     *
-     * @return array{0: string, 1: CarbonImmutable}
-     */
     private function systemClock(): array
     {
         $systemTimezone = trim((string) config(
@@ -154,10 +171,6 @@ class DashboardController extends Controller
         }
     }
 
-    /**
-     * Database datetime values are stored as UTC. Read the raw value so the
-     * conversion never depends on Laravel's application/display timezone.
-     */
     private function formatUtcAttribute(
         Model $model,
         string $attribute,
@@ -189,9 +202,9 @@ class DashboardController extends Controller
         }
 
         [$attribute, $format] = match ($activityType) {
-            'customers' => ['created_at', 'd M Y H:i'],
-            'payments' => ['cleared_at', 'd M Y H:i'],
-            'audit' => ['created_at', 'd M Y H:i:s'],
+            'customers' => ['created_at', 'd M Y h:i A'],
+            'payments' => ['cleared_at', 'd M Y h:i A'],
+            'audit' => ['created_at', 'd M Y h:i:s A'],
             default => [null, null],
         };
 
