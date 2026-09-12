@@ -6,6 +6,7 @@ use App\Models\AdminSession;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
@@ -85,6 +86,89 @@ class AdminSessionService
 
             return $tracked;
         }, 3);
+    }
+
+    public function inventory(array $filters): LengthAwarePaginator
+    {
+        $query = AdminSession::query()
+            ->with([
+                'admin.roles' => fn ($query) => $query
+                    ->select('admin_roles.id', 'admin_roles.name', 'admin_roles.code')
+                    ->orderBy('admin_roles.name'),
+            ]);
+
+        $search = trim((string) ($filters['admin_search'] ?? ''));
+        $status = strtoupper(trim((string) ($filters['admin_status'] ?? '')));
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search): void {
+                $builder
+                    ->where('ip_address', 'like', '%'.$search.'%')
+                    ->orWhere('device_name', 'like', '%'.$search.'%')
+                    ->orWhere('browser', 'like', '%'.$search.'%')
+                    ->orWhere('platform', 'like', '%'.$search.'%')
+                    ->orWhereHas('admin', function ($adminQuery) use ($search): void {
+                        $adminQuery
+                            ->where('name', 'like', '%'.$search.'%')
+                            ->orWhere('email', 'like', '%'.$search.'%');
+                    });
+            });
+        }
+
+        if ($status === 'ACTIVE') {
+            $query->whereNull('revoked_at')->whereNull('logged_out_at');
+        } elseif ($status === 'REVOKED') {
+            $query->whereNotNull('revoked_at');
+        } elseif ($status === 'LOGGED_OUT') {
+            $query->whereNull('revoked_at')->whereNotNull('logged_out_at');
+        }
+
+        $perPage = (int) ($filters['admin_per_page'] ?? 20);
+        $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 20;
+
+        return $query
+            ->orderByDesc('last_seen_at')
+            ->orderByDesc('id')
+            ->paginate($perPage, ['*'], 'admin_page')
+            ->withQueryString();
+    }
+
+    public function revoke(
+        AdminSession $session,
+        AdminUser $actor,
+        Request $request
+    ): bool {
+        if (! $session->isActive()) {
+            return false;
+        }
+
+        $currentUuid = (string) $request->session()->get(self::SESSION_KEY, '');
+
+        if ($currentUuid !== '' && hash_equals($currentUuid, (string) $session->uuid)) {
+            return false;
+        }
+
+        $session->forceFill([
+            'revoked_at' => now(),
+            'revoked_reason' => 'FORCE_LOGOUT_BY_ADMIN',
+        ])->save();
+
+        AuditLog::record(
+            actorType: 'ADMIN',
+            actorId: $actor->getKey(),
+            action: 'ADMIN_SESSION_FORCE_REVOKED',
+            module: 'SECURITY',
+            newValues: [
+                'target_admin_id' => $session->admin_user_id,
+                'session_uuid' => $session->uuid,
+                'ip_address' => $session->ip_address,
+                'device_name' => $session->device_name,
+            ],
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return true;
     }
 
     public function markLoggedOut(Request $request, ?AdminUser $admin): void
