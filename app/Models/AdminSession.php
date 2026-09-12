@@ -10,6 +10,12 @@ class AdminSession extends Model
 {
     use HasFactory;
 
+    public const ACTIVITY_ONLINE = 'ONLINE';
+
+    public const ACTIVITY_RECENT = 'RECENTLY_ACTIVE';
+
+    public const ACTIVITY_OFFLINE = 'OFFLINE';
+
     protected $fillable = [
         'uuid',
         'admin_user_id',
@@ -46,5 +52,35 @@ class AdminSession extends Model
     {
         return $this->revoked_at === null
             && $this->logged_out_at === null;
+    }
+
+    public function lifecycleStatus(): string
+    {
+        if ($this->revoked_at !== null) {
+            return 'REVOKED';
+        }
+
+        if ($this->logged_out_at !== null) {
+            return 'LOGGED_OUT';
+        }
+
+        return 'ACTIVE';
+    }
+
+    public function activityStatus(): string
+    {
+        if (! $this->isActive() || $this->last_seen_at === null) {
+            return self::ACTIVITY_OFFLINE;
+        }
+
+        if ($this->last_seen_at->gte(now()->subMinutes(2))) {
+            return self::ACTIVITY_ONLINE;
+        }
+
+        if ($this->last_seen_at->gte(now()->subMinutes(15))) {
+            return self::ACTIVITY_RECENT;
+        }
+
+        return self::ACTIVITY_OFFLINE;
     }
 }
