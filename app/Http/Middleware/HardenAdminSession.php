@@ -38,8 +38,9 @@ class HardenAdminSession
          * not treated as fully authenticated admin device sessions yet.
          */
         if (
-            ! $request->session()->boolean(
-                'tradex_admin_totp_enrollment_only'
+            ! (bool) $request->session()->get(
+                'tradex_admin_totp_enrollment_only',
+                false
             )
         ) {
             $tracked = $this->adminSessions->ensureTracked(
