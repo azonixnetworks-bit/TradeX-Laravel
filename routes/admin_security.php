@@ -37,6 +37,28 @@ Route::prefix('admin/security')
             ->middleware('throttle:60,1')
             ->name('admin-sessions.show');
 
+        Route::get(
+            '/content-protection',
+            [ContentProtectionController::class, 'index']
+        )
+            ->middleware('throttle:60,1')
+            ->name('content-protection');
+    });
+
+/*
+|--------------------------------------------------------------------------
+| Admin Session Mutation Boundary
+|--------------------------------------------------------------------------
+|
+| ADMIN-11 keeps /admin/security/* strictly read-only. Session revocation
+| actions live on a separate admin control surface while preserving the
+| existing route names used by the Security UI.
+|
+*/
+Route::prefix('admin')
+    ->name('admin.security.')
+    ->middleware('admin.auth')
+    ->group(function (): void {
         Route::patch(
             '/admin-sessions/{adminSession}/revoke',
             [SessionController::class, 'revokeAdminSession']
@@ -52,11 +74,4 @@ Route::prefix('admin/security')
             ->whereNumber('adminUser')
             ->middleware('throttle:10,1')
             ->name('admin-sessions.revoke-all');
-
-        Route::get(
-            '/content-protection',
-            [ContentProtectionController::class, 'index']
-        )
-            ->middleware('throttle:60,1')
-            ->name('content-protection');
     });
