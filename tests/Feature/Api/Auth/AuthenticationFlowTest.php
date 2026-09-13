@@ -127,27 +127,56 @@ class AuthenticationFlowTest extends TestCase
             );
     }
 
-    public function test_second_mobile_installation_is_blocked_when_mobile_slot_is_occupied(): void
+    public function test_second_mobile_installation_is_allowed_after_strong_login(): void
     {
         $user = $this->createTotpUser();
 
-        $user->devices()->create([
-            'uuid' =>
-                (string) Str::uuid(),
-            'device_slot' =>
-                UserDevice::SLOT_MOBILE,
-            'platform' =>
-                UserDevice::PLATFORM_ANDROID,
-            'installation_id_hash' =>
-                hash(
-                    'sha256',
-                    (string) Str::uuid()
-                ),
-            'is_trusted' => true,
-            'is_active' => true,
-            'registered_at' => now(),
-            'trusted_at' => now(),
-        ]);
+        $this->createTrustedDevice(
+            $user,
+            (string) Str::uuid(),
+            UserDevice::PLATFORM_ANDROID,
+            'First Phone'
+        );
+
+        $this
+            ->postJson(
+                '/api/v1/auth/login',
+                $this->loginPayload(
+                    $user
+                )
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.device.device_slot',
+                UserDevice::SLOT_MOBILE
+            );
+
+        $this->assertSame(
+            2,
+            $user->devices()
+                ->active()
+                ->trusted()
+                ->count()
+        );
+    }
+
+    public function test_third_new_installation_is_blocked_when_trusted_device_limit_is_reached(): void
+    {
+        $user = $this->createTotpUser();
+
+        $this->createTrustedDevice(
+            $user,
+            (string) Str::uuid(),
+            UserDevice::PLATFORM_ANDROID,
+            'First Phone'
+        );
+
+        $this->createTrustedDevice(
+            $user,
+            (string) Str::uuid(),
+            UserDevice::PLATFORM_IOS,
+            'Second Phone'
+        );
 
         $this
             ->postJson(
@@ -159,8 +188,58 @@ class AuthenticationFlowTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath(
                 'error.code',
-                'DEVICE_SLOT_OCCUPIED'
+                'DEVICE_LIMIT_REACHED'
             );
+
+        $this->assertSame(
+            2,
+            $user->devices()
+                ->active()
+                ->trusted()
+                ->count()
+        );
+    }
+
+    public function test_known_trusted_device_can_login_again_when_device_limit_is_full(): void
+    {
+        $user = $this->createTotpUser();
+        $knownInstallationId = (string) Str::uuid();
+
+        $known = $this->createTrustedDevice(
+            $user,
+            $knownInstallationId,
+            UserDevice::PLATFORM_ANDROID,
+            'Known Phone'
+        );
+
+        $this->createTrustedDevice(
+            $user,
+            (string) Str::uuid(),
+            UserDevice::PLATFORM_IOS,
+            'Second Phone'
+        );
+
+        $this
+            ->postJson(
+                '/api/v1/auth/login',
+                $this->loginPayload(
+                    $user,
+                    $knownInstallationId
+                )
+            )
+            ->assertOk()
+            ->assertJsonPath(
+                'data.device.uuid',
+                $known->uuid
+            );
+
+        $this->assertSame(
+            2,
+            $user->devices()
+                ->active()
+                ->trusted()
+                ->count()
+        );
     }
 
     private function createTotpUser(): User
@@ -208,8 +287,42 @@ class AuthenticationFlowTest extends TestCase
         return $user->refresh();
     }
 
+    private function createTrustedDevice(
+        User $user,
+        string $installationId,
+        string $platform,
+        string $name
+    ): UserDevice {
+        $slot = in_array(
+            $platform,
+            [
+                UserDevice::PLATFORM_ANDROID,
+                UserDevice::PLATFORM_IOS,
+            ],
+            true
+        )
+            ? UserDevice::SLOT_MOBILE
+            : UserDevice::SLOT_DESKTOP;
+
+        return $user->devices()->create([
+            'uuid' => (string) Str::uuid(),
+            'device_slot' => $slot,
+            'platform' => $platform,
+            'device_name' => $name,
+            'installation_id_hash' => hash(
+                'sha256',
+                strtolower(trim($installationId))
+            ),
+            'is_trusted' => true,
+            'is_active' => true,
+            'registered_at' => now(),
+            'trusted_at' => now(),
+        ]);
+    }
+
     private function loginPayload(
-        User $user
+        User $user,
+        ?string $installationId = null
     ): array {
         return [
             'email' => $user->email,
@@ -223,7 +336,8 @@ class AuthenticationFlowTest extends TestCase
                         time()
                     ),
             'installation_id' =>
-                (string) Str::uuid(),
+                $installationId
+                ?? (string) Str::uuid(),
             'platform' =>
                 UserDevice::PLATFORM_ANDROID,
             'device_name' =>
