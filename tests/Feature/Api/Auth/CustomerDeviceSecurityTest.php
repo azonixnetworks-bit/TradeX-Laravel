@@ -163,17 +163,24 @@ class CustomerDeviceSecurityTest extends TestCase
             ->deleteJson('/api/v1/auth/devices/'.$old->uuid)
             ->assertOk();
 
-        /* Test-only reset allows another valid TOTP in the same wall-clock step. */
-        $user->forceFill([
-            'totp_last_used_step' => null,
-        ])->save();
+        /*
+         * A second strong login must never replay the TOTP step consumed by
+         * the first login. The configured TOTP window accepts the immediately
+         * following step, which lets the test model a fresh authenticator code
+         * without sleeping or weakening replay protection.
+         */
+        $nextTotpTimestamp = time() + (int) config(
+            'tradex_auth.totp.period_seconds',
+            30
+        );
 
         $reLogin = $this->postJson(
             '/api/v1/auth/login',
             $this->loginPayload(
                 $user->fresh(),
                 $oldInstallationId,
-                'Old Phone Re-enrolled'
+                'Old Phone Re-enrolled',
+                $nextTotpTimestamp
             )
         );
 
@@ -270,14 +277,15 @@ class CustomerDeviceSecurityTest extends TestCase
     private function loginPayload(
         User $user,
         ?string $installationId = null,
-        string $deviceName = 'Current Phone'
+        string $deviceName = 'Current Phone',
+        ?int $totpTimestamp = null
     ): array {
         return [
             'email' => $user->email,
             'password' => 'StrongPassword123!',
             'totp_code' => app(TotpService::class)->codeAt(
                 (string) $user->totp_secret,
-                time()
+                $totpTimestamp ?? time()
             ),
             'installation_id' => $installationId ?? (string) Str::uuid(),
             'platform' => UserDevice::PLATFORM_ANDROID,
