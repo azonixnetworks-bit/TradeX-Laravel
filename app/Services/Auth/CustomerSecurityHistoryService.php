@@ -29,26 +29,73 @@ class CustomerSecurityHistoryService
         'CUSTOMER_DEVICE_FORCE_REVOKED',
     ];
 
+    private const REVIEWABLE_ACTIONS = [
+        'USER_LOGIN_RISK_DETECTED',
+        'USER_SUSPICIOUS_LOGIN_DETECTED',
+    ];
+
+    private const REVIEW_ACTIONS = [
+        CustomerSecurityEventReviewService::ACTION_CONFIRMED,
+        CustomerSecurityEventReviewService::ACTION_REPORTED,
+    ];
+
     public function history(User $user, int $limit = 30): Collection
     {
-        return $this->queryForUser($user)
+        $events = $this->queryForUser($user)
             ->whereIn('action', self::HISTORY_ACTIONS)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit($this->boundedLimit($limit))
-            ->get()
-            ->map(fn (AuditLog $event): array => $this->safeEvent($event));
+            ->get();
+
+        return $this->mapEvents($user, $events);
     }
 
     public function notifications(User $user, int $limit = 20): Collection
     {
-        return $this->queryForUser($user)
+        $events = $this->queryForUser($user)
             ->whereIn('action', self::NOTIFICATION_ACTIONS)
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->limit($this->boundedLimit($limit))
-            ->get()
-            ->map(fn (AuditLog $event): array => $this->safeEvent($event));
+            ->get();
+
+        return $this->mapEvents($user, $events);
+    }
+
+    private function mapEvents(User $user, Collection $events): Collection
+    {
+        $reviewableIds = $events
+            ->filter(
+                fn (AuditLog $event): bool =>
+                    in_array($event->action, self::REVIEWABLE_ACTIONS, true)
+            )
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->values()
+            ->all();
+
+        $reviews = collect();
+
+        if ($reviewableIds !== []) {
+            $reviews = AuditLog::query()
+                ->where('actor_type', 'USER')
+                ->where('actor_id', $user->getKey())
+                ->where('target_type', 'AUDIT_LOG')
+                ->whereIn('target_id', $reviewableIds)
+                ->whereIn('action', self::REVIEW_ACTIONS)
+                ->orderByDesc('id')
+                ->get()
+                ->unique('target_id')
+                ->keyBy(fn (AuditLog $event): int => (int) $event->target_id);
+        }
+
+        return $events->map(
+            fn (AuditLog $event): array => $this->safeEvent(
+                $event,
+                $reviews->get((int) $event->getKey())
+            )
+        );
     }
 
     private function queryForUser(User $user): Builder
@@ -75,8 +122,10 @@ class CustomerSecurityHistoryService
             });
     }
 
-    private function safeEvent(AuditLog $event): array
-    {
+    private function safeEvent(
+        AuditLog $event,
+        ?AuditLog $review = null
+    ): array {
         $values = is_array($event->new_values)
             ? $event->new_values
             : [];
@@ -92,6 +141,18 @@ class CustomerSecurityHistoryService
         };
 
         [$title, $message] = $this->copyFor($event->action, $values);
+
+        $requiresReview = in_array(
+            $event->action,
+            self::REVIEWABLE_ACTIONS,
+            true
+        );
+
+        $reviewStatus = match ($review?->action) {
+            CustomerSecurityEventReviewService::ACTION_CONFIRMED => 'CONFIRMED',
+            CustomerSecurityEventReviewService::ACTION_REPORTED => 'REPORTED_UNAUTHORIZED',
+            default => $requiresReview ? 'PENDING' : null,
+        };
 
         return [
             'event_id' => (int) $event->getKey(),
@@ -116,6 +177,12 @@ class CustomerSecurityHistoryService
                     static fn ($signal): string => (string) $signal,
                     (array) ($values['signals'] ?? [])
                 )),
+            ],
+            'review' => [
+                'required' => $requiresReview,
+                'status' => $reviewStatus,
+                'can_respond' => $requiresReview && $review === null,
+                'responded_at' => $review?->created_at?->toISOString(),
             ],
         ];
     }
