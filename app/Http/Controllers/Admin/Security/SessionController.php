@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin\Security;
 use App\Http\Controllers\Controller;
 use App\Models\AdminSession;
 use App\Models\AdminUser;
+use App\Models\UserDevice;
+use App\Services\Admin\Security\AdminCustomerDeviceSecurityService;
 use App\Services\Admin\Security\AdminSecurityService;
 use App\Services\Admin\Security\AdminSessionRiskService;
 use App\Services\Admin\Security\AdminSessionService;
@@ -65,27 +67,12 @@ class SessionController extends Controller
 
         $data['permissions'] = [
             'view' => true,
-
-            'events' =>
-                $admin->hasPermission(
-                    'security.events'
-                ),
-
-            'manage' =>
-                $admin->hasPermission(
-                    'security.manage'
-                ),
-
-            'open_user' =>
-                $admin->hasPermission(
-                    'users.view_details'
-                ),
+            'events' => $admin->hasPermission('security.events'),
+            'manage' => $admin->hasPermission('security.manage'),
+            'open_user' => $admin->hasPermission('users.view_details'),
         ];
 
-        return view(
-            'admin.security.sessions',
-            $data
-        );
+        return view('admin.security.sessions', $data);
     }
 
     public function showAdminSession(
@@ -175,6 +162,34 @@ class SessionController extends Controller
                 $count > 0
                     ? "{$count} admin session(s) were signed out. The current browser session, if applicable, was preserved."
                     : 'No other active sessions were available to sign out.'
+            );
+    }
+
+    public function revokeCustomerDevice(
+        Request $request,
+        UserDevice $userDevice,
+        AdminCustomerDeviceSecurityService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission('security.manage'),
+            403
+        );
+
+        $revoked = $service->revoke(
+            $userDevice,
+            $admin,
+            $request
+        );
+
+        return redirect()
+            ->route('admin.security.sessions')
+            ->with(
+                $revoked ? 'success' : 'error',
+                $revoked
+                    ? 'The selected customer device was revoked and its active sessions were signed out.'
+                    : 'That customer device is already inactive.'
             );
     }
 
