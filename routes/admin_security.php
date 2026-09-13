@@ -47,12 +47,11 @@ Route::prefix('admin/security')
 
 /*
 |--------------------------------------------------------------------------
-| Admin Session Mutation Boundary
+| Security Mutation Boundary
 |--------------------------------------------------------------------------
 |
-| ADMIN-11 keeps /admin/security/* strictly read-only. Session revocation
-| actions live on a separate admin control surface while preserving the
-| existing route names used by the Security UI.
+| ADMIN-11 keeps /admin/security/* strictly read-only. Mutating controls
+| therefore live on a separate /admin control surface.
 |
 */
 Route::prefix('admin')
@@ -74,4 +73,12 @@ Route::prefix('admin')
             ->whereNumber('adminUser')
             ->middleware('throttle:10,1')
             ->name('admin-sessions.revoke-all');
+
+        Route::patch(
+            '/customer-devices/{userDevice}/revoke',
+            [SessionController::class, 'revokeCustomerDevice']
+        )
+            ->whereNumber('userDevice')
+            ->middleware('throttle:20,1')
+            ->name('customer-devices.revoke');
     });
