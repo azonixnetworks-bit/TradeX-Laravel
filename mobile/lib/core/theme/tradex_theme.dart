@@ -20,8 +20,8 @@ abstract final class TradeXTheme {
       brightness: Brightness.dark,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: TradeXColors.background,
-      splashColor: TradeXColors.gold.withValues(alpha: 0.08),
-      highlightColor: TradeXColors.gold.withValues(alpha: 0.04),
+      splashColor: TradeXColors.gold.withOpacity(0.08),
+      highlightColor: TradeXColors.gold.withOpacity(0.04),
       dividerColor: TradeXColors.border,
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
