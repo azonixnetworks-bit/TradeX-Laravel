@@ -38,11 +38,11 @@ class TradeXBottomNav extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: TradeXColors.borderStrong.withOpacity(0.75),
+            color: TradeXColors.borderStrong.withValues(alpha: 0.75),
           ),
           boxShadow: <BoxShadow>[
             BoxShadow(
-              color: Colors.black.withOpacity(0.55),
+              color: Colors.black.withValues(alpha: 0.55),
               blurRadius: 24,
               offset: const Offset(0, 12),
             ),
@@ -74,7 +74,7 @@ class TradeXBottomNav extends StatelessWidget {
                                 gradient: RadialGradient(
                                   radius: 0.9,
                                   colors: <Color>[
-                                    TradeXColors.gold.withOpacity(0.20),
+                                    TradeXColors.gold.withValues(alpha: 0.20),
                                     Colors.transparent,
                                   ],
                                 ),
@@ -93,7 +93,7 @@ class TradeXBottomNav extends StatelessWidget {
                               shadows: active
                                   ? <Shadow>[
                                       Shadow(
-                                        color: TradeXColors.gold.withOpacity(0.55),
+                                        color: TradeXColors.gold.withValues(alpha: 0.55),
                                         blurRadius: 10,
                                       ),
                                     ]
@@ -126,7 +126,7 @@ class TradeXBottomNav extends StatelessWidget {
                                 boxShadow: active
                                     ? <BoxShadow>[
                                         BoxShadow(
-                                          color: TradeXColors.gold.withOpacity(0.65),
+                                          color: TradeXColors.gold.withValues(alpha: 0.65),
                                           blurRadius: 8,
                                         ),
                                       ]
