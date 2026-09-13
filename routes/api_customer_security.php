@@ -35,6 +35,13 @@ Route::middleware([
             ->name('security.')
             ->group(function (): void {
                 Route::get(
+                    '/center',
+                    [SecurityActivityController::class, 'center']
+                )
+                    ->middleware('throttle:60,1')
+                    ->name('center');
+
+                Route::get(
                     '/history',
                     [SecurityActivityController::class, 'history']
                 )
