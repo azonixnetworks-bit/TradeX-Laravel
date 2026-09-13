@@ -59,7 +59,7 @@ class CustomerSecurityHistoryService
 
         return AuditLog::query()
             ->where(function (Builder $query) use ($user, $deviceIds): void {
-                $query->where(function (Builder $owned): void use ($user) {
+                $query->where(function (Builder $owned) use ($user): void {
                     $owned
                         ->where('actor_type', 'USER')
                         ->where('actor_id', $user->getKey());
