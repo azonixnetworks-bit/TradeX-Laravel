@@ -47,5 +47,13 @@ Route::middleware([
                 )
                     ->middleware('throttle:60,1')
                     ->name('notifications');
+
+                Route::post(
+                    '/events/{eventId}/review',
+                    [SecurityActivityController::class, 'review']
+                )
+                    ->whereNumber('eventId')
+                    ->middleware('throttle:10,1')
+                    ->name('events.review');
             });
     });
