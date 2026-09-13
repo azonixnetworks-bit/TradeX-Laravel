@@ -77,3 +77,5 @@ Route::middleware([
             ->middleware('throttle:api-register-totp')
             ->name('recovery-codes.regenerate');
     });
+
+require __DIR__.'/api_customer_security.php';
