@@ -4,6 +4,18 @@
 @section('page-title', 'Security Sessions')
 
 @section('content')
+@php
+    $displayTimezone = (string) config('tradex_admin_hardening.display_timezone', 'Asia/Colombo');
+    $localTime = static function ($value) use ($displayTimezone): string {
+        if (blank($value)) {
+            return '—';
+        }
+
+        return \Illuminate\Support\Carbon::parse($value, 'UTC')
+            ->timezone($displayTimezone)
+            ->format('d M Y H:i:s');
+    };
+@endphp
 <style>
     .session-badge,
     .risk-badge {
@@ -167,7 +179,7 @@
 
                     <div class="admin-session-field">
                         <span class="admin-session-label">Login / Last Seen</span>
-                        <strong>{{ $adminSession->login_at?->format('Y-m-d H:i:s') ?: '—' }}</strong>
+                        <strong>{{ $localTime($adminSession->login_at) }}</strong>
                         @if($adminSession->last_seen_at)
                             <small class="session-meta">Last seen {{ $adminSession->last_seen_at->diffForHumans() }}</small>
                         @else
@@ -313,15 +325,28 @@
                     <th>User</th>
                     <th>Device</th>
                     <th>Trust</th>
+                    <th>Risk</th>
                     <th>Session</th>
                     <th>Last Used</th>
                     <th>Expires</th>
                     <th>Last Login IP</th>
-                    <th></th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
             @forelse($sessions as $session)
+                @php
+                    $customerRiskLevel = (string) ($session->risk_level ?? 'NORMAL');
+                    $customerRiskClass = match($customerRiskLevel) {
+                        'SUSPICIOUS' => 'risk-suspicious',
+                        'REVIEW' => 'risk-review',
+                        default => 'risk-normal',
+                    };
+                    $customerSignals = collect($session->risk_signals ?? [])
+                        ->map(fn ($signal) => str_replace('_', ' ', (string) $signal))
+                        ->implode(' · ');
+                    $deviceActive = (bool) $session->is_active && blank($session->device_revoked_at);
+                @endphp
                 <tr>
                     <td>
                         <strong>{{ $session->user_name }}</strong><br>
@@ -335,22 +360,44 @@
                     </td>
                     <td>
                         {{ $session->is_trusted ? 'TRUSTED' : 'NOT TRUSTED' }}
-                        @if(!$session->is_active || $session->device_revoked_at)<br><small>DEVICE REVOKED</small>@endif
+                        @if(!$deviceActive)<br><small>DEVICE REVOKED</small>@endif
                     </td>
-                    <td><strong>{{ $session->session_status }}</strong><br><small>Created {{ $session->token_created_at ?: '—' }}</small></td>
-                    <td>{{ $session->last_used_at ?: '—' }}</td>
-                    <td>{{ $session->expires_at ?: '—' }}</td>
+                    <td>
+                        <span class="risk-badge {{ $customerRiskClass }}">{{ $customerRiskLevel }}</span>
+                        @if(($session->risk_score ?? 0) > 0)
+                            <small class="session-meta">Score {{ (int) $session->risk_score }}</small>
+                        @endif
+                        @if($customerSignals !== '')
+                            <div class="session-risk-signals">{{ $customerSignals }}</div>
+                        @endif
+                    </td>
+                    <td>
+                        <strong>{{ $session->session_status }}</strong><br>
+                        <small>Created {{ $localTime($session->token_created_at) }}</small>
+                    </td>
+                    <td>{{ $localTime($session->last_used_at) }}</td>
+                    <td>{{ $localTime($session->expires_at) }}</td>
                     <td>{{ $session->last_login_ip ?: '—' }}</td>
                     <td>
-                        @if($permissions['open_user'])
-                            <a class="secondary-btn" href="{{ route('admin.users.show', $session->user_id) }}">User Security</a>
-                        @else
-                            Read only
-                        @endif
+                        <div class="session-actions">
+                            <a class="secondary-btn" href="{{ route('admin.security.customer-devices.show', $session->user_device_id) }}">Details</a>
+
+                            @if($permissions['open_user'])
+                                <a class="secondary-btn" href="{{ route('admin.users.show', $session->user_id) }}">User Security</a>
+                            @endif
+
+                            @if($permissions['manage'] && $deviceActive)
+                                <form method="POST" action="{{ route('admin.security.customer-devices.revoke', $session->user_device_id) }}" onsubmit="return confirm('Force revoke this customer device and sign out all sessions on it?');">
+                                    @csrf
+                                    @method('PATCH')
+                                    <button class="secondary-btn" type="submit">Force Revoke</button>
+                                </form>
+                            @endif
+                        </div>
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="8">No customer sessions match the selected filters.</td></tr>
+                <tr><td colspan="9">No customer sessions match the selected filters.</td></tr>
             @endforelse
             </tbody>
         </table>
