@@ -134,7 +134,7 @@ class _GreetingHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Good Morning, Alex 👋',
+                'Good Morning, Alex \u{1F44B}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -255,7 +255,7 @@ class _HeroBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AspectRatio(
-      aspectRatio: 2.65,
+      aspectRatio: 2.60,
       child: Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
@@ -294,7 +294,7 @@ class _HeroBanner extends StatelessWidget {
               child: CustomPaint(painter: _HeroMarketArtPainter()),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 12, 14),
+              padding: const EdgeInsets.fromLTRB(20, 12, 12, 10),
               child: FractionallySizedBox(
                 widthFactor: 0.66,
                 alignment: Alignment.centerLeft,
@@ -625,7 +625,8 @@ class _LearningCard extends StatelessWidget {
                     icon: const Icon(Icons.arrow_forward_rounded, size: 18),
                     label: const Text(
                       'Continue Learning',
-                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                          fontSize: 12.5, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -672,7 +673,8 @@ class _CourseThumbnail extends StatelessWidget {
                 color: Colors.black.withOpacity(0.62),
                 border: Border.all(color: Colors.white, width: 1.4),
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 28),
             ),
           ),
         ],
@@ -730,7 +732,8 @@ class _TradeIdeaCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 7),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: TradeXColors.goldDeep.withOpacity(0.70),
                         borderRadius: BorderRadius.circular(7),
@@ -765,7 +768,7 @@ class _TradeIdeaCard extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '▲ +12.80 (+0.55%)',
+                    '\u25B2 +12.80 (+0.55%)',
                     style: TextStyle(
                       color: TradeXColors.success,
                       fontSize: 12.5,
@@ -811,7 +814,8 @@ class _TradeMetrics extends StatelessWidget {
     return const Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: <Widget>[
-        _MetricRow(label: 'Direction', value: 'BUY', valueColor: TradeXColors.success),
+        _MetricRow(
+            label: 'Direction', value: 'BUY', valueColor: TradeXColors.success),
         SizedBox(height: 5),
         _MetricRow(label: 'Entry', value: '2340 - 2345'),
         SizedBox(height: 5),
@@ -876,7 +880,8 @@ class _MarketCategories extends StatelessWidget {
       children: <Widget>[
         const Row(
           children: <Widget>[
-            Icon(Icons.bar_chart_rounded, color: TradeXColors.goldBright, size: 26),
+            Icon(Icons.bar_chart_rounded,
+                color: TradeXColors.goldBright, size: 26),
             SizedBox(width: 9),
             Text(
               'Market Categories',
@@ -1130,7 +1135,8 @@ class _VideoThumbnail extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.5),
               ),
-              child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 29),
+              child: const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 29),
             ),
           ),
         ],
