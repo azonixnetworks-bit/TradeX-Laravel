@@ -25,17 +25,17 @@ class CustomerLoginRiskService
         $platform = strtoupper((string) ($payload['platform'] ?? ''));
         $deviceModel = trim((string) ($payload['device_model'] ?? ''));
 
-        if (! $knownActiveTrustedDevice) {
-            $signals[] = 'NEW_DEVICE';
-            $score += 30;
-        }
-
         $recentDevices = $user->devices()
             ->active()
             ->trusted()
             ->orderByDesc('last_login_at')
             ->limit(5)
             ->get();
+
+        if (! $knownActiveTrustedDevice && $recentDevices->isNotEmpty()) {
+            $signals[] = 'NEW_DEVICE';
+            $score += 30;
+        }
 
         if ($recentDevices->isNotEmpty()) {
             $knownIps = $recentDevices
