@@ -38,6 +38,14 @@ Route::prefix('admin/security')
             ->name('admin-sessions.show');
 
         Route::get(
+            '/customer-devices/{userDevice}',
+            [SessionController::class, 'showCustomerDevice']
+        )
+            ->whereNumber('userDevice')
+            ->middleware('throttle:60,1')
+            ->name('customer-devices.show');
+
+        Route::get(
             '/content-protection',
             [ContentProtectionController::class, 'index']
         )
