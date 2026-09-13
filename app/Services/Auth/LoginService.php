@@ -103,6 +103,19 @@ class LoginService
                     );
                 }
 
+                $installationHash = $this->devices
+                    ->hashInstallationId(
+                        (string) $payload['installation_id']
+                    );
+
+                $wasKnownActiveTrustedDevice = $user
+                    ->devices()
+                    ->where('installation_id_hash', $installationHash)
+                    ->where('is_active', true)
+                    ->where('is_trusted', true)
+                    ->whereNull('revoked_at')
+                    ->exists();
+
                 $device =
                     $this->devices
                         ->bindAfterStrongLogin(
@@ -135,6 +148,34 @@ class LoginService
                     'last_login_ip' =>
                         $request->ip(),
                 ])->save();
+
+                if (! $wasKnownActiveTrustedDevice) {
+                    AuditLog::record(
+                        actorType: 'USER',
+                        actorId: $user->getKey(),
+                        action: 'USER_NEW_TRUSTED_DEVICE_ADDED',
+                        module: 'SECURITY',
+                        targetType: 'USER_DEVICE',
+                        targetId: $device->getKey(),
+                        newValues: [
+                            'device_uuid' => $device->uuid,
+                            'device_slot' => $device->device_slot,
+                            'platform' => $device->platform,
+                            'device_name' => $device->device_name,
+                            'device_model' => $device->device_model,
+                            'app_version' => $device->app_version,
+                            'mfa_method' => $mfaMethod,
+                            'active_trusted_devices' => $user
+                                ->devices()
+                                ->where('is_active', true)
+                                ->where('is_trusted', true)
+                                ->whereNull('revoked_at')
+                                ->count(),
+                        ],
+                        ipAddress: $request->ip(),
+                        userAgent: $request->userAgent()
+                    );
+                }
 
                 AuditLog::record(
                     'USER',
