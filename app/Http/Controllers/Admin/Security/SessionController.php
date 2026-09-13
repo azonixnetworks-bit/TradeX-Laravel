@@ -10,6 +10,7 @@ use App\Services\Admin\Security\AdminCustomerDeviceSecurityService;
 use App\Services\Admin\Security\AdminSecurityService;
 use App\Services\Admin\Security\AdminSessionRiskService;
 use App\Services\Admin\Security\AdminSessionService;
+use App\Services\Admin\Security\CustomerDeviceRiskReadService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -20,7 +21,8 @@ class SessionController extends Controller
         Request $request,
         AdminSecurityService $service,
         AdminSessionService $adminSessions,
-        AdminSessionRiskService $riskService
+        AdminSessionRiskService $riskService,
+        CustomerDeviceRiskReadService $customerRisk
     ): View {
         $admin = $this->admin();
 
@@ -40,6 +42,8 @@ class SessionController extends Controller
                 'per_page',
             ])
         );
+
+        $customerRisk->enrichSessions($data['sessions']);
 
         $data['adminSessions'] = $adminSessions->inventory(
             $request->only([
@@ -105,6 +109,32 @@ class SessionController extends Controller
                     ->session()
                     ->get(AdminSessionService::SESSION_KEY, ''),
                 'canManage' => $admin->hasPermission('security.manage'),
+            ]
+        );
+    }
+
+    public function showCustomerDevice(
+        UserDevice $userDevice,
+        CustomerDeviceRiskReadService $riskService
+    ): View {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission('security.view'),
+            403
+        );
+
+        $userDevice->load('user');
+        $detail = $riskService->detail($userDevice);
+
+        return view(
+            'admin.security.customer-device-show',
+            [
+                'device' => $userDevice,
+                'risk' => $detail['risk'],
+                'history' => $detail['history'],
+                'canManage' => $admin->hasPermission('security.manage'),
+                'canOpenUser' => $admin->hasPermission('users.view_details'),
             ]
         );
     }
@@ -184,7 +214,7 @@ class SessionController extends Controller
         );
 
         return redirect()
-            ->route('admin.security.sessions')
+            ->route('admin.security.customer-devices.show', $userDevice)
             ->with(
                 $revoked ? 'success' : 'error',
                 $revoked
