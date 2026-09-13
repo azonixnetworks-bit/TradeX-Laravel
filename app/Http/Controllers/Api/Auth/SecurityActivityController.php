@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserDevice;
+use App\Services\Auth\CustomerSecurityEventReviewService;
 use App\Services\Auth\CustomerSecurityHistoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class SecurityActivityController extends Controller
 {
@@ -58,6 +61,46 @@ class SecurityActivityController extends Controller
                     ->values(),
                 'read_tracking' => false,
             ],
+        ]);
+    }
+
+    public function review(
+        Request $request,
+        int $eventId,
+        CustomerSecurityEventReviewService $security
+    ): JsonResponse {
+        $user = $request->user();
+        $currentDevice = $request->attributes->get('tradex_user_device');
+
+        abort_unless(
+            $user instanceof User
+            && $currentDevice instanceof UserDevice,
+            401,
+            'Unauthenticated.'
+        );
+
+        $validated = $request->validate([
+            'response' => [
+                'required',
+                'string',
+                Rule::in([
+                    CustomerSecurityEventReviewService::RESPONSE_YES,
+                    CustomerSecurityEventReviewService::RESPONSE_NO,
+                ]),
+            ],
+        ]);
+
+        $result = $security->respond(
+            $user,
+            $currentDevice,
+            $eventId,
+            (string) $validated['response'],
+            $request
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
         ]);
     }
 
