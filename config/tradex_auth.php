@@ -4,6 +4,17 @@ return [
     'access_token_minutes' => 15,
     'refresh_token_days' => 30,
 
+    /*
+     * A customer may keep at most this many active trusted devices.
+     * Device category (mobile/desktop) is descriptive only; the limit applies
+     * across all supported platforms. New devices still require strong login
+     * authentication before they can be trusted.
+     */
+    'max_trusted_devices' => max(
+        1,
+        (int) env('TRADEX_MAX_TRUSTED_DEVICES', 2)
+    ),
+
     'rate_limits' => [
         'login_per_minute' => 5,
         'login_per_hour_ip' => 30,
