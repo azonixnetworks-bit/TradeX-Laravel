@@ -23,15 +23,8 @@ class DeviceBindingService
             $platform
         );
 
-        $installationHash = hash(
-            'sha256',
-            strtolower(
-                trim(
-                    (string) $payload[
-                        'installation_id'
-                    ]
-                )
-            )
+        $installationHash = $this->hashInstallationId(
+            (string) $payload['installation_id']
         );
 
         $existing = $user
@@ -53,36 +46,38 @@ class DeviceBindingService
             );
         }
 
-        $slotOwner = $user
-            ->devices()
-            ->where(
-                'device_slot',
-                $slot
-            )
-            ->where(
-                'is_active',
-                true
-            )
-            ->whereNull(
-                'revoked_at'
-            )
-            ->first();
-
-        if (
-            $slotOwner !== null
-            && (
-                $existing === null
-                || $slotOwner->getKey()
-                    !== $existing->getKey()
-            )
-        ) {
-            throw new AuthApiException(
-                409,
-                'DEVICE_SLOT_OCCUPIED',
-                $slot === UserDevice::SLOT_MOBILE
-                    ? 'The mobile device slot is already occupied.'
-                    : 'The desktop device slot is already occupied.'
+        /*
+         * Existing trusted devices are allowed to sign in again even when the
+         * account already has the maximum number of trusted devices. Only a
+         * genuinely new installation consumes another device position.
+         *
+         * LoginService holds a row lock on the user before this method runs,
+         * so concurrent logins for the same account cannot both bypass this
+         * count and create more than the configured limit.
+         */
+        if ($existing === null) {
+            $maxTrustedDevices = max(
+                1,
+                (int) config(
+                    'tradex_auth.max_trusted_devices',
+                    2
+                )
             );
+
+            $activeTrustedDevices = $user
+                ->devices()
+                ->where('is_active', true)
+                ->where('is_trusted', true)
+                ->whereNull('revoked_at')
+                ->count();
+
+            if ($activeTrustedDevices >= $maxTrustedDevices) {
+                throw new AuthApiException(
+                    409,
+                    'DEVICE_LIMIT_REACHED',
+                    "This account already has {$maxTrustedDevices} trusted devices. Sign out or remove an existing device before adding another one."
+                );
+            }
         }
 
         $attributes = [
