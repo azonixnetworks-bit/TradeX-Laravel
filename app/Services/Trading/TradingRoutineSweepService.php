@@ -16,7 +16,7 @@ class TradingRoutineSweepService
     }
 
     /** @return array{enabled:bool,processed:int,accepted:int,failed:int,skipped:int} */
-    public function sweep(?int $limit = null, ?CarbonImmutable $now = null): array
+    public function sweep(?int $batchSize = null, ?CarbonImmutable $now = null): array
     {
         if (! (bool) config('trading_routine.enabled', true)) {
             return [
@@ -28,8 +28,8 @@ class TradingRoutineSweepService
             ];
         }
 
-        $limit = max(1, min(
-            $limit ?: (int) config('trading_routine.scheduler.batch_limit', 250),
+        $batchSize = max(1, min(
+            $batchSize ?: (int) config('trading_routine.scheduler.batch_limit', 250),
             1000
         ));
         $now = $now ?: CarbonImmutable::now('UTC');
@@ -45,34 +45,42 @@ class TradingRoutineSweepService
             ->where('enabled', true)
             ->with('user')
             ->orderBy('id')
-            ->limit($limit)
-            ->get()
-            ->each(function (TradingRoutinePreference $preference) use ($now, &$result): void {
-                $user = $preference->user;
-                if (! $user || ! $this->isDue($preference, $now)) {
-                    return;
-                }
+            ->chunkById(
+                $batchSize,
+                function ($preferences) use ($now, &$result): void {
+                    foreach ($preferences as $preference) {
+                        if (! $preference instanceof TradingRoutinePreference) {
+                            continue;
+                        }
 
-                try {
-                    $plan = $this->plans->createOrGet($user, $preference, $now);
-                    $result['processed']++;
+                        $user = $preference->user;
+                        if (! $user || ! $this->isDue($preference, $now)) {
+                            continue;
+                        }
 
-                    if (! $preference->whatsapp_pdf_enabled) {
-                        $result['skipped']++;
-                        return;
+                        try {
+                            $plan = $this->plans->createOrGet($user, $preference, $now);
+                            $result['processed']++;
+
+                            if (! $preference->whatsapp_pdf_enabled) {
+                                $result['skipped']++;
+                                continue;
+                            }
+
+                            $delivery = $this->deliveries->deliverWhatsApp($plan, $preference);
+
+                            match ($delivery->status) {
+                                TradingRoutineDelivery::STATUS_ACCEPTED => $result['accepted']++,
+                                TradingRoutineDelivery::STATUS_FAILED => $result['failed']++,
+                                default => $result['skipped']++,
+                            };
+                        } catch (Throwable) {
+                            $result['failed']++;
+                        }
                     }
-
-                    $delivery = $this->deliveries->deliverWhatsApp($plan, $preference);
-
-                    match ($delivery->status) {
-                        TradingRoutineDelivery::STATUS_ACCEPTED => $result['accepted']++,
-                        TradingRoutineDelivery::STATUS_FAILED => $result['failed']++,
-                        default => $result['skipped']++,
-                    };
-                } catch (Throwable) {
-                    $result['failed']++;
-                }
-            });
+                },
+                'id'
+            );
 
         return $result;
     }
