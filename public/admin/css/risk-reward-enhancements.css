@@ -25,6 +25,45 @@
     color: var(--gold-light);
 }
 
+.risk-reward-market-tabs {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+#riskRewardBinanceFields:not([hidden]) {
+    display: grid;
+    gap: 18px;
+}
+
+.risk-reward-field select {
+    width: 100%;
+    min-height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: #061321;
+    color: var(--text);
+    font-size: 15px;
+    outline: none;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.risk-reward-field select:focus {
+    border-color: rgba(217, 168, 60, .54);
+    box-shadow: 0 0 0 3px rgba(217, 168, 60, .08);
+}
+
+.risk-reward-side-button.active:not(.buy):not(.sell) {
+    border-color: rgba(217, 168, 60, .58);
+    background: rgba(217, 168, 60, .10);
+    color: var(--gold-light);
+}
+
+@media (max-width: 900px) {
+    .risk-reward-market-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 520px) {
     .risk-reward-result-actions {
         display: grid;
@@ -33,5 +72,9 @@
 
     .risk-reward-result-actions .secondary-btn {
         width: 100%;
+    }
+
+    .risk-reward-market-tabs {
+        grid-template-columns: 1fr;
     }
 }
