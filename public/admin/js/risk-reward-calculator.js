@@ -50,8 +50,12 @@
         specSymbol: document.getElementById('riskRewardSpecSymbol'),
         contractSize: document.getElementById('riskRewardContractSize'),
         minLot: document.getElementById('riskRewardMinLot'),
+        maxLot: document.getElementById('riskRewardMaxLot'),
         lotStep: document.getElementById('riskRewardLotStep'),
         specProfile: document.getElementById('riskRewardSpecProfile'),
+        specStatus: document.getElementById('riskRewardSpecStatus'),
+        specSource: document.getElementById('riskRewardSpecSource'),
+        specReviewed: document.getElementById('riskRewardSpecReviewed'),
     };
 
     const moneyFormatter = new Intl.NumberFormat('en-US', {
@@ -106,6 +110,7 @@
     }
 
     function updateInstrumentPreview() {
+        const market = currentMarket();
         const instrument = currentInstrument();
         const symbol = normalizeSymbol(instrumentInput.value);
 
@@ -117,24 +122,33 @@
             return;
         }
 
-        instrumentHelp.textContent = `${instrument.name} · ${instrument.spec_profile || 'TradeX reference profile'}`;
-        renderSpecification(symbol, instrument);
+        const status = instrument.spec_status || market?.spec_status || 'REFERENCE';
+        instrumentHelp.textContent = `${instrument.name} · ${instrument.spec_profile || 'TradeX reference profile'} · ${status}`;
+        renderSpecification(symbol, instrument, market);
     }
 
-    function renderSpecification(symbol, instrument) {
+    function renderSpecification(symbol, instrument, market = null) {
         resultNodes.specSymbol.textContent = symbol || '—';
         resultNodes.contractSize.textContent = formatNumber(instrument.contract_size);
         resultNodes.minLot.textContent = formatNumber(instrument.min_lot);
+        resultNodes.maxLot.textContent = formatNumber(instrument.max_lot);
         resultNodes.lotStep.textContent = formatNumber(instrument.lot_step);
         resultNodes.specProfile.textContent = instrument.spec_profile || 'TradeX reference';
+        resultNodes.specStatus.textContent = instrument.spec_status || market?.spec_status || 'REFERENCE';
+        resultNodes.specSource.textContent = instrument.spec_source || market?.spec_source || 'TradeX reference profile';
+        resultNodes.specReviewed.textContent = instrument.spec_verified_at || market?.spec_verified_at || 'Broker confirmation required';
     }
 
     function clearSpecification() {
         resultNodes.specSymbol.textContent = '—';
         resultNodes.contractSize.textContent = '—';
         resultNodes.minLot.textContent = '—';
+        resultNodes.maxLot.textContent = '—';
         resultNodes.lotStep.textContent = '—';
         resultNodes.specProfile.textContent = '—';
+        resultNodes.specStatus.textContent = '—';
+        resultNodes.specSource.textContent = '—';
+        resultNodes.specReviewed.textContent = '—';
     }
 
     function selectMarket(marketKey, clearInputs = true) {
@@ -221,8 +235,12 @@
         resultNodes.specSymbol.textContent = data.symbol || '—';
         resultNodes.contractSize.textContent = formatNumber(specification.contract_size);
         resultNodes.minLot.textContent = formatNumber(specification.min_lot);
+        resultNodes.maxLot.textContent = formatNumber(specification.max_lot);
         resultNodes.lotStep.textContent = formatNumber(specification.lot_step);
         resultNodes.specProfile.textContent = specification.profile || 'TradeX reference';
+        resultNodes.specStatus.textContent = specification.status || 'REFERENCE';
+        resultNodes.specSource.textContent = specification.source || 'TradeX reference profile';
+        resultNodes.specReviewed.textContent = specification.verified_at || 'Broker confirmation required';
 
         const warnings = Array.isArray(data.warnings) ? data.warnings.filter(Boolean) : [];
         resultNodes.warning.hidden = warnings.length === 0;
