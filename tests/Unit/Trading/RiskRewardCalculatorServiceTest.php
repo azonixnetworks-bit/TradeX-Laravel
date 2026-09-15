@@ -32,6 +32,8 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertEqualsWithDelta(0.20, $result['recommended_lot'], 0.000001);
         $this->assertEqualsWithDelta(100.00, $result['actual_risk'], 0.01);
         $this->assertEqualsWithDelta(200.00, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(20000.00, $result['position_units'], 0.01);
+        $this->assertEqualsWithDelta(100.00, $result['risk_utilization_percent'], 0.001);
         $this->assertEqualsWithDelta(2.00, $result['risk_reward_ratio'], 0.000001);
         $this->assertEqualsWithDelta(50.00, $result['stop_loss_distance'], 0.001);
         $this->assertEqualsWithDelta(100.00, $result['take_profit_distance'], 0.001);
@@ -53,6 +55,8 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertEqualsWithDelta(0.29, $result['recommended_lot'], 0.000001);
         $this->assertEqualsWithDelta(96.99, $result['actual_risk'], 0.01);
         $this->assertEqualsWithDelta(192.05, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(29000.00, $result['position_units'], 0.01);
+        $this->assertEqualsWithDelta(96.99, $result['risk_utilization_percent'], 0.02);
         $this->assertLessThanOrEqual(100.00, $result['actual_risk']);
     }
 
@@ -71,6 +75,8 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertEqualsWithDelta(0.10, $result['recommended_lot'], 0.000001);
         $this->assertEqualsWithDelta(100.00, $result['actual_risk'], 0.01);
         $this->assertEqualsWithDelta(200.00, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(10.00, $result['position_units'], 0.001);
+        $this->assertEqualsWithDelta(100.00, $result['risk_utilization_percent'], 0.001);
     }
 
     public function test_it_calculates_crypto_reference_profile(): void
@@ -88,6 +94,7 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertEqualsWithDelta(0.10, $result['recommended_lot'], 0.000001);
         $this->assertEqualsWithDelta(100.00, $result['actual_risk'], 0.01);
         $this->assertEqualsWithDelta(200.00, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(0.10, $result['position_units'], 0.000001);
     }
 
     public function test_it_calculates_deriv_reference_profile(): void
@@ -105,6 +112,8 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertEqualsWithDelta(1.00, $result['recommended_lot'], 0.000001);
         $this->assertEqualsWithDelta(5.00, $result['actual_risk'], 0.01);
         $this->assertEqualsWithDelta(10.00, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(1.00, $result['position_units'], 0.000001);
+        $this->assertEqualsWithDelta(100.00, $result['risk_utilization_percent'], 0.001);
     }
 
     public function test_it_does_not_force_minimum_lot_when_it_would_exceed_requested_risk(): void
@@ -121,6 +130,8 @@ class RiskRewardCalculatorServiceTest extends TestCase
 
         $this->assertNull($result['recommended_lot']);
         $this->assertNull($result['actual_risk']);
+        $this->assertNull($result['position_units']);
+        $this->assertNull($result['risk_utilization_percent']);
         $this->assertFalse($result['tradable_within_risk']);
         $this->assertEqualsWithDelta(10.00, $result['minimum_lot_risk'], 0.01);
         $this->assertNotEmpty($result['warnings']);
