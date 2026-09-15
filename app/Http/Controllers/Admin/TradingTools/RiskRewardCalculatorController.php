@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\TradingTools;
 
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
+use App\Services\Trading\BinanceFuturesRiskRewardCalculatorService;
 use App\Services\Trading\RiskRewardCalculatorService;
 use App\Services\Trading\TradingInstrumentCatalog;
 use DomainException;
@@ -31,7 +32,9 @@ class RiskRewardCalculatorController extends Controller
 
     public function calculate(
         Request $request,
-        RiskRewardCalculatorService $calculator
+        RiskRewardCalculatorService $calculator,
+        BinanceFuturesRiskRewardCalculatorService $binanceFuturesCalculator,
+        TradingInstrumentCatalog $catalog
     ): JsonResponse {
         $this->viewer();
 
@@ -44,7 +47,10 @@ class RiskRewardCalculatorController extends Controller
                 'entry' => ['required', 'numeric', 'gt:0'],
                 'stop_loss' => ['required', 'numeric', 'gt:0'],
                 'take_profit' => ['required', 'numeric', 'gt:0'],
-                'risk_amount' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
+                'risk_amount' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
+                'margin_amount' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
+                'calculation_mode' => ['nullable', 'in:RISK_BASED,MARGIN_BASED'],
+                'leverage' => ['nullable', 'integer', 'min:1', 'max:125'],
                 'quote_to_usd_rate' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
             ]
         );
@@ -62,9 +68,19 @@ class RiskRewardCalculatorController extends Controller
         }
 
         try {
-            $result = $calculator->calculate(
-                $validator->validated()
-            );
+            $input = $validator->validated();
+
+            if (strtolower((string) ($input['market'] ?? '')) === 'binance_futures') {
+                $market = $catalog->markets()['binance_futures'] ?? null;
+
+                if (! is_array($market)) {
+                    throw new DomainException('Binance Futures calculator configuration is unavailable.');
+                }
+
+                $result = $binanceFuturesCalculator->calculate($input, $market);
+            } else {
+                $result = $calculator->calculate($input);
+            }
         } catch (DomainException $exception) {
             return response()->json(
                 [
