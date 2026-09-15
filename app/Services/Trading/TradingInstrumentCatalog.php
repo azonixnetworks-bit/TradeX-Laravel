@@ -21,10 +21,16 @@ class TradingInstrumentCatalog
             (array) config('ic_markets_commodities', [])
         );
 
-        return $this->applyBrokerCatalog(
+        $markets = $this->applyBrokerCatalog(
             $markets,
             'crypto',
             (array) config('ic_markets_crypto', [])
+        );
+
+        return $this->applyBrokerCatalog(
+            $markets,
+            'binance_futures',
+            (array) config('binance_futures', [])
         );
     }
 
@@ -53,6 +59,12 @@ class TradingInstrumentCatalog
         $market['broker'] = (string) ($catalog['broker'] ?? ($market['broker'] ?? 'IC Markets'));
         $market['instrument_count'] = (int) ($catalog['instrument_count'] ?? count($instruments));
         $market['instruments'] = $instruments;
+
+        foreach (['calculation_modes', 'leverage'] as $metadataKey) {
+            if (array_key_exists($metadataKey, $catalog)) {
+                $market[$metadataKey] = $catalog[$metadataKey];
+            }
+        }
 
         $markets[$marketKey] = $market;
 
