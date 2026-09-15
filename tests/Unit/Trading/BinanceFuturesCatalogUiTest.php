@@ -42,8 +42,12 @@ class BinanceFuturesCatalogUiTest extends TestCase
         $script = file_get_contents(base_path(
             'public/admin/js/risk-reward-binance-futures.js'
         ));
+        $leverageScript = file_get_contents(base_path(
+            'public/admin/js/risk-reward-binance-leverage.js'
+        ));
 
         $this->assertStringContainsString('risk-reward-binance-futures.js', $view);
+        $this->assertStringContainsString('risk-reward-binance-leverage.js', $view);
         $this->assertStringContainsString('riskRewardCalculationMode', $script);
         $this->assertStringContainsString('RISK_BASED', $script);
         $this->assertStringContainsString('MARGIN_BASED', $script);
@@ -65,5 +69,14 @@ class BinanceFuturesCatalogUiTest extends TestCase
         $this->assertStringContainsString('fetch(root.dataset.calculateEndpoint', $script);
         $this->assertStringNotContainsString('margin * leverage', strtolower($script));
         $this->assertStringNotContainsString('risk /', strtolower($script));
+
+        $this->assertStringContainsString('riskRewardLeverageRange', $leverageScript);
+        $this->assertStringContainsString('type="range"', $leverageScript);
+        $this->assertStringContainsString('riskRewardLeverageMinus', $leverageScript);
+        $this->assertStringContainsString('riskRewardLeveragePlus', $leverageScript);
+        $this->assertStringContainsString('riskRewardLeveragePresets', $leverageScript);
+        $this->assertStringContainsString('[1, 5, 10, 20, 50, 100, 125]', $leverageScript);
+        $this->assertStringContainsString("source.dispatchEvent(new Event('change'", $leverageScript);
+        $this->assertStringNotContainsString('fetch(', $leverageScript);
     }
 }
