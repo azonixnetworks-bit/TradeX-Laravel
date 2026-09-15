@@ -36,6 +36,7 @@
     }
 
     const defaultMarket = root.dataset.defaultMarket || Object.keys(markets)[0] || 'forex';
+    const conversionUi = ensureConversionField();
 
     const resultNodes = {
         lotSize: document.getElementById('riskRewardLotSize'),
@@ -71,6 +72,60 @@
         maximumFractionDigits: 8,
     });
 
+    function ensureConversionField() {
+        const existing = document.getElementById('riskRewardConversionField');
+
+        if (existing) {
+            return {
+                wrapper: existing,
+                input: document.getElementById('riskRewardQuoteToUsdRate'),
+                label: document.getElementById('riskRewardConversionLabel'),
+                help: document.getElementById('riskRewardConversionHelp'),
+            };
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'risk-reward-field';
+        wrapper.id = 'riskRewardConversionField';
+        wrapper.hidden = true;
+
+        const label = document.createElement('label');
+        label.id = 'riskRewardConversionLabel';
+        label.htmlFor = 'riskRewardQuoteToUsdRate';
+        label.textContent = 'Quote Currency → USD Rate';
+
+        const input = document.createElement('input');
+        input.id = 'riskRewardQuoteToUsdRate';
+        input.name = 'quote_to_usd_rate';
+        input.type = 'number';
+        input.min = '0.00000001';
+        input.step = 'any';
+        input.inputMode = 'decimal';
+        input.placeholder = 'Auto from TradeX market data';
+
+        const help = document.createElement('small');
+        help.className = 'risk-reward-field-help';
+        help.id = 'riskRewardConversionHelp';
+        help.textContent = 'Leave blank to use the configured TradeX Forex market-data provider.';
+
+        const error = document.createElement('div');
+        error.className = 'risk-reward-field-error';
+        error.dataset.errorFor = 'quote_to_usd_rate';
+
+        wrapper.append(label, input, help, error);
+
+        const riskAmount = document.getElementById('riskRewardAmount');
+        const riskField = riskAmount?.closest('.risk-reward-field');
+
+        if (riskField) {
+            riskField.insertAdjacentElement('afterend', wrapper);
+        } else {
+            form.appendChild(wrapper);
+        }
+
+        return { wrapper, input, label, help };
+    }
+
     function currentMarket() {
         return markets[marketField.value] || null;
     }
@@ -90,6 +145,48 @@
         return market.instruments[symbol] || null;
     }
 
+    function requiresExternalConversion(instrument = currentInstrument()) {
+        if (marketField.value !== 'forex' || !instrument) {
+            return false;
+        }
+
+        const base = String(instrument.base_currency || '').toUpperCase();
+        const quote = String(instrument.quote_currency || '').toUpperCase();
+
+        return base !== '' && quote !== '' && base !== 'USD' && quote !== 'USD';
+    }
+
+    function updateConversionField() {
+        if (!conversionUi.wrapper || !conversionUi.input) {
+            return;
+        }
+
+        const instrument = currentInstrument();
+        const required = requiresExternalConversion(instrument);
+        conversionUi.wrapper.hidden = !required;
+
+        if (!required) {
+            conversionUi.input.value = '';
+            conversionUi.input.classList.remove('is-invalid');
+            conversionUi.input.removeAttribute('aria-invalid');
+            const errorNode = root.querySelector('[data-error-for="quote_to_usd_rate"]');
+            if (errorNode) {
+                errorNode.textContent = '';
+            }
+            return;
+        }
+
+        const quote = String(instrument?.quote_currency || '').toUpperCase();
+
+        if (conversionUi.label) {
+            conversionUi.label.textContent = `${quote} → USD Conversion Rate (optional)`;
+        }
+
+        if (conversionUi.help) {
+            conversionUi.help.textContent = `Leave blank for automatic ${quote}→USD conversion from TradeX market data. Enter the current rate only if the live provider is unavailable.`;
+        }
+    }
+
     function populateInstrumentList() {
         const market = currentMarket();
         instrumentList.replaceChildren();
@@ -100,15 +197,20 @@
 
         Object.entries(market.instruments).forEach(([symbol, instrument]) => {
             const option = document.createElement('option');
+            const category = instrument?.category ? ` · ${instrument.category}` : '';
             option.value = symbol;
-            option.label = instrument?.name ? `${symbol} — ${instrument.name}` : symbol;
+            option.label = instrument?.name
+                ? `${symbol} — ${instrument.name}${category}`
+                : symbol;
             instrumentList.appendChild(option);
         });
     }
 
     function updateMarketDescription() {
         const market = currentMarket();
-        marketDescription.textContent = market?.description || '';
+        const count = Number(market?.instrument_count || 0);
+        const suffix = count > 0 ? ` · ${count} instruments` : '';
+        marketDescription.textContent = `${market?.description || ''}${suffix}`;
     }
 
     function updateInstrumentPreview() {
@@ -121,12 +223,17 @@
                 ? 'Select an exact symbol from the available list.'
                 : 'Start typing a symbol, for example EURUSD.';
             clearSpecification();
+            updateConversionField();
             return;
         }
 
         const status = instrument.spec_status || market?.spec_status || 'REFERENCE';
-        instrumentHelp.textContent = `${instrument.name} · ${instrument.spec_profile || 'TradeX reference profile'} · ${status}`;
+        const broker = instrument.broker || market?.broker || '';
+        const category = instrument.category || '';
+        const context = [broker, category, instrument.spec_profile, status].filter(Boolean).join(' · ');
+        instrumentHelp.textContent = `${instrument.name}${context ? ` · ${context}` : ''}`;
         renderSpecification(symbol, instrument, market);
+        updateConversionField();
     }
 
     function renderSpecification(symbol, instrument, market = null) {
@@ -176,6 +283,8 @@
             hideMessage();
             resetResults();
             updateInstrumentPreview();
+        } else {
+            updateConversionField();
         }
     }
 
@@ -220,13 +329,17 @@
     function renderResult(data) {
         const specification = data.specification || {};
         const recommendedLot = data.recommended_lot;
+        const conversion = data.quote_to_usd_conversion || {};
 
         if (recommendedLot === null || recommendedLot === undefined) {
             resultNodes.lotSize.textContent = 'Not Tradable';
             resultNodes.lotStatus.textContent = 'The configured minimum volume would exceed the requested risk.';
         } else {
+            const conversionText = conversion.source && conversion.source !== 'USD_QUOTE'
+                ? ` · FX ${conversion.source}`
+                : '';
             resultNodes.lotSize.textContent = `${formatNumber(recommendedLot)} lot`;
-            resultNodes.lotStatus.textContent = `${data.symbol} · ${data.side} · requested risk ${money(data.risk_amount)}`;
+            resultNodes.lotStatus.textContent = `${data.symbol} · ${data.side} · requested risk ${money(data.risk_amount)}${conversionText}`;
         }
 
         resultNodes.actualRisk.textContent = nullableMoney(data.actual_risk);
@@ -328,6 +441,7 @@
 
     function payloadFromForm() {
         const data = new FormData(form);
+        const conversionRate = String(data.get('quote_to_usd_rate') || '').trim();
 
         return {
             market: String(data.get('market') || ''),
@@ -337,6 +451,7 @@
             stop_loss: String(data.get('stop_loss') || ''),
             take_profit: String(data.get('take_profit') || ''),
             risk_amount: String(data.get('risk_amount') || ''),
+            quote_to_usd_rate: conversionRate === '' ? null : conversionRate,
         };
     }
 
@@ -415,6 +530,10 @@
             riskAmount.value = '';
         }
 
+        if (conversionUi.input) {
+            conversionUi.input.value = '';
+        }
+
         clearErrors();
         hideMessage();
         resetResults();
@@ -442,6 +561,12 @@
         hideMessage();
         resetResults();
         updateInstrumentPreview();
+    });
+
+    conversionUi.input?.addEventListener('input', () => {
+        clearErrors();
+        hideMessage();
+        resetResults();
     });
 
     form.addEventListener('submit', submitCalculator);
