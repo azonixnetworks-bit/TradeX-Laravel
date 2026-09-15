@@ -4,6 +4,10 @@ namespace App\Services\Trading;
 
 class TradingInstrumentCatalog
 {
+    public function __construct(
+        private readonly BinanceFuturesExchangeInfoService $binanceFuturesExchangeInfo
+    ) {}
+
     /** @return array<string, mixed> */
     public function markets(): array
     {
@@ -27,11 +31,19 @@ class TradingInstrumentCatalog
             (array) config('ic_markets_crypto', [])
         );
 
-        return $this->applyBrokerCatalog(
+        $markets = $this->applyBrokerCatalog(
             $markets,
             'binance_futures',
             (array) config('binance_futures', [])
         );
+
+        if (isset($markets['binance_futures']) && is_array($markets['binance_futures'])) {
+            $markets['binance_futures'] = $this->binanceFuturesExchangeInfo->hydrateMarket(
+                $markets['binance_futures']
+            );
+        }
+
+        return $markets;
     }
 
     /**
@@ -61,6 +73,7 @@ class TradingInstrumentCatalog
         $market['instruments'] = $instruments;
 
         foreach ([
+            'live_catalog',
             'calculation_modes',
             'margin_modes',
             'leverage',
