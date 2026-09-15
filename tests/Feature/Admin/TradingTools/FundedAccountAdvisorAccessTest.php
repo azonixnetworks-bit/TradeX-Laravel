@@ -24,7 +24,7 @@ class FundedAccountAdvisorAccessTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_authorized_admin_can_open_advisor(): void
+    public function test_authorized_admin_sees_customer_owned_report_monitor_not_customer_input_form(): void
     {
         $admin = $this->createAdminWithPermissions(['funded_advisor.view']);
 
@@ -33,49 +33,22 @@ class FundedAccountAdvisorAccessTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Funded Account Advisor');
-        $response->assertSee('Generate Customer Risk Plan');
+        $response->assertSee('Customer-owned workflow');
+        $response->assertSee('Customer-Generated Reports');
+        $response->assertDontSee('Generate Customer Risk Plan');
+        $response->assertDontSee('Customer Name');
         $this->assertStringContainsString(
             'no-store',
             (string) $response->headers->get('Cache-Control')
         );
     }
 
-    public function test_advisor_report_snapshots_partner_affiliate_details(): void
-    {
-        $admin = $this->createAdminWithPermissions(['funded_advisor.view']);
-        $partner = FundedAccountPartner::query()->create([
-            'name' => 'TradeX Test Funding',
-            'affiliate_url' => 'https://partner.example/ref/tradex',
-            'promo_code' => 'TRADEX10',
-            'offer_text' => 'TradeX customer offer',
-            'is_active' => true,
-            'is_featured' => true,
-            'priority' => 1,
-            'created_by_admin_id' => $admin->id,
-            'updated_by_admin_id' => $admin->id,
-        ]);
-
-        $response = $this->actingAs($admin, 'admin')
-            ->post(route('admin.funded_advisor.reports.generate'), array_merge(
-                $this->validAdvisorInput(),
-                ['partner_uuid' => $partner->uuid]
-            ));
-
-        $report = FundedAdvisorReport::query()->firstOrFail();
-
-        $response->assertRedirect(route('admin.funded_advisor.reports.show', $report));
-        $this->assertSame('TradeX Test Funding', $report->partner_name_snapshot);
-        $this->assertSame('https://partner.example/ref/tradex', $report->affiliate_url_snapshot);
-        $this->assertSame('TRADEX10', $report->promo_code_snapshot);
-        $this->assertSame(250.0, (float) $report->output_json['recommended_risk_amount']);
-        $this->assertSame(3, $report->output_json['recommended_entries']);
-    }
-
-    public function test_authorized_admin_can_download_pdf_with_partner_link(): void
+    public function test_authorized_admin_can_download_existing_customer_pdf_with_partner_link(): void
     {
         $admin = $this->createAdminWithPermissions(['funded_advisor.view']);
         $report = FundedAdvisorReport::query()->create([
             'customer_name' => 'PDF Customer',
+            'customer_email' => 'pdf-customer@tradex.test',
             'prop_firm_name' => 'Example Funding',
             'partner_name_snapshot' => 'TradeX Test Funding',
             'affiliate_url_snapshot' => 'https://partner.example/ref/tradex',
@@ -112,7 +85,6 @@ class FundedAccountAdvisorAccessTest extends TestCase
                 'warnings' => [],
                 'disclaimer' => 'Risk planning only.',
             ],
-            'generated_by_admin_id' => $admin->id,
             'generated_at' => now(),
         ]);
 
@@ -163,8 +135,6 @@ class FundedAccountAdvisorAccessTest extends TestCase
     private function validAdvisorInput(): array
     {
         return [
-            'customer_name' => 'Advisor Test Customer',
-            'customer_email' => 'customer@tradex.test',
             'prop_firm_name' => 'Example Funding',
             'phase' => 'EVALUATION',
             'account_size' => 100000,
