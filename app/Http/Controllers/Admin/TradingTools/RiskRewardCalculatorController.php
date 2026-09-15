@@ -63,10 +63,8 @@ class RiskRewardCalculatorController extends Controller
                     Rule::requiredIf($isBinanceFutures),
                     'nullable', 'in:RISK_BASED,MARGIN_BASED',
                 ],
-                'margin_mode' => [
-                    Rule::requiredIf($isBinanceFutures),
-                    'nullable', 'in:ISOLATED,CROSS',
-                ],
+                // Optional for backward compatibility. The Binance service defaults to ISOLATED.
+                'margin_mode' => ['nullable', 'in:ISOLATED,CROSS'],
                 'leverage' => [
                     Rule::requiredIf($isBinanceFutures),
                     'nullable', 'integer', 'min:1', 'max:125',
