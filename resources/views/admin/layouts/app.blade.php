@@ -159,6 +159,13 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->hasPermission('trading_routine.view'))
+<script
+    src="{{ asset('admin/js/trading-routine-nav.js') }}"
+    data-routine-url="{{ route('admin.trading_routine.index') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
