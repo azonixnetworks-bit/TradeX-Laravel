@@ -2,8 +2,11 @@
 
 $broker = 'Binance';
 $verifiedAt = '2026-09-15';
-$source = 'Binance official USDⓈ-M Futures calculator, fee, funding and liquidation documentation; live symbol filters, fee tier, funding rate and leverage/maintenance-margin tiers remain authoritative';
+$source = 'Binance official USDⓈ-M Futures calculator, fee, funding, liquidation and exchangeInfo documentation; live symbol filters, fee tier, funding rate and leverage/maintenance-margin tiers remain authoritative';
 
+// Emergency fallback only. Production/runtime symbol discovery comes from Binance public
+// GET /fapi/v1/exchangeInfo and is cached server-side. Keep these core symbols so the
+// calculator remains usable when Binance market-data access is temporarily unavailable.
 $symbols = [
     'BTCUSDT' => 'Bitcoin / Tether',
     'ETHUSDT' => 'Ethereum / Tether',
@@ -29,16 +32,16 @@ foreach ($symbols as $symbol => $name) {
         'contract_size' => 1.0,
         'base_currency' => $base,
         'quote_currency' => 'USDT',
-        // Risk planning precision only. Binance live exchangeInfo LOT_SIZE / MARKET_LOT_SIZE
-        // filters are authoritative for executable min/max/step quantity.
+        // Fallback risk-planning precision only. Binance live exchangeInfo PRICE_FILTER,
+        // LOT_SIZE and MARKET_LOT_SIZE filters are authoritative when live catalog loads.
         'min_lot' => 0.00000001,
         'max_lot' => 1000000000.0,
         'lot_step' => 0.00000001,
         'tick_size' => 0.00000001,
         'distance_unit' => 0.00000001,
         'distance_label' => 'price units',
-        'spec_profile' => 'Binance USDⓈ-M perpetual risk-planning profile',
-        'spec_status' => 'PARTIALLY VERIFIED',
+        'spec_profile' => 'Binance USDⓈ-M perpetual emergency fallback profile',
+        'spec_status' => 'FALLBACK / PARTIALLY VERIFIED',
         'spec_source' => $source,
         'spec_verified_at' => $verifiedAt,
     ];
@@ -47,12 +50,25 @@ foreach ($symbols as $symbol => $name) {
 return [
     'enabled' => true,
     'label' => 'Binance Futures',
-    'description' => 'USDⓈ-M perpetual risk planning with leverage, all-in fee/slippage/funding estimates and optional isolated liquidation estimate. Live Binance account and tier values remain authoritative.',
+    'description' => 'USDⓈ-M perpetual risk planning with live Binance symbol discovery, leverage, all-in fee/slippage/funding estimates and optional isolated liquidation estimate.',
     'broker' => $broker,
     'instrument_count' => count($instruments),
     'spec_status' => 'PARTIALLY VERIFIED',
     'spec_source' => $source,
     'spec_verified_at' => $verifiedAt,
+    'live_catalog' => [
+        'enabled' => (bool) env('BINANCE_FUTURES_LIVE_CATALOG_ENABLED', true),
+        'base_url' => (string) env('BINANCE_FUTURES_BASE_URL', 'https://fapi.binance.com'),
+        'quote_asset' => 'USDT',
+        'contract_type' => 'PERPETUAL',
+        'trading_status' => 'TRADING',
+        'cache_seconds' => (int) env('BINANCE_FUTURES_CATALOG_CACHE_SECONDS', 600),
+        'stale_cache_seconds' => (int) env('BINANCE_FUTURES_CATALOG_STALE_SECONDS', 86400),
+        'connect_timeout_seconds' => (int) env('BINANCE_FUTURES_CONNECT_TIMEOUT_SECONDS', 2),
+        'timeout_seconds' => (int) env('BINANCE_FUTURES_TIMEOUT_SECONDS', 5),
+        // Tests remain deterministic by default. Dedicated tests can explicitly enable this.
+        'allow_testing' => false,
+    ],
     'calculation_modes' => [
         'RISK_BASED' => 'Risk Based',
         'MARGIN_BASED' => 'Margin Based',
