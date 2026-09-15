@@ -134,6 +134,14 @@ class RiskRewardCalculatorService
             ? $profitPerLotUsd * $recommendedLot
             : null;
 
+        $positionUnits = $recommendedLot !== null
+            ? $recommendedLot * $contractSize
+            : null;
+
+        $riskUtilization = $actualRisk !== null
+            ? ($actualRisk / $riskAmount) * 100
+            : null;
+
         $riskRewardRatio = $rewardDistance / $riskDistance;
         $slDistanceUnits = $riskDistance / $distanceUnit;
         $tpDistanceUnits = $rewardDistance / $distanceUnit;
@@ -153,6 +161,8 @@ class RiskRewardCalculatorService
             'tradable_within_risk' => $tradableWithinRisk,
             'actual_risk' => $actualRisk,
             'potential_profit' => $potentialProfit,
+            'position_units' => $positionUnits,
+            'risk_utilization_percent' => $riskUtilization,
             'risk_reward_ratio' => $riskRewardRatio,
             'stop_loss_distance' => $slDistanceUnits,
             'take_profit_distance' => $tpDistanceUnits,
