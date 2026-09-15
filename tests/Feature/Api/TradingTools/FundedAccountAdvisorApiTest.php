@@ -45,7 +45,7 @@ class FundedAccountAdvisorApiTest extends TestCase
             ->assertJsonPath('data.partners.0.promo_code', 'TRADEX10');
     }
 
-    public function test_report_uses_authenticated_customer_identity_even_if_spoofed_identity_fields_are_sent(): void
+    public function test_report_snapshots_authenticated_customer_identity_and_partner(): void
     {
         $user = $this->createApiUser([
             'name' => 'Real TradeX Customer',
@@ -63,14 +63,11 @@ class FundedAccountAdvisorApiTest extends TestCase
             'priority' => 1,
         ]);
 
-        $payload = array_merge($this->validAdvisorInput(), [
-            'partner_uuid' => $partner->uuid,
-            'customer_name' => 'Spoofed Customer',
-            'customer_email' => 'spoofed@example.test',
-        ]);
-
         $response = $this->withToken($token)
-            ->postJson('/api/v1/funded-account-advisor/reports', $payload);
+            ->postJson('/api/v1/funded-account-advisor/reports', array_merge(
+                $this->validAdvisorInput(),
+                ['partner_uuid' => $partner->uuid]
+            ));
 
         $response->assertCreated()
             ->assertJsonPath('data.customer.name', 'Real TradeX Customer')
@@ -87,6 +84,25 @@ class FundedAccountAdvisorApiTest extends TestCase
         $this->assertSame('TradeX Funding Partner', $report->partner_name_snapshot);
         $this->assertSame('https://partner.example/ref/tradex', $report->affiliate_url_snapshot);
         $this->assertNull($report->generated_by_admin_id);
+    }
+
+    public function test_customer_cannot_override_name_or_email_in_report_request(): void
+    {
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->postJson('/api/v1/funded-account-advisor/reports', array_merge(
+                $this->validAdvisorInput(),
+                [
+                    'customer_name' => 'Spoofed Customer',
+                    'customer_email' => 'spoofed@example.test',
+                ]
+            ))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['customer_name', 'customer_email']);
+
+        $this->assertDatabaseCount('funded_advisor_reports', 0);
     }
 
     public function test_customer_can_only_view_and_download_own_report(): void
