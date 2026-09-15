@@ -152,6 +152,13 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->hasPermission('funded_advisor.view'))
+<script
+    src="{{ asset('admin/js/funded-account-advisor-nav.js') }}"
+    data-advisor-url="{{ route('admin.funded_advisor.index') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
