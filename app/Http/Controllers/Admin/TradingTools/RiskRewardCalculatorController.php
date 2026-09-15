@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\TradingTools;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Services\Trading\RiskRewardCalculatorService;
+use App\Services\Trading\TradingInstrumentCatalog;
 use DomainException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,14 +14,14 @@ use Illuminate\Support\Facades\Validator;
 
 class RiskRewardCalculatorController extends Controller
 {
-    public function index(): Response
+    public function index(TradingInstrumentCatalog $catalog): Response
     {
         $this->viewer();
 
         return response()->view(
             'admin.trading_tools.risk_reward.index',
             [
-                'markets' => config('trading_instruments.markets', []),
+                'markets' => $catalog->markets(),
                 'disclaimer' => (string) config('trading_instruments.disclaimer', ''),
             ],
             200,
@@ -44,6 +45,7 @@ class RiskRewardCalculatorController extends Controller
                 'stop_loss' => ['required', 'numeric', 'gt:0'],
                 'take_profit' => ['required', 'numeric', 'gt:0'],
                 'risk_amount' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
+                'quote_to_usd_rate' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
             ]
         );
 
