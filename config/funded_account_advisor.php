@@ -13,6 +13,7 @@ return [
     */
     'max_recommended_risk_percent' => 0.50,
     'max_daily_plan_percent' => 1.00,
+    'max_planned_entries' => 5,
     'safety_reserve_percent' => 20.0,
 
     'status_thresholds' => [
