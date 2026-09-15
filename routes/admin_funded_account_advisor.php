@@ -13,8 +13,6 @@ Route::prefix('admin')
             ->group(function (): void {
                 Route::get('/', [FundedAccountAdvisorController::class, 'index'])
                     ->name('index');
-                Route::post('/reports', [FundedAccountAdvisorController::class, 'generate'])
-                    ->name('reports.generate');
                 Route::get('/reports/{fundedAdvisorReport}', [FundedAccountAdvisorController::class, 'show'])
                     ->name('reports.show');
                 Route::get('/reports/{fundedAdvisorReport}/pdf', [FundedAccountAdvisorController::class, 'pdf'])
