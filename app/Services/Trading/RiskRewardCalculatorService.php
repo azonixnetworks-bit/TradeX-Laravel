@@ -69,14 +69,23 @@ class RiskRewardCalculatorService
             throw new DomainException('Stop loss and take profit must be different from entry price.');
         }
 
-        $quoteToUsd = $this->quoteToUsdRate(
-            (string) ($instrument['base_currency'] ?? ''),
-            (string) ($instrument['quote_currency'] ?? ''),
-            $entry
+        $baseCurrency = (string) ($instrument['base_currency'] ?? '');
+        $quoteCurrency = (string) ($instrument['quote_currency'] ?? '');
+
+        $riskQuoteToUsd = $this->quoteToUsdRate(
+            $baseCurrency,
+            $quoteCurrency,
+            $stopLoss
         );
 
-        $riskPerLotUsd = $riskDistance * $contractSize * $quoteToUsd;
-        $profitPerLotUsd = $rewardDistance * $contractSize * $quoteToUsd;
+        $profitQuoteToUsd = $this->quoteToUsdRate(
+            $baseCurrency,
+            $quoteCurrency,
+            $takeProfit
+        );
+
+        $riskPerLotUsd = $riskDistance * $contractSize * $riskQuoteToUsd;
+        $profitPerLotUsd = $rewardDistance * $contractSize * $profitQuoteToUsd;
 
         if ($riskPerLotUsd <= 0) {
             throw new DomainException('Unable to calculate risk for the selected instrument.');
@@ -151,7 +160,8 @@ class RiskRewardCalculatorService
             'risk_per_lot' => $riskPerLotUsd,
             'profit_per_lot' => $profitPerLotUsd,
             'minimum_lot_risk' => $minimumLotRisk,
-            'quote_to_usd_rate' => $quoteToUsd,
+            'risk_quote_to_usd_rate' => $riskQuoteToUsd,
+            'profit_quote_to_usd_rate' => $profitQuoteToUsd,
             'warnings' => $warnings,
             'specification' => [
                 'contract_size' => $contractSize,
@@ -159,8 +169,8 @@ class RiskRewardCalculatorService
                 'max_lot' => $maxLot,
                 'lot_step' => $lotStep,
                 'tick_size' => (float) ($instrument['tick_size'] ?? 0),
-                'base_currency' => (string) ($instrument['base_currency'] ?? ''),
-                'quote_currency' => (string) ($instrument['quote_currency'] ?? ''),
+                'base_currency' => $baseCurrency,
+                'quote_currency' => $quoteCurrency,
                 'profile' => (string) ($instrument['spec_profile'] ?? 'TradeX reference'),
             ],
         ];
@@ -199,7 +209,7 @@ class RiskRewardCalculatorService
     private function quoteToUsdRate(
         string $baseCurrency,
         string $quoteCurrency,
-        float $entry
+        float $conversionPrice
     ): float {
         $baseCurrency = strtoupper($baseCurrency);
         $quoteCurrency = strtoupper($quoteCurrency);
@@ -208,8 +218,8 @@ class RiskRewardCalculatorService
             return 1.0;
         }
 
-        if ($baseCurrency === 'USD' && $entry > 0) {
-            return 1.0 / $entry;
+        if ($baseCurrency === 'USD' && $conversionPrice > 0) {
+            return 1.0 / $conversionPrice;
         }
 
         throw new DomainException(
