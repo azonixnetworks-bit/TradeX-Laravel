@@ -42,6 +42,8 @@
         lotStatus: document.getElementById('riskRewardLotStatus'),
         actualRisk: document.getElementById('riskRewardActualRisk'),
         potentialProfit: document.getElementById('riskRewardPotentialProfit'),
+        positionUnits: document.getElementById('riskRewardPositionUnits'),
+        riskUtilization: document.getElementById('riskRewardRiskUtilization'),
         ratio: document.getElementById('riskRewardRatio'),
         perLot: document.getElementById('riskRewardPerLot'),
         slDistance: document.getElementById('riskRewardSlDistance'),
@@ -205,6 +207,8 @@
         resultNodes.lotStatus.textContent = 'Complete the trade setup to calculate.';
         resultNodes.actualRisk.textContent = '—';
         resultNodes.potentialProfit.textContent = '—';
+        resultNodes.positionUnits.textContent = '—';
+        resultNodes.riskUtilization.textContent = '—';
         resultNodes.ratio.textContent = '—';
         resultNodes.perLot.textContent = '—';
         resultNodes.slDistance.textContent = '—';
@@ -227,6 +231,12 @@
 
         resultNodes.actualRisk.textContent = nullableMoney(data.actual_risk);
         resultNodes.potentialProfit.textContent = nullableMoney(data.potential_profit);
+        resultNodes.positionUnits.textContent = data.position_units === null || data.position_units === undefined
+            ? '—'
+            : formatNumber(data.position_units);
+        resultNodes.riskUtilization.textContent = data.risk_utilization_percent === null || data.risk_utilization_percent === undefined
+            ? '—'
+            : `${formatFixed(data.risk_utilization_percent, 2)}%`;
         resultNodes.ratio.textContent = `1 : ${formatFixed(data.risk_reward_ratio, 2)}`;
         resultNodes.perLot.textContent = money(data.risk_per_lot);
         resultNodes.slDistance.textContent = `${formatFixed(data.stop_loss_distance, 2)} ${data.distance_label || 'points'}`;
