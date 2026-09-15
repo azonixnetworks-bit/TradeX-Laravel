@@ -326,5 +326,6 @@
 
 @push('scripts')
 <script src="{{ asset('admin/js/risk-reward-calculator.js') }}"></script>
+<script src="{{ asset('admin/js/risk-reward-binance-futures.js') }}"></script>
 <script src="{{ asset('admin/js/risk-reward-copy.js') }}"></script>
 @endpush
