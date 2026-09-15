@@ -111,3 +111,68 @@
 
     refreshState();
 })();
+
+(() => {
+    'use strict';
+
+    const root = document.getElementById('riskRewardCalculatorApp');
+    const marketField = document.getElementById('riskRewardMarket');
+    const instrumentInput = document.getElementById('riskRewardInstrument');
+    const marketDataNode = document.getElementById('riskRewardMarketData');
+    const wrapper = document.getElementById('riskRewardConversionField');
+    const input = document.getElementById('riskRewardQuoteToUsdRate');
+    const label = document.getElementById('riskRewardConversionLabel');
+    const help = document.getElementById('riskRewardConversionHelp');
+
+    if (!root || !marketField || !instrumentInput || !marketDataNode || !wrapper || !input) {
+        return;
+    }
+
+    let markets = {};
+
+    try {
+        markets = JSON.parse(marketDataNode.textContent || '{}');
+    } catch (error) {
+        return;
+    }
+
+    function refreshCrossMarketConversion() {
+        const market = markets[marketField.value] || null;
+        const symbol = String(instrumentInput.value || '').trim().toUpperCase();
+        const instrument = market?.instruments?.[symbol] || null;
+
+        if (!instrument) {
+            return;
+        }
+
+        const base = String(instrument.base_currency || '').toUpperCase();
+        const quote = String(instrument.quote_currency || '').toUpperCase();
+        const needsConversion = base !== '' && quote !== '' && base !== 'USD' && quote !== 'USD';
+
+        if (!needsConversion) {
+            return;
+        }
+
+        wrapper.hidden = false;
+
+        if (label) {
+            label.textContent = `${quote} → USD Conversion Rate (optional)`;
+        }
+
+        if (help) {
+            help.textContent = `Leave blank for automatic ${quote}→USD conversion from TradeX market data. Enter the current rate only if the live provider is unavailable.`;
+        }
+    }
+
+    instrumentInput.addEventListener('input', () => {
+        window.setTimeout(refreshCrossMarketConversion, 0);
+    });
+
+    root.querySelectorAll('[data-market-key]').forEach((button) => {
+        button.addEventListener('click', () => {
+            window.setTimeout(refreshCrossMarketConversion, 0);
+        });
+    });
+
+    refreshCrossMarketConversion();
+})();
