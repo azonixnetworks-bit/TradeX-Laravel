@@ -31,18 +31,26 @@ class RiskRewardCalculatorUiContractTest extends TestCase
         $this->assertStringContainsString('riskRewardRiskUtilization', $script);
     }
 
-    public function test_forex_cross_pair_ui_exposes_optional_usd_conversion_fallback(): void
+    public function test_cross_pair_ui_exposes_optional_usd_conversion_fallback(): void
     {
-        $script = file_get_contents(base_path(
+        $calculatorScript = file_get_contents(base_path(
             'public/admin/js/risk-reward-calculator.js'
         ));
+        $copyScript = file_get_contents(base_path(
+            'public/admin/js/risk-reward-copy.js'
+        ));
 
-        $this->assertStringContainsString('riskRewardConversionField', $script);
-        $this->assertStringContainsString('riskRewardQuoteToUsdRate', $script);
-        $this->assertStringContainsString('quote_to_usd_rate', $script);
-        $this->assertStringContainsString('automatic', strtolower($script));
-        $this->assertStringContainsString('instrument.category', $script);
-        $this->assertStringContainsString('instrument_count', $script);
+        $this->assertStringContainsString('riskRewardConversionField', $calculatorScript);
+        $this->assertStringContainsString('riskRewardQuoteToUsdRate', $calculatorScript);
+        $this->assertStringContainsString('quote_to_usd_rate', $calculatorScript);
+        $this->assertStringContainsString('automatic', strtolower($calculatorScript));
+        $this->assertStringContainsString('instrument.category', $calculatorScript);
+        $this->assertStringContainsString('instrument_count', $calculatorScript);
+
+        // Compatibility layer keeps the fallback visible for non-USD commodity crosses too.
+        $this->assertStringContainsString('needsConversion', $copyScript);
+        $this->assertStringContainsString('quote !== \'USD\'', $copyScript);
+        $this->assertStringNotContainsString("marketField.value !== 'forex'", $copyScript);
     }
 
     public function test_copy_script_builds_plain_text_summary_without_network_requests(): void
