@@ -22,6 +22,7 @@ use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\ScreenerServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
 use App\Providers\TradeJournalServiceProvider;
+use App\Providers\TradingRoutineServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -45,5 +46,6 @@ return [
     CopyTradingServiceProvider::class,
     TradeJournalServiceProvider::class,
     FundedAccountAdvisorApiServiceProvider::class,
+    TradingRoutineServiceProvider::class,
     ScreenerServiceProvider::class,
 ];
