@@ -20,6 +20,7 @@ class FundedAccountAdvisorController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $this->user($request);
+        $maxPlannedEntries = $this->maxPlannedEntries();
 
         $partners = FundedAccountPartner::query()
             ->where('is_active', true)
@@ -63,7 +64,7 @@ class FundedAccountAdvisorController extends Controller
                     'max_recommended_risk_percent' => (float) config('funded_account_advisor.max_recommended_risk_percent', 0.50),
                     'max_daily_plan_percent' => (float) config('funded_account_advisor.max_daily_plan_percent', 1.00),
                     'safety_reserve_percent' => (float) config('funded_account_advisor.safety_reserve_percent', 20.0),
-                    'max_planned_entries' => 5,
+                    'max_planned_entries' => $maxPlannedEntries,
                 ],
             ],
         ]);
@@ -195,7 +196,7 @@ class FundedAccountAdvisorController extends Controller
             'current_balance' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
             'current_equity' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
             'desired_risk_percent' => ['required', 'numeric', 'gt:0', 'max:10'],
-            'planned_max_entries' => ['required', 'integer', 'min:1', 'max:5'],
+            'planned_max_entries' => ['required', 'integer', 'min:1', 'max:'.$this->maxPlannedEntries()],
             'minimum_rr' => ['required', 'numeric', 'gt:0', 'max:20'],
             'minimum_trading_days' => ['required', 'integer', 'min:0', 'max:365'],
             'completed_trading_days' => ['required', 'integer', 'min:0', 'max:3650'],
@@ -241,6 +242,11 @@ class FundedAccountAdvisorController extends Controller
             'generated_at' => $report->generated_at?->toISOString(),
             'pdf_path' => route('api.v1.funded-advisor.reports.pdf', $report, false),
         ];
+    }
+
+    private function maxPlannedEntries(): int
+    {
+        return max(1, (int) config('funded_account_advisor.max_planned_entries', 5));
     }
 
     private function ownedBy(FundedAdvisorReport $report, User $user): void
