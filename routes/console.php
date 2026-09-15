@@ -76,3 +76,13 @@ Schedule::command('tradex:copy-trade-billing:sweep')
             false
         )
     );
+
+Schedule::command('tradex:trading-routine:sweep')
+    ->everyMinute()
+    ->withoutOverlapping(5)
+    ->when(
+        fn (): bool => (bool) config(
+            'trading_routine.enabled',
+            true
+        )
+    );
