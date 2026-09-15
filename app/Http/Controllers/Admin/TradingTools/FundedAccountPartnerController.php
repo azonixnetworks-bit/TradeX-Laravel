@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -98,9 +97,7 @@ class FundedAccountPartnerController extends Controller
                 $attributes,
                 $this->storeLogo($request, $fundedAccountPartner->uuid)
             );
-        }
-
-        if ($request->boolean('remove_logo')) {
+        } elseif ($request->boolean('remove_logo')) {
             $this->deleteLogo($fundedAccountPartner);
             $attributes = array_merge($attributes, [
                 'logo_disk' => null,
@@ -200,9 +197,9 @@ class FundedAccountPartnerController extends Controller
             'account_sizes' => ['nullable', 'string', 'max:4000'],
             'challenge_types' => ['nullable', 'string', 'max:4000'],
             'priority' => ['required', 'integer', 'min:0', 'max:100000'],
-            'is_featured' => ['nullable', 'boolean'],
-            'is_active' => ['nullable', 'boolean'],
-            'logo' => ['nullable', 'image', Rule::in(['jpg', 'jpeg', 'png', 'webp']), 'max:2048'],
+            'is_featured' => ['required', 'boolean'],
+            'is_active' => ['required', 'boolean'],
+            'logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'remove_logo' => ['nullable', 'boolean'],
         ]);
     }
@@ -230,8 +227,8 @@ class FundedAccountPartnerController extends Controller
             'account_sizes' => $this->listValue($validated['account_sizes'] ?? null),
             'challenge_types' => $this->listValue($validated['challenge_types'] ?? null),
             'priority' => (int) $validated['priority'],
-            'is_featured' => (bool) ($validated['is_featured'] ?? false),
-            'is_active' => (bool) ($validated['is_active'] ?? false),
+            'is_featured' => (bool) $validated['is_featured'],
+            'is_active' => (bool) $validated['is_active'],
         ];
     }
 
