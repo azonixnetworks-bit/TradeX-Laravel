@@ -20,7 +20,7 @@ class IcMarketsCryptoCatalogTest extends TestCase
 
         foreach ([
             'BTCUSD', 'ETHUSD', 'XRPUSD', 'SOLUSD', 'AAVEUSD',
-            'TRUMPUSD', 'PENGUUSD', 'FARTCOINUSD', '1000xPEPE',
+            'TRUMPUSD', 'PENGUUSD', 'FARTCOINUSD', '1000XPEPE',
             'HYPEUSD', 'TAOUSD', 'QNTUSD', 'KAIAUSD',
         ] as $symbol) {
             $this->assertArrayHasKey($symbol, $instruments);
@@ -43,8 +43,8 @@ class IcMarketsCryptoCatalogTest extends TestCase
         $this->assertSame(0.0001, $instruments['XRPUSD']['tick_size']);
 
         $this->assertSame(1000.0, $instruments['TRXUSD']['contract_size']);
-        $this->assertSame(1000.0, $instruments['1000xPEPE']['contract_size']);
-        $this->assertSame(0.000001, $instruments['1000xPEPE']['tick_size']);
+        $this->assertSame(1000.0, $instruments['1000XPEPE']['contract_size']);
+        $this->assertSame(0.000001, $instruments['1000XPEPE']['tick_size']);
         $this->assertSame(10000.0, $instruments['KAIAUSD']['contract_size']);
 
         foreach ($instruments as $instrument) {
