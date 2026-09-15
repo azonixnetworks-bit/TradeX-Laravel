@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminRoleSeeder::class,
             AdminPermissionSeeder::class,
+            FundedAccountAdvisorPermissionSeeder::class,
             AdminRolePermissionSeeder::class,
             SuperAdminSeeder::class,
             AffiliateStageSeeder::class,
