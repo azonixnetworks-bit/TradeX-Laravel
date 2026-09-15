@@ -5,6 +5,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/risk-reward-calculator.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/risk-reward-enhancements.css') }}">
 @endpush
 
 @section('content')
@@ -218,13 +219,21 @@
             </div>
 
             <div class="risk-reward-result-grid">
-                <div class="risk-reward-result-card">
+                <div class="risk-reward-result-card is-highlight">
                     <span>Actual Risk</span>
                     <strong id="riskRewardActualRisk">—</strong>
                 </div>
-                <div class="risk-reward-result-card">
+                <div class="risk-reward-result-card is-highlight">
                     <span>Potential Profit</span>
                     <strong id="riskRewardPotentialProfit">—</strong>
+                </div>
+                <div class="risk-reward-result-card">
+                    <span>Position Units</span>
+                    <strong id="riskRewardPositionUnits">—</strong>
+                </div>
+                <div class="risk-reward-result-card">
+                    <span>Risk Utilization</span>
+                    <strong id="riskRewardRiskUtilization">—</strong>
                 </div>
                 <div class="risk-reward-result-card">
                     <span>Risk : Reward</span>
@@ -245,6 +254,20 @@
             </div>
 
             <div class="risk-reward-warning" id="riskRewardWarning" hidden></div>
+
+            <div class="risk-reward-result-actions">
+                <button
+                    type="button"
+                    class="secondary-btn"
+                    id="riskRewardCopyButton"
+                    disabled
+                >
+                    Copy Trade Summary
+                </button>
+                <span class="risk-reward-copy-status" id="riskRewardCopyStatus">
+                    Calculate a position first.
+                </span>
+            </div>
 
             <div class="risk-reward-spec-card">
                 <div class="risk-reward-spec-heading">
@@ -303,4 +326,5 @@
 
 @push('scripts')
 <script src="{{ asset('admin/js/risk-reward-calculator.js') }}"></script>
+<script src="{{ asset('admin/js/risk-reward-copy.js') }}"></script>
 @endpush
