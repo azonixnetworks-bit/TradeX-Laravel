@@ -6,6 +6,12 @@ use DomainException;
 
 class RiskRewardCalculatorService
 {
+    public function __construct(
+        private readonly TradingInstrumentCatalog $catalog,
+        private readonly ForexUsdConversionService $forexConversion
+    ) {
+    }
+
     /**
      * @param array<string, mixed> $input
      * @return array<string, mixed>
@@ -16,7 +22,7 @@ class RiskRewardCalculatorService
         $symbol = strtoupper(trim((string) ($input['symbol'] ?? '')));
         $side = strtoupper((string) ($input['side'] ?? ''));
 
-        $markets = (array) config('trading_instruments.markets', []);
+        $markets = $this->catalog->markets();
         $market = $markets[$marketKey] ?? null;
 
         if (! is_array($market)) {
@@ -69,20 +75,30 @@ class RiskRewardCalculatorService
             throw new DomainException('Stop loss and take profit must be different from entry price.');
         }
 
-        $baseCurrency = (string) ($instrument['base_currency'] ?? '');
-        $quoteCurrency = (string) ($instrument['quote_currency'] ?? '');
+        $baseCurrency = strtoupper((string) ($instrument['base_currency'] ?? ''));
+        $quoteCurrency = strtoupper((string) ($instrument['quote_currency'] ?? ''));
+        $conversionSource = 'USD_QUOTE';
+        $conversionSymbol = null;
 
-        $riskQuoteToUsd = $this->quoteToUsdRate(
-            $baseCurrency,
-            $quoteCurrency,
-            $stopLoss
-        );
+        if ($quoteCurrency === 'USD') {
+            $riskQuoteToUsd = 1.0;
+            $profitQuoteToUsd = 1.0;
+        } elseif ($baseCurrency === 'USD') {
+            $riskQuoteToUsd = $this->usdBaseQuoteToUsdRate($stopLoss);
+            $profitQuoteToUsd = $this->usdBaseQuoteToUsdRate($takeProfit);
+            $conversionSource = 'INSTRUMENT_PRICE';
+            $conversionSymbol = $symbol;
+        } else {
+            $conversion = $this->forexConversion->resolve(
+                $quoteCurrency,
+                $input['quote_to_usd_rate'] ?? null
+            );
 
-        $profitQuoteToUsd = $this->quoteToUsdRate(
-            $baseCurrency,
-            $quoteCurrency,
-            $takeProfit
-        );
+            $riskQuoteToUsd = $conversion['rate'];
+            $profitQuoteToUsd = $conversion['rate'];
+            $conversionSource = $conversion['source'];
+            $conversionSymbol = $conversion['symbol'];
+        }
 
         $riskPerLotUsd = $riskDistance * $contractSize * $riskQuoteToUsd;
         $profitPerLotUsd = $rewardDistance * $contractSize * $profitQuoteToUsd;
@@ -172,6 +188,12 @@ class RiskRewardCalculatorService
             'minimum_lot_risk' => $minimumLotRisk,
             'risk_quote_to_usd_rate' => $riskQuoteToUsd,
             'profit_quote_to_usd_rate' => $profitQuoteToUsd,
+            'quote_to_usd_conversion' => [
+                'source' => $conversionSource,
+                'symbol' => $conversionSymbol,
+                'risk_rate' => $riskQuoteToUsd,
+                'profit_rate' => $profitQuoteToUsd,
+            ],
             'warnings' => $warnings,
             'specification' => [
                 'contract_size' => $contractSize,
@@ -181,6 +203,8 @@ class RiskRewardCalculatorService
                 'tick_size' => (float) ($instrument['tick_size'] ?? 0),
                 'base_currency' => $baseCurrency,
                 'quote_currency' => $quoteCurrency,
+                'broker' => (string) ($instrument['broker'] ?? $market['broker'] ?? ''),
+                'category' => (string) ($instrument['category'] ?? ''),
                 'profile' => (string) ($instrument['spec_profile'] ?? 'TradeX reference'),
                 'status' => (string) ($instrument['spec_status'] ?? $market['spec_status'] ?? 'REFERENCE'),
                 'source' => (string) ($instrument['spec_source'] ?? $market['spec_source'] ?? 'TradeX reference profile'),
@@ -221,25 +245,13 @@ class RiskRewardCalculatorService
         }
     }
 
-    private function quoteToUsdRate(
-        string $baseCurrency,
-        string $quoteCurrency,
-        float $conversionPrice
-    ): float {
-        $baseCurrency = strtoupper($baseCurrency);
-        $quoteCurrency = strtoupper($quoteCurrency);
-
-        if ($quoteCurrency === 'USD') {
-            return 1.0;
+    private function usdBaseQuoteToUsdRate(float $conversionPrice): float
+    {
+        if ($conversionPrice <= 0) {
+            throw new DomainException('Unable to calculate the USD conversion rate for this instrument.');
         }
 
-        if ($baseCurrency === 'USD' && $conversionPrice > 0) {
-            return 1.0 / $conversionPrice;
-        }
-
-        throw new DomainException(
-            'This instrument needs an external quote-currency to USD conversion rate. It is not enabled in this release.'
-        );
+        return 1.0 / $conversionPrice;
     }
 
     private function roundDownToStep(float $value, float $step): float
