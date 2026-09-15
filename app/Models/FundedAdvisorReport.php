@@ -10,6 +10,7 @@ class FundedAdvisorReport extends Model
 {
     protected $fillable = [
         'uuid',
+        'user_id',
         'customer_name',
         'customer_email',
         'prop_firm_name',
@@ -46,6 +47,11 @@ class FundedAdvisorReport extends Model
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function partner(): BelongsTo
