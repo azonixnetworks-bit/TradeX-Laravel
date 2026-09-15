@@ -35,6 +35,8 @@ class RiskRewardCalculatorAccessTest extends TestCase
         $response->assertOk();
         $response->assertSee('Risk Reward Calculator');
         $response->assertSee('TRADING TOOLS');
+        $response->assertSee('GBPJPY');
+        $response->assertSee('USDTHB');
 
         $this->assertStringContainsString(
             'no-store',
@@ -67,12 +69,43 @@ class RiskRewardCalculatorAccessTest extends TestCase
             ->assertJsonPath('data.symbol', 'EURUSD')
             ->assertJsonPath('data.side', 'BUY')
             ->assertJsonPath('data.recommended_lot', 0.2)
-            ->assertJsonPath('data.specification.status', 'REFERENCE');
+            ->assertJsonPath('data.specification.broker', 'IC Markets')
+            ->assertJsonPath('data.specification.category', 'Major')
+            ->assertJsonPath('data.specification.status', 'PARTIALLY VERIFIED');
 
         $this->assertStringContainsString(
             'no-store',
             (string) $response->headers->get('Cache-Control')
         );
+    }
+
+    public function test_authorized_admin_can_calculate_cross_pair_with_manual_conversion_rate(): void
+    {
+        $admin = $this->createAdminWithRiskRewardPermission();
+
+        $response = $this
+            ->actingAs($admin, 'admin')
+            ->postJson(
+                route('admin.risk_reward.calculate'),
+                [
+                    'market' => 'forex',
+                    'symbol' => 'EURGBP',
+                    'side' => 'BUY',
+                    'entry' => 0.8500,
+                    'stop_loss' => 0.8450,
+                    'take_profit' => 0.8600,
+                    'risk_amount' => 100,
+                    'quote_to_usd_rate' => 1.30,
+                ]
+            );
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.symbol', 'EURGBP')
+            ->assertJsonPath('data.recommended_lot', 0.15)
+            ->assertJsonPath('data.quote_to_usd_conversion.source', 'MANUAL')
+            ->assertJsonPath('data.specification.category', 'Minor');
     }
 
     public function test_invalid_symbol_is_rejected_server_side(): void
