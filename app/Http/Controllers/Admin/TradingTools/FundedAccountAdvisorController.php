@@ -11,39 +11,41 @@ use App\Services\Trading\FundedAccountAdvisorService;
 use App\Services\Trading\FundedAdvisorPdfService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Response;
+use Illuminate\Http\Response;
 use Illuminate\Validation\Rule;
-use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class FundedAccountAdvisorController extends Controller
 {
-    public function index(): View
+    public function index(): Response
     {
-        $admin = $this->admin();
-        abort_unless($admin->hasPermission('funded_advisor.view'), 403);
+        $admin = $this->viewer();
 
-        return $this->noStore(view('admin.trading_tools.funded_account.index', [
-            'partners' => FundedAccountPartner::query()
-                ->where('is_active', true)
-                ->orderByDesc('is_featured')
-                ->orderBy('priority')
-                ->orderBy('name')
-                ->get(),
-            'recentReports' => FundedAdvisorReport::query()
-                ->where('generated_by_admin_id', $admin->id)
-                ->latest('generated_at')
-                ->limit(10)
-                ->get(),
-        ]));
+        return response()->view(
+            'admin.trading_tools.funded_account.index',
+            [
+                'partners' => FundedAccountPartner::query()
+                    ->where('is_active', true)
+                    ->orderByDesc('is_featured')
+                    ->orderBy('priority')
+                    ->orderBy('name')
+                    ->get(),
+                'recentReports' => FundedAdvisorReport::query()
+                    ->where('generated_by_admin_id', $admin->id)
+                    ->latest('generated_at')
+                    ->limit(10)
+                    ->get(),
+            ],
+            200,
+            $this->noStoreHeaders()
+        );
     }
 
     public function generate(
         Request $request,
         FundedAccountAdvisorService $advisor
     ): RedirectResponse {
-        $admin = $this->admin();
-        abort_unless($admin->hasPermission('funded_advisor.view'), 403);
+        $admin = $this->viewer();
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:160'],
@@ -131,50 +133,59 @@ class FundedAccountAdvisorController extends Controller
         return redirect()->route('admin.funded_advisor.reports.show', $report);
     }
 
-    public function show(FundedAdvisorReport $fundedAdvisorReport): View
+    public function show(FundedAdvisorReport $fundedAdvisorReport): Response
     {
-        $admin = $this->admin();
-        abort_unless($admin->hasPermission('funded_advisor.view'), 403);
+        $this->viewer();
 
-        return $this->noStore(view('admin.trading_tools.funded_account.show', [
-            'report' => $fundedAdvisorReport,
-            'input' => (array) $fundedAdvisorReport->inputs_json,
-            'output' => (array) $fundedAdvisorReport->output_json,
-        ]));
+        return response()->view(
+            'admin.trading_tools.funded_account.show',
+            [
+                'report' => $fundedAdvisorReport,
+                'input' => (array) $fundedAdvisorReport->inputs_json,
+                'output' => (array) $fundedAdvisorReport->output_json,
+            ],
+            200,
+            $this->noStoreHeaders()
+        );
     }
 
     public function pdf(
         FundedAdvisorReport $fundedAdvisorReport,
         FundedAdvisorPdfService $pdfService
     ): SymfonyResponse {
-        $admin = $this->admin();
-        abort_unless($admin->hasPermission('funded_advisor.view'), 403);
+        $this->viewer();
 
         $pdf = $pdfService->render($fundedAdvisorReport);
         $filename = 'tradex-funded-account-plan-'.$fundedAdvisorReport->uuid.'.pdf';
 
-        return Response::make($pdf, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-            'Cache-Control' => 'private, no-store, no-cache, must-revalidate',
-            'Pragma' => 'no-cache',
-            'X-Content-Type-Options' => 'nosniff',
-            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
-        ]);
+        return response($pdf, 200, array_merge(
+            $this->noStoreHeaders(),
+            [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            ]
+        ));
     }
 
-    private function admin(): AdminUser
+    private function viewer(): AdminUser
     {
         $admin = auth('admin')->user();
         abort_unless($admin instanceof AdminUser, 401);
+        abort_unless($admin->hasPermission('funded_advisor.view'), 403);
 
         return $admin;
     }
 
-    private function noStore(View $view): View
+    /** @return array<string, string> */
+    private function noStoreHeaders(): array
     {
-        // Admin hardening middleware supplies response security headers. Views
-        // remain side-effect free; sensitive report responses are not cached.
-        return $view;
+        return [
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0, must-revalidate',
+            'Pragma' => 'no-cache',
+            'X-Content-Type-Options' => 'nosniff',
+            'Referrer-Policy' => 'no-referrer',
+            'X-Frame-Options' => 'DENY',
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
+        ];
     }
 }
