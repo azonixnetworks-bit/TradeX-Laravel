@@ -172,6 +172,11 @@ class RiskRewardCalculatorService
                 'base_currency' => $baseCurrency,
                 'quote_currency' => $quoteCurrency,
                 'profile' => (string) ($instrument['spec_profile'] ?? 'TradeX reference'),
+                'status' => (string) ($instrument['spec_status'] ?? $market['spec_status'] ?? 'REFERENCE'),
+                'source' => (string) ($instrument['spec_source'] ?? $market['spec_source'] ?? 'TradeX reference profile'),
+                'verified_at' => $instrument['spec_verified_at']
+                    ?? $market['spec_verified_at']
+                    ?? null,
             ],
         ];
     }
