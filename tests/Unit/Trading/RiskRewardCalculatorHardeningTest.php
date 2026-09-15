@@ -45,7 +45,7 @@ class RiskRewardCalculatorHardeningTest extends TestCase
         $this->assertStringContainsString('capped', strtolower(implode(' ', $result['warnings'])));
     }
 
-    public function test_reference_crypto_profile_is_labeled_as_reference_not_verified(): void
+    public function test_crypto_profile_is_labeled_as_ic_markets_partially_verified(): void
     {
         $result = app(RiskRewardCalculatorService::class)->calculate([
             'market' => 'crypto',
@@ -57,10 +57,12 @@ class RiskRewardCalculatorHardeningTest extends TestCase
             'risk_amount' => 100,
         ]);
 
-        $this->assertSame('REFERENCE', $result['specification']['status']);
-        $this->assertNull($result['specification']['verified_at']);
+        $this->assertSame('IC Markets', $result['specification']['broker']);
+        $this->assertSame('Crypto CFD', $result['specification']['category']);
+        $this->assertSame('PARTIALLY VERIFIED', $result['specification']['status']);
+        $this->assertSame('2026-09-15', $result['specification']['verified_at']);
         $this->assertStringContainsString(
-            'broker-neutral',
+            'cryptocurrency cfd product specification sheet',
             strtolower($result['specification']['source'])
         );
     }
