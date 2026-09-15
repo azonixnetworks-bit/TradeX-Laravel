@@ -10,6 +10,14 @@
     }
 
     const trailingInput = trailingField.querySelector('input[name="trailing_reference_amount"]');
+    const plannedEntries = form.querySelector('input[name="planned_max_entries"]');
+
+    if (plannedEntries) {
+        plannedEntries.max = '5';
+        if (Number(plannedEntries.value) > 5) {
+            plannedEntries.value = '5';
+        }
+    }
 
     function updateTrailingField() {
         const trailing = drawdownType.value === 'TRAILING';
