@@ -46,6 +46,10 @@ class FundedAccountAdvisorController extends Controller
         FundedAccountAdvisorService $advisor
     ): RedirectResponse {
         $admin = $this->viewer();
+        $maxPlannedEntries = max(
+            1,
+            (int) config('funded_account_advisor.max_planned_entries', 5)
+        );
 
         $validated = $request->validate([
             'customer_name' => ['required', 'string', 'max:160'],
@@ -76,7 +80,7 @@ class FundedAccountAdvisorController extends Controller
             'current_balance' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
             'current_equity' => ['required', 'numeric', 'gt:0', 'max:1000000000'],
             'desired_risk_percent' => ['required', 'numeric', 'gt:0', 'max:10'],
-            'planned_max_entries' => ['required', 'integer', 'min:1', 'max:20'],
+            'planned_max_entries' => ['required', 'integer', 'min:1', 'max:'.$maxPlannedEntries],
             'minimum_rr' => ['required', 'numeric', 'gt:0', 'max:20'],
             'minimum_trading_days' => ['required', 'integer', 'min:0', 'max:365'],
             'completed_trading_days' => ['required', 'integer', 'min:0', 'max:3650'],
