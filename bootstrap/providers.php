@@ -5,6 +5,7 @@ use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\CopyTradingServiceProvider;
 use App\Providers\DashboardServiceProvider;
+use App\Providers\FundedAccountAdvisorApiServiceProvider;
 use App\Providers\InvestmentServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\LegalPolicyApiServiceProvider;
@@ -43,5 +44,6 @@ return [
     PushNotificationApiServiceProvider::class,
     CopyTradingServiceProvider::class,
     TradeJournalServiceProvider::class,
+    FundedAccountAdvisorApiServiceProvider::class,
     ScreenerServiceProvider::class,
 ];
