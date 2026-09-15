@@ -49,6 +49,9 @@ class FundedAccountAdvisorService
         $dailyLimitAmount = $dailyStartReference * ($dailyLossLimitPercent / 100);
         $dailyLossUsed = max(0.0, $dailyStartReference - $dailyCurrentReference);
         $dailyRemaining = max(0.0, $dailyLimitAmount - $dailyLossUsed);
+        $dailyUsedPercent = $dailyLimitAmount > 0
+            ? ($dailyLossUsed / $dailyLimitAmount) * 100
+            : 100.0;
 
         $maxDrawdownAmount = $accountSize * ($maxDrawdownPercent / 100);
         $trailingReference = $drawdownType === 'TRAILING'
@@ -58,6 +61,30 @@ class FundedAccountAdvisorService
         $overallRemaining = max(0.0, $drawdownCurrentReference - $drawdownThreshold);
         $overallCapacityForUsage = min($maxDrawdownAmount, $overallRemaining);
         $overallDrawdownUsed = max(0.0, $maxDrawdownAmount - $overallCapacityForUsage);
+        $overallUsedPercent = $maxDrawdownAmount > 0
+            ? ($overallDrawdownUsed / $maxDrawdownAmount) * 100
+            : 100.0;
+
+        $targetAmount = $accountSize * ($profitTargetPercent / 100);
+        $targetBalance = $accountSize + $targetAmount;
+        $currentProfit = $currentBalance - $accountSize;
+        $remainingTarget = $targetAmount > 0
+            ? max(0.0, $targetBalance - $currentBalance)
+            : 0.0;
+        $targetProgress = $targetAmount > 0
+            ? max(0.0, min(100.0, ($currentProfit / $targetAmount) * 100))
+            : 0.0;
+        $targetReached = $targetAmount > 0 && $remainingTarget <= 0.000001;
+
+        $dangerThreshold = (float) config(
+            'funded_account_advisor.status_thresholds.danger_used_percent',
+            75.0
+        );
+        $hardStop = $dailyRemaining <= 0
+            || $overallRemaining <= 0
+            || $dailyUsedPercent >= $dangerThreshold
+            || $overallUsedPercent >= $dangerThreshold
+            || $targetReached;
 
         $reservePercent = min(
             95.0,
@@ -81,19 +108,23 @@ class FundedAccountAdvisorService
         $perEntryDailyCap = $safeDailyRemaining / $plannedMaxEntries;
         $perEntryOverallCap = $safeOverallRemaining / $plannedMaxEntries;
 
-        $recommendedRisk = $this->floorMoney(max(0.0, min(
-            $desiredRiskAmount,
-            $policyRiskCap,
-            $perEntryDailyCap,
-            $perEntryOverallCap
-        )));
+        $recommendedRisk = $hardStop
+            ? 0.0
+            : $this->floorMoney(max(0.0, min(
+                $desiredRiskAmount,
+                $policyRiskCap,
+                $perEntryDailyCap,
+                $perEntryOverallCap
+            )));
 
         $policyDailyCap = $accountSize * ($maxDailyPlanPercent / 100);
-        $dailyPlanBudget = $this->floorMoney(max(0.0, min(
-            $policyDailyCap,
-            $safeDailyRemaining,
-            $safeOverallRemaining
-        )));
+        $dailyPlanBudget = $hardStop
+            ? 0.0
+            : $this->floorMoney(max(0.0, min(
+                $policyDailyCap,
+                $safeDailyRemaining,
+                $safeOverallRemaining
+            )));
 
         $entryPlan = $this->buildEntryPlan(
             $recommendedRisk,
@@ -103,24 +134,14 @@ class FundedAccountAdvisorService
         $recommendedEntries = count($entryPlan);
         $plannedExposure = $this->floorMoney(array_sum(array_column($entryPlan, 'risk_amount')));
 
-        $dailyUsedPercent = $dailyLimitAmount > 0
-            ? ($dailyLossUsed / $dailyLimitAmount) * 100
-            : 100.0;
-        $overallUsedPercent = $maxDrawdownAmount > 0
-            ? ($overallDrawdownUsed / $maxDrawdownAmount) * 100
-            : 100.0;
-
-        $targetAmount = $accountSize * ($profitTargetPercent / 100);
-        $targetBalance = $accountSize + $targetAmount;
-        $currentProfit = $currentBalance - $accountSize;
-        $remainingTarget = max(0.0, $targetBalance - $currentBalance);
-        $targetProgress = $targetAmount > 0
-            ? max(0.0, min(100.0, ($currentProfit / $targetAmount) * 100))
-            : 100.0;
         $targetPerWinningTrade = $this->floorMoney($recommendedRisk * $minimumRr);
-        $estimatedWinsToTarget = $targetPerWinningTrade > 0
-            ? (int) ceil($remainingTarget / $targetPerWinningTrade)
-            : null;
+        $estimatedWinsToTarget = $targetAmount <= 0
+            ? null
+            : ($targetReached
+                ? 0
+                : ($targetPerWinningTrade > 0
+                    ? (int) ceil($remainingTarget / $targetPerWinningTrade)
+                    : null));
 
         $lossCapacity = $recommendedRisk > 0
             ? (int) floor(min($dailyRemaining, $overallRemaining) / $recommendedRisk)
@@ -138,7 +159,7 @@ class FundedAccountAdvisorService
             $overallUsedPercent,
             $recommendedRisk,
             $desiredRiskAmount,
-            $targetProgress
+            $targetReached
         );
 
         $minimumTradingDays = max(0, (int) ($input['minimum_trading_days'] ?? 0));
@@ -183,6 +204,7 @@ class FundedAccountAdvisorService
             'safety_reserve_percent' => round($reservePercent, 2),
             'entry_plan' => $entryPlan,
             'headline' => $this->headline(
+                $status,
                 $recommendedEntries,
                 $recommendedRisk,
                 $plannedExposure,
@@ -252,12 +274,8 @@ class FundedAccountAdvisorService
         float $overallUsedPercent,
         float $recommendedRisk,
         float $desiredRiskAmount,
-        float $targetProgress
+        bool $targetReached
     ): string {
-        if ($targetProgress >= 100.0) {
-            return 'TARGET_REACHED';
-        }
-
         $danger = (float) config(
             'funded_account_advisor.status_thresholds.danger_used_percent',
             75.0
@@ -270,10 +288,17 @@ class FundedAccountAdvisorService
         if (
             $dailyRemaining <= 0
             || $overallRemaining <= 0
-            || $recommendedRisk <= 0
             || $dailyUsedPercent >= $danger
             || $overallUsedPercent >= $danger
         ) {
+            return 'DANGER';
+        }
+
+        if ($targetReached) {
+            return 'TARGET_REACHED';
+        }
+
+        if ($recommendedRisk <= 0) {
             return 'DANGER';
         }
 
@@ -289,13 +314,18 @@ class FundedAccountAdvisorService
     }
 
     private function headline(
+        string $status,
         int $entries,
         float $risk,
         float $exposure,
         float $rr
     ): string {
+        if ($status === 'TARGET_REACHED') {
+            return 'Profit target reached. Do not add challenge risk just to keep trading; verify the provider dashboard and progression requirements.';
+        }
+
         if ($entries <= 0 || $risk <= 0) {
-            return 'Do not open a new planned entry. The current risk capacity is insufficient.';
+            return 'Do not open a new planned entry. The current risk capacity is insufficient or inside the TradeX stop-trading zone.';
         }
 
         return sprintf(
@@ -323,9 +353,11 @@ class FundedAccountAdvisorService
             $warnings[] = 'Risk capacity is in the danger zone. Do not force a trade; verify the provider dashboard and current rule calculations before any new entry.';
         } elseif ($status === 'CAUTION') {
             $warnings[] = 'Risk capacity is reduced. Use the advisor amount rather than the requested risk amount.';
+        } elseif ($status === 'TARGET_REACHED') {
+            $warnings[] = 'The configured profit target is reached. Verify minimum-day and progression requirements before taking additional risk.';
         }
 
-        if ($recommendedRisk + 0.009 < $desiredRiskAmount) {
+        if ($recommendedRisk > 0 && $recommendedRisk + 0.009 < $desiredRiskAmount) {
             $warnings[] = 'Requested risk was reduced to protect the configured daily and overall drawdown buffers.';
         }
 
