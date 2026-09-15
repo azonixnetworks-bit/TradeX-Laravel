@@ -257,3 +257,16 @@ require __DIR__ . '/admin_hardening.php';
 */
 
 require __DIR__ . '/admin_customers.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-26 — TradeX Risk Reward Calculator
+|--------------------------------------------------------------------------
+|
+| Permission-gated position sizing for Forex, Commodity, Crypto and Deriv
+| reference profiles. This module performs calculations only and never
+| places, modifies or transmits live trades.
+|
+*/
+
+require __DIR__ . '/admin_risk_reward.php';
