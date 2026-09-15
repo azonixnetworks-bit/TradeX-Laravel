@@ -60,7 +60,13 @@ class TradingInstrumentCatalog
         $market['instrument_count'] = (int) ($catalog['instrument_count'] ?? count($instruments));
         $market['instruments'] = $instruments;
 
-        foreach (['calculation_modes', 'leverage'] as $metadataKey) {
+        foreach ([
+            'calculation_modes',
+            'margin_modes',
+            'leverage',
+            'cost_assumptions',
+            'liquidation',
+        ] as $metadataKey) {
             if (array_key_exists($metadataKey, $catalog)) {
                 $market[$metadataKey] = $catalog[$metadataKey];
             }
