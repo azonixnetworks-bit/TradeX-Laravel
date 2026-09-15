@@ -38,7 +38,7 @@ class RiskRewardCalculatorServiceTest extends TestCase
         $this->assertTrue($result['tradable_within_risk']);
     }
 
-    public function test_it_converts_usd_base_forex_quote_risk_back_to_usd(): void
+    public function test_it_converts_usd_base_forex_risk_at_stop_and_profit_at_target(): void
     {
         $result = $this->calculator->calculate([
             'market' => 'forex',
@@ -50,9 +50,10 @@ class RiskRewardCalculatorServiceTest extends TestCase
             'risk_amount' => 100,
         ]);
 
-        $this->assertEqualsWithDelta(0.30, $result['recommended_lot'], 0.000001);
-        $this->assertEqualsWithDelta(100.00, $result['actual_risk'], 0.01);
-        $this->assertEqualsWithDelta(200.00, $result['potential_profit'], 0.01);
+        $this->assertEqualsWithDelta(0.29, $result['recommended_lot'], 0.000001);
+        $this->assertEqualsWithDelta(96.99, $result['actual_risk'], 0.01);
+        $this->assertEqualsWithDelta(192.05, $result['potential_profit'], 0.01);
+        $this->assertLessThanOrEqual(100.00, $result['actual_risk']);
     }
 
     public function test_it_calculates_gold_with_configured_contract_size(): void
