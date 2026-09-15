@@ -145,6 +145,13 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->hasPermission('risk_reward.view'))
+<script
+    src="{{ asset('admin/js/risk-reward-nav.js') }}"
+    data-calculator-url="{{ route('admin.risk_reward.index') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
