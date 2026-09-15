@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class RiskRewardCalculatorController extends Controller
 {
@@ -38,6 +39,9 @@ class RiskRewardCalculatorController extends Controller
     ): JsonResponse {
         $this->viewer();
 
+        $isBinanceFutures = strtolower((string) $request->input('market', '')) === 'binance_futures';
+        $calculationMode = strtoupper((string) $request->input('calculation_mode', 'RISK_BASED'));
+
         $validator = Validator::make(
             $request->all(),
             [
@@ -47,10 +51,22 @@ class RiskRewardCalculatorController extends Controller
                 'entry' => ['required', 'numeric', 'gt:0'],
                 'stop_loss' => ['required', 'numeric', 'gt:0'],
                 'take_profit' => ['required', 'numeric', 'gt:0'],
-                'risk_amount' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
-                'margin_amount' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
-                'calculation_mode' => ['nullable', 'in:RISK_BASED,MARGIN_BASED'],
-                'leverage' => ['nullable', 'integer', 'min:1', 'max:125'],
+                'risk_amount' => [
+                    Rule::requiredIf(! $isBinanceFutures || $calculationMode === 'RISK_BASED'),
+                    'nullable', 'numeric', 'gt:0', 'max:1000000000',
+                ],
+                'margin_amount' => [
+                    Rule::requiredIf($isBinanceFutures && $calculationMode === 'MARGIN_BASED'),
+                    'nullable', 'numeric', 'gt:0', 'max:1000000000',
+                ],
+                'calculation_mode' => [
+                    Rule::requiredIf($isBinanceFutures),
+                    'nullable', 'in:RISK_BASED,MARGIN_BASED',
+                ],
+                'leverage' => [
+                    Rule::requiredIf($isBinanceFutures),
+                    'nullable', 'integer', 'min:1', 'max:125',
+                ],
                 'quote_to_usd_rate' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
             ]
         );
