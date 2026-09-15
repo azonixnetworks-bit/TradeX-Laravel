@@ -7,14 +7,14 @@ use Illuminate\Console\Command;
 
 class TradingRoutineSweepCommand extends Command
 {
-    protected $signature = 'tradex:trading-routine:sweep {--limit= : Maximum enabled customer preferences to inspect}';
+    protected $signature = 'tradex:trading-routine:sweep {--batch= : Database chunk size for enabled customer preferences}';
 
     protected $description = 'Generate due daily trading routine plans and submit opted-in WhatsApp PDF deliveries.';
 
     public function handle(TradingRoutineSweepService $sweep): int
     {
-        $limit = $this->option('limit');
-        $result = $sweep->sweep(is_numeric($limit) ? (int) $limit : null);
+        $batch = $this->option('batch');
+        $result = $sweep->sweep(is_numeric($batch) ? (int) $batch : null);
 
         if (! $result['enabled']) {
             $this->components->info('TradeX trading routine automation is disabled.');
