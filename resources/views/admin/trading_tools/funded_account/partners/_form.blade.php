@@ -1,13 +1,16 @@
 @php
     $editing = isset($partner);
-    $value = static function (string $field, mixed $default = '') use ($editing, $partner ?? null) {
+    $partnerModel = $editing ? $partner : null;
+
+    $value = static function (string $field, mixed $default = '') use ($editing, $partnerModel) {
         if (old($field) !== null) {
             return old($field);
         }
 
-        return $editing ? ($partner->{$field} ?? $default) : $default;
+        return $editing ? ($partnerModel->{$field} ?? $default) : $default;
     };
-    $listValue = static function (string $field) use ($editing, $partner ?? null) {
+
+    $listValue = static function (string $field) use ($editing, $partnerModel) {
         if (old($field) !== null) {
             return old($field);
         }
@@ -16,7 +19,7 @@
             return '';
         }
 
-        $items = $partner->{$field};
+        $items = $partnerModel->{$field};
         return is_array($items) ? implode(', ', $items) : '';
     };
 @endphp
@@ -71,9 +74,11 @@
 </div>
 
 <div class="funded-advisor-checks">
-    <label><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing ? $partner->is_active : true))> Active</label>
-    <label><input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $editing ? $partner->is_featured : false))> Recommended / Featured</label>
-    @if($editing && $partner->hasLogo())
+    <input type="hidden" name="is_active" value="0">
+    <label><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing ? $partnerModel->is_active : true))> Active</label>
+    <input type="hidden" name="is_featured" value="0">
+    <label><input type="checkbox" name="is_featured" value="1" @checked(old('is_featured', $editing ? $partnerModel->is_featured : false))> Recommended / Featured</label>
+    @if($editing && $partnerModel->hasLogo())
         <label><input type="checkbox" name="remove_logo" value="1"> Remove current logo</label>
     @endif
 </div>
