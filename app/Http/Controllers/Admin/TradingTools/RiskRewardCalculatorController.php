@@ -63,10 +63,26 @@ class RiskRewardCalculatorController extends Controller
                     Rule::requiredIf($isBinanceFutures),
                     'nullable', 'in:RISK_BASED,MARGIN_BASED',
                 ],
+                'margin_mode' => [
+                    Rule::requiredIf($isBinanceFutures),
+                    'nullable', 'in:ISOLATED,CROSS',
+                ],
                 'leverage' => [
                     Rule::requiredIf($isBinanceFutures),
                     'nullable', 'integer', 'min:1', 'max:125',
                 ],
+                'entry_fee_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'exit_fee_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'slippage_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+                'funding_rate_percent' => ['nullable', 'numeric', 'min:-100', 'max:100'],
+                'funding_intervals' => ['nullable', 'integer', 'min:0', 'max:1000'],
+                'maintenance_margin_rate_percent' => [
+                    'nullable', 'numeric', 'gt:0', 'lt:100', 'required_with:maintenance_amount',
+                ],
+                'maintenance_amount' => [
+                    'nullable', 'numeric', 'min:0', 'max:1000000000', 'required_with:maintenance_margin_rate_percent',
+                ],
+                'liquidation_wallet_balance' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
                 'quote_to_usd_rate' => ['nullable', 'numeric', 'gt:0', 'max:1000000000'],
             ]
         );
