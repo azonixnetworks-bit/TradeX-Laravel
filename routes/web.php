@@ -270,3 +270,16 @@ require __DIR__ . '/admin_customers.php';
 */
 
 require __DIR__ . '/admin_risk_reward.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-27 — Funded Account Advisor
+|--------------------------------------------------------------------------
+|
+| Firm-neutral funded-account risk planning, customer report snapshots,
+| partner/referral management and downloadable PDF risk plans. This module
+| does not execute trades or hardcode changing third-party challenge rules.
+|
+*/
+
+require __DIR__ . '/admin_funded_account_advisor.php';
