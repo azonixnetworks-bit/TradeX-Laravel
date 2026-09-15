@@ -170,6 +170,8 @@ class FundedAccountAdvisorController extends Controller
     private function rules(): array
     {
         return [
+            'customer_name' => ['prohibited'],
+            'customer_email' => ['prohibited'],
             'prop_firm_name' => ['nullable', 'string', 'max:160'],
             'partner_uuid' => [
                 'nullable',
