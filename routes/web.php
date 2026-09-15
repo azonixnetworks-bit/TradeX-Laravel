@@ -283,3 +283,16 @@ require __DIR__ . '/admin_risk_reward.php';
 */
 
 require __DIR__ . '/admin_funded_account_advisor.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-28 — Daily Trading Routine Planner
+|--------------------------------------------------------------------------
+|
+| Customer-owned routine preferences, timezone-aware daily PDF generation
+| and monitored WhatsApp delivery. Admins monitor outcomes but do not fill
+| customer trading-routine data on the customer's behalf.
+|
+*/
+
+require __DIR__ . '/admin_trading_routine.php';
