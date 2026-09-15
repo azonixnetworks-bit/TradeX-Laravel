@@ -261,12 +261,28 @@
                         <dd id="riskRewardMinLot">—</dd>
                     </div>
                     <div>
+                        <dt>Maximum Lot</dt>
+                        <dd id="riskRewardMaxLot">—</dd>
+                    </div>
+                    <div>
                         <dt>Lot Step</dt>
                         <dd id="riskRewardLotStep">—</dd>
                     </div>
                     <div>
                         <dt>Profile</dt>
                         <dd id="riskRewardSpecProfile">—</dd>
+                    </div>
+                    <div>
+                        <dt>Spec Status</dt>
+                        <dd id="riskRewardSpecStatus">—</dd>
+                    </div>
+                    <div class="risk-reward-spec-wide">
+                        <dt>Source</dt>
+                        <dd id="riskRewardSpecSource">—</dd>
+                    </div>
+                    <div>
+                        <dt>Reviewed</dt>
+                        <dd id="riskRewardSpecReviewed">—</dd>
                     </div>
                 </dl>
             </div>
