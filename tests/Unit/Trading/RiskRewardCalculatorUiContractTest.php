@@ -31,6 +31,20 @@ class RiskRewardCalculatorUiContractTest extends TestCase
         $this->assertStringContainsString('riskRewardRiskUtilization', $script);
     }
 
+    public function test_forex_cross_pair_ui_exposes_optional_usd_conversion_fallback(): void
+    {
+        $script = file_get_contents(base_path(
+            'public/admin/js/risk-reward-calculator.js'
+        ));
+
+        $this->assertStringContainsString('riskRewardConversionField', $script);
+        $this->assertStringContainsString('riskRewardQuoteToUsdRate', $script);
+        $this->assertStringContainsString('quote_to_usd_rate', $script);
+        $this->assertStringContainsString('automatic', strtolower($script));
+        $this->assertStringContainsString('instrument.category', $script);
+        $this->assertStringContainsString('instrument_count', $script);
+    }
+
     public function test_copy_script_builds_plain_text_summary_without_network_requests(): void
     {
         $script = file_get_contents(base_path(
