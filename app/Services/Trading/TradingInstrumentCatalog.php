@@ -8,23 +8,53 @@ class TradingInstrumentCatalog
     public function markets(): array
     {
         $markets = (array) config('trading_instruments.markets', []);
-        $icForex = (array) config('ic_markets_forex', []);
 
-        if (! (bool) ($icForex['enabled'] ?? false)) {
+        $markets = $this->applyBrokerCatalog(
+            $markets,
+            'forex',
+            (array) config('ic_markets_forex', [])
+        );
+
+        $markets = $this->applyBrokerCatalog(
+            $markets,
+            'commodity',
+            (array) config('ic_markets_commodities', [])
+        );
+
+        return $this->applyBrokerCatalog(
+            $markets,
+            'crypto',
+            (array) config('ic_markets_crypto', [])
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $markets
+     * @param array<string, mixed> $catalog
+     * @return array<string, mixed>
+     */
+    private function applyBrokerCatalog(
+        array $markets,
+        string $marketKey,
+        array $catalog
+    ): array {
+        if (! (bool) ($catalog['enabled'] ?? false)) {
             return $markets;
         }
 
-        $forex = (array) ($markets['forex'] ?? []);
-        $forex['label'] = (string) ($icForex['label'] ?? 'Forex');
-        $forex['description'] = (string) ($icForex['description'] ?? ($forex['description'] ?? ''));
-        $forex['spec_status'] = (string) ($icForex['spec_status'] ?? ($forex['spec_status'] ?? 'REFERENCE'));
-        $forex['spec_source'] = (string) ($icForex['spec_source'] ?? ($forex['spec_source'] ?? 'TradeX reference'));
-        $forex['spec_verified_at'] = $icForex['spec_verified_at'] ?? ($forex['spec_verified_at'] ?? null);
-        $forex['broker'] = (string) ($icForex['broker'] ?? 'IC Markets');
-        $forex['instrument_count'] = (int) ($icForex['instrument_count'] ?? count((array) ($icForex['instruments'] ?? [])));
-        $forex['instruments'] = (array) ($icForex['instruments'] ?? []);
+        $market = (array) ($markets[$marketKey] ?? []);
+        $instruments = (array) ($catalog['instruments'] ?? []);
 
-        $markets['forex'] = $forex;
+        $market['label'] = (string) ($catalog['label'] ?? ($market['label'] ?? ucfirst($marketKey)));
+        $market['description'] = (string) ($catalog['description'] ?? ($market['description'] ?? ''));
+        $market['spec_status'] = (string) ($catalog['spec_status'] ?? ($market['spec_status'] ?? 'REFERENCE'));
+        $market['spec_source'] = (string) ($catalog['spec_source'] ?? ($market['spec_source'] ?? 'TradeX reference'));
+        $market['spec_verified_at'] = $catalog['spec_verified_at'] ?? ($market['spec_verified_at'] ?? null);
+        $market['broker'] = (string) ($catalog['broker'] ?? ($market['broker'] ?? 'IC Markets'));
+        $market['instrument_count'] = (int) ($catalog['instrument_count'] ?? count($instruments));
+        $market['instruments'] = $instruments;
+
+        $markets[$marketKey] = $market;
 
         return $markets;
     }
