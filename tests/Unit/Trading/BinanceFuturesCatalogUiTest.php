@@ -21,6 +21,11 @@ class BinanceFuturesCatalogUiTest extends TestCase
         $this->assertTrue($market['leverage']['tier_dependent']);
         $this->assertSame('Risk Based', $market['calculation_modes']['RISK_BASED']);
         $this->assertSame('Margin Based', $market['calculation_modes']['MARGIN_BASED']);
+        $this->assertSame('Isolated', $market['margin_modes']['ISOLATED']);
+        $this->assertSame('Cross', $market['margin_modes']['CROSS']);
+        $this->assertSame(0.02, $market['cost_assumptions']['reference_maker_fee_percent']);
+        $this->assertSame(0.05, $market['cost_assumptions']['reference_taker_fee_percent']);
+        $this->assertTrue($market['liquidation']['requires_live_tier_inputs']);
 
         foreach (['BTCUSDT', 'ETHUSDT', 'BNBUSDT', 'SOLUSDT', 'XRPUSDT', 'DOGEUSDT'] as $symbol) {
             $this->assertArrayHasKey($symbol, $market['instruments']);
@@ -29,7 +34,7 @@ class BinanceFuturesCatalogUiTest extends TestCase
         }
     }
 
-    public function test_binance_futures_ui_exposes_mode_leverage_margin_and_backend_only_calculation(): void
+    public function test_binance_futures_ui_exposes_mode_leverage_cost_and_liquidation_inputs(): void
     {
         $view = file_get_contents(base_path(
             'resources/views/admin/trading_tools/risk_reward/index.blade.php'
@@ -44,7 +49,18 @@ class BinanceFuturesCatalogUiTest extends TestCase
         $this->assertStringContainsString('MARGIN_BASED', $script);
         $this->assertStringContainsString('riskRewardLeverage', $script);
         $this->assertStringContainsString('riskRewardMarginAmount', $script);
+        $this->assertStringContainsString('riskRewardMarginMode', $script);
+        $this->assertStringContainsString('riskRewardEntryFeeRate', $script);
+        $this->assertStringContainsString('riskRewardExitFeeRate', $script);
+        $this->assertStringContainsString('riskRewardSlippage', $script);
+        $this->assertStringContainsString('riskRewardFundingRate', $script);
+        $this->assertStringContainsString('riskRewardMaintenanceMarginRate', $script);
+        $this->assertStringContainsString('riskRewardMaintenanceAmount', $script);
+        $this->assertStringContainsString('riskRewardEstimatedLiquidation', $script);
+        $this->assertStringContainsString('riskRewardAllInStopRisk', $script);
         $this->assertStringContainsString('margin_amount', $script);
+        $this->assertStringContainsString('entry_fee_rate_percent', $script);
+        $this->assertStringContainsString('maintenance_margin_rate_percent', $script);
         $this->assertStringContainsString('data.futures', $script);
         $this->assertStringContainsString('fetch(root.dataset.calculateEndpoint', $script);
         $this->assertStringNotContainsString('margin * leverage', strtolower($script));
