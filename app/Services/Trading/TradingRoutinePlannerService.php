@@ -13,13 +13,14 @@ class TradingRoutinePlannerService
         CarbonInterface $localDate
     ): array {
         $balance = max(0.01, (float) $preference->planning_balance);
-        $riskPercent = min(
-            (float) $preference->risk_per_trade_percent,
-            (float) config('trading_routine.guardrails.max_risk_per_trade_percent', 1.0)
-        );
         $dailyCapPercent = min(
             (float) $preference->daily_risk_cap_percent,
             (float) config('trading_routine.guardrails.max_daily_risk_cap_percent', 2.0)
+        );
+        $riskPercent = min(
+            (float) $preference->risk_per_trade_percent,
+            (float) config('trading_routine.guardrails.max_risk_per_trade_percent', 1.0),
+            $dailyCapPercent
         );
         $riskAmount = $this->floorMoney($balance * ($riskPercent / 100));
         $dailyRiskCap = $this->floorMoney($balance * ($dailyCapPercent / 100));
