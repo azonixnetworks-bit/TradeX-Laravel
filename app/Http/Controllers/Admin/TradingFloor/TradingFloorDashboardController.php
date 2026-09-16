@@ -10,6 +10,7 @@ use App\Models\TradingFloorCommissionInvoice;
 use App\Models\TradingFloorCommissionPayment;
 use App\Services\Admin\TradingFloor\TradingFloorCommissionService;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class TradingFloorDashboardController extends Controller
 {
@@ -39,6 +40,12 @@ class TradingFloorDashboardController extends Controller
             ->pluck('total', 'currency')
             ->all();
 
+        $lastSuccessfulAccessIds = DB::table('trading_floor_access_logs')
+            ->selectRaw('MAX(id)')
+            ->whereDate('accessed_at', $today)
+            ->whereIn('decision', ['GRANTED', 'WARNING'])
+            ->groupBy('trading_floor_client_id');
+
         return response()->view(
             'admin.trading_floor.index',
             [
@@ -47,10 +54,9 @@ class TradingFloorDashboardController extends Controller
                         ->where('status', TradingFloorClient::STATUS_ACTIVE)
                         ->count(),
                     'present_today' => TradingFloorAccessLog::query()
-                        ->whereDate('accessed_at', $today)
+                        ->whereIn('id', $lastSuccessfulAccessIds)
                         ->where('direction', TradingFloorAccessLog::DIRECTION_ENTRY)
-                        ->distinct('trading_floor_client_id')
-                        ->count('trading_floor_client_id'),
+                        ->count(),
                     'commission_due_by_currency' => $commissionDueByCurrency,
                     'received_this_month_by_currency' => $receivedThisMonthByCurrency,
                     'overdue_clients' => TradingFloorCommissionInvoice::query()
