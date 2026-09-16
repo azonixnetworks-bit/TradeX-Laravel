@@ -29,7 +29,10 @@ class CreatePayPalOrderController extends Controller
                 (string) $request->validated(
                     'idempotency_key'
                 ),
-                $request
+                $request,
+                $request->validated(
+                    'product_uuid'
+                )
             ),
         ], 201);
     }
