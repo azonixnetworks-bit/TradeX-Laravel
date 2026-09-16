@@ -1,0 +1,52 @@
+/* ADMIN-29 laptop-width refinements. Loaded by economic-news-nav.js and scoped to Economic News classes. */
+@media (min-width: 901px) and (max-width: 1500px) {
+    .economic-news-table {
+        min-width: 980px;
+    }
+
+    .economic-news-table th,
+    .economic-news-table td {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .economic-news-table th {
+        font-size: 9px;
+        letter-spacing: .09em;
+    }
+
+    .economic-news-table td {
+        font-size: 11.5px;
+    }
+
+    .economic-news-pairs {
+        max-width: 215px;
+        gap: 4px;
+    }
+
+    .economic-news-pairs span {
+        padding: 4px 6px;
+        font-size: 9px;
+    }
+
+    .economic-news-confidence {
+        width: 70px;
+    }
+}
+
+@media (min-width: 901px) and (max-width: 1250px) {
+    .economic-news-table {
+        min-width: 930px;
+    }
+
+    .economic-news-table th,
+    .economic-news-table td {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .economic-news-panel-head {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+}
