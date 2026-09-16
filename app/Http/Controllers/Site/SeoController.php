@@ -36,13 +36,14 @@ class SeoController extends Controller
         }
 
         $baseUrl = $this->baseUrl($request);
-        $privatePaths = "Disallow: /admin/\nDisallow: /customer/\nDisallow: /payments/\nDisallow: /api/\nDisallow: /up\n";
+        $privatePaths = "Allow: /admin/brand/\nDisallow: /admin/\nDisallow: /customer/\nDisallow: /onboarding/\nDisallow: /payments/\nDisallow: /api/\nDisallow: /up\n";
 
         $body = "User-agent: *\nAllow: /\n{$privatePaths}\n";
 
-        if ((bool) config('seo.crawlers.allow_ai_search', true)) {
-            $body .= "User-agent: OAI-SearchBot\nAllow: /\n{$privatePaths}\n";
-        }
+        $body .= "User-agent: OAI-SearchBot\n";
+        $body .= (bool) config('seo.crawlers.allow_ai_search', true)
+            ? "Allow: /\n{$privatePaths}\n"
+            : "Disallow: /\n";
 
         $body .= "User-agent: GPTBot\n";
         $body .= (bool) config('seo.crawlers.allow_model_training', false)

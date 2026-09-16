@@ -28,18 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*
-         * SEO-01 search indexing policy wraps both route groups so private
-         * surfaces and every non-production response receive X-Robots-Tag.
+         * SEO-01 is global so private/noindex headers also cover framework
+         * health routes and any future route groups, not only web/api.
          */
-        $middleware->prependToGroup(
-            'api',
-            SearchEngineIndexPolicy::class
-        );
-
-        $middleware->prependToGroup(
-            'web',
-            SearchEngineIndexPolicy::class
-        );
+        $middleware->prepend(SearchEngineIndexPolicy::class);
 
         /*
          * API-23 final hardening is installed once on Laravel's api group.

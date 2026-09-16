@@ -32,7 +32,7 @@ class SiteController extends Controller
             $baseUrl = $request->getSchemeAndHttpHost();
         }
 
-        $canonical = $baseUrl.($page['path'] === '/' ? '' : $page['path']);
+        $canonical = $baseUrl.($page['path'] === '/' ? '/' : $page['path']);
         $brand = config('seo.brand', []);
         $schema = $this->schema($key, $page, $brand, $baseUrl, $canonical);
 
@@ -41,6 +41,7 @@ class SiteController extends Controller
             'page' => $page,
             'pages' => $pages,
             'brand' => $brand,
+            'baseUrl' => $baseUrl,
             'canonical' => $canonical,
             'schema' => $schema,
         ]);

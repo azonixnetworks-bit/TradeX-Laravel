@@ -29,6 +29,8 @@ class SearchEngineIndexPolicy
             'admin/*',
             'customer',
             'customer/*',
+            'onboarding',
+            'onboarding/*',
             'payments',
             'payments/*',
             'api',

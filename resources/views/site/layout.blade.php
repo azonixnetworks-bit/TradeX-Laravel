@@ -16,13 +16,13 @@
     <meta property="og:title" content="{{ $page['title'] }}">
     <meta property="og:description" content="{{ $page['description'] }}">
     <meta property="og:url" content="{{ $canonical }}">
-    <meta property="og:image" content="{{ rtrim(config('app.url'), '/') }}/admin/brand/tradex-logo.png">
+    <meta property="og:image" content="{{ $baseUrl }}/admin/brand/tradex-logo.png">
     <meta property="og:image:alt" content="TradeX — The OS for Every Trader">
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $page['title'] }}">
     <meta name="twitter:description" content="{{ $page['description'] }}">
-    <meta name="twitter:image" content="{{ rtrim(config('app.url'), '/') }}/admin/brand/tradex-logo.png">
+    <meta name="twitter:image" content="{{ $baseUrl }}/admin/brand/tradex-logo.png">
 
     @if(config('seo.verification.google'))
         <meta name="google-site-verification" content="{{ config('seo.verification.google') }}">

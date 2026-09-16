@@ -2,7 +2,7 @@
 
 ## Purpose
 
-SEO-01 creates a crawlable public TradeX entity while keeping administration, customer, payment, API, and health surfaces out of search indexes.
+SEO-01 creates a crawlable public TradeX entity while keeping administration, onboarding, customer, payment, API, and health surfaces out of search indexes.
 
 The implementation is intentionally separated from the private administration UI and does not change RBAC, authentication, trading calculations, payment logic, or ADMIN-29 economic-news mutation rules.
 
@@ -57,8 +57,9 @@ SEO_ALLOW_MODEL_TRAINING=false
 4. Set Google/Bing verification tokens if meta verification is used.
 5. Validate representative pages with Google's Rich Results / URL Inspection tools and Schema.org validation.
 6. Confirm Cloudflare/WAF rules do not incorrectly block Googlebot, Bingbot, or OAI-SearchBot on public pages.
-7. Verify `/admin/*`, `/customer/*`, `/payments/*`, `/api/*`, and `/up` return the `X-Robots-Tag` noindex policy.
-8. Add IndexNow submission in the content-publishing phase when TradeX begins publishing frequently changing public news/articles.
+7. Verify `/admin/*`, `/onboarding/*`, `/customer/*`, `/payments/*`, `/api/*`, and `/up` return the `X-Robots-Tag` noindex policy.
+8. Confirm `/admin/brand/*` remains crawlable because public structured data and social metadata reference official TradeX brand assets there.
+9. Add IndexNow submission in the content-publishing phase when TradeX begins publishing frequently changing public news/articles.
 
 ## AI / GEO note
 
