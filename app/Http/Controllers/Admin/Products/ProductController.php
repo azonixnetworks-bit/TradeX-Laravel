@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\Products;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Products\StoreProductRequest;
 use App\Http\Requests\Admin\Products\UpdateProductRequest;
 use App\Models\AdminUser;
 use App\Models\Product;
@@ -32,18 +33,53 @@ class ProductController extends Controller
         );
     }
 
+    public function create(): Response
+    {
+        $admin = $this->admin();
+
+        $this->ensureManager($admin);
+
+        return $this->view(
+            'admin.products.create',
+            [
+                'billingTypes' => [
+                    Product::BILLING_ONE_TIME_LIFETIME,
+                ],
+                'currencies' => ['USD'],
+            ]
+        );
+    }
+
+    public function store(
+        StoreProductRequest $request,
+        AdminProductService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        $this->ensureManager($admin);
+
+        $product = $service->create(
+            $admin,
+            $request->validated(),
+            $request
+        );
+
+        return redirect()
+            ->route(
+                'admin.products.index'
+            )
+            ->with(
+                'success',
+                'Product '.$product->name.' added to the TradeX catalog successfully.'
+            );
+    }
+
     public function edit(
         Product $product
     ): Response {
         $admin = $this->viewer();
 
-        abort_unless(
-            $admin->isSuperAdmin()
-            || $admin->hasPermission(
-                'products.manage'
-            ),
-            403
-        );
+        $this->ensureManager($admin);
 
         return $this->view(
             'admin.products.edit',
@@ -58,13 +94,7 @@ class ProductController extends Controller
     ): RedirectResponse {
         $admin = $this->admin();
 
-        abort_unless(
-            $admin->isSuperAdmin()
-            || $admin->hasPermission(
-                'products.manage'
-            ),
-            403
-        );
+        $this->ensureManager($admin);
 
         $service->update(
             $product,
@@ -96,6 +126,18 @@ class ProductController extends Controller
         );
 
         return $admin;
+    }
+
+    private function ensureManager(
+        AdminUser $admin
+    ): void {
+        abort_unless(
+            $admin->isSuperAdmin()
+            || $admin->hasPermission(
+                'products.manage'
+            ),
+            403
+        );
     }
 
     private function admin(): AdminUser

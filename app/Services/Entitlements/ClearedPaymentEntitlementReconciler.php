@@ -14,7 +14,10 @@ use DomainException;
 class ClearedPaymentEntitlementReconciler
 {
     public function __construct(
-        private readonly EducationPremiumEntitlementService $entitlements
+        private readonly EducationPremiumEntitlementService
+            $educationPremium,
+        private readonly GenericProductEntitlementService
+            $genericProducts
     ) {
     }
 
@@ -22,13 +25,10 @@ class ClearedPaymentEntitlementReconciler
         Payment $payment
     ): UserEntitlement {
         $payment->loadMissing('order');
-
         $order = $payment->order;
 
         if (
             ! $order instanceof PaymentOrder
-            || $order->product_code
-                !== Product::CODE_EDUCATION_PREMIUM
             || ! $payment->isCleared()
             || (int) $order->user_id
                 !== (int) $payment->user_id
@@ -36,7 +36,7 @@ class ClearedPaymentEntitlementReconciler
                 !== (int) $order->getKey()
         ) {
             throw new DomainException(
-                'Cleared payment does not satisfy the education premium reconciliation contract.'
+                'Cleared payment does not satisfy the product entitlement reconciliation contract.'
             );
         }
 
@@ -45,12 +45,36 @@ class ClearedPaymentEntitlementReconciler
 
         if (! $user instanceof User) {
             throw new DomainException(
-                'Cleared payment user is unavailable for education premium reconciliation.'
+                'Cleared payment user is unavailable for entitlement reconciliation.'
             );
         }
 
+        if (
+            $order->product_code
+                !== Product::CODE_EDUCATION_PREMIUM
+        ) {
+            return $this->genericProducts
+                ->activateFromClearedPayment(
+                    $user,
+                    $order,
+                    $payment
+                );
+        }
+
+        return $this->reconcileEducationPremium(
+            $user,
+            $order,
+            $payment
+        );
+    }
+
+    private function reconcileEducationPremium(
+        User $user,
+        PaymentOrder $order,
+        Payment $payment
+    ): UserEntitlement {
         try {
-            return $this->entitlements
+            return $this->educationPremium
                 ->activateFromClearedPayment(
                     $user,
                     $order,
@@ -59,7 +83,7 @@ class ClearedPaymentEntitlementReconciler
         } catch (
             EducationPremiumEntitlementConflictException $exception
         ) {
-            $active = $this->entitlements
+            $active = $this->educationPremium
                 ->active($user);
 
             if (
@@ -74,17 +98,11 @@ class ClearedPaymentEntitlementReconciler
             $boundPayment = Payment::query()
                 ->find($active->payment_id);
 
-            /*
-             * The conflict may have resolved after the entitlement service
-             * released its transaction lock, for example if the prior
-             * backing payment was reversed concurrently. Retry once so the
-             * new cleared payment can become the authoritative backing row.
-             */
             if (
                 ! $boundPayment instanceof Payment
                 || ! $boundPayment->isCleared()
             ) {
-                return $this->entitlements
+                return $this->educationPremium
                     ->activateFromClearedPayment(
                         $user->fresh(),
                         $order->fresh(),
@@ -92,12 +110,6 @@ class ClearedPaymentEntitlementReconciler
                     );
             }
 
-            /*
-             * A second externally-cleared payment must never silently rebind
-             * the lifetime entitlement away from another still-cleared
-             * payment. The money ledger remains authoritative and durable,
-             * while the duplicate payment is surfaced for payment review.
-             */
             AuditLog::record(
                 actorType: 'SYSTEM',
                 actorId: null,
