@@ -4,10 +4,12 @@ namespace App\Services\Payments;
 
 use App\Exceptions\AuthApiException;
 use App\Models\PaymentOrder;
+use App\Models\Product;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use Srmklive\PayPal\Services\PayPal as PayPalClient;
 
 class PayPalGatewayService
@@ -491,14 +493,38 @@ class PayPalGatewayService
             (string) $order->currency
         );
 
-        $productName = (string) config(
-            'tradex_payments.product.education_premium.name',
-            'TradeX Education Premium'
-        );
+        $product = Product::query()
+            ->where('code', $order->product_code)
+            ->first();
 
-        $productCode = (string) config(
-            'tradex_payments.product.education_premium.code',
-            PaymentOrder::PRODUCT_EDUCATION_PREMIUM
+        if ($product instanceof Product) {
+            $productName = trim((string) $product->name);
+            $productCode = (string) $product->code;
+            $productDescription = filled($product->description)
+                ? trim((string) $product->description)
+                : $productName;
+        } else {
+            $productName = $order->product_code
+                === PaymentOrder::PRODUCT_EDUCATION_PREMIUM
+                    ? (string) config(
+                        'tradex_payments.product.education_premium.name',
+                        'TradeX Education Premium'
+                    )
+                    : 'TradeX Digital Product';
+
+            $productCode = (string) $order->product_code;
+            $productDescription = $productName;
+        }
+
+        $productName = Str::limit(
+            $productName,
+            120,
+            ''
+        );
+        $productDescription = Str::limit(
+            $productDescription,
+            127,
+            ''
         );
 
         $payload = [
@@ -532,7 +558,7 @@ class PayPalGatewayService
                             'sku' =>
                                 $productCode,
                             'description' =>
-                                'TradeX OS Premium Trading Education Course',
+                                $productDescription,
                             'quantity' =>
                                 '1',
                             'category' =>
