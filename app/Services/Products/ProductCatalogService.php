@@ -5,6 +5,7 @@ namespace App\Services\Products;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Entitlements\EducationPremiumEntitlementService;
+use App\Services\Entitlements\GenericProductEntitlementService;
 use App\Services\Payments\PaymentMoney;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -13,7 +14,9 @@ class ProductCatalogService
     public function __construct(
         private readonly PaymentMoney $money,
         private readonly EducationPremiumEntitlementService
-            $educationPremium
+            $educationPremium,
+        private readonly GenericProductEntitlementService
+            $genericEntitlements
     ) {
     }
 
@@ -44,10 +47,12 @@ class ProductCatalogService
         Product $product,
         User $user
     ): array {
-        $activeEntitlement =
-            $product->isEducationPremium()
-                && $this->educationPremium
-                    ->hasActive($user);
+        $activeEntitlement = $product->isEducationPremium()
+            ? $this->educationPremium->hasActive($user)
+            : $this->genericEntitlements->hasActive(
+                $user,
+                (string) $product->code
+            );
 
         return [
             'uuid' =>
@@ -83,7 +88,19 @@ class ProductCatalogService
                     ->is_active
                 && ! $activeEntitlement,
             'payment_methods_endpoint' =>
-                '/api/v1/payments/methods',
+                $product->isEducationPremium()
+                    ? '/api/v1/payments/methods'
+                    : null,
+            'checkout' => [
+                'paypal' => [
+                    'create_endpoint' =>
+                        '/api/v1/payments/paypal/orders',
+                    'product_uuid' =>
+                        $product->uuid,
+                    'idempotency_header' =>
+                        'Idempotency-Key',
+                ],
+            ],
         ];
     }
 }
