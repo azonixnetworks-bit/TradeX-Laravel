@@ -161,7 +161,7 @@ class TradingFloorClientController extends Controller
             ],
             'fixed_commission_amount' => [
                 Rule::requiredIf(fn () => in_array(strtoupper((string) $request->input('commission_type')), ['FIXED', 'HYBRID'], true)),
-                'nullable', 'numeric', 'min:0', 'max:9999999999999999.99',
+                'nullable', 'numeric', 'min:0',
             ],
             'commission_currency' => ['required', 'string', 'size:3'],
             'billing_cycle' => ['required', Rule::in(['WEEKLY', 'MONTHLY', 'QUARTERLY'])],
