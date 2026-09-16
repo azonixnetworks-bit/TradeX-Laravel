@@ -7,33 +7,52 @@ use App\Models\AdminUser;
 use App\Models\TradingFloorAccessLog;
 use App\Models\TradingFloorClient;
 use App\Models\TradingFloorCommissionInvoice;
+use App\Models\TradingFloorCommissionPayment;
+use App\Services\Admin\TradingFloor\TradingFloorCommissionService;
 use Illuminate\Http\Response;
 
 class TradingFloorDashboardController extends Controller
 {
-    public function index(): Response
+    public function index(TradingFloorCommissionService $commissions): Response
     {
         $this->viewer();
+        $commissions->markOverdueOpenInvoices();
 
         $today = now()->toDateString();
+
+        $commissionDueByCurrency = TradingFloorCommissionInvoice::query()
+            ->selectRaw('currency, SUM(balance_amount) as total')
+            ->whereIn('status', [
+                TradingFloorCommissionInvoice::STATUS_PENDING,
+                TradingFloorCommissionInvoice::STATUS_PARTIALLY_PAID,
+                TradingFloorCommissionInvoice::STATUS_OVERDUE,
+            ])
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->all();
+
+        $receivedThisMonthByCurrency = TradingFloorCommissionPayment::query()
+            ->selectRaw('currency, SUM(amount) as total')
+            ->where('status', TradingFloorCommissionPayment::STATUS_RECEIVED)
+            ->whereBetween('received_at', [now()->startOfMonth(), now()->endOfMonth()])
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->all();
 
         return response()->view(
             'admin.trading_floor.index',
             [
                 'stats' => [
-                    'active_clients' => TradingFloorClient::query()->where('status', TradingFloorClient::STATUS_ACTIVE)->count(),
+                    'active_clients' => TradingFloorClient::query()
+                        ->where('status', TradingFloorClient::STATUS_ACTIVE)
+                        ->count(),
                     'present_today' => TradingFloorAccessLog::query()
                         ->whereDate('accessed_at', $today)
                         ->where('direction', TradingFloorAccessLog::DIRECTION_ENTRY)
                         ->distinct('trading_floor_client_id')
                         ->count('trading_floor_client_id'),
-                    'commission_due' => TradingFloorCommissionInvoice::query()
-                        ->whereIn('status', [
-                            TradingFloorCommissionInvoice::STATUS_PENDING,
-                            TradingFloorCommissionInvoice::STATUS_PARTIALLY_PAID,
-                            TradingFloorCommissionInvoice::STATUS_OVERDUE,
-                        ])
-                        ->sum('balance_amount'),
+                    'commission_due_by_currency' => $commissionDueByCurrency,
+                    'received_this_month_by_currency' => $receivedThisMonthByCurrency,
                     'overdue_clients' => TradingFloorCommissionInvoice::query()
                         ->where('status', TradingFloorCommissionInvoice::STATUS_OVERDUE)
                         ->distinct('trading_floor_client_id')
