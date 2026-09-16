@@ -28,7 +28,14 @@ class TradingFloorAccessCredentialController extends Controller
         ]);
 
         $type = strtoupper(trim((string) $data['credential_type']));
-        $referenceHash = $this->referenceHash((string) $data['credential_reference']);
+        $deviceCode = filled($data['device_code'] ?? null)
+            ? strtoupper(trim((string) $data['device_code']))
+            : null;
+        $referenceHash = $this->referenceHash(
+            $type,
+            $deviceCode,
+            (string) $data['credential_reference']
+        );
 
         $alreadyAssigned = TradingFloorAccessCredential::query()
             ->where('credential_type', $type)
@@ -41,13 +48,11 @@ class TradingFloorAccessCredentialController extends Controller
                 ->withErrors(['credential_reference' => 'This NFC card or fingerprint device reference is already assigned.']);
         }
 
-        DB::transaction(function () use ($client, $admin, $data, $type, $referenceHash): void {
+        DB::transaction(function () use ($client, $admin, $type, $deviceCode, $referenceHash): void {
             $client->accessCredentials()->create([
                 'credential_type' => $type,
                 'credential_reference' => $referenceHash,
-                'device_code' => filled($data['device_code'] ?? null)
-                    ? trim((string) $data['device_code'])
-                    : null,
+                'device_code' => $deviceCode,
                 'status' => TradingFloorAccessCredential::STATUS_ACTIVE,
                 'issued_at' => now(),
                 'created_by_admin_id' => $admin->id,
@@ -86,11 +91,15 @@ class TradingFloorAccessCredentialController extends Controller
             ->with('success', 'Access credential revoked. Historical access records remain preserved.');
     }
 
-    private function referenceHash(string $reference): string
+    private function referenceHash(string $type, ?string $deviceCode, string $reference): string
     {
+        $scope = $type === TradingFloorAccessCredential::TYPE_FINGERPRINT
+            ? ($deviceCode ?: 'UNSCOPED')
+            : 'GLOBAL';
+
         return hash_hmac(
             'sha256',
-            trim($reference),
+            $type.'|'.$scope.'|'.trim($reference),
             (string) config('app.key')
         );
     }
