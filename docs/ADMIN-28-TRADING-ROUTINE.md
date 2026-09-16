@@ -20,6 +20,28 @@ The module reuses the existing Meta WhatsApp Cloud API graph version, phone-numb
 
 Create and approve a separate WhatsApp utility template intended for the daily TradeX plan. The implementation expects a DOCUMENT media header and a static body, so no customer-controlled body text is injected into the template message.
 
+### Meta template specification
+
+Create this as a separate template in WhatsApp Manager. Do not reuse the registration OTP/authentication template.
+
+- Template name: `tradex_daily_trading_plan`
+- Category: `UTILITY`
+- Language: `English (US)` / `en_US`
+- Header type: `DOCUMENT`
+- Body variables: none
+- Buttons: none required
+- Sample header media: upload a non-sensitive sample TradeX Daily Trading Routine PDF when Meta asks for a document example
+
+Recommended body copy:
+
+> Your TradeX Daily Trading Routine is ready. Review the attached PDF before you trade today. Follow your risk limits, session plan, checklist and stop rules. This is a planning and discipline tool, not a trade signal.
+
+Recommended footer:
+
+> TradeX OS — Trading discipline & risk planning
+
+Keep the template operational rather than promotional. The attached PDF contains the customer-specific plan; the WhatsApp template itself remains static and contains no customer name, account balance, trade signal, guaranteed-return language or sensitive account information.
+
 Deployment settings:
 
 ```dotenv
@@ -44,6 +66,17 @@ META_WHATSAPP_CONNECT_TIMEOUT_SECONDS=5
 ```
 
 Keep `TRADEX_TRADING_ROUTINE_WHATSAPP_DRIVER=disabled` until the document template is approved and tested. A provider API acceptance is stored as `ACCEPTED`; the module does not falsely label it `DELIVERED` without a delivery-status webhook.
+
+### Approval and activation sequence
+
+1. Create `tradex_daily_trading_plan` in WhatsApp Manager using the specification above.
+2. Upload a non-sensitive sample PDF for the DOCUMENT header sample if requested.
+3. Submit the template for Meta review.
+4. Keep `TRADEX_TRADING_ROUTINE_WHATSAPP_DRIVER=disabled` while the template is pending or rejected.
+5. After the exact template name and `en_US` language are approved, set `TRADEX_TRADING_ROUTINE_WHATSAPP_DRIVER=meta` in the production deployment environment.
+6. Run `php artisan optimize:clear` after changing deployment environment values.
+7. Test with one internal verified WhatsApp account before enabling customer opt-ins broadly.
+8. Confirm the persisted provider status is `ACCEPTED` and that the PDF opens correctly in WhatsApp.
 
 ## Customer API
 
