@@ -296,3 +296,16 @@ require __DIR__ . '/admin_funded_account_advisor.php';
 */
 
 require __DIR__ . '/admin_trading_routine.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-29 — Economic News Intelligence
+|--------------------------------------------------------------------------
+|
+| Permission-gated economic calendar, impact feeds, live intelligence and
+| affected-pair direction. Mutating actions are separated behind dedicated
+| permissions and audited services; mobile consumption remains read-only.
+|
+*/
+
+require __DIR__ . '/admin_economic_news.php';

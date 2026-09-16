@@ -166,6 +166,17 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->isSuperAdmin() || auth('admin')->user()?->hasPermission('economic_news.view'))
+<script
+    src="{{ asset('admin/js/economic-news-nav.js') }}"
+    data-overview-url="{{ route('admin.economic_news.index') }}"
+    data-high-url="{{ route('admin.economic_news.high_impact') }}"
+    data-medium-url="{{ route('admin.economic_news.medium_impact') }}"
+    data-live-url="{{ route('admin.economic_news.live') }}"
+    data-calendar-url="{{ route('admin.economic_news.calendar') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>
