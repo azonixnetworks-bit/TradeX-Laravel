@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*
-         * SEO-01 is global so private/noindex headers also cover framework
+         * ADMIN-30 is global so private/noindex headers also cover framework
          * health routes and any future route groups, not only web/api.
          */
         $middleware->prepend(SearchEngineIndexPolicy::class);
