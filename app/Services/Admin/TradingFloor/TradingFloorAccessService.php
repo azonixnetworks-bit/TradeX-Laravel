@@ -9,6 +9,7 @@ use App\Models\TradingFloorAccessLog;
 use App\Models\TradingFloorAccessSetting;
 use App\Models\TradingFloorClient;
 use App\Models\TradingFloorCommissionInvoice;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class TradingFloorAccessService
@@ -182,8 +183,8 @@ class TradingFloorAccessService
             return ['DENIED', 'CLIENT_NOT_ACTIVE', 'The Trading Floor customer account is not active.'];
         }
 
-        $overrideMode = strtoupper((string) ($client->access_override_mode ?: 'AUTO'));
-        $overrideActive = $overrideMode !== 'AUTO'
+        $overrideMode = strtoupper((string) ($client->access_override_mode ?: TradingFloorClient::ACCESS_OVERRIDE_AUTO));
+        $overrideActive = $overrideMode !== TradingFloorClient::ACCESS_OVERRIDE_AUTO
             && ($client->access_override_until === null || $client->access_override_until->isFuture());
 
         if ($direction === TradingFloorAccessLog::DIRECTION_EXIT && $settings->allow_exit_when_blocked) {
@@ -194,11 +195,11 @@ class TradingFloorAccessService
             return ['GRANTED', 'EXIT_ALLOWED', 'Exit access granted.'];
         }
 
-        if ($overrideActive && $overrideMode === 'FORCE_DENY') {
+        if ($overrideActive && $overrideMode === TradingFloorClient::ACCESS_OVERRIDE_FORCE_DENY) {
             return ['DENIED', 'ADMIN_FORCE_DENY', 'Access denied by an active administrator override.'];
         }
 
-        if ($overrideActive && $overrideMode === 'FORCE_ALLOW') {
+        if ($overrideActive && $overrideMode === TradingFloorClient::ACCESS_OVERRIDE_FORCE_ALLOW) {
             return ['GRANTED', 'ADMIN_FORCE_ALLOW', 'Access granted by an active administrator override.'];
         }
 
@@ -255,6 +256,7 @@ class TradingFloorAccessService
             ->whereNotIn('status', [
                 TradingFloorCommissionInvoice::STATUS_PAID,
                 TradingFloorCommissionInvoice::STATUS_WAIVED,
+                TradingFloorCommissionInvoice::STATUS_DISPUTED,
             ]);
 
         $overdueCount = (clone $query)->count();
@@ -268,7 +270,9 @@ class TradingFloorAccessService
 
         $daysOverdue = 0;
         if ($earliestDue !== null) {
-            $daysOverdue = now()->parse($earliestDue)->startOfDay()->diffInDays(now()->startOfDay());
+            $daysOverdue = Carbon::parse($earliestDue)
+                ->startOfDay()
+                ->diffInDays(now()->startOfDay());
         }
 
         return [
