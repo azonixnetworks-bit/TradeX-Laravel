@@ -13,6 +13,7 @@ class AdminPermissionSeeder extends Seeder
             ['dashboard.view', 'View Dashboard', 'DASHBOARD'],
             ['market_clock.view', 'View Market Clock', 'MARKET_CLOCK'],
             ['screener.monitor.view', 'View Screener Monitor', 'SCREENER'],
+            ['risk_reward.view', 'View Risk Reward Calculator', 'TRADING_TOOLS'],
 
             ['users.view', 'View Users', 'USERS'],
             ['users.view_details', 'View User Details', 'USERS'],

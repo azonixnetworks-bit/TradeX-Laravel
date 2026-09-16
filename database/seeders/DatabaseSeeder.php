@@ -11,8 +11,13 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AdminRoleSeeder::class,
             AdminPermissionSeeder::class,
+            FundedAccountAdvisorPermissionSeeder::class,
+            TradingRoutinePermissionSeeder::class,
+            EconomicNewsPermissionSeeder::class,
+            FundedNoTradeZonePermissionSeeder::class,
             AdminRolePermissionSeeder::class,
             SuperAdminSeeder::class,
+            FundedNoTradeZoneRuleSeeder::class,
             AffiliateStageSeeder::class,
             ProductSeeder::class,
             InvestmentProductSeeder::class,

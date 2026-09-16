@@ -5,6 +5,8 @@ use App\Providers\AffiliateApiServiceProvider;
 use App\Providers\AppServiceProvider;
 use App\Providers\CopyTradingServiceProvider;
 use App\Providers\DashboardServiceProvider;
+use App\Providers\EconomicNewsServiceProvider;
+use App\Providers\FundedAccountAdvisorApiServiceProvider;
 use App\Providers\InvestmentServiceProvider;
 use App\Providers\KycApiServiceProvider;
 use App\Providers\LegalPolicyApiServiceProvider;
@@ -21,6 +23,7 @@ use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\ScreenerServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
 use App\Providers\TradeJournalServiceProvider;
+use App\Providers\TradingRoutineServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -43,5 +46,8 @@ return [
     PushNotificationApiServiceProvider::class,
     CopyTradingServiceProvider::class,
     TradeJournalServiceProvider::class,
+    FundedAccountAdvisorApiServiceProvider::class,
+    TradingRoutineServiceProvider::class,
+    EconomicNewsServiceProvider::class,
     ScreenerServiceProvider::class,
 ];

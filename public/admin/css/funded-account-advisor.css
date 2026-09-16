@@ -1,0 +1,609 @@
+.funded-advisor-page {
+    display: grid;
+    gap: 20px;
+}
+
+.funded-advisor-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.funded-advisor-header h1 span,
+.funded-advisor-panel-heading h2 span {
+    color: var(--gold-light);
+}
+
+.funded-advisor-header-actions,
+.funded-advisor-form-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.funded-advisor-layout,
+.funded-advisor-result-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.7fr) minmax(290px, .8fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.funded-advisor-form-panel,
+.funded-advisor-side-panel,
+.funded-advisor-plan-panel,
+.funded-advisor-rule-panel,
+.funded-advisor-partner-form,
+.funded-advisor-partner-table-panel,
+.funded-advisor-danger-zone {
+    padding: 20px;
+}
+
+.funded-advisor-panel-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.funded-advisor-panel-heading h2 {
+    margin: 4px 0 0;
+}
+
+.funded-advisor-panel-heading > span {
+    color: var(--gold-light);
+    border: 1px solid rgba(217, 168, 60, .28);
+    background: rgba(217, 168, 60, .08);
+    border-radius: 9px;
+    padding: 7px 9px;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.funded-advisor-section-title {
+    margin: 22px 0 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+
+.funded-advisor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.funded-advisor-field {
+    display: grid;
+    gap: 7px;
+}
+
+.funded-advisor-field-full {
+    grid-column: 1 / -1;
+}
+
+.funded-advisor-field > span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.funded-advisor-field > span small,
+.funded-advisor-field > small {
+    color: var(--text-muted);
+    font-weight: 500;
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.funded-advisor-field input,
+.funded-advisor-field select,
+.funded-advisor-field textarea {
+    width: 100%;
+    min-height: 46px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #061321;
+    color: var(--text);
+    padding: 10px 13px;
+    font: inherit;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.funded-advisor-field textarea {
+    resize: vertical;
+    min-height: 88px;
+}
+
+.funded-advisor-field input:focus,
+.funded-advisor-field select:focus,
+.funded-advisor-field textarea:focus {
+    border-color: rgba(217, 168, 60, .58);
+    box-shadow: 0 0 0 3px rgba(217, 168, 60, .08);
+}
+
+.funded-advisor-money {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #061321;
+}
+
+.funded-advisor-money:focus-within {
+    border-color: rgba(217, 168, 60, .58);
+    box-shadow: 0 0 0 3px rgba(217, 168, 60, .08);
+}
+
+.funded-advisor-money b {
+    display: grid;
+    place-items: center;
+    color: var(--gold-light);
+    border-right: 1px solid var(--border);
+}
+
+.funded-advisor-money input {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none !important;
+}
+
+.funded-advisor-callout,
+.funded-advisor-side-note,
+.funded-advisor-stop-card,
+.funded-advisor-disclaimer {
+    margin-top: 18px;
+    border: 1px solid rgba(217, 168, 60, .20);
+    background: rgba(217, 168, 60, .055);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.funded-advisor-callout strong,
+.funded-advisor-side-note strong,
+.funded-advisor-stop-card span,
+.funded-advisor-disclaimer strong {
+    color: var(--gold-light);
+    font-size: 11px;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.funded-advisor-callout p,
+.funded-advisor-side-note p,
+.funded-advisor-disclaimer p {
+    margin: 7px 0 0;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-size: 12px;
+}
+
+.funded-advisor-submit {
+    width: 100%;
+    margin-top: 18px;
+    min-height: 48px;
+}
+
+.funded-advisor-report-link {
+    display: grid;
+    gap: 4px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+}
+
+.funded-advisor-report-link strong {
+    color: var(--text);
+    font-size: 13px;
+}
+
+.funded-advisor-report-link span,
+.funded-advisor-report-link small {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.funded-advisor-alert {
+    padding: 14px 16px;
+    border-radius: 11px;
+    font-size: 12px;
+}
+
+.funded-advisor-alert.is-danger {
+    border-color: rgba(236, 82, 82, .3);
+    background: rgba(236, 82, 82, .07);
+    color: #ffb1b1;
+}
+
+.funded-advisor-alert ul {
+    margin: 8px 0 0 18px;
+}
+
+.funded-advisor-headline {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    align-items: center;
+    border-left: 3px solid var(--gold);
+}
+
+.funded-advisor-headline span {
+    color: var(--text-muted);
+    font-size: 10px;
+    letter-spacing: .13em;
+    font-weight: 800;
+}
+
+.funded-advisor-headline h2 {
+    margin: 6px 0 0;
+    max-width: 900px;
+    font-size: 17px;
+    line-height: 1.55;
+}
+
+.funded-advisor-headline > strong,
+.funded-advisor-status-pill {
+    flex: 0 0 auto;
+    padding: 8px 10px;
+    border-radius: 999px;
+    font-size: 10px;
+    letter-spacing: .08em;
+}
+
+.funded-advisor-headline.is-safe > strong,
+.funded-advisor-status-pill.is-safe {
+    color: #9ff0c8;
+    background: rgba(42, 185, 116, .10);
+    border: 1px solid rgba(42, 185, 116, .25);
+}
+
+.funded-advisor-headline.is-caution > strong {
+    color: var(--gold-light);
+    background: rgba(217, 168, 60, .10);
+    border: 1px solid rgba(217, 168, 60, .25);
+}
+
+.funded-advisor-headline.is-danger > strong {
+    color: #ffb1b1;
+    background: rgba(236, 82, 82, .10);
+    border: 1px solid rgba(236, 82, 82, .25);
+}
+
+.funded-advisor-status-pill.is-muted {
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--border);
+}
+
+.funded-advisor-result-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.funded-advisor-metric {
+    padding: 16px;
+    display: grid;
+    gap: 7px;
+}
+
+.funded-advisor-metric span {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.funded-advisor-metric strong {
+    color: var(--text);
+    font-size: 20px;
+}
+
+.funded-advisor-metric small {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.funded-advisor-metric.is-primary strong {
+    color: var(--gold-light);
+}
+
+.funded-advisor-entry-list {
+    display: grid;
+    gap: 10px;
+}
+
+.funded-advisor-entry-row {
+    display: grid;
+    grid-template-columns: 90px 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    padding: 13px;
+    background: rgba(6, 19, 33, .45);
+}
+
+.funded-advisor-entry-row div {
+    display: grid;
+    gap: 4px;
+}
+
+.funded-advisor-entry-row span {
+    color: var(--text-muted);
+    font-size: 9px;
+    letter-spacing: .09em;
+}
+
+.funded-advisor-entry-row strong {
+    color: var(--gold-light);
+}
+
+.funded-advisor-entry-row p {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.funded-advisor-stop-card {
+    display: grid;
+    gap: 6px;
+}
+
+.funded-advisor-stop-card strong {
+    color: var(--text);
+    font-size: 24px;
+}
+
+.funded-advisor-stop-card small {
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.funded-advisor-rule-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.funded-advisor-rule-list > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.funded-advisor-rule-list dt {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.funded-advisor-rule-list dd {
+    margin: 0;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.funded-advisor-warning-panel {
+    padding: 17px;
+    border-color: rgba(217, 168, 60, .26);
+}
+
+.funded-advisor-warning-panel strong {
+    color: var(--gold-light);
+}
+
+.funded-advisor-warning-panel p {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.55;
+}
+
+.funded-advisor-partner-card {
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.funded-advisor-partner-card h2 {
+    margin: 6px 0;
+}
+
+.funded-advisor-partner-card p,
+.funded-advisor-partner-card small {
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.funded-advisor-promo {
+    margin: 8px 0;
+    color: var(--text-secondary);
+}
+
+.funded-advisor-promo strong {
+    color: var(--gold-light);
+}
+
+.funded-advisor-table-wrap {
+    overflow-x: auto;
+}
+
+.funded-advisor-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 780px;
+}
+
+.funded-advisor-table th,
+.funded-advisor-table td {
+    padding: 13px 10px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+}
+
+.funded-advisor-table th {
+    color: var(--text-muted);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.funded-advisor-table td {
+    color: var(--text-secondary);
+    font-size: 11px;
+}
+
+.funded-advisor-table td > small {
+    display: block;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.funded-advisor-partner-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.funded-advisor-partner-name > img,
+.funded-advisor-partner-name > span {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: contain;
+    background: rgba(217, 168, 60, .07);
+    border: 1px solid rgba(217, 168, 60, .18);
+}
+
+.funded-advisor-partner-name > span {
+    display: grid;
+    place-items: center;
+    color: var(--gold-light);
+    font-weight: 800;
+}
+
+.funded-advisor-partner-name div {
+    display: grid;
+    gap: 3px;
+}
+
+.funded-advisor-partner-name small {
+    color: var(--gold-light);
+    font-size: 8px;
+    letter-spacing: .08em;
+}
+
+.funded-advisor-checks {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.funded-advisor-checks label {
+    display: flex;
+    gap: 7px;
+    align-items: center;
+}
+
+.funded-advisor-form-actions {
+    margin-top: 18px;
+}
+
+.funded-advisor-danger-zone {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    border-color: rgba(236, 82, 82, .2);
+}
+
+.funded-advisor-danger-zone strong {
+    color: #ffb1b1;
+}
+
+.funded-advisor-danger-zone p {
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.funded-advisor-empty {
+    padding: 24px 10px;
+    color: var(--text-muted);
+    text-align: center;
+    font-size: 12px;
+}
+
+@media (max-width: 1120px) {
+    .funded-advisor-result-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .funded-advisor-layout,
+    .funded-advisor-result-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 680px) {
+    .funded-advisor-header,
+    .funded-advisor-headline,
+    .funded-advisor-partner-card,
+    .funded-advisor-danger-zone {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .funded-advisor-grid,
+    .funded-advisor-result-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .funded-advisor-entry-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .funded-advisor-entry-row > div:first-child {
+        grid-column: 1 / -1;
+    }
+
+    .funded-advisor-header-actions,
+    .funded-advisor-form-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .funded-advisor-header-actions .primary-btn,
+    .funded-advisor-header-actions .secondary-btn,
+    .funded-advisor-form-actions .primary-btn,
+    .funded-advisor-form-actions .secondary-btn,
+    .funded-advisor-partner-card .primary-btn {
+        width: 100%;
+        text-align: center;
+    }
+}

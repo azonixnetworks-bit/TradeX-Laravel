@@ -145,6 +145,45 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->hasPermission('risk_reward.view'))
+<script
+    src="{{ asset('admin/js/risk-reward-nav.js') }}"
+    data-calculator-url="{{ route('admin.risk_reward.index') }}"
+></script>
+@endif
+
+@if(auth('admin')->user()?->hasPermission('funded_advisor.view'))
+<script
+    src="{{ asset('admin/js/funded-account-advisor-nav.js') }}"
+    data-advisor-url="{{ route('admin.funded_advisor.index') }}"
+></script>
+@endif
+
+@if(auth('admin')->user()?->isSuperAdmin() || auth('admin')->user()?->hasPermission('funded_no_trade_zone.view'))
+<script
+    src="{{ asset('admin/js/funded-no-trade-zone-nav.js') }}"
+    data-no-trade-url="{{ route('admin.funded_no_trade_zone.index') }}"
+></script>
+@endif
+
+@if(auth('admin')->user()?->hasPermission('trading_routine.view'))
+<script
+    src="{{ asset('admin/js/trading-routine-nav.js') }}"
+    data-routine-url="{{ route('admin.trading_routine.index') }}"
+></script>
+@endif
+
+@if(auth('admin')->user()?->isSuperAdmin() || auth('admin')->user()?->hasPermission('economic_news.view'))
+<script
+    src="{{ asset('admin/js/economic-news-nav.js') }}"
+    data-overview-url="{{ route('admin.economic_news.index') }}"
+    data-high-url="{{ route('admin.economic_news.high_impact') }}"
+    data-medium-url="{{ route('admin.economic_news.medium_impact') }}"
+    data-live-url="{{ route('admin.economic_news.live') }}"
+    data-calendar-url="{{ route('admin.economic_news.calendar') }}"
+></script>
+@endif
+
 <script
     src="{{ asset('admin/js/sidebar-enhancements.js') }}">
 </script>

@@ -1,0 +1,368 @@
+/* ADMIN-31 — Funded No Trade Zone responsive rule-library refinements. */
+.funded-no-trade-zone-page .funded-advisor-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(217, 168, 60, .35) transparent;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table-wrap::-webkit-scrollbar {
+    height: 8px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table-wrap::-webkit-scrollbar-thumb {
+    background: rgba(217, 168, 60, .35);
+    border-radius: 999px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table {
+    min-width: 1120px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table th,
+.funded-no-trade-zone-page .funded-advisor-table td {
+    padding: 15px 12px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table th {
+    white-space: nowrap;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td {
+    vertical-align: middle;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:first-child {
+    min-width: 150px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:first-child > strong {
+    display: block;
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.35;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(2),
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(4),
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(5),
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(7),
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(8) {
+    white-space: nowrap;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(3) {
+    min-width: 135px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(4) {
+    min-width: 105px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(5) {
+    min-width: 145px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) {
+    min-width: 245px;
+    max-width: 310px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) small {
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.funded-no-trade-zone-page .funded-advisor-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 34px;
+    min-width: 92px;
+    padding: 0 12px;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+    line-height: 1;
+    font-weight: 800;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table .secondary-btn,
+.funded-no-trade-zone-page .funded-advisor-header-actions .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    word-break: normal;
+    overflow-wrap: normal;
+}
+
+.funded-no-trade-zone-page .funded-advisor-table .secondary-btn {
+    min-width: 72px;
+    min-height: 38px;
+    padding: 0 14px;
+}
+
+.funded-no-trade-zone-page .funded-advisor-header-actions {
+    flex-wrap: nowrap;
+}
+
+.funded-no-trade-zone-page .funded-advisor-header-actions > span {
+    flex: 0 0 auto;
+}
+
+/* Laptop/desktop: keep every column visible inside the admin content pane. */
+@media (min-width: 721px) and (max-width: 1500px) {
+    .funded-no-trade-zone-page .funded-advisor-partner-table-panel {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table-wrap {
+        overflow-x: hidden;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table {
+        width: 100%;
+        min-width: 0;
+        table-layout: fixed;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table th,
+    .funded-no-trade-zone-page .funded-advisor-table td {
+        min-width: 0 !important;
+        max-width: none;
+        padding: 13px 7px;
+        box-sizing: border-box;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table th {
+        font-size: 8px;
+        letter-spacing: .08em;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td {
+        font-size: 10.5px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(1),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(1) { width: 15%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(2),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(2) { width: 8%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(3),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(3) { width: 14%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(4),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(4) { width: 9%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(5),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(5) { width: 16%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(6),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) { width: 22%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(7),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(7) { width: 9%; }
+    .funded-no-trade-zone-page .funded-advisor-table th:nth-child(8),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(8) { width: 7%; }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:first-child > strong {
+        font-size: 11.5px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td > small {
+        font-size: 8px;
+        line-height: 1.35;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6),
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) small {
+        overflow: hidden;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) small {
+        display: block;
+        max-width: 100%;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow-wrap: normal;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-status-pill {
+        min-width: 0;
+        min-height: 32px;
+        max-width: 100%;
+        padding: 0 9px;
+        font-size: 9px;
+        letter-spacing: .045em;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table .secondary-btn {
+        width: 100%;
+        min-width: 0;
+        min-height: 34px;
+        padding: 0 8px;
+        font-size: 10px;
+        box-sizing: border-box;
+    }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+    .funded-no-trade-zone-page .funded-advisor-partner-table-panel {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table th,
+    .funded-no-trade-zone-page .funded-advisor-table td {
+        padding-left: 5px;
+        padding-right: 5px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td {
+        font-size: 10px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table th {
+        font-size: 7.5px;
+    }
+}
+
+@media (max-width: 900px) {
+    .funded-no-trade-zone-page .funded-advisor-panel-heading {
+        align-items: center;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-header-actions {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 720px) {
+    .funded-no-trade-zone-page .funded-advisor-partner-table-panel {
+        padding: 14px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-panel-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-panel-heading h2 {
+        font-size: 18px;
+        line-height: 1.3;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table-wrap {
+        overflow: visible;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table,
+    .funded-no-trade-zone-page .funded-advisor-table tbody {
+        display: block;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table thead {
+        display: none;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table tbody {
+        display: grid;
+        gap: 12px;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table tr {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(6, 19, 33, .48);
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td {
+        display: grid;
+        align-content: start;
+        gap: 6px;
+        min-width: 0 !important;
+        max-width: none !important;
+        padding: 12px;
+        border-bottom: 1px solid var(--border);
+        white-space: normal !important;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-last-child(-n + 2) {
+        border-bottom: 0;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td::before {
+        color: var(--text-muted);
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: .1em;
+        text-transform: uppercase;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(1)::before { content: 'Company / Program'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(2)::before { content: 'Phase'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(3)::before { content: 'Policy'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(4)::before { content: 'Impact'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(5)::before { content: 'Rule Window'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6)::before { content: 'Verified'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(7)::before { content: 'Status'; }
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(8)::before { content: 'Manage'; }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:first-child,
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) {
+        grid-column: 1 / -1;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) small {
+        overflow-wrap: anywhere;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table .funded-advisor-empty {
+        grid-column: 1 / -1;
+        text-align: center;
+    }
+}
+
+@media (max-width: 520px) {
+    .funded-no-trade-zone-page .funded-advisor-panel-heading {
+        grid-template-columns: 1fr;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-header-actions {
+        width: 100%;
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-header-actions .primary-btn {
+        flex: 1 1 auto;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table tr {
+        grid-template-columns: 1fr;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td,
+    .funded-no-trade-zone-page .funded-advisor-table td:first-child,
+    .funded-no-trade-zone-page .funded-advisor-table td:nth-child(6) {
+        grid-column: 1;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table td:last-child {
+        border-bottom: 0;
+    }
+
+    .funded-no-trade-zone-page .funded-advisor-table .secondary-btn,
+    .funded-no-trade-zone-page .funded-advisor-status-pill {
+        width: 100%;
+    }
+}

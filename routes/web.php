@@ -257,3 +257,55 @@ require __DIR__ . '/admin_hardening.php';
 */
 
 require __DIR__ . '/admin_customers.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-26 — TradeX Risk Reward Calculator
+|--------------------------------------------------------------------------
+|
+| Permission-gated position sizing for Forex, Commodity, Crypto and Deriv
+| reference profiles. This module performs calculations only and never
+| places, modifies or transmits live trades.
+|
+*/
+
+require __DIR__ . '/admin_risk_reward.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-27 — Funded Account Advisor
+|--------------------------------------------------------------------------
+|
+| Firm-neutral funded-account risk planning, customer report snapshots,
+| partner/referral management and downloadable PDF risk plans. This module
+| does not execute trades or hardcode changing third-party challenge rules.
+|
+*/
+
+require __DIR__ . '/admin_funded_account_advisor.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-28 — Daily Trading Routine Planner
+|--------------------------------------------------------------------------
+|
+| Customer-owned routine preferences, timezone-aware daily PDF generation
+| and monitored WhatsApp delivery. Admins monitor outcomes but do not fill
+| customer trading-routine data on the customer's behalf.
+|
+*/
+
+require __DIR__ . '/admin_trading_routine.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-29 — Economic News Intelligence
+|--------------------------------------------------------------------------
+|
+| Permission-gated economic calendar, impact feeds, live intelligence and
+| affected-pair direction. Mutating actions are separated behind dedicated
+| permissions and audited services; mobile consumption remains read-only.
+|
+*/
+
+require __DIR__ . '/admin_economic_news.php';

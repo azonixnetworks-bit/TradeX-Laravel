@@ -76,3 +76,28 @@ Schedule::command('tradex:copy-trade-billing:sweep')
             false
         )
     );
+
+Schedule::command('tradex:trading-routine:sweep')
+    ->everyMinute()
+    ->withoutOverlapping(5)
+    ->when(
+        fn (): bool => (bool) config(
+            'trading_routine.enabled',
+            true
+        )
+    );
+
+$economicNewsSyncMinutes = max(
+    1,
+    min(30, (int) config('economic_news.sync.frequency_minutes', 5))
+);
+
+Schedule::command('tradex:economic-news:sync')
+    ->cron(sprintf('*/%d * * * *', $economicNewsSyncMinutes))
+    ->withoutOverlapping(max(5, $economicNewsSyncMinutes + 2))
+    ->when(
+        fn (): bool => (bool) config(
+            'economic_news.sync.enabled',
+            false
+        )
+    );
