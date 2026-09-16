@@ -55,7 +55,12 @@
                 <div class="panel-eyebrow">RULE LIBRARY</div>
                 <h2>Funded Company News Restrictions</h2>
             </div>
-            <span>{{ str_pad((string) $rules->total(), 2, '0', STR_PAD_LEFT) }}</span>
+            <div class="funded-advisor-header-actions">
+                <span>{{ str_pad((string) $rules->total(), 2, '0', STR_PAD_LEFT) }}</span>
+                @if($canManageRules)
+                    <a class="primary-btn" href="{{ route('admin.funded_no_trade_zone.rules.create') }}">+ New Rule</a>
+                @endif
+            </div>
         </div>
 
         <div class="funded-advisor-table-wrap">
@@ -93,7 +98,16 @@
                             @endif
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="funded-advisor-empty">No funded no-trade rules yet. Add the first verified company rule.</td></tr>
+                        <tr>
+                            <td colspan="8" class="funded-advisor-empty">
+                                No funded no-trade rules yet. Add the first verified company rule.
+                                @if($canManageRules)
+                                    <div style="margin-top:12px">
+                                        <a class="primary-btn" href="{{ route('admin.funded_no_trade_zone.rules.create') }}">+ Add First Rule</a>
+                                    </div>
+                                @endif
+                            </td>
+                        </tr>
                     @endforelse
                 </tbody>
             </table>
