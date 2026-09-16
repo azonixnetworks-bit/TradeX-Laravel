@@ -5,10 +5,11 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/funded-account-advisor.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/funded-no-trade-zone.css') }}">
 @endpush
 
 @section('content')
-<div class="funded-advisor-page">
+<div class="funded-advisor-page funded-no-trade-zone-page">
     <div class="page-header funded-advisor-header">
         <div>
             <div class="page-eyebrow">ADMIN-31 · TRADING TOOLS</div>
