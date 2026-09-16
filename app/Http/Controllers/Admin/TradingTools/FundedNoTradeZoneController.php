@@ -26,7 +26,7 @@ class FundedNoTradeZoneController extends Controller
                 ->with('partner')
                 ->orderByDesc('is_active')
                 ->orderBy('priority')
-                ->orderBy('partner_id')
+                ->orderBy('funded_account_partner_id')
                 ->paginate(25),
             'activeRuleCount' => FundedNoTradeRule::query()->where('is_active', true)->count(),
             'partnerRuleCount' => FundedNoTradeRule::query()->distinct('funded_account_partner_id')->count('funded_account_partner_id'),
