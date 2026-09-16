@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\UserEntitlement;
 use App\Services\Payments\PaymentReversalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request as HttpClientRequest;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
@@ -108,6 +109,33 @@ class DynamicProductPayPalTest extends TestCase
             ]
         );
 
+        Http::assertSent(
+            function (HttpClientRequest $request): bool {
+                if (
+                    $request->method() !== 'POST'
+                    || $request->url()
+                        !== 'https://api-m.sandbox.paypal.com/v2/checkout/orders'
+                ) {
+                    return false;
+                }
+
+                $payload = $request->data();
+
+                return data_get(
+                    $payload,
+                    'purchase_units.0.items.0.sku'
+                ) === 'TRADEX_SIGNAL_PACK'
+                    && data_get(
+                        $payload,
+                        'purchase_units.0.items.0.name'
+                    ) === 'TradeX Signal Pack'
+                    && data_get(
+                        $payload,
+                        'purchase_units.0.items.0.description'
+                    ) === 'Lifetime signal pack access.';
+            }
+        );
+
         $this
             ->withToken($token)
             ->postJson(
@@ -147,8 +175,6 @@ class DynamicProductPayPalTest extends TestCase
                 'code' => 'TRADEX_SIGNAL_PACK',
                 'purchase_allowed' => false,
             ]);
-
-        Http::fake();
 
         $this
             ->withToken($token)
