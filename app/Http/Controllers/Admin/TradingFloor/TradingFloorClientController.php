@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\TradingFloor;
 use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\TradingFloorClient;
+use App\Models\TradingFloorCommissionInvoice;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -103,7 +104,19 @@ class TradingFloorClientController extends Controller
             'commissionInvoices' => fn ($query) => $query->with('payments')->latest('due_date')->limit(20),
         ]);
 
-        return view('admin.trading_floor.clients.show', compact('client'));
+        $outstandingByCurrency = TradingFloorCommissionInvoice::query()
+            ->selectRaw('currency, SUM(balance_amount) as total')
+            ->where('trading_floor_client_id', $client->id)
+            ->whereIn('status', [
+                TradingFloorCommissionInvoice::STATUS_PENDING,
+                TradingFloorCommissionInvoice::STATUS_PARTIALLY_PAID,
+                TradingFloorCommissionInvoice::STATUS_OVERDUE,
+            ])
+            ->groupBy('currency')
+            ->pluck('total', 'currency')
+            ->all();
+
+        return view('admin.trading_floor.clients.show', compact('client', 'outstandingByCurrency'));
     }
 
     public function edit(TradingFloorClient $client): View
