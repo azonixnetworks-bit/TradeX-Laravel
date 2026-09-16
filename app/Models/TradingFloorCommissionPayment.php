@@ -23,6 +23,9 @@ class TradingFloorCommissionPayment extends Model
         'received_by_admin_id',
         'status',
         'notes',
+        'reversed_at',
+        'reversed_by_admin_id',
+        'reversal_reason',
     ];
 
     protected function casts(): array
@@ -30,6 +33,7 @@ class TradingFloorCommissionPayment extends Model
         return [
             'amount' => 'decimal:2',
             'received_at' => 'datetime',
+            'reversed_at' => 'datetime',
         ];
     }
 
@@ -41,6 +45,10 @@ class TradingFloorCommissionPayment extends Model
             $payment->payment_method = strtoupper(trim((string) $payment->payment_method));
             $payment->status = strtoupper(trim((string) ($payment->status ?: self::STATUS_RECEIVED)));
             $payment->received_at ??= now();
+        });
+
+        static::updating(function (self $payment): void {
+            $payment->status = strtoupper(trim((string) $payment->status));
         });
     }
 
@@ -57,5 +65,10 @@ class TradingFloorCommissionPayment extends Model
     public function receivedByAdmin(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'received_by_admin_id');
+    }
+
+    public function reversedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'reversed_by_admin_id');
     }
 }
