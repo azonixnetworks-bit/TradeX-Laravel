@@ -11,7 +11,8 @@ use Illuminate\Database\QueryException;
 class TradingRoutineDailyPlanService
 {
     public function __construct(
-        private readonly TradingRoutinePlannerService $planner
+        private readonly TradingRoutinePlannerService $planner,
+        private readonly FundedNoTradeZoneCustomerService $fundedNoTradeZones
     ) {
     }
 
@@ -21,8 +22,9 @@ class TradingRoutineDailyPlanService
         ?CarbonImmutable $now = null
     ): TradingRoutineDailyPlan {
         $timezone = $preference->timezone ?: (string) config('trading_routine.defaults.timezone', 'Asia/Colombo');
-        $now = ($now ?: CarbonImmutable::now('UTC'))->setTimezone($timezone);
-        $planDate = $now->toDateString();
+        $nowUtc = $now ?: CarbonImmutable::now('UTC');
+        $localNow = $nowUtc->setTimezone($timezone);
+        $planDate = $localNow->toDateString();
 
         $existing = TradingRoutineDailyPlan::query()
             ->where('user_id', $user->id)
@@ -47,6 +49,27 @@ class TradingRoutineDailyPlanService
             'whatsapp_pdf_enabled' => (bool) $preference->whatsapp_pdf_enabled,
         ];
 
+        $planData = $this->planner->build($preference, $localNow);
+        $fundedSnapshot = $this->fundedNoTradeZones->snapshotForUserDate(
+            $user,
+            $planDate,
+            $timezone,
+            $nowUtc
+        );
+
+        $planData['funded_no_trade_zone'] = $fundedSnapshot;
+        $planData['no_trade_rules'] = array_values(array_slice(array_unique(array_merge(
+            $this->fundedZoneRuleLines($fundedSnapshot),
+            (array) ($planData['no_trade_rules'] ?? [])
+        )), 0, 12));
+
+        if (($fundedSnapshot['rule_check_required'] ?? false) === true) {
+            $planData['warnings'] = array_values(array_unique(array_merge(
+                (array) ($planData['warnings'] ?? []),
+                ['Funded-account news rules are unverified or older than 30 days. Re-check the prop firm official rules before trading.']
+            )));
+        }
+
         try {
             return TradingRoutineDailyPlan::query()->create([
                 'user_id' => $user->id,
@@ -58,7 +81,7 @@ class TradingRoutineDailyPlanService
                     : null,
                 'timezone_snapshot' => $timezone,
                 'preference_snapshot_json' => $preferenceSnapshot,
-                'plan_json' => $this->planner->build($preference, $now),
+                'plan_json' => $planData,
                 'generated_at' => now(),
             ]);
         } catch (QueryException $exception) {
@@ -73,5 +96,41 @@ class TradingRoutineDailyPlanService
 
             throw $exception;
         }
+    }
+
+    /**
+     * The existing PDF already renders plan_json.no_trade_rules. By injecting
+     * funded-company windows here, web/API/PDF consume one immutable daily snapshot.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<int, string>
+     */
+    private function fundedZoneRuleLines(array $snapshot): array
+    {
+        $lines = [];
+
+        foreach ((array) ($snapshot['zones'] ?? []) as $zone) {
+            if (! is_array($zone)) {
+                continue;
+            }
+
+            $instruments = implode(', ', (array) ($zone['affected_instruments'] ?? []));
+            $verification = ($zone['rule_verification_status'] ?? 'UNVERIFIED') === 'VERIFIED'
+                ? ''
+                : ' | RULE CHECK REQUIRED';
+
+            $lines[] = sprintf(
+                'FUNDED NO TRADE %s %s | %s (%s %s) | %s%s',
+                (string) ($zone['local_window_label'] ?? ''),
+                (string) ($zone['timezone'] ?? ''),
+                (string) ($zone['event_title'] ?? 'Economic event'),
+                (string) ($zone['event_currency'] ?? ''),
+                (string) ($zone['event_impact'] ?? ''),
+                $instruments !== '' ? $instruments : 'Affected instruments per firm rule',
+                $verification
+            );
+        }
+
+        return array_values(array_slice($lines, 0, 8));
     }
 }
