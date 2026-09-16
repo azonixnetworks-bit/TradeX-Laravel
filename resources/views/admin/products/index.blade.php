@@ -13,6 +13,17 @@
             Product code, billing type and currency are immutable.
         </p>
     </div>
+
+    @if($canManage)
+        <div style="display:flex;align-items:center;">
+            <a
+                class="primary-btn"
+                href="{{ route('admin.products.create') }}"
+            >
+                + Add Product
+            </a>
+        </div>
+    @endif
 </div>
 
 @if(session('success'))
