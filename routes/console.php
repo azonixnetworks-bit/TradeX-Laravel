@@ -86,3 +86,18 @@ Schedule::command('tradex:trading-routine:sweep')
             true
         )
     );
+
+$economicNewsSyncMinutes = max(
+    1,
+    min(30, (int) config('economic_news.sync.frequency_minutes', 5))
+);
+
+Schedule::command('tradex:economic-news:sync')
+    ->cron(sprintf('*/%d * * * *', $economicNewsSyncMinutes))
+    ->withoutOverlapping(max(5, $economicNewsSyncMinutes + 2))
+    ->when(
+        fn (): bool => (bool) config(
+            'economic_news.sync.enabled',
+            false
+        )
+    );
