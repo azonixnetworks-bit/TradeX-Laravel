@@ -21,7 +21,10 @@ class TradingFloorAccessDevice extends Model
         'status',
         'last_seen_at',
         'last_ip',
+        'revoked_at',
+        'revocation_reason',
         'created_by_admin_id',
+        'revoked_by_admin_id',
     ];
 
     protected $hidden = [
@@ -32,6 +35,7 @@ class TradingFloorAccessDevice extends Model
     {
         return [
             'last_seen_at' => 'datetime',
+            'revoked_at' => 'datetime',
         ];
     }
 
@@ -57,6 +61,11 @@ class TradingFloorAccessDevice extends Model
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'created_by_admin_id');
+    }
+
+    public function revokedByAdmin(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'revoked_by_admin_id');
     }
 
     public function attempts(): HasMany
