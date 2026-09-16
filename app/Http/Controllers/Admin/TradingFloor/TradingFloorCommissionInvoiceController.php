@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\TradingFloorClient;
 use App\Models\TradingFloorCommissionInvoice;
+use App\Models\TradingFloorCommissionPayment;
 use App\Services\Admin\TradingFloor\TradingFloorCommissionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,20 +64,29 @@ class TradingFloorCommissionInvoiceController extends Controller
             ->withQueryString();
 
         $stats = [
-            'outstanding' => TradingFloorCommissionInvoice::query()
+            'outstanding_by_currency' => TradingFloorCommissionInvoice::query()
+                ->selectRaw('currency, SUM(balance_amount) as total')
                 ->whereIn('status', [
                     TradingFloorCommissionInvoice::STATUS_PENDING,
                     TradingFloorCommissionInvoice::STATUS_PARTIALLY_PAID,
                     TradingFloorCommissionInvoice::STATUS_OVERDUE,
                 ])
-                ->sum('balance_amount'),
-            'overdue' => TradingFloorCommissionInvoice::query()
+                ->groupBy('currency')
+                ->pluck('total', 'currency')
+                ->all(),
+            'overdue_by_currency' => TradingFloorCommissionInvoice::query()
+                ->selectRaw('currency, SUM(balance_amount) as total')
                 ->where('status', TradingFloorCommissionInvoice::STATUS_OVERDUE)
-                ->sum('balance_amount'),
-            'received_this_month' => DB::table('trading_floor_commission_payments')
-                ->where('status', 'RECEIVED')
+                ->groupBy('currency')
+                ->pluck('total', 'currency')
+                ->all(),
+            'received_this_month_by_currency' => TradingFloorCommissionPayment::query()
+                ->selectRaw('currency, SUM(amount) as total')
+                ->where('status', TradingFloorCommissionPayment::STATUS_RECEIVED)
                 ->whereBetween('received_at', [now()->startOfMonth(), now()->endOfMonth()])
-                ->sum('amount'),
+                ->groupBy('currency')
+                ->pluck('total', 'currency')
+                ->all(),
             'open_invoices' => TradingFloorCommissionInvoice::query()
                 ->whereIn('status', [
                     TradingFloorCommissionInvoice::STATUS_PENDING,
