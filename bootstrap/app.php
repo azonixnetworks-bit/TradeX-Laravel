@@ -5,6 +5,7 @@ use App\Console\Commands\MobileApiReleaseCheckCommand;
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminSecurityHeaders;
 use App\Http\Middleware\EnsureTradeXMobileApiSession;
+use App\Http\Middleware\EnsureTradingFloorAccessDevice;
 use App\Http\Middleware\ForceAdminTotp;
 use App\Http\Middleware\HardenAdminSession;
 use App\Http\Middleware\HardenMobileApiRequests;
@@ -61,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin.auth' => AdminAuthenticate::class,
             'tradex.mobile' => EnsureTradeXMobileApiSession::class,
+            'trading.floor.device' => EnsureTradingFloorAccessDevice::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
