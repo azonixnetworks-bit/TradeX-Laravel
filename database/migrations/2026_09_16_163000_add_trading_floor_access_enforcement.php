@@ -31,16 +31,19 @@ return new class extends Migration
             $table->string('status', 20)->default('ACTIVE');
             $table->timestamp('last_seen_at')->nullable();
             $table->string('last_ip', 45)->nullable();
+            $table->timestamp('revoked_at')->nullable();
+            $table->text('revocation_reason')->nullable();
             $table->unsignedBigInteger('created_by_admin_id')->nullable();
+            $table->unsignedBigInteger('revoked_by_admin_id')->nullable();
             $table->timestamps();
 
             $table->unique('uuid', 'tf_device_uuid_uq');
             $table->unique('device_code', 'tf_device_code_uq');
             $table->index(['status', 'floor_code'], 'tf_device_status_floor_idx');
             $table->foreign('created_by_admin_id', 'tf_device_admin_fk')
-                ->references('id')
-                ->on('admin_users')
-                ->nullOnDelete();
+                ->references('id')->on('admin_users')->nullOnDelete();
+            $table->foreign('revoked_by_admin_id', 'tf_device_revoke_admin_fk')
+                ->references('id')->on('admin_users')->nullOnDelete();
         });
 
         Schema::create('trading_floor_access_settings', function (Blueprint $table): void {
@@ -55,9 +58,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('updated_by_admin_id', 'tf_setting_admin_fk')
-                ->references('id')
-                ->on('admin_users')
-                ->nullOnDelete();
+                ->references('id')->on('admin_users')->nullOnDelete();
         });
 
         DB::table('trading_floor_access_settings')->insert([
@@ -91,24 +92,15 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique('uuid', 'tf_attempt_uuid_uq');
-            $table->unique(
-                ['trading_floor_access_device_id', 'device_event_id'],
-                'tf_attempt_device_event_uq'
-            );
+            $table->unique(['trading_floor_access_device_id', 'device_event_id'], 'tf_attempt_device_event_uq');
             $table->index(['trading_floor_client_id', 'occurred_at'], 'tf_attempt_client_time_idx');
             $table->index(['decision', 'occurred_at'], 'tf_attempt_decision_time_idx');
             $table->foreign('trading_floor_access_device_id', 'tf_attempt_device_fk')
-                ->references('id')
-                ->on('trading_floor_access_devices')
-                ->cascadeOnDelete();
+                ->references('id')->on('trading_floor_access_devices')->cascadeOnDelete();
             $table->foreign('trading_floor_client_id', 'tf_attempt_client_fk')
-                ->references('id')
-                ->on('trading_floor_clients')
-                ->nullOnDelete();
+                ->references('id')->on('trading_floor_clients')->nullOnDelete();
             $table->foreign('trading_floor_access_credential_id', 'tf_attempt_credential_fk')
-                ->references('id')
-                ->on('trading_floor_access_credentials')
-                ->nullOnDelete();
+                ->references('id')->on('trading_floor_access_credentials')->nullOnDelete();
         });
     }
 
