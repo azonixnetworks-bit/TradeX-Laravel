@@ -7,6 +7,13 @@
 @php
     $admin = auth('admin')->user();
     $canManageClients = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.clients.manage');
+    $canManageCommissions = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.commissions.manage');
+    $commissionDueText = collect($stats['commission_due_by_currency'])
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
+    $receivedText = collect($stats['received_this_month_by_currency'])
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
 @endphp
 
 <div class="page-header">
@@ -16,6 +23,7 @@
         <p>Customer registration, access control, attendance and commission collection in one operational workspace.</p>
     </div>
     <div style="display:flex;gap:10px;align-items:center;">
+        <a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.index') }}">Commission Ledger</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.clients.index') }}">Customer Directory</a>
         @if($canManageClients)
             <a class="btn btn-primary" href="{{ route('admin.trading_floor.clients.create') }}">＋ Register Customer</a>
@@ -23,7 +31,7 @@
     </div>
 </div>
 
-<div class="dashboard-grid" style="margin-top: 22px;">
+<div class="dashboard-grid" style="margin-top:22px;">
     <div class="stat-card">
         <div class="stat-card__label">Active Clients</div>
         <div class="stat-card__value">{{ number_format($stats['active_clients']) }}</div>
@@ -34,7 +42,11 @@
     </div>
     <div class="stat-card">
         <div class="stat-card__label">Commission Due</div>
-        <div class="stat-card__value">{{ number_format((float) $stats['commission_due'], 2) }}</div>
+        <div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $commissionDueText !== '' ? $commissionDueText : '0.00' }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-card__label">Received This Month</div>
+        <div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $receivedText !== '' ? $receivedText : '0.00' }}</div>
     </div>
     <div class="stat-card">
         <div class="stat-card__label">Overdue Clients</div>
@@ -42,7 +54,7 @@
     </div>
 </div>
 
-<div class="panel" style="margin-top: 24px;">
+<div class="panel" style="margin-top:24px;">
     <div class="panel-header">
         <div>
             <div class="panel-eyebrow">OPERATIONS</div>
@@ -52,7 +64,7 @@
     </div>
 
     <div class="panel-body">
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;">
             <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;">
                 <div class="panel-eyebrow">CUSTOMERS</div>
                 <h3 style="margin:6px 0;">Customer Directory</h3>
@@ -65,6 +77,11 @@
                     <p style="margin:0;opacity:.7;">Create a trading-floor client and configure the commercial agreement.</p>
                 </a>
             @endif
+            <a href="{{ route('admin.trading_floor.commissions.index') }}" class="panel" style="padding:18px;text-decoration:none;">
+                <div class="panel-eyebrow">COMMISSION</div>
+                <h3 style="margin:6px 0;">Billing & Collection</h3>
+                <p style="margin:0;opacity:.7;">Invoices, partial payments, balances, overdue items and payment proof.</p>
+            </a>
             <div class="panel" style="padding:18px;">
                 <div class="panel-eyebrow">ACCESS CONTROL</div>
                 <h3 style="margin:6px 0;">NFC & Fingerprint</h3>
