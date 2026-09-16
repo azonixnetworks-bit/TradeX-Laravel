@@ -8,7 +8,10 @@
     $admin = auth('admin')->user();
     $canManageClient = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.clients.manage');
     $canManageAccess = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.access.manage');
-    $invoiceBalance = $client->commissionInvoices->sum(fn ($invoice) => (float) $invoice->balance_amount);
+    $canManageCommission = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.commissions.manage');
+    $outstandingText = collect($outstandingByCurrency)
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
 @endphp
 
 <div class="page-header">
@@ -17,8 +20,11 @@
         <h1>{{ $client->full_name }} <span>{{ $client->status }}</span></h1>
         <p>{{ $client->floor_code ?: 'No floor' }} · {{ $client->desk_code ?: 'No desk' }} · {{ $client->package_code ?: 'No package' }}</p>
     </div>
-    <div style="display:flex;gap:10px;">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.clients.index') }}">Directory</a>
+        @if($canManageCommission)
+            <a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.create', $client) }}">＋ Commission Invoice</a>
+        @endif
         @if($canManageClient)<a class="btn btn-primary" href="{{ route('admin.trading_floor.clients.edit', $client) }}">Edit Customer</a>@endif
     </div>
 </div>
@@ -27,7 +33,7 @@
     <div class="stat-card"><div class="stat-card__label">Commission Type</div><div class="stat-card__value" style="font-size:22px;">{{ $client->commission_type }}</div></div>
     <div class="stat-card"><div class="stat-card__label">Billing Cycle</div><div class="stat-card__value" style="font-size:22px;">{{ $client->billing_cycle }}</div></div>
     <div class="stat-card"><div class="stat-card__label">Active Credentials</div><div class="stat-card__value">{{ number_format($client->accessCredentials->where('status', 'ACTIVE')->count()) }}</div></div>
-    <div class="stat-card"><div class="stat-card__label">Outstanding Commission</div><div class="stat-card__value" style="font-size:22px;">{{ $client->commission_currency }} {{ number_format($invoiceBalance, 2) }}</div></div>
+    <div class="stat-card"><div class="stat-card__label">Outstanding Commission</div><div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $outstandingText !== '' ? $outstandingText : '0.00' }}</div></div>
 </div>
 
 <div style="display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:18px;margin-top:18px;">
@@ -49,7 +55,10 @@
     </div>
 
     <div class="panel">
-        <div class="panel-header"><div><div class="panel-eyebrow">COMMISSION</div><h2>Agreement</h2></div></div>
+        <div class="panel-header">
+            <div><div class="panel-eyebrow">COMMISSION</div><h2>Agreement</h2></div>
+            @if($canManageCommission)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.create', $client) }}">Create Invoice</a>@endif
+        </div>
         <div class="panel-body">
             <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;">
                 <div><small style="opacity:.6;">Type</small><div>{{ $client->commission_type }}</div></div>
@@ -143,18 +152,21 @@
     </div>
 
     <div class="panel">
-        <div class="panel-header"><div><div class="panel-eyebrow">BILLING</div><h2>Recent Commission Invoices</h2></div></div>
+        <div class="panel-header">
+            <div><div class="panel-eyebrow">BILLING</div><h2>Recent Commission Invoices</h2></div>
+            <a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.index', ['search' => $client->client_code]) }}">View Ledger</a>
+        </div>
         <div class="panel-body" style="overflow-x:auto;">
             <table class="data-table" style="width:100%;">
                 <thead><tr><th>Invoice</th><th>Due</th><th>Amount</th><th>Balance</th><th>Status</th></tr></thead>
                 <tbody>
                     @forelse($client->commissionInvoices as $invoice)
                         <tr>
-                            <td>{{ $invoice->invoice_number }}</td>
+                            <td><a href="{{ route('admin.trading_floor.commissions.show', $invoice) }}">{{ $invoice->invoice_number }}</a></td>
                             <td>{{ $invoice->due_date?->format('Y-m-d') }}</td>
                             <td>{{ $invoice->currency }} {{ number_format((float) $invoice->commission_amount, 2) }}</td>
                             <td>{{ $invoice->currency }} {{ number_format((float) $invoice->balance_amount, 2) }}</td>
-                            <td>{{ $invoice->status }}</td>
+                            <td>{{ str_replace('_', ' ', $invoice->status) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="5" style="padding:22px;text-align:center;opacity:.7;">No commission invoices yet.</td></tr>
