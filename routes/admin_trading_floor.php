@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessCredentialController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorClientController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionInvoiceController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionPaymentController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorDashboardController;
 use Illuminate\Support\Facades\Route;
 
@@ -48,4 +50,51 @@ Route::prefix('admin/trading-floor')
             ->whereUuid('credential')
             ->middleware('throttle:20,1')
             ->name('clients.credentials.revoke');
+
+        Route::get('/commissions', [TradingFloorCommissionInvoiceController::class, 'index'])
+            ->name('commissions.index');
+
+        Route::get(
+            '/clients/{client}/commissions/create',
+            [TradingFloorCommissionInvoiceController::class, 'create']
+        )
+            ->whereUuid('client')
+            ->name('commissions.create');
+
+        Route::post(
+            '/clients/{client}/commissions',
+            [TradingFloorCommissionInvoiceController::class, 'store']
+        )
+            ->whereUuid('client')
+            ->middleware('throttle:20,1')
+            ->name('commissions.store');
+
+        Route::get('/commissions/{invoice}', [TradingFloorCommissionInvoiceController::class, 'show'])
+            ->whereUuid('invoice')
+            ->name('commissions.show');
+
+        Route::post(
+            '/commissions/{invoice}/payments',
+            [TradingFloorCommissionPaymentController::class, 'store']
+        )
+            ->whereUuid('invoice')
+            ->middleware('throttle:20,1')
+            ->name('commissions.payments.store');
+
+        Route::patch(
+            '/commissions/{invoice}/payments/{payment}/reverse',
+            [TradingFloorCommissionPaymentController::class, 'reverse']
+        )
+            ->whereUuid('invoice')
+            ->whereUuid('payment')
+            ->middleware('throttle:10,1')
+            ->name('commissions.payments.reverse');
+
+        Route::get(
+            '/commissions/{invoice}/payments/{payment}/proof',
+            [TradingFloorCommissionPaymentController::class, 'proof']
+        )
+            ->whereUuid('invoice')
+            ->whereUuid('payment')
+            ->name('commissions.payments.proof');
     });
