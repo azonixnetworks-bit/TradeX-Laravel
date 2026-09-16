@@ -64,7 +64,7 @@ class TradingFloorCommissionService
 
         if ($balance <= 0) {
             $status = TradingFloorCommissionInvoice::STATUS_PAID;
-        } elseif ($invoice->due_date?->isPast()) {
+        } elseif ($invoice->due_date?->lt(now()->startOfDay())) {
             $status = TradingFloorCommissionInvoice::STATUS_OVERDUE;
         } elseif ($paid > 0) {
             $status = TradingFloorCommissionInvoice::STATUS_PARTIALLY_PAID;
