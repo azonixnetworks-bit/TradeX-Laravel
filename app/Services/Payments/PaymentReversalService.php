@@ -148,7 +148,7 @@ class PaymentReversalService
                         'payment_reversal_code' => $reversalCode,
                         'provider_event_recorded' => $providerEventId !== null,
                         'entitlement_review_required' => false,
-                        'entitlement_policy' => 'TIED_PAYMENT_ONLY',
+                        'entitlement_policy' => 'ADMIN_25_TIED_PAYMENT_ONLY',
                         'education_entitlement_revoked' =>
                             $educationProduct && $revoked !== null,
                         'product_entitlement_revoked' =>
