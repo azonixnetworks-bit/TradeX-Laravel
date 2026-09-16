@@ -7,6 +7,15 @@
 @php
     $admin = auth('admin')->user();
     $canManage = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.commissions.manage');
+    $outstandingText = collect($stats['outstanding_by_currency'])
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
+    $overdueText = collect($stats['overdue_by_currency'])
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
+    $receivedText = collect($stats['received_this_month_by_currency'])
+        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
+        ->implode(' · ');
 @endphp
 
 <div class="page-header">
@@ -22,9 +31,9 @@
 </div>
 
 <div class="dashboard-grid" style="margin-top:22px;">
-    <div class="stat-card"><div class="stat-card__label">Outstanding</div><div class="stat-card__value" style="font-size:22px;">{{ number_format((float) $stats['outstanding'], 2) }}</div></div>
-    <div class="stat-card"><div class="stat-card__label">Overdue</div><div class="stat-card__value" style="font-size:22px;">{{ number_format((float) $stats['overdue'], 2) }}</div></div>
-    <div class="stat-card"><div class="stat-card__label">Received This Month</div><div class="stat-card__value" style="font-size:22px;">{{ number_format((float) $stats['received_this_month'], 2) }}</div></div>
+    <div class="stat-card"><div class="stat-card__label">Outstanding</div><div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $outstandingText !== '' ? $outstandingText : '0.00' }}</div></div>
+    <div class="stat-card"><div class="stat-card__label">Overdue</div><div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $overdueText !== '' ? $overdueText : '0.00' }}</div></div>
+    <div class="stat-card"><div class="stat-card__label">Received This Month</div><div class="stat-card__value" style="font-size:18px;line-height:1.35;">{{ $receivedText !== '' ? $receivedText : '0.00' }}</div></div>
     <div class="stat-card"><div class="stat-card__label">Open Invoices</div><div class="stat-card__value">{{ number_format($stats['open_invoices']) }}</div></div>
 </div>
 
