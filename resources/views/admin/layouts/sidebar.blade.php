@@ -6,6 +6,10 @@
         $admin->hasPermission('users.view')
         || $admin->hasPermission('users.invite');
 
+    $hasTradingFloorNavigation =
+        $admin->isSuperAdmin()
+        || $admin->hasPermission('trading_floor.view');
+
     $hasContentNavigation =
         $admin->hasPermission('education.view')
         || $admin->hasPermission('our_channel.view')
@@ -161,6 +165,36 @@
                 >
                     <span class="nav-icon">◷</span>
                     <span>Recently Joined</span>
+                </a>
+            @endif
+        @endif
+
+        @if($hasTradingFloorNavigation)
+            <div class="nav-section-title">TRADING FLOOR</div>
+
+            <a
+                href="{{ route('admin.trading_floor.index') }}"
+                class="nav-link {{ request()->routeIs('admin.trading_floor.index') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">▦</span>
+                <span>Floor Dashboard</span>
+            </a>
+
+            <a
+                href="{{ route('admin.trading_floor.clients.index') }}"
+                class="nav-link {{ request()->routeIs('admin.trading_floor.clients.index') || request()->routeIs('admin.trading_floor.clients.show') || request()->routeIs('admin.trading_floor.clients.edit') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◎</span>
+                <span>Floor Customers</span>
+            </a>
+
+            @if($admin->isSuperAdmin() || $admin->hasPermission('trading_floor.clients.manage'))
+                <a
+                    href="{{ route('admin.trading_floor.clients.create') }}"
+                    class="nav-link {{ request()->routeIs('admin.trading_floor.clients.create') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">＋</span>
+                    <span>Register Customer</span>
                 </a>
             @endif
         @endif
