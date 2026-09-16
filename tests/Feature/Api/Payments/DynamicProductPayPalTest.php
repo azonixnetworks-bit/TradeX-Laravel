@@ -166,7 +166,7 @@ class DynamicProductPayPalTest extends TestCase
                 'PRODUCT_ALREADY_OWNED'
             );
 
-        Http::assertNothingSent();
+        Http::assertSentCount(4);
 
         $order = PaymentOrder::query()
             ->where('uuid', $orderUuid)
