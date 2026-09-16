@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             FundedAccountAdvisorPermissionSeeder::class,
             TradingRoutinePermissionSeeder::class,
             EconomicNewsPermissionSeeder::class,
+            FundedNoTradeZonePermissionSeeder::class,
             AdminRolePermissionSeeder::class,
             SuperAdminSeeder::class,
             AffiliateStageSeeder::class,
