@@ -309,3 +309,16 @@ require __DIR__ . '/admin_trading_routine.php';
 */
 
 require __DIR__ . '/admin_economic_news.php';
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN-30 — Trading Floor & Client Management
+|--------------------------------------------------------------------------
+|
+| Customer registration, NFC/fingerprint reference management, floor access
+| logs and commission collection. Biometric templates remain outside TradeX;
+| only external device references are stored by this module.
+|
+*/
+
+require __DIR__ . '/admin_trading_floor.php';
