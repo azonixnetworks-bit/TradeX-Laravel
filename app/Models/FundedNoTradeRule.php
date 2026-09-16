@@ -16,6 +16,13 @@ class FundedNoTradeRule extends Model
     public const POLICY_ALLOWED = 'ALLOWED';
     public const POLICY_CONDITIONAL = 'CONDITIONAL';
 
+    public const ENFORCEMENT_BLOCKED = 'BLOCKED';
+    public const ENFORCEMENT_HARD_BREACH = 'HARD_BREACH';
+    public const ENFORCEMENT_SOFT_BREACH = 'SOFT_BREACH';
+    public const ENFORCEMENT_PROFIT_DEDUCTION = 'PROFIT_DEDUCTION';
+    public const ENFORCEMENT_REWARD_SHARE = 'REWARD_SHARE';
+    public const ENFORCEMENT_GUIDANCE = 'GUIDANCE';
+
     public const PHASE_ALL = 'ALL';
     public const PHASE_CHALLENGE = 'CHALLENGE';
     public const PHASE_VERIFICATION = 'VERIFICATION';
@@ -27,7 +34,9 @@ class FundedNoTradeRule extends Model
         'program_name',
         'phase',
         'policy',
+        'enforcement_type',
         'impact_levels',
+        'event_keywords',
         'minutes_before',
         'minutes_after',
         'affected_instruments_only',
@@ -52,6 +61,7 @@ class FundedNoTradeRule extends Model
     {
         return [
             'impact_levels' => 'array',
+            'event_keywords' => 'array',
             'minutes_before' => 'integer',
             'minutes_after' => 'integer',
             'affected_instruments_only' => 'boolean',
@@ -85,7 +95,7 @@ class FundedNoTradeRule extends Model
 
     private static function normalize(self $rule): void
     {
-        foreach (['phase', 'policy'] as $field) {
+        foreach (['phase', 'policy', 'enforcement_type'] as $field) {
             if ($rule->{$field} !== null) {
                 $rule->{$field} = strtoupper(trim((string) $rule->{$field}));
             }
@@ -96,6 +106,7 @@ class FundedNoTradeRule extends Model
             : null;
 
         $rule->impact_levels = self::normalizeList($rule->impact_levels, true);
+        $rule->event_keywords = self::normalizeList($rule->event_keywords, true);
         $rule->restricted_currencies = self::normalizeList($rule->restricted_currencies, true);
         $rule->restricted_instruments = self::normalizeList($rule->restricted_instruments, true);
     }
@@ -160,5 +171,24 @@ class FundedNoTradeRule extends Model
         $levels = array_map('strtoupper', (array) $this->impact_levels);
 
         return $levels === [] || in_array(strtoupper($impact), $levels, true);
+    }
+
+    public function appliesToEventTitle(string $title): bool
+    {
+        $keywords = array_values((array) $this->event_keywords);
+        if ($keywords === []) {
+            return true;
+        }
+
+        $title = strtoupper(trim($title));
+
+        foreach ($keywords as $keyword) {
+            $keyword = strtoupper(trim((string) $keyword));
+            if ($keyword !== '' && str_contains($title, $keyword)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -23,7 +23,7 @@
 
     <section class="panel funded-advisor-callout">
         <strong>Shared compliance engine</strong>
-        <p>Rules maintained here are designed to feed the same TradeX no-trade-zone calculation used by customer screens, future mobile API responses and Trading Routine PDF snapshots. Economic event times remain UTC at the backend.</p>
+        <p>RESTRICTED records create customer No Trade Zones. CONDITIONAL and ALLOWED records stay in the rule library for accurate compliance context without falsely blocking trading. Economic event times remain UTC at the backend.</p>
     </section>
 
     <div class="funded-advisor-result-grid">
@@ -71,7 +71,7 @@
                         <th>Phase</th>
                         <th>Policy</th>
                         <th>Impact</th>
-                        <th>No Trade Window</th>
+                        <th>Rule Window</th>
                         <th>Verified</th>
                         <th>Status</th>
                         @if($canManageRules)<th>Manage</th>@endif
@@ -85,9 +85,25 @@
                                 <small>{{ $rule->program_name ?: 'All programs' }}</small>
                             </td>
                             <td>{{ $rule->phase }}</td>
-                            <td><span class="funded-advisor-status-pill {{ $rule->policy === 'ALLOWED' ? 'is-safe' : 'is-muted' }}">{{ $rule->policy }}</span></td>
-                            <td>{{ implode(', ', (array) $rule->impact_levels) ?: 'All' }}</td>
-                            <td>{{ $rule->minutes_before }}m before · {{ $rule->minutes_after }}m after</td>
+                            <td>
+                                <span class="funded-advisor-status-pill {{ $rule->policy === 'ALLOWED' ? 'is-safe' : 'is-muted' }}">{{ $rule->policy }}</span>
+                                <small>{{ str_replace('_', ' ', (string) $rule->enforcement_type) }}</small>
+                            </td>
+                            <td>
+                                {{ implode(', ', (array) $rule->impact_levels) ?: 'All' }}
+                                @if((array) $rule->event_keywords !== [])
+                                    <small>{{ count((array) $rule->event_keywords) }} event keyword{{ count((array) $rule->event_keywords) === 1 ? '' : 's' }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                @if($rule->policy === 'RESTRICTED')
+                                    {{ $rule->minutes_before }}m before · {{ $rule->minutes_after }}m after
+                                @elseif($rule->policy === 'CONDITIONAL')
+                                    Compliance condition
+                                @else
+                                    No restriction
+                                @endif
+                            </td>
                             <td>
                                 {{ $rule->verified_at?->format('Y-m-d') ?? 'Not verified' }}
                                 @if($rule->source_reference)<small>{{ $rule->source_reference }}</small>@endif
@@ -119,8 +135,8 @@
     </section>
 
     <section class="panel funded-advisor-callout">
-        <strong>Next integration boundary</strong>
-        <p>Customer funded-account selection will map these rules against ADMIN-29 economic events. The shared service already returns UTC start/end times, affected instruments, rule provenance and trading-action restrictions for later API/PDF consumption.</p>
+        <strong>Official-source rule pack</strong>
+        <p>Seeded rule records carry their official company source, verification timestamp, enforcement consequence and event-name matching where the company restricts only selected releases. Re-verify stale rules before relying on them.</p>
     </section>
 </div>
 @endsection

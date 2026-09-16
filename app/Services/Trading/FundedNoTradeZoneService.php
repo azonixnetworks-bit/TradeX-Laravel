@@ -23,8 +23,10 @@ class FundedNoTradeZoneService
         $at = $at ?: CarbonImmutable::now('UTC');
         $phase = strtoupper(trim($phase ?: FundedNoTradeRule::PHASE_ALL));
         $programName = filled($programName) ? trim((string) $programName) : null;
-        $impact = strtoupper((string) ($event->effectiveIntelligence()['impact'] ?? $event->impact));
+        $effective = $event->effectiveIntelligence();
+        $impact = strtoupper((string) ($effective['impact'] ?? $event->impact));
         $currency = strtoupper(trim((string) $event->currency));
+        $title = strtoupper(trim((string) $event->title));
 
         return FundedNoTradeRule::query()
             ->where('funded_account_partner_id', $partner->id)
@@ -34,8 +36,19 @@ class FundedNoTradeZoneService
             ->orderByDesc('verified_at')
             ->orderByDesc('id')
             ->get()
-            ->first(function (FundedNoTradeRule $rule) use ($at, $phase, $programName, $impact, $currency): bool {
-                if (! $rule->isEffectiveAt($at) || ! $rule->appliesToImpact($impact)) {
+            ->first(function (FundedNoTradeRule $rule) use (
+                $at,
+                $phase,
+                $programName,
+                $impact,
+                $currency,
+                $title
+            ): bool {
+                if (
+                    ! $rule->isEffectiveAt($at)
+                    || ! $rule->appliesToImpact($impact)
+                    || ! $rule->appliesToEventTitle($title)
+                ) {
                     return false;
                 }
 
@@ -60,6 +73,8 @@ class FundedNoTradeZoneService
 
     /**
      * Build a serializable UTC no-trade-zone payload shared by admin, API and PDF integrations.
+     * CONDITIONAL/ALLOWED records are retained for compliance intelligence but do not become
+     * customer no-trade zones unless the company rule is explicitly marked RESTRICTED.
      *
      * @return array<string, mixed>|null
      */
@@ -73,7 +88,7 @@ class FundedNoTradeZoneService
         $now = CarbonImmutable::instance($now ?: CarbonImmutable::now('UTC'))->utc();
         $rule = $this->resolveRule($partner, $event, $programName, $phase, $now);
 
-        if ($rule === null || $rule->policy === FundedNoTradeRule::POLICY_ALLOWED) {
+        if ($rule === null || $rule->policy !== FundedNoTradeRule::POLICY_RESTRICTED) {
             return null;
         }
 
@@ -99,6 +114,7 @@ class FundedNoTradeZoneService
         return [
             'status' => $status,
             'policy' => $rule->policy,
+            'enforcement_type' => $rule->enforcement_type,
             'starts_at_utc' => $startsAt->toIso8601String(),
             'ends_at_utc' => $endsAt->toIso8601String(),
             'minutes_before' => $rule->minutes_before,
