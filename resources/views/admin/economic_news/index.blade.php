@@ -5,6 +5,7 @@
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin/css/economic-news.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/economic-news-premium.css') }}">
 @endpush
 
 @section('content')
