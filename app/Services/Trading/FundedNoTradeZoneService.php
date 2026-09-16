@@ -24,6 +24,7 @@ class FundedNoTradeZoneService
         $phase = strtoupper(trim($phase ?: FundedNoTradeRule::PHASE_ALL));
         $programName = filled($programName) ? trim((string) $programName) : null;
         $impact = strtoupper((string) ($event->effectiveIntelligence()['impact'] ?? $event->impact));
+        $currency = strtoupper(trim((string) $event->currency));
 
         return FundedNoTradeRule::query()
             ->where('funded_account_partner_id', $partner->id)
@@ -33,7 +34,7 @@ class FundedNoTradeZoneService
             ->orderByDesc('verified_at')
             ->orderByDesc('id')
             ->get()
-            ->first(function (FundedNoTradeRule $rule) use ($at, $phase, $programName, $impact): bool {
+            ->first(function (FundedNoTradeRule $rule) use ($at, $phase, $programName, $impact, $currency): bool {
                 if (! $rule->isEffectiveAt($at) || ! $rule->appliesToImpact($impact)) {
                     return false;
                 }
@@ -46,6 +47,11 @@ class FundedNoTradeZoneService
                     if ($programName === null || strcasecmp($rule->program_name, $programName) !== 0) {
                         return false;
                     }
+                }
+
+                $restrictedCurrencies = array_values((array) $rule->restricted_currencies);
+                if ($restrictedCurrencies !== [] && ! in_array($currency, $restrictedCurrencies, true)) {
+                    return false;
                 }
 
                 return true;
