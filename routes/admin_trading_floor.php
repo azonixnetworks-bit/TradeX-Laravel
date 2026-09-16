@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessCredentialController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessDeviceController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessMonitorController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessOverrideController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessSettingsController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorClientController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionInvoiceController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionPaymentController;
@@ -50,6 +54,38 @@ Route::prefix('admin/trading-floor')
             ->whereUuid('credential')
             ->middleware('throttle:20,1')
             ->name('clients.credentials.revoke');
+
+        Route::patch(
+            '/clients/{client}/access-override',
+            [TradingFloorAccessOverrideController::class, 'update']
+        )
+            ->whereUuid('client')
+            ->middleware('throttle:20,1')
+            ->name('clients.access_override.update');
+
+        Route::get('/access', [TradingFloorAccessMonitorController::class, 'index'])
+            ->name('access.index');
+
+        Route::get('/access/settings', [TradingFloorAccessSettingsController::class, 'index'])
+            ->name('access.settings');
+
+        Route::patch('/access/settings', [TradingFloorAccessSettingsController::class, 'update'])
+            ->middleware('throttle:20,1')
+            ->name('access.settings.update');
+
+        Route::post('/access/devices', [TradingFloorAccessDeviceController::class, 'store'])
+            ->middleware('throttle:10,1')
+            ->name('access.devices.store');
+
+        Route::patch('/access/devices/{device}/rotate', [TradingFloorAccessDeviceController::class, 'rotate'])
+            ->whereUuid('device')
+            ->middleware('throttle:10,1')
+            ->name('access.devices.rotate');
+
+        Route::patch('/access/devices/{device}/revoke', [TradingFloorAccessDeviceController::class, 'revoke'])
+            ->whereUuid('device')
+            ->middleware('throttle:10,1')
+            ->name('access.devices.revoke');
 
         Route::get('/commissions', [TradingFloorCommissionInvoiceController::class, 'index'])
             ->name('commissions.index');
