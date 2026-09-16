@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\EconomicNews\Contracts\EconomicCalendarProvider;
+use App\Services\EconomicNews\Providers\ForexFactoryJsonCalendarProvider;
 use App\Services\EconomicNews\Providers\TradingEconomicsCalendarProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,10 +19,11 @@ class EconomicNewsServiceProvider extends ServiceProvider
         $this->app->singleton(EconomicCalendarProvider::class, function (): EconomicCalendarProvider {
             $provider = strtolower(trim((string) config(
                 'economic_news.sync.provider',
-                'trading_economics'
+                'forex_factory_json'
             )));
 
             return match ($provider) {
+                'forex_factory_json' => new ForexFactoryJsonCalendarProvider(),
                 'trading_economics' => new TradingEconomicsCalendarProvider(),
                 default => throw new InvalidArgumentException(
                     sprintf('Unsupported economic news provider [%s].', $provider)
