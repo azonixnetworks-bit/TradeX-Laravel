@@ -8,6 +8,7 @@ use App\Http\Middleware\EnsureTradeXMobileApiSession;
 use App\Http\Middleware\ForceAdminTotp;
 use App\Http\Middleware\HardenAdminSession;
 use App\Http\Middleware\HardenMobileApiRequests;
+use App\Http\Middleware\SearchEngineIndexPolicy;
 use App\Support\Admin\AdminWebExceptionResponder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -26,6 +27,12 @@ return Application::configure(basePath: dirname(__DIR__))
         MobileApiReleaseCheckCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
+        /*
+         * SEO-01 is global so private/noindex headers also cover framework
+         * health routes and any future route groups, not only web/api.
+         */
+        $middleware->prepend(SearchEngineIndexPolicy::class);
+
         /*
          * API-23 final hardening is installed once on Laravel's api group.
          * This covers routes/api.php plus provider-loaded API route files
