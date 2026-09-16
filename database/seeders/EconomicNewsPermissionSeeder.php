@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\AdminPermission;
+use App\Models\AdminRole;
 use Illuminate\Database\Seeder;
 
 class EconomicNewsPermissionSeeder extends Seeder
@@ -19,8 +20,10 @@ class EconomicNewsPermissionSeeder extends Seeder
             ['economic_news.publish', 'Publish Economic News Intelligence'],
         ];
 
+        $permissionIds = [];
+
         foreach ($permissions as [$code, $name]) {
-            AdminPermission::updateOrCreate(
+            $permission = AdminPermission::updateOrCreate(
                 ['code' => $code],
                 [
                     'name' => $name,
@@ -28,6 +31,17 @@ class EconomicNewsPermissionSeeder extends Seeder
                     'description' => null,
                 ]
             );
+
+            $permissionIds[] = $permission->id;
+        }
+
+        // Keep this module seeder safe to run on its own. New ADMIN-29
+        // permissions must become available to the existing super admin
+        // without requiring the global role seeder (which may resync roles).
+        $superAdmin = AdminRole::where('code', 'SUPER_ADMIN')->first();
+
+        if ($superAdmin !== null) {
+            $superAdmin->permissions()->syncWithoutDetaching($permissionIds);
         }
     }
 }
