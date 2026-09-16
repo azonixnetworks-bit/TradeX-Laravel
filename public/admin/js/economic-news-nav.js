@@ -4,7 +4,20 @@
     const script = document.currentScript;
     const nav = document.querySelector('.sidebar-nav');
 
-    if (!script || !nav) {
+    if (!script) {
+        return;
+    }
+
+    const responsiveHref = new URL('../css/economic-news-laptop.css', script.src).href;
+    if (!document.querySelector(`link[data-economic-news-responsive="true"]`)) {
+        const responsiveStyles = document.createElement('link');
+        responsiveStyles.rel = 'stylesheet';
+        responsiveStyles.href = responsiveHref;
+        responsiveStyles.dataset.economicNewsResponsive = 'true';
+        document.head.appendChild(responsiveStyles);
+    }
+
+    if (!nav) {
         return;
     }
 
