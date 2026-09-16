@@ -3,9 +3,11 @@
 namespace Tests\Feature\Api\Payments;
 
 use App\Models\IntegrationProviderState;
+use App\Models\Payment;
 use App\Models\PaymentOrder;
 use App\Models\Product;
 use App\Models\UserEntitlement;
+use App\Services\Payments\PaymentReversalService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\CreatesTradeXMobileSession;
@@ -145,6 +147,47 @@ class DynamicProductPayPalTest extends TestCase
                 'code' => 'TRADEX_SIGNAL_PACK',
                 'purchase_allowed' => false,
             ]);
+
+        Http::fake();
+
+        $this
+            ->withToken($token)
+            ->withHeader(
+                'Idempotency-Key',
+                'dynamic-product-paypal-repeat-0002'
+            )
+            ->postJson(
+                '/api/v1/payments/paypal/orders',
+                ['product_uuid' => $product->uuid]
+            )
+            ->assertStatus(409)
+            ->assertJsonPath(
+                'error.code',
+                'PRODUCT_ALREADY_OWNED'
+            );
+
+        Http::assertNothingSent();
+
+        $order = PaymentOrder::query()
+            ->where('uuid', $orderUuid)
+            ->firstOrFail();
+
+        $payment = Payment::query()
+            ->where('payment_order_id', $order->getKey())
+            ->firstOrFail();
+
+        app(PaymentReversalService::class)
+            ->recordPayPalProcessorReversal($payment);
+
+        $this->assertDatabaseHas(
+            'user_entitlements',
+            [
+                'user_id' => $buyer->getKey(),
+                'product_code' => 'TRADEX_SIGNAL_PACK',
+                'status' => UserEntitlement::STATUS_REVOKED,
+                'payment_id' => $payment->getKey(),
+            ]
+        );
     }
 
     public function test_same_idempotency_key_cannot_be_reused_for_another_product(): void
