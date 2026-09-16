@@ -18,6 +18,11 @@ class CreatePayPalOrderRequest extends FormRequest
                 $this->header(
                     'Idempotency-Key'
                 ),
+            'product_uuid' => filled(
+                $this->input('product_uuid')
+            )
+                ? trim((string) $this->input('product_uuid'))
+                : null,
         ]);
     }
 
@@ -30,6 +35,11 @@ class CreatePayPalOrderRequest extends FormRequest
                 'min:16',
                 'max:128',
                 'regex:/^[A-Za-z0-9._:-]+$/',
+            ],
+            'product_uuid' => [
+                'nullable',
+                'uuid',
+                'exists:products,uuid',
             ],
         ];
     }
