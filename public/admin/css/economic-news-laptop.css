@@ -50,3 +50,50 @@
         padding-right: 16px;
     }
 }
+
+/* Keep compact intelligence controls readable as a single token. */
+.economic-news-impact,
+.economic-news-bias,
+.economic-news-volatility,
+.economic-news-status,
+.economic-news-badge {
+    white-space: nowrap;
+    word-break: keep-all;
+    overflow-wrap: normal;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.economic-news-table td:nth-child(3),
+.economic-news-table td:nth-child(4),
+.economic-news-table td:nth-child(6),
+.economic-news-table td:nth-child(8),
+.economic-news-table td:nth-child(9) {
+    white-space: nowrap;
+}
+
+.economic-news-table td:nth-child(3),
+.economic-news-table td:nth-child(4),
+.economic-news-table td:nth-child(6),
+.economic-news-table td:nth-child(8) {
+    width: 1%;
+}
+
+.economic-news-table td:nth-child(9) .economic-news-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    word-break: keep-all;
+    flex-shrink: 0;
+}
+
+@media (min-width: 901px) {
+    .economic-news-table th:nth-child(3),
+    .economic-news-table th:nth-child(4),
+    .economic-news-table th:nth-child(6),
+    .economic-news-table th:nth-child(8),
+    .economic-news-table th:nth-child(9) {
+        white-space: nowrap;
+    }
+}
