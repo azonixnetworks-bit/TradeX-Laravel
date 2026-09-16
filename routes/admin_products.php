@@ -16,6 +16,24 @@ Route::prefix('admin/products')
         )->name('index');
 
         Route::get(
+            '/create',
+            [
+                ProductController::class,
+                'create',
+            ]
+        )->name('create');
+
+        Route::post(
+            '/',
+            [
+                ProductController::class,
+                'store',
+            ]
+        )
+            ->middleware('throttle:10,1')
+            ->name('store');
+
+        Route::get(
             '/{product}/edit',
             [
                 ProductController::class,
