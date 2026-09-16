@@ -7,8 +7,11 @@ use App\Models\AuditLog;
 use App\Models\Payment;
 use App\Models\PaymentAdjustment;
 use App\Models\PaymentOrder;
+use App\Models\Product;
+use App\Models\UserEntitlement;
 use App\Services\Affiliates\AffiliateCommercialService;
 use App\Services\Entitlements\EducationPremiumEntitlementService;
+use App\Services\Entitlements\GenericProductEntitlementService;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -16,7 +19,8 @@ class PaymentReversalService
 {
     public function __construct(
         private readonly AffiliateCommercialService $affiliateCommercial,
-        private readonly EducationPremiumEntitlementService $educationPremium
+        private readonly EducationPremiumEntitlementService $educationPremium,
+        private readonly GenericProductEntitlementService $genericProducts
     ) {
     }
 
@@ -87,12 +91,7 @@ class PaymentReversalService
                     $locked->isPaymentReversed()
                     && $existing instanceof PaymentAdjustment
                 ) {
-                    /*
-                     * Provider webhook retries must be idempotent. Reconcile
-                     * only the entitlement tied to this already-reversed
-                     * payment and return the same durable adjustment.
-                     */
-                    $this->educationPremium->revokeForReversedPayment($locked);
+                    $this->revokeProductEntitlement($locked);
 
                     return $existing;
                 }
@@ -125,8 +124,13 @@ class PaymentReversalService
                         'status' => PaymentOrder::STATUS_PAYMENT_REVERSED,
                     ]);
 
-                $revoked = $this->educationPremium
-                    ->revokeForReversedPayment($locked);
+                $revoked = $this->revokeProductEntitlement($locked);
+
+                $locked->loadMissing('order');
+                $educationProduct =
+                    $locked->order instanceof PaymentOrder
+                    && $locked->order->product_code
+                        === Product::CODE_EDUCATION_PREMIUM;
 
                 AuditLog::record(
                     actorType: 'SYSTEM',
@@ -144,8 +148,11 @@ class PaymentReversalService
                         'payment_reversal_code' => $reversalCode,
                         'provider_event_recorded' => $providerEventId !== null,
                         'entitlement_review_required' => false,
-                        'entitlement_policy' => 'ADMIN_25_TIED_PAYMENT_ONLY',
-                        'education_entitlement_revoked' => $revoked !== null,
+                        'entitlement_policy' => 'TIED_PAYMENT_ONLY',
+                        'education_entitlement_revoked' =>
+                            $educationProduct && $revoked !== null,
+                        'product_entitlement_revoked' =>
+                            $revoked !== null,
                         'copy_trade_force_close' => false,
                     ]
                 );
@@ -160,6 +167,24 @@ class PaymentReversalService
         }
 
         return $adjustment;
+    }
+
+    private function revokeProductEntitlement(
+        Payment $payment
+    ): ?UserEntitlement {
+        $payment->loadMissing('order');
+
+        if (
+            $payment->order instanceof PaymentOrder
+            && $payment->order->product_code
+                === Product::CODE_EDUCATION_PREMIUM
+        ) {
+            return $this->educationPremium
+                ->revokeForReversedPayment($payment);
+        }
+
+        return $this->genericProducts
+            ->revokeForReversedPayment($payment);
     }
 
     private function reverseAffiliateIfPresent(Payment $payment): void
