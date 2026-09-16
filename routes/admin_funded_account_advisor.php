@@ -38,3 +38,6 @@ Route::prefix('admin')
                     });
             });
     });
+
+/* ADMIN-31 extends funded-account tooling with company-specific news restrictions. */
+require __DIR__ . '/admin_funded_no_trade_zone.php';
