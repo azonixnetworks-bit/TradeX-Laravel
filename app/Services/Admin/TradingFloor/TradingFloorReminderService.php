@@ -11,7 +11,7 @@ use Illuminate\Support\Collection;
 class TradingFloorReminderService
 {
     /** @return array{created:int,existing:int,skipped:int} */
-    public function generate(AdminUser $admin): array
+    public function generate(?AdminUser $admin = null): array
     {
         $summary = ['created' => 0, 'existing' => 0, 'skipped' => 0];
         $today = now()->startOfDay();
@@ -99,7 +99,7 @@ class TradingFloorReminderService
                             'amount' => (float) $payment->amount,
                             'received_at' => $payment->received_at?->toIso8601String(),
                         ],
-                        'created_by_admin_id' => $admin->id,
+                        'created_by_admin_id' => $admin?->id,
                     ]);
                     $summary['created']++;
                 }
@@ -112,7 +112,7 @@ class TradingFloorReminderService
     private function queueInvoiceReminder(
         TradingFloorCommissionInvoice $invoice,
         string $type,
-        AdminUser $admin,
+        ?AdminUser $admin,
         array &$summary
     ): void {
         $client = $invoice->client;
@@ -147,7 +147,7 @@ class TradingFloorReminderService
                 'balance' => (float) $invoice->balance_amount,
                 'reminder_type' => $type,
             ],
-            'created_by_admin_id' => $admin->id,
+            'created_by_admin_id' => $admin?->id,
         ]);
         $summary['created']++;
     }
