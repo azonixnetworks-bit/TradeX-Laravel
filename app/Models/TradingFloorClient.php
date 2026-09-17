@@ -92,6 +92,16 @@ class TradingFloorClient extends Model
         return $this->hasMany(TradingFloorCommissionInvoice::class);
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(TradingFloorClientDocument::class);
+    }
+
+    public function credentialReplacements(): HasMany
+    {
+        return $this->hasMany(TradingFloorCredentialReplacement::class);
+    }
+
     public function accessOverrideByAdmin(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'access_override_by_admin_id');
