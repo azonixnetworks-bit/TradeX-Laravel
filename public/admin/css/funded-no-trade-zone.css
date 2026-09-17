@@ -101,6 +101,12 @@
     overflow-wrap: normal;
 }
 
+.funded-no-trade-zone-page > .funded-advisor-header > .primary-btn,
+.funded-no-trade-zone-page .funded-advisor-header-actions .primary-btn {
+    min-height: 44px;
+    box-sizing: border-box;
+}
+
 .funded-no-trade-zone-page .funded-advisor-table .secondary-btn {
     min-width: 72px;
     min-height: 38px;
@@ -141,7 +147,7 @@
     }
 
     .funded-no-trade-zone-page .funded-advisor-table th {
-        font-size: 8px;
+        font-size: 9.5px;
         letter-spacing: .08em;
     }
 
@@ -171,7 +177,7 @@
     }
 
     .funded-no-trade-zone-page .funded-advisor-table td > small {
-        font-size: 8px;
+        font-size: 9px;
         line-height: 1.35;
     }
 
@@ -238,7 +244,7 @@
     }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 1180px) {
     .funded-no-trade-zone-page .funded-advisor-partner-table-panel {
         padding: 14px;
     }
@@ -301,7 +307,7 @@
 
     .funded-no-trade-zone-page .funded-advisor-table td::before {
         color: var(--text-muted);
-        font-size: 8px;
+        font-size: 9px;
         font-weight: 800;
         letter-spacing: .1em;
         text-transform: uppercase;
