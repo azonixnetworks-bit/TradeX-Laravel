@@ -87,6 +87,17 @@ Schedule::command('tradex:trading-routine:sweep')
         )
     );
 
+Schedule::command('tradex:trading-floor:reminders')
+    ->dailyAt((string) config('trading_floor.reminders.schedule_time', '08:00'))
+    ->timezone((string) config('trading_floor.reminders.timezone', 'Asia/Colombo'))
+    ->withoutOverlapping(60)
+    ->when(
+        fn (): bool => (bool) config(
+            'trading_floor.reminders.automation_enabled',
+            false
+        )
+    );
+
 $economicNewsSyncMinutes = max(
     1,
     min(30, (int) config('economic_news.sync.frequency_minutes', 5))
