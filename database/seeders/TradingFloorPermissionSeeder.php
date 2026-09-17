@@ -18,6 +18,12 @@ class TradingFloorPermissionSeeder extends Seeder
             ['trading_floor.payments.manage', 'Manage Trading Floor Commission Payments'],
             ['trading_floor.reports.view', 'View Trading Floor Reports'],
             ['trading_floor.settings.manage', 'Manage Trading Floor Settings'],
+            ['trading_floor.resources.view', 'View Trading Floor Floors, Desks and Packages'],
+            ['trading_floor.floors.manage', 'Manage Trading Floor Floors'],
+            ['trading_floor.desks.manage', 'Manage Trading Floor Desks and Seats'],
+            ['trading_floor.packages.manage', 'Manage Trading Floor Packages'],
+            ['trading_floor.memberships.view', 'View Trading Floor Memberships'],
+            ['trading_floor.memberships.manage', 'Manage Trading Floor Memberships'],
         ];
 
         $permissionIds = [];
