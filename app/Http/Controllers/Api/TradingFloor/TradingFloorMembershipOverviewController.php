@@ -33,6 +33,7 @@ class TradingFloorMembershipOverviewController extends Controller
 
         $membership = TradingFloorMembership::query()
             ->with([
+                'client:id,status',
                 'package:id,uuid,code,name,description,features',
                 'floor:id,uuid,code,name',
                 'desk:id,uuid,code,name,zone,status',
