@@ -24,6 +24,7 @@ use App\Providers\ScreenerServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
 use App\Providers\TradeJournalServiceProvider;
 use App\Providers\TradingRoutineServiceProvider;
+use App\Providers\WhatsAppApiServiceProvider;
 
 return [
     AppServiceProvider::class,
@@ -50,4 +51,5 @@ return [
     TradingRoutineServiceProvider::class,
     EconomicNewsServiceProvider::class,
     ScreenerServiceProvider::class,
+    WhatsAppApiServiceProvider::class,
 ];
