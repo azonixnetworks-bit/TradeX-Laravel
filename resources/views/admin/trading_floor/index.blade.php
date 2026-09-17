@@ -9,13 +9,17 @@
     $canManageClients = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.clients.manage');
     $canManageAccessSettings = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.settings.manage');
     $canViewReports = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.reports.view');
+    $canViewResources = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.resources.view');
+    $canViewMemberships = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.memberships.view');
     $commissionDueText = collect($stats['commission_due_by_currency'])->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))->implode(' · ');
     $receivedText = collect($stats['received_this_month_by_currency'])->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))->implode(' · ');
 @endphp
 
 <div class="page-header">
-    <div><div class="page-eyebrow">ADMIN-30 · TRADING FLOOR & CLIENT MANAGEMENT</div><h1>Trading Floor <span>Control</span></h1><p>Customer registration, access control, attendance and commission collection in one operational workspace.</p></div>
+    <div><div class="page-eyebrow">ADMIN-30 / ADMIN-31 · TRADING FLOOR MANAGEMENT</div><h1>Trading Floor <span>Control</span></h1><p>Customer, access, billing, resource, desk, package and membership operations in one workspace.</p></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        @if($canViewResources)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.resources.index') }}">Floor Resources</a>@endif
+        @if($canViewMemberships)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.index') }}">Memberships</a>@endif
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.access.index') }}">Attendance & Access</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.index') }}">Commission Ledger</a>
         @if($canViewReports)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.reports.index') }}">Reports</a>@endif
@@ -36,6 +40,8 @@
     <div class="panel-header"><div><div class="panel-eyebrow">OPERATIONS</div><h2>Trading Floor Management</h2></div><span>{{ $generatedAt->utc()->format('Y-m-d H:i:s') }} UTC</span></div>
     <div class="panel-body">
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
+            @if($canViewResources)<a href="{{ route('admin.trading_floor.resources.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">ADMIN-31</div><h3 style="margin:6px 0;">Floors, Desks & Packages</h3><p style="margin:0;opacity:.7;">Physical floors, desk availability, pricing and package configuration.</p></a>@endif
+            @if($canViewMemberships)<a href="{{ route('admin.trading_floor.memberships.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">MEMBERSHIP</div><h3 style="margin:6px 0;">Membership Management</h3><p style="margin:0;opacity:.7;">Membership periods, package snapshots, seat allocation and payment status.</p></a>@endif
             <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">CUSTOMERS</div><h3 style="margin:6px 0;">Customer Directory</h3><p style="margin:0;opacity:.7;">Profiles, floor/desk allocation, commission setup and access status.</p></a>
             @if($canManageClients)<a href="{{ route('admin.trading_floor.clients.create') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">REGISTRATION</div><h3 style="margin:6px 0;">Register Customer</h3><p style="margin:0;opacity:.7;">Create a trading-floor client and configure the commercial agreement.</p></a>@endif
             <a href="{{ route('admin.trading_floor.commissions.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">COMMISSION</div><h3 style="margin:6px 0;">Billing & Collection</h3><p style="margin:0;opacity:.7;">Invoices, partial payments, balances, overdue items and payment proof.</p></a>
