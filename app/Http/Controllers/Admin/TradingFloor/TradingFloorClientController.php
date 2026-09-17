@@ -102,6 +102,8 @@ class TradingFloorClientController extends Controller
             'accessCredentials' => fn ($query) => $query->latest('created_at'),
             'accessLogs' => fn ($query) => $query->latest('accessed_at')->limit(20),
             'commissionInvoices' => fn ($query) => $query->with('payments')->latest('due_date')->limit(20),
+            'documents' => fn ($query) => $query->with(['uploadedByAdmin:id,name', 'archivedByAdmin:id,name'])->latest('created_at'),
+            'credentialReplacements' => fn ($query) => $query->with(['oldCredential', 'newCredential', 'replacedByAdmin:id,name'])->latest('replaced_at'),
         ]);
 
         $outstandingByCurrency = TradingFloorCommissionInvoice::query()
