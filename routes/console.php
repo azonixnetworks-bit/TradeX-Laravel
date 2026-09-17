@@ -87,6 +87,14 @@ Schedule::command('tradex:trading-routine:sweep')
         )
     );
 
+Schedule::command('tradex:trading-floor:memberships-sweep')
+    ->dailyAt((string) config('trading_floor.memberships.schedule_time', '00:15'))
+    ->timezone((string) config('trading_floor.memberships.timezone', 'Asia/Colombo'))
+    ->withoutOverlapping(60)
+    ->when(
+        fn (): bool => (bool) config('trading_floor.memberships.sweep_enabled', true)
+    );
+
 Schedule::command('tradex:trading-floor:reminders')
     ->dailyAt((string) config('trading_floor.reminders.schedule_time', '08:00'))
     ->timezone((string) config('trading_floor.reminders.timezone', 'Asia/Colombo'))
