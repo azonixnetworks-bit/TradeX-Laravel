@@ -8,27 +8,19 @@
     $admin = auth('admin')->user();
     $canManageClients = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.clients.manage');
     $canManageAccessSettings = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.settings.manage');
-    $commissionDueText = collect($stats['commission_due_by_currency'])
-        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
-        ->implode(' · ');
-    $receivedText = collect($stats['received_this_month_by_currency'])
-        ->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))
-        ->implode(' · ');
+    $canViewReports = $admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.reports.view');
+    $commissionDueText = collect($stats['commission_due_by_currency'])->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))->implode(' · ');
+    $receivedText = collect($stats['received_this_month_by_currency'])->map(fn ($amount, $currency) => $currency.' '.number_format((float) $amount, 2))->implode(' · ');
 @endphp
 
 <div class="page-header">
-    <div>
-        <div class="page-eyebrow">ADMIN-30 · TRADING FLOOR & CLIENT MANAGEMENT</div>
-        <h1>Trading Floor <span>Control</span></h1>
-        <p>Customer registration, access control, attendance and commission collection in one operational workspace.</p>
-    </div>
+    <div><div class="page-eyebrow">ADMIN-30 · TRADING FLOOR & CLIENT MANAGEMENT</div><h1>Trading Floor <span>Control</span></h1><p>Customer registration, access control, attendance and commission collection in one operational workspace.</p></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.access.index') }}">Attendance & Access</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.commissions.index') }}">Commission Ledger</a>
+        @if($canViewReports)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.reports.index') }}">Reports</a>@endif
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.clients.index') }}">Customer Directory</a>
-        @if($canManageClients)
-            <a class="btn btn-primary" href="{{ route('admin.trading_floor.clients.create') }}">＋ Register Customer</a>
-        @endif
+        @if($canManageClients)<a class="btn btn-primary" href="{{ route('admin.trading_floor.clients.create') }}">＋ Register Customer</a>@endif
     </div>
 </div>
 
@@ -44,28 +36,16 @@
     <div class="panel-header"><div><div class="panel-eyebrow">OPERATIONS</div><h2>Trading Floor Management</h2></div><span>{{ $generatedAt->utc()->format('Y-m-d H:i:s') }} UTC</span></div>
     <div class="panel-body">
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;">
-            <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;">
-                <div class="panel-eyebrow">CUSTOMERS</div><h3 style="margin:6px 0;">Customer Directory</h3><p style="margin:0;opacity:.7;">Profiles, floor/desk allocation, commission setup and access status.</p>
-            </a>
-            @if($canManageClients)
-                <a href="{{ route('admin.trading_floor.clients.create') }}" class="panel" style="padding:18px;text-decoration:none;">
-                    <div class="panel-eyebrow">REGISTRATION</div><h3 style="margin:6px 0;">Register Customer</h3><p style="margin:0;opacity:.7;">Create a trading-floor client and configure the commercial agreement.</p>
-                </a>
+            <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">CUSTOMERS</div><h3 style="margin:6px 0;">Customer Directory</h3><p style="margin:0;opacity:.7;">Profiles, floor/desk allocation, commission setup and access status.</p></a>
+            @if($canManageClients)<a href="{{ route('admin.trading_floor.clients.create') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">REGISTRATION</div><h3 style="margin:6px 0;">Register Customer</h3><p style="margin:0;opacity:.7;">Create a trading-floor client and configure the commercial agreement.</p></a>@endif
+            <a href="{{ route('admin.trading_floor.commissions.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">COMMISSION</div><h3 style="margin:6px 0;">Billing & Collection</h3><p style="margin:0;opacity:.7;">Invoices, partial payments, balances, overdue items and payment proof.</p></a>
+            <a href="{{ route('admin.trading_floor.access.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">ATTENDANCE</div><h3 style="margin:6px 0;">Access Monitor</h3><p style="margin:0;opacity:.7;">Entry/exit history, warnings, denied scans and current presence.</p></a>
+            @if($canViewReports)
+                <a href="{{ route('admin.trading_floor.reports.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">REPORTING</div><h3 style="margin:6px 0;">Reports & Statements</h3><p style="margin:0;opacity:.7;">Attendance, finance exports, live presence and printable customer statements.</p></a>
+                <a href="{{ route('admin.trading_floor.reminders.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">REMINDERS</div><h3 style="margin:6px 0;">Reminder Queue</h3><p style="margin:0;opacity:.7;">Due, overdue and payment confirmation reminders ready for provider delivery.</p></a>
             @endif
-            <a href="{{ route('admin.trading_floor.commissions.index') }}" class="panel" style="padding:18px;text-decoration:none;">
-                <div class="panel-eyebrow">COMMISSION</div><h3 style="margin:6px 0;">Billing & Collection</h3><p style="margin:0;opacity:.7;">Invoices, partial payments, balances, overdue items and payment proof.</p>
-            </a>
-            <a href="{{ route('admin.trading_floor.access.index') }}" class="panel" style="padding:18px;text-decoration:none;">
-                <div class="panel-eyebrow">ATTENDANCE</div><h3 style="margin:6px 0;">Access Monitor</h3><p style="margin:0;opacity:.7;">Entry/exit history, warnings, denied scans and current presence.</p>
-            </a>
-            <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;">
-                <div class="panel-eyebrow">CREDENTIALS</div><h3 style="margin:6px 0;">NFC & Fingerprint</h3><p style="margin:0;opacity:.7;">Assign protected card or biometric device references from customer profiles.</p>
-            </a>
-            @if($canManageAccessSettings)
-                <a href="{{ route('admin.trading_floor.access.settings') }}" class="panel" style="padding:18px;text-decoration:none;">
-                    <div class="panel-eyebrow">ENFORCEMENT</div><h3 style="margin:6px 0;">Reader & Access Settings</h3><p style="margin:0;opacity:.7;">Provision devices and configure overdue commission access rules.</p>
-                </a>
-            @endif
+            <a href="{{ route('admin.trading_floor.clients.index') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">CREDENTIALS</div><h3 style="margin:6px 0;">NFC & Fingerprint</h3><p style="margin:0;opacity:.7;">Assign protected card or biometric device references from customer profiles.</p></a>
+            @if($canManageAccessSettings)<a href="{{ route('admin.trading_floor.access.settings') }}" class="panel" style="padding:18px;text-decoration:none;"><div class="panel-eyebrow">ENFORCEMENT</div><h3 style="margin:6px 0;">Reader & Access Settings</h3><p style="margin:0;opacity:.7;">Provision devices and configure overdue commission access rules.</p></a>@endif
         </div>
     </div>
 </div>
