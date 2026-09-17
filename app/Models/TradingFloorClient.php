@@ -92,6 +92,11 @@ class TradingFloorClient extends Model
         return $this->hasMany(TradingFloorCommissionInvoice::class);
     }
 
+    public function memberships(): HasMany
+    {
+        return $this->hasMany(TradingFloorMembership::class);
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(TradingFloorClientDocument::class);
