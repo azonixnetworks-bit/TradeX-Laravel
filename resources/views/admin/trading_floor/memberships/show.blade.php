@@ -17,6 +17,8 @@
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.index') }}">Memberships</a>
+        <a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.documents.invoice',$membership) }}">Print Invoice</a>
+        <a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.seat_map') }}">Seat Map</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.clients.show',$membership->client) }}">Customer Profile</a>
     </div>
 </div>
@@ -119,7 +121,7 @@
                 @forelse($membership->payments as $payment)
                     <tr>
                         <td>{{ $payment->received_at?->format('Y-m-d H:i') }}</td><td>{{ str_replace('_',' ',$payment->payment_method) }}</td><td>{{ $payment->transaction_reference ?: '—' }}</td><td>{{ $payment->currency }} {{ number_format((float)$payment->amount,2) }}</td><td>{{ $payment->receivedByAdmin?->name ?: '—' }}</td><td><span class="badge">{{ $payment->status }}</span>@if($payment->status==='REVERSED')<div style="font-size:11px;opacity:.65;">{{ $payment->reversal_reason }}</div>@endif</td>
-                        <td>@if($canManagePayments && $payment->status==='RECEIVED')<form method="POST" action="{{ route('admin.trading_floor.memberships.payments.reverse',[$membership,$payment]) }}" style="display:inline-flex;gap:6px;">@csrf @method('PATCH')<input name="reversal_reason" required maxlength="2000" placeholder="Reversal reason" style="min-width:150px;"><button class="btn btn-secondary" type="submit">Reverse</button></form>@else—@endif</td>
+                        <td><div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap;"><a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.documents.receipt',[$membership,$payment]) }}">Receipt</a>@if($canManagePayments && $payment->status==='RECEIVED')<form method="POST" action="{{ route('admin.trading_floor.memberships.payments.reverse',[$membership,$payment]) }}" style="display:inline-flex;gap:6px;">@csrf @method('PATCH')<input name="reversal_reason" required maxlength="2000" placeholder="Reversal reason" style="min-width:150px;"><button class="btn btn-secondary" type="submit">Reverse</button></form>@endif</div></td>
                     </tr>
                 @empty<tr><td colspan="7" style="padding:24px;text-align:center;opacity:.7;">No membership payments recorded.</td></tr>@endforelse
                 </tbody>
