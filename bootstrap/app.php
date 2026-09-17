@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function (): void {
             Route::middleware('api')
+                ->prefix('api')
                 ->group(base_path('routes/api_trading_floor_memberships.php'));
         },
     )
