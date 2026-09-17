@@ -78,6 +78,16 @@ return [
                     'META_WHATSAPP_ACCESS_TOKEN'
                 ),
 
+            'app_secret' =>
+                env(
+                    'META_WHATSAPP_APP_SECRET'
+                ),
+
+            'webhook_verify_token' =>
+                env(
+                    'META_WHATSAPP_WEBHOOK_VERIFY_TOKEN'
+                ),
+
             'otp_template_name' =>
                 env(
                     'META_WHATSAPP_OTP_TEMPLATE_NAME'
