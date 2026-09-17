@@ -6,8 +6,10 @@ use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessMonitorController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessOverrideController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorAccessSettingsController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorClientController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorClientDocumentController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionInvoiceController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorCommissionPaymentController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorCredentialReplacementController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorDashboardController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorDocumentController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorReminderController;
@@ -31,8 +33,17 @@ Route::prefix('admin/trading-floor')
             ->whereUuid('client')->middleware('throttle:20,1')->name('clients.credentials.store');
         Route::patch('/clients/{client}/credentials/{credential}/revoke', [TradingFloorAccessCredentialController::class, 'revoke'])
             ->whereUuid('client')->whereUuid('credential')->middleware('throttle:20,1')->name('clients.credentials.revoke');
+        Route::post('/clients/{client}/credentials/{credential}/replace', [TradingFloorCredentialReplacementController::class, 'store'])
+            ->whereUuid('client')->whereUuid('credential')->middleware('throttle:10,1')->name('clients.credentials.replace');
         Route::patch('/clients/{client}/access-override', [TradingFloorAccessOverrideController::class, 'update'])
             ->whereUuid('client')->middleware('throttle:20,1')->name('clients.access_override.update');
+
+        Route::post('/clients/{client}/documents', [TradingFloorClientDocumentController::class, 'store'])
+            ->whereUuid('client')->middleware('throttle:10,1')->name('clients.documents.store');
+        Route::get('/clients/{client}/documents/{document}', [TradingFloorClientDocumentController::class, 'download'])
+            ->whereUuid('client')->whereUuid('document')->name('clients.documents.download');
+        Route::patch('/clients/{client}/documents/{document}/archive', [TradingFloorClientDocumentController::class, 'archive'])
+            ->whereUuid('client')->whereUuid('document')->middleware('throttle:10,1')->name('clients.documents.archive');
 
         Route::get('/access', [TradingFloorAccessMonitorController::class, 'index'])->name('access.index');
         Route::get('/access/settings', [TradingFloorAccessSettingsController::class, 'index'])->name('access.settings');
