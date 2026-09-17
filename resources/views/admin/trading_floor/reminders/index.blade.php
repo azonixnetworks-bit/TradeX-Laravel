@@ -20,11 +20,12 @@
 
 <div class="page-header">
     <div>
-        <div class="page-eyebrow">ADMIN-30 · NOTIFICATIONS & REMINDERS</div>
+        <div class="page-eyebrow">ADMIN-30/31 · NOTIFICATIONS & REMINDERS</div>
         <h1>Reminder <span>Queue</span></h1>
-        <p>Prepare due-date, overdue and payment-received reminders for future WhatsApp, email and in-app delivery.</p>
+        <p>Prepare commission due-date, overdue, payment-received and membership renewal reminders for WhatsApp, email and in-app delivery.</p>
     </div>
     <div>
+        <a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.index') }}">Memberships</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.reports.index') }}">Reports</a>
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.index') }}">Floor Dashboard</a>
         @if($canGenerate)
@@ -35,6 +36,7 @@
 
 <div class="dashboard-grid" style="margin-top:18px;">
     <div class="stat-card"><div class="stat-card__label">Pending</div><div class="stat-card__value">{{ number_format($stats['pending']) }}</div></div>
+    <div class="stat-card"><div class="stat-card__label">Membership Renewals</div><div class="stat-card__value">{{ number_format($stats['membership_renewals']) }}</div></div>
     <div class="stat-card"><div class="stat-card__label">WhatsApp Ready</div><div class="stat-card__value">{{ number_format($stats['whatsapp']) }}</div></div>
     <div class="stat-card"><div class="stat-card__label">Email Ready</div><div class="stat-card__value">{{ number_format($stats['email']) }}</div></div>
     <div class="stat-card"><div class="stat-card__label">In-App</div><div class="stat-card__value">{{ number_format($stats['in_app']) }}</div></div>
@@ -55,7 +57,7 @@
     <div class="panel-header"><div><div class="panel-eyebrow">DELIVERY FOUNDATION</div><h2>Prepared Reminders</h2></div><span>{{ number_format($reminders->total()) }} RECORDS</span></div>
     <div class="panel-body" style="overflow-x:auto;">
         <table class="data-table" style="width:100%;">
-            <thead><tr><th>Created</th><th>Customer</th><th>Type</th><th>Channel</th><th>Recipient</th><th>Invoice / Payment</th><th>Status</th><th>Error</th></tr></thead>
+            <thead><tr><th>Created</th><th>Customer</th><th>Type</th><th>Channel</th><th>Recipient</th><th>Subject</th><th>Status</th><th>Error</th></tr></thead>
             <tbody>
             @forelse($reminders as $reminder)
                 <tr>
@@ -64,7 +66,16 @@
                     <td>{{ str_replace('_', ' ', $reminder->reminder_type) }}</td>
                     <td>{{ str_replace('_', ' ', $reminder->channel) }}</td>
                     <td>{{ $maskRecipient($reminder->recipient) }}</td>
-                    <td>@if($reminder->invoice)<a href="{{ route('admin.trading_floor.commissions.show', $reminder->invoice) }}">{{ $reminder->invoice->invoice_number }}</a>@elseif($reminder->payment){{ $reminder->payment->currency }} {{ number_format((float) $reminder->payment->amount, 2) }}@else—@endif</td>
+                    <td>
+                        @if($reminder->membership)
+                            <a href="{{ route('admin.trading_floor.memberships.show', $reminder->membership) }}">{{ $reminder->membership->membership_number }}</a>
+                            <div style="opacity:.65;font-size:12px;">{{ $reminder->membership->package?->code }} · expires {{ $reminder->membership->expires_at?->format('Y-m-d') }}</div>
+                        @elseif($reminder->invoice)
+                            <a href="{{ route('admin.trading_floor.commissions.show', $reminder->invoice) }}">{{ $reminder->invoice->invoice_number }}</a>
+                        @elseif($reminder->payment)
+                            {{ $reminder->payment->currency }} {{ number_format((float) $reminder->payment->amount, 2) }}
+                        @else—@endif
+                    </td>
                     <td><span class="badge">{{ $reminder->status }}</span></td>
                     <td>{{ $reminder->last_error ?: '—' }}</td>
                 </tr>
@@ -78,6 +89,6 @@
 </div>
 
 <div class="panel" style="margin-top:18px;">
-    <div class="panel-body"><strong>Delivery boundary</strong><p style="margin-bottom:0;">This queue prepares reminder intent only. WhatsApp and email provider delivery will be connected separately so provider failures, retries and delivery receipts remain auditable.</p></div>
+    <div class="panel-body"><strong>Delivery boundary</strong><p style="margin-bottom:0;">This queue prepares reminder intent only. WhatsApp and email provider delivery remains separated so provider failures, retries and delivery receipts stay auditable.</p></div>
 </div>
 @endsection
