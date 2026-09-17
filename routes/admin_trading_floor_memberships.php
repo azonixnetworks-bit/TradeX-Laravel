@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipPaymentController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorResourceController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +29,10 @@ Route::prefix('admin/trading-floor')
         Route::get('/memberships/{membership}', [TradingFloorMembershipController::class, 'show'])->whereUuid('membership')->name('memberships.show');
         Route::patch('/memberships/{membership}/activate', [TradingFloorMembershipController::class, 'activate'])->whereUuid('membership')->middleware('throttle:20,1')->name('memberships.activate');
         Route::patch('/memberships/{membership}/cancel', [TradingFloorMembershipController::class, 'cancel'])->whereUuid('membership')->middleware('throttle:20,1')->name('memberships.cancel');
+        Route::post('/memberships/{membership}/renew', [TradingFloorMembershipController::class, 'renew'])->whereUuid('membership')->middleware('throttle:10,1')->name('memberships.renew');
+        Route::patch('/memberships/{membership}/package', [TradingFloorMembershipController::class, 'changePackage'])->whereUuid('membership')->middleware('throttle:10,1')->name('memberships.package.update');
+        Route::patch('/memberships/{membership}/transfer', [TradingFloorMembershipController::class, 'transfer'])->whereUuid('membership')->middleware('throttle:15,1')->name('memberships.transfer');
+        Route::post('/memberships/{membership}/payments', [TradingFloorMembershipPaymentController::class, 'store'])->whereUuid('membership')->middleware('throttle:20,1')->name('memberships.payments.store');
+        Route::patch('/memberships/{membership}/payments/{payment}/reverse', [TradingFloorMembershipPaymentController::class, 'reverse'])
+            ->whereUuid('membership')->whereUuid('payment')->middleware('throttle:10,1')->name('memberships.payments.reverse');
     });
