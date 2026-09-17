@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipDocumentController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipPaymentController;
+use App\Http\Controllers\Admin\TradingFloor\TradingFloorMembershipReportController;
 use App\Http\Controllers\Admin\TradingFloor\TradingFloorResourceController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,8 +27,15 @@ Route::prefix('admin/trading-floor')
 
         Route::get('/memberships', [TradingFloorMembershipController::class, 'index'])->name('memberships.index');
         Route::get('/memberships/create', [TradingFloorMembershipController::class, 'create'])->name('memberships.create');
+        Route::get('/memberships/seat-map', [TradingFloorMembershipReportController::class, 'seatMap'])->name('memberships.seat_map');
+        Route::get('/memberships/reports', [TradingFloorMembershipReportController::class, 'index'])->name('memberships.reports.index');
+        Route::get('/memberships/reports/package-revenue.csv', [TradingFloorMembershipReportController::class, 'packageRevenueCsv'])->name('memberships.reports.package_revenue_csv');
         Route::post('/memberships', [TradingFloorMembershipController::class, 'store'])->middleware('throttle:20,1')->name('memberships.store');
+
         Route::get('/memberships/{membership}', [TradingFloorMembershipController::class, 'show'])->whereUuid('membership')->name('memberships.show');
+        Route::get('/memberships/{membership}/invoice', [TradingFloorMembershipDocumentController::class, 'invoice'])->whereUuid('membership')->name('memberships.documents.invoice');
+        Route::get('/memberships/{membership}/payments/{payment}/receipt', [TradingFloorMembershipDocumentController::class, 'receipt'])
+            ->whereUuid('membership')->whereUuid('payment')->name('memberships.documents.receipt');
         Route::patch('/memberships/{membership}/activate', [TradingFloorMembershipController::class, 'activate'])->whereUuid('membership')->middleware('throttle:20,1')->name('memberships.activate');
         Route::patch('/memberships/{membership}/cancel', [TradingFloorMembershipController::class, 'cancel'])->whereUuid('membership')->middleware('throttle:20,1')->name('memberships.cancel');
         Route::post('/memberships/{membership}/renew', [TradingFloorMembershipController::class, 'renew'])->whereUuid('membership')->middleware('throttle:10,1')->name('memberships.renew');
