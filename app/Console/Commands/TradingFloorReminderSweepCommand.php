@@ -9,7 +9,7 @@ class TradingFloorReminderSweepCommand extends Command
 {
     protected $signature = 'tradex:trading-floor:reminders';
 
-    protected $description = 'Generate due Trading Floor commission and payment reminder queue items.';
+    protected $description = 'Generate Trading Floor commission, payment and membership renewal reminder queue items.';
 
     public function handle(TradingFloorReminderService $service): int
     {
