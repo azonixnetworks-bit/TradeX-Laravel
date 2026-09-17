@@ -37,6 +37,8 @@ class TradingFloorReminderController extends Controller
         $query = TradingFloorReminder::query()
             ->with([
                 'client:id,uuid,client_code,full_name',
+                'membership:id,uuid,membership_number,trading_floor_package_id,expires_at',
+                'membership.package:id,uuid,code,name',
                 'invoice:id,uuid,invoice_number',
                 'payment:id,uuid,amount,currency',
             ]);
@@ -59,6 +61,10 @@ class TradingFloorReminderController extends Controller
             'whatsapp' => TradingFloorReminder::query()->where('channel', 'WHATSAPP')->where('status', TradingFloorReminder::STATUS_PENDING)->count(),
             'email' => TradingFloorReminder::query()->where('channel', 'EMAIL')->where('status', TradingFloorReminder::STATUS_PENDING)->count(),
             'in_app' => TradingFloorReminder::query()->where('channel', 'IN_APP')->where('status', TradingFloorReminder::STATUS_PENDING)->count(),
+            'membership_renewals' => TradingFloorReminder::query()
+                ->where('status', TradingFloorReminder::STATUS_PENDING)
+                ->whereNotNull('trading_floor_membership_id')
+                ->count(),
         ];
 
         return view('admin.trading_floor.reminders.index', compact(
