@@ -19,9 +19,14 @@ class TradingFloorReminder extends Model
     public const TYPE_OVERDUE = 'OVERDUE';
     public const TYPE_PAYMENT_RECEIVED = 'PAYMENT_RECEIVED';
 
+    public const TYPE_MEMBERSHIP_RENEWAL_7_DAYS = 'MEMBERSHIP_RENEWAL_7_DAYS';
+    public const TYPE_MEMBERSHIP_RENEWAL_3_DAYS = 'MEMBERSHIP_RENEWAL_3_DAYS';
+    public const TYPE_MEMBERSHIP_RENEWAL_TODAY = 'MEMBERSHIP_RENEWAL_TODAY';
+
     protected $fillable = [
         'uuid',
         'trading_floor_client_id',
+        'trading_floor_membership_id',
         'trading_floor_commission_invoice_id',
         'trading_floor_commission_payment_id',
         'reminder_type',
@@ -59,6 +64,11 @@ class TradingFloorReminder extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(TradingFloorClient::class, 'trading_floor_client_id');
+    }
+
+    public function membership(): BelongsTo
+    {
+        return $this->belongsTo(TradingFloorMembership::class, 'trading_floor_membership_id');
     }
 
     public function invoice(): BelongsTo
