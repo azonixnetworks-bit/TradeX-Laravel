@@ -170,6 +170,13 @@
 ></script>
 @endif
 
+@if(auth('admin')->user()?->isSuperAdmin() || auth('admin')->user()?->hasPermission('funded_no_trade_zone.view'))
+<script
+    src="{{ asset('admin/js/funded-no-trade-zone-nav.js') }}"
+    data-no-trade-url="{{ route('admin.funded_no_trade_zone.index') }}"
+></script>
+@endif
+
 @if(auth('admin')->user()?->hasPermission('trading_routine.view'))
 <script
     src="{{ asset('admin/js/trading-routine-nav.js') }}"
