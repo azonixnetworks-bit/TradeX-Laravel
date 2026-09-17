@@ -1,10 +1,14 @@
+@php
+    $tfProfileAdmin = auth('admin')->user();
+    $canManageClientDocuments = $tfProfileAdmin?->isSuperAdmin() || $tfProfileAdmin?->hasPermission('trading_floor.clients.manage');
+@endphp
 <div class="panel" style="margin-top:18px;">
     <div class="panel-header">
         <div><div class="panel-eyebrow">CUSTOMER DOCUMENTS</div><h2>Private Document Vault</h2></div>
         <span>PDF / JPG / PNG · private storage</span>
     </div>
     <div class="panel-body">
-        @if($canManageClient)
+        @if($canManageClientDocuments)
             <form method="POST" action="{{ route('admin.trading_floor.clients.documents.store', $client) }}" enctype="multipart/form-data" style="display:grid;grid-template-columns:180px minmax(220px,1fr) minmax(260px,1fr) auto;gap:12px;align-items:end;margin-bottom:20px;">
                 @csrf
                 <div class="form-group" style="margin:0;">
@@ -15,14 +19,8 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="form-group" style="margin:0;">
-                    <label>Title</label>
-                    <input name="title" required maxlength="255" placeholder="e.g. Signed floor agreement">
-                </div>
-                <div class="form-group" style="margin:0;">
-                    <label>Private File</label>
-                    <input name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png">
-                </div>
+                <div class="form-group" style="margin:0;"><label>Title</label><input name="title" required maxlength="255" placeholder="e.g. Signed floor agreement"></div>
+                <div class="form-group" style="margin:0;"><label>Private File</label><input name="document" type="file" required accept=".pdf,.jpg,.jpeg,.png"></div>
                 <button class="btn btn-primary" type="submit">Upload Document</button>
             </form>
         @endif
@@ -40,10 +38,9 @@
                             <td><span class="badge">{{ $document->status }}</span></td>
                             <td style="text-align:right;white-space:nowrap;">
                                 <a class="btn btn-secondary" href="{{ route('admin.trading_floor.clients.documents.download', [$client, $document]) }}">Download</a>
-                                @if($canManageClient && $document->status === 'ACTIVE')
+                                @if($canManageClientDocuments && $document->status === 'ACTIVE')
                                     <form method="POST" action="{{ route('admin.trading_floor.clients.documents.archive', [$client, $document]) }}" style="display:inline-flex;gap:6px;align-items:center;margin-left:6px;">
-                                        @csrf
-                                        @method('PATCH')
+                                        @csrf @method('PATCH')
                                         <input name="archived_reason" required maxlength="2000" placeholder="Archive reason" style="min-width:170px;">
                                         <button class="btn btn-secondary" type="submit">Archive</button>
                                     </form>
