@@ -70,6 +70,10 @@
             rel="stylesheet"
             href="{{ asset('admin/css/trading-floor-premium.css') }}"
         >
+        <link
+            rel="stylesheet"
+            href="{{ asset('admin/css/trading-floor-theme-lock.css') }}"
+        >
     @endif
 </head>
 
