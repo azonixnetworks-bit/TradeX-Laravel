@@ -2,6 +2,10 @@
 @section('title','Trading Floor Memberships | TradeX Administration')
 @section('page-title','Trading Floor Memberships')
 @section('content')
+@php
+    $admin=auth('admin')->user();
+    $canViewReports=$admin?->isSuperAdmin() || $admin?->hasPermission('trading_floor.reports.view');
+@endphp
 <div class="page-header">
     <div>
         <div class="page-eyebrow">ADMIN-31 · MEMBERSHIP MANAGEMENT</div>
@@ -9,6 +13,8 @@
         <p>Customer membership periods, renewals, package snapshots, payment status and seat allocation.</p>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.seat_map') }}">Seat Availability Map</a>
+        @if($canViewReports)<a class="btn btn-secondary" href="{{ route('admin.trading_floor.memberships.reports.index') }}">Revenue Reports</a>@endif
         <a class="btn btn-secondary" href="{{ route('admin.trading_floor.resources.index') }}">Resource Dashboard</a>
         <a class="btn btn-primary" href="{{ route('admin.trading_floor.memberships.create') }}">＋ New Membership</a>
     </div>
