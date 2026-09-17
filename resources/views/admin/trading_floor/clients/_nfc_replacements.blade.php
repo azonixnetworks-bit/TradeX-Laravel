@@ -1,26 +1,21 @@
+@php
+    $tfProfileAdmin = auth('admin')->user();
+    $canManageNfcReplacement = $tfProfileAdmin?->isSuperAdmin() || $tfProfileAdmin?->hasPermission('trading_floor.access.manage');
+@endphp
 <div class="panel" style="margin-top:18px;">
     <div class="panel-header">
         <div><div class="panel-eyebrow">LOST / REPLACED CARD</div><h2>NFC Replacement History</h2></div>
         <span>Old card is revoked before the replacement becomes active</span>
     </div>
     <div class="panel-body">
-        @if($canManageAccess)
+        @if($canManageNfcReplacement)
             @php($activeNfc = $client->accessCredentials->where('credential_type', 'NFC')->where('status', 'ACTIVE'))
             @forelse($activeNfc as $credential)
                 <form method="POST" action="{{ route('admin.trading_floor.clients.credentials.replace', [$client, $credential]) }}" style="display:grid;grid-template-columns:180px minmax(240px,1fr) minmax(260px,1fr) auto;gap:12px;align-items:end;margin-bottom:14px;">
                     @csrf
-                    <div class="form-group" style="margin:0;">
-                        <label>Current Protected Card</label>
-                        <input type="text" value="{{ substr($credential->credential_reference, 0, 12) }}…" disabled>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label>New NFC Card UID</label>
-                        <input name="new_credential_reference" type="password" autocomplete="off" required minlength="2" maxlength="255" placeholder="Scan replacement card">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label>Replacement Reason</label>
-                        <input name="replacement_reason" required maxlength="2000" placeholder="Lost, stolen, damaged or replaced">
-                    </div>
+                    <div class="form-group" style="margin:0;"><label>Current Protected Card</label><input type="text" value="{{ substr($credential->credential_reference, 0, 12) }}…" disabled></div>
+                    <div class="form-group" style="margin:0;"><label>New NFC Card UID</label><input name="new_credential_reference" type="password" autocomplete="off" required minlength="2" maxlength="255" placeholder="Scan replacement card"></div>
+                    <div class="form-group" style="margin:0;"><label>Replacement Reason</label><input name="replacement_reason" required maxlength="2000" placeholder="Lost, stolen, damaged or replaced"></div>
                     <button class="btn btn-primary" type="submit">Replace Card</button>
                 </form>
             @empty
