@@ -77,3 +77,5 @@ Route::prefix('admin/trading-floor')
         Route::post('/reminders/generate', [TradingFloorReminderController::class, 'generate'])
             ->middleware('throttle:6,1')->name('reminders.generate');
     });
+
+require __DIR__ . '/admin_trading_floor_memberships.php';
