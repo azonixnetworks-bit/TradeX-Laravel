@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class TradingFloorMembership extends Model
@@ -88,5 +89,20 @@ class TradingFloorMembership extends Model
     public function renewedFrom(): BelongsTo
     {
         return $this->belongsTo(self::class, 'renewed_from_membership_id');
+    }
+
+    public function renewals(): HasMany
+    {
+        return $this->hasMany(self::class, 'renewed_from_membership_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(TradingFloorMembershipPayment::class, 'trading_floor_membership_id');
+    }
+
+    public function changes(): HasMany
+    {
+        return $this->hasMany(TradingFloorMembershipChange::class, 'trading_floor_membership_id');
     }
 }
