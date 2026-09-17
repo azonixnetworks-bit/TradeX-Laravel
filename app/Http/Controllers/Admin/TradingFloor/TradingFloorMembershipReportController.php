@@ -12,8 +12,8 @@ use App\Models\TradingFloorPackage;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class TradingFloorMembershipReportController extends Controller
 {
@@ -109,14 +109,21 @@ class TradingFloorMembershipReportController extends Controller
             ->keyBy('trading_floor_desk_id');
 
         $totalDesks = $floors->sum(fn ($floor) => $floor->desks->count());
-        $activeDesks = $floors->sum(fn ($floor) => $floor->desks->where('status', TradingFloorDesk::STATUS_ACTIVE)->count());
+        $activeDeskIds = $floors
+            ->where('status', TradingFloorFloor::STATUS_ACTIVE)
+            ->flatMap(fn ($floor) => $floor->desks
+                ->where('status', TradingFloorDesk::STATUS_ACTIVE)
+                ->pluck('id'))
+            ->values();
+        $activeDesks = $activeDeskIds->count();
         $occupied = $occupancy->count();
+        $occupiedActive = collect($occupancy->keys())->intersect($activeDeskIds)->count();
 
         $stats = [
             'total_desks' => $totalDesks,
             'active_desks' => $activeDesks,
             'occupied' => $occupied,
-            'available' => max(0, $activeDesks - $occupied),
+            'available' => max(0, $activeDesks - $occupiedActive),
             'unavailable' => max(0, $totalDesks - $activeDesks),
         ];
 
@@ -164,6 +171,7 @@ class TradingFloorMembershipReportController extends Controller
         $sales = TradingFloorMembership::query()
             ->selectRaw('trading_floor_package_id, currency, COUNT(*) as memberships_sold, SUM(price_amount) as sold_value')
             ->whereBetween('created_at', [$from, $to])
+            ->where('status', '<>', TradingFloorMembership::STATUS_CANCELLED)
             ->groupBy('trading_floor_package_id', 'currency')
             ->get();
 
