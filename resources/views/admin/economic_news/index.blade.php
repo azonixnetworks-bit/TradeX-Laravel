@@ -23,8 +23,8 @@
         </div>
         <div class="economic-news-header-side">
             <div class="economic-news-sync">
-                <span>SERVER TIME</span>
-                <strong>{{ $generatedAt->utc()->format('Y-m-d H:i:s') }} UTC</strong>
+                <span>YOUR LOCAL TIME</span>
+                <strong data-economic-local-time="{{ $generatedAt->toIso8601String() }}">{{ $generatedAt->utc()->format('Y-m-d H:i:s') }} UTC</strong>
             </div>
             <div class="economic-news-actions">
                 @if($canManageEvents)<a class="economic-news-link" href="{{ route('admin.economic_news.events.create') }}">＋ New Event</a>@endif
@@ -64,7 +64,7 @@
                             $effective = $event?->effectiveIntelligence();
                         @endphp
                         <article class="economic-news-live-item">
-                            <div class="economic-news-live-time"><strong>{{ $update->published_at?->utc()->format('H:i:s') }}</strong><span>{{ $update->published_at?->utc()->format('Y-m-d') }} UTC</span></div>
+                            <div class="economic-news-live-time"><strong data-economic-local-time="{{ $update->published_at?->toIso8601String() }}">{{ $update->published_at?->utc()->format('Y-m-d H:i:s') }} UTC</strong></div>
                             <div class="economic-news-live-body">
                                 <div class="economic-news-live-meta">
                                     <span class="economic-news-badge">{{ $update->update_type }}</span>
@@ -101,13 +101,26 @@
             @if($events && $events->count())
                 <div class="economic-news-table-wrap">
                     <table class="economic-news-table">
-                        <thead><tr><th>Event / Source</th><th>Schedule</th><th>Impact</th><th>Bias</th><th>Confidence</th><th>Volatility</th><th>Affected Pairs</th><th>Status</th>@if($canManageEvents)<th>Manage</th>@endif</tr></thead>
+                        <thead><tr><th>Event / Source</th><th>Schedule</th><th>Remaining Time</th><th>Impact</th><th>Bias</th><th>Confidence</th><th>Volatility</th><th>Affected Pairs</th><th>Status</th>@if($canManageEvents)<th>Manage</th>@endif</tr></thead>
                         <tbody>
                             @foreach($events as $event)
-                                @php($effective = $event->effectiveIntelligence())
+                                @php
+                                    $effective = $event->effectiveIntelligence();
+                                @endphp
                                 <tr>
                                     <td><strong>{{ $event->title }}</strong><small>{{ $event->currency ?: ($event->country_code ?: 'GLOBAL') }} · {{ $event->source?->name ?? 'Manual / Internal' }}@if($effective['manual_override']) · ADMIN OVERRIDE @endif</small></td>
-                                    <td>{{ $event->scheduled_at_utc?->utc()->format('Y-m-d H:i') }}<small>UTC</small></td>
+                                    <td><span data-economic-local-time="{{ $event->scheduled_at_utc?->toIso8601String() }}">{{ $event->scheduled_at_utc?->utc()->format('Y-m-d H:i') }} UTC</span></td>
+                                    <td style="white-space: nowrap; font-variant-numeric: tabular-nums;">
+                                        @if($event->scheduled_at_utc)
+                                            @php
+                                                $remainingSeconds = max(0, $event->scheduled_at_utc->getTimestamp() - $generatedAt->getTimestamp());
+                                                $remainingLabel = $remainingSeconds === 0 ? 'End' : sprintf('%dd %02dh %02dm %02ds', intdiv($remainingSeconds, 86400), intdiv($remainingSeconds % 86400, 3600), intdiv($remainingSeconds % 3600, 60), $remainingSeconds % 60);
+                                            @endphp
+                                            <strong data-economic-countdown="{{ $event->scheduled_at_utc->getTimestamp() * 1000 }}">{{ $remainingLabel }}</strong>
+                                        @else
+                                            <span>—</span>
+                                        @endif
+                                    </td>
                                     <td><span class="economic-news-impact is-{{ strtolower($effective['impact']) }}">{{ $effective['impact'] }}</span></td>
                                     <td><span class="economic-news-bias is-{{ strtolower($effective['bias']) }}">{{ $effective['bias'] }}</span></td>
                                     <td><strong>{{ $effective['confidence_score'] }}%</strong><div class="economic-news-confidence"><span style="width: {{ min(100, max(0, $effective['confidence_score'])) }}%"></span></div></td>
@@ -116,7 +129,7 @@
                                     <td><span class="economic-news-status is-{{ strtolower($effective['status']) }}">{{ $effective['status'] }}</span><small>{{ $event->updates_count }} updates</small></td>
                                     @if($canManageEvents)<td><a class="economic-news-link" href="{{ route('admin.economic_news.events.edit', $event) }}">Edit</a></td>@endif
                                 </tr>
-                                @if(filled($effective['reason']))<tr class="economic-news-reason-row"><td colspan="{{ $canManageEvents ? 9 : 8 }}"><strong>Reason:</strong> {{ $effective['reason'] }}</td></tr>@endif
+                                @if(filled($effective['reason']))<tr class="economic-news-reason-row"><td colspan="{{ $canManageEvents ? 10 : 9 }}"><strong>Reason:</strong> {{ $effective['reason'] }}</td></tr>@endif
                             @endforeach
                         </tbody>
                     </table>
@@ -130,7 +143,7 @@
         @if($mode === 'overview' && $liveUpdates->count())
             <section class="panel economic-news-panel economic-news-recent">
                 <div class="economic-news-panel-head"><div><div class="panel-eyebrow">LATEST</div><h2>Recent Live Updates</h2></div><a href="{{ route('admin.economic_news.live') }}" class="economic-news-link">View live feed</a></div>
-                <div class="economic-news-mini-feed">@foreach($liveUpdates as $update)<div><span>{{ $update->published_at?->utc()->format('M d · H:i') }} UTC</span><strong>{{ $update->event?->title ?? 'Economic Event' }}</strong><p>{{ $update->message }}</p></div>@endforeach</div>
+                <div class="economic-news-mini-feed">@foreach($liveUpdates as $update)<div><span data-economic-local-time="{{ $update->published_at?->toIso8601String() }}">{{ $update->published_at?->utc()->format('M d · H:i') }} UTC</span><strong>{{ $update->event?->title ?? 'Economic Event' }}</strong><p>{{ $update->message }}</p></div>@endforeach</div>
             </section>
         @endif
     @endif
@@ -138,3 +151,46 @@
     <div class="economic-news-boundary"><strong>Effective intelligence model</strong><p>Original event intelligence remains stored separately from manual overrides. Consumer APIs will receive effective values with override provenance instead of destructive replacement.</p></div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+(() => {
+    // Display UTC instants in the viewer's device timezone, including its daylight-saving rules.
+    const formatter = new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: true, timeZoneName: 'shortOffset',
+    });
+    document.querySelectorAll('[data-economic-local-time]').forEach(element => {
+        const instant = new Date(element.dataset.economicLocalTime);
+        if (Number.isNaN(instant.getTime())) return;
+        element.textContent = formatter.format(instant);
+        element.title = `${formatter.resolvedOptions().timeZone} · ${instant.toISOString()}`;
+    });
+
+    const countdowns = Array.from(document.querySelectorAll('[data-economic-countdown]'));
+    if (!countdowns.length) return;
+
+    // Anchor to server UTC so a visitor's timezone or incorrect clock cannot change the countdown.
+    const serverTime = {{ $generatedAt->getTimestamp() * 1000 }};
+    const startedAt = performance.now();
+    const pad = value => String(value).padStart(2, '0');
+    const update = () => {
+        const now = serverTime + performance.now() - startedAt;
+        let pending = false;
+        countdowns.forEach(element => {
+            const seconds = Math.max(0, Math.ceil((Number(element.dataset.economicCountdown) - now) / 1000));
+            if (seconds === 0) {
+                element.textContent = 'End';
+                return;
+            }
+            pending = true;
+            element.textContent = `${Math.floor(seconds / 86400)}d ${pad(Math.floor(seconds % 86400 / 3600))}h ${pad(Math.floor(seconds % 3600 / 60))}m ${pad(seconds % 60)}s`;
+        });
+        return pending;
+    };
+    if (update()) {
+        const timer = setInterval(() => { if (!update()) clearInterval(timer); }, 1000);
+    }
+})();
+</script>
+@endpush
