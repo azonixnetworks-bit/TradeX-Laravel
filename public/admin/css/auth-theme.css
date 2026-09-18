@@ -1,0 +1,142 @@
+/* ==========================================================================
+   TradeX Admin Auth Theme
+   Visual-only harmonisation for login, password recovery and TOTP screens.
+   ========================================================================== */
+
+:root {
+    --auth-bg: #050b12;
+    --auth-panel: #0b1520;
+    --auth-panel-soft: #0d1926;
+    --auth-input: #07121d;
+    --auth-border: rgba(255,255,255,.08);
+    --auth-border-gold: rgba(216,174,90,.27);
+    --auth-gold: #d8ae5a;
+    --auth-gold-soft: #f2d88d;
+    --auth-blue: #2388ff;
+    --auth-text: #eef3f8;
+    --auth-muted: #8595a8;
+}
+
+body {
+    background:
+        radial-gradient(circle at 17% 12%, rgba(35,136,255,.09), transparent 31%),
+        radial-gradient(circle at 83% 82%, rgba(216,174,90,.065), transparent 28%),
+        var(--auth-bg) !important;
+    color: var(--auth-text) !important;
+}
+
+.shell,
+.card {
+    border-color: var(--auth-border-gold) !important;
+    background:
+        radial-gradient(circle at 0% 50%, rgba(216,174,90,.045), transparent 34%),
+        linear-gradient(145deg, rgba(15,24,36,.98), rgba(7,13,20,.98)) !important;
+    box-shadow:
+        0 36px 90px rgba(0,0,0,.42),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+
+.shell {
+    border-radius: 28px !important;
+}
+
+.card {
+    border-radius: 22px !important;
+}
+
+.brand {
+    background:
+        radial-gradient(circle at 8% 10%, rgba(216,174,90,.055), transparent 32%),
+        linear-gradient(145deg, rgba(10,29,45,.94), rgba(5,13,22,.98)) !important;
+}
+
+.tag,
+.eyebrow {
+    color: var(--auth-gold) !important;
+}
+
+.brand h1 span {
+    color: var(--auth-gold-soft) !important;
+}
+
+.brand-copy,
+.subtitle,
+.copy,
+.meta,
+.policy {
+    color: var(--auth-muted) !important;
+}
+
+label {
+    color: #b7c3cf !important;
+}
+
+input[type="email"],
+input[type="password"],
+input[type="text"] {
+    border-color: rgba(255,255,255,.09) !important;
+    border-radius: 12px !important;
+    color: var(--auth-text) !important;
+    background: var(--auth-input) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.018);
+}
+
+input:focus {
+    outline: none !important;
+    border-color: rgba(35,136,255,.58) !important;
+    box-shadow: 0 0 0 3px rgba(35,136,255,.075) !important;
+}
+
+.login-btn,
+button[type="submit"] {
+    border: 1px solid rgba(246,220,151,.72) !important;
+    border-radius: 12px !important;
+    color: #151106 !important;
+    background:
+        linear-gradient(135deg, #f1d27c 0%, #d7aa50 58%, #bd8833 100%) !important;
+    box-shadow:
+        0 12px 28px rgba(193,143,50,.18),
+        inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+.login-btn:hover,
+button[type="submit"]:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255,235,183,.9) !important;
+    background:
+        linear-gradient(135deg, #f6dc91 0%, #e0b65c 58%, #c9953b 100%) !important;
+}
+
+.toggle {
+    color: #8ea0b3 !important;
+}
+
+.options a,
+.back {
+    color: var(--auth-gold-soft) !important;
+}
+
+.message,
+.status,
+.error,
+.policy {
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 11px !important;
+}
+
+.security,
+.brand-lockup {
+    border-color: rgba(255,255,255,.06) !important;
+}
+
+.brand-lockup span,
+.bottom-copy {
+    color: #73869a !important;
+}
+
+@media (max-width: 520px) {
+    .shell,
+    .card {
+        border-radius: 18px !important;
+    }
+}

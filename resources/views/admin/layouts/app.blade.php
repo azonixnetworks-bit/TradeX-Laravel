@@ -75,6 +75,11 @@
             href="{{ asset('admin/css/trading-floor-theme-lock.css') }}"
         >
     @endif
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/project-theme.css') }}"
+    >
 </head>
 
 <body>
