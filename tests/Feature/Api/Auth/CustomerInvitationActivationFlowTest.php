@@ -12,6 +12,7 @@ use App\Models\UserRegistrationSession;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -37,6 +38,19 @@ class CustomerInvitationActivationFlowTest extends TestCase
 
     public function test_admin_invite_completes_secure_activation_only_after_required_steps(): void
     {
+        config([
+            'tradex_registration.delivery.whatsapp_driver' => 'meta',
+            'tradex_registration.delivery.meta.graph_version' => 'v26.0',
+            'tradex_registration.delivery.meta.phone_number_id' => '123456789012345',
+            'tradex_registration.delivery.meta.access_token' => 'test-token',
+            'tradex_registration.delivery.meta.otp_template_name' => 'tradex_otp',
+            'tradex_registration.delivery.meta.otp_template_language' => 'en_US',
+        ]);
+        Http::preventStrayRequests();
+        Http::fake(['https://graph.facebook.com/*' => Http::response([
+            'messages' => [['id' => 'wamid.invitation-test']],
+        ])]);
+
         $this->publishRequiredPolicies();
 
         $plainInvitationToken = str_repeat('a', 64);
@@ -109,6 +123,13 @@ class CustomerInvitationActivationFlowTest extends TestCase
                 'data.next_action',
                 'VERIFY_WHATSAPP_OTP'
             );
+
+        Http::assertSentCount(1);
+        Http::assertSent(fn ($request) => $request['to'] === ltrim($invitation->whatsapp_number, '+')
+            && data_get($request->data(), 'template.components.0.parameters.0.text') === '123456'
+        );
+        $this->assertNull($session->fresh()->whatsapp_verified_at);
+        $this->assertDatabaseCount('users', 0);
 
         $this->postJson(
             '/api/v1/auth/register/whatsapp/verify',
@@ -317,6 +338,41 @@ class CustomerInvitationActivationFlowTest extends TestCase
                 )
                 ->count()
         );
+    }
+
+    public function test_failed_whatsapp_delivery_keeps_profile_unverified_and_offers_resend(): void
+    {
+        config([
+            'tradex_registration.delivery.whatsapp_driver' => 'meta',
+            'tradex_registration.delivery.meta.access_token' => '',
+        ]);
+        Http::fake();
+        $token = str_repeat('b', 64);
+        $invitation = $this->createInvitation($token);
+        $activation = $this->postJson('/api/v1/auth/invite/activate', [
+            'invitation_id' => $invitation->uuid,
+            'token' => $token,
+        ])->assertCreated();
+        $payload = $this->sessionPayload(
+            $activation->json('data.registration_id'),
+            $activation->json('data.registration_token'),
+            ['otp_code' => '123456']
+        );
+
+        $this->postJson('/api/v1/auth/register/email/verify', $payload)
+            ->assertOk()
+            ->assertJsonPath('data.email_verified', true)
+            ->assertJsonPath('data.whatsapp_otp_sent', false)
+            ->assertJsonPath('data.next_action', 'RESEND_WHATSAPP_OTP');
+        $this->postJson('/api/v1/auth/register/whatsapp/verify', $payload)
+            ->assertUnprocessable()
+            ->assertJsonPath('error.code', 'OTP_NOT_FOUND');
+
+        $session = UserRegistrationSession::where('uuid', $payload['registration_id'])->firstOrFail();
+        $this->assertNotNull($session->email_verified_at);
+        $this->assertNull($session->whatsapp_verified_at);
+        $this->assertDatabaseCount('users', 0);
+        Http::assertNothingSent();
     }
 
     public function test_invalid_invitation_token_cannot_create_registration_session(): void

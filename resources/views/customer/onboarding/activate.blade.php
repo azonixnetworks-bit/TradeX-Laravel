@@ -816,7 +816,7 @@ input.email-otp-digit:not(:placeholder-shown) {
 
             case 'VERIFY_WHATSAPP_OTP':
             case 'RESEND_WHATSAPP_OTP':
-                renderWhatsAppOtp();
+                renderWhatsAppOtp(action === 'RESEND_WHATSAPP_OTP');
                 break;
 
             case 'SET_PASSWORD':
@@ -1045,17 +1045,18 @@ input.email-otp-digit:not(:placeholder-shown) {
 }
 
 
-    function renderWhatsAppOtp() {
+    function renderWhatsAppOtp(needsResend = false) {
         app.innerHTML = `
             <div class="step-kicker">Step 2 · Contact</div>
             <h2>Verify WhatsApp</h2>
-            <p class="subtitle">Enter the six-digit code sent through the configured TradeX WhatsApp verification channel.</p>
+            <p class="subtitle">Enter the six-digit code from WhatsApp to verify the number on your TradeX profile.</p>
+            ${needsResend ? '<div class="notice danger" role="status">A WhatsApp code could not be sent or has expired. Request a new code below. If sending continues to fail, contact TradeX support.</div>' : ''}
             <form id="whatsappForm">
                 <label for="whatsappOtp">WhatsApp verification code</label>
                 <input id="whatsappOtp" class="otp-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required>
                 <div class="actions">
                     <button class="btn btn-primary" type="submit">Verify WhatsApp</button>
-                    <button id="resendWhatsapp" class="btn btn-secondary" type="button">Resend Code</button>
+                    <button id="resendWhatsapp" class="btn btn-secondary" type="button">${needsResend ? 'Send WhatsApp Code' : 'Resend Code'}</button>
                 </div>
             </form>
             <div id="inlineNotice"></div>
@@ -1071,7 +1072,10 @@ input.email-otp-digit:not(:placeholder-shown) {
         });
 
         document.getElementById('resendWhatsapp').addEventListener('click', async () => {
-            await resend('/api/v1/auth/register/whatsapp/resend', 'A fresh WhatsApp code was requested.');
+            if (await resend('/api/v1/auth/register/whatsapp/resend', 'A fresh WhatsApp code was requested.')) {
+                renderWhatsAppOtp();
+                inlineSuccess('Code requested. Check WhatsApp on the number provided in your profile.');
+            }
         });
     }
 
@@ -1403,8 +1407,10 @@ input.email-otp-digit:not(:placeholder-shown) {
         try {
             await api(path, sessionPayload());
             inlineSuccess(successMessage);
+            return true;
         } catch (error) {
             inlineError(error.message, error.code);
+            return false;
         } finally {
             disableButtons(false);
         }
