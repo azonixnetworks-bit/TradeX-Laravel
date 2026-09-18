@@ -490,3 +490,251 @@ html[data-theme="dark"] .theme-toggle:hover {
         box-shadow: none !important;
     }
 }
+
+
+/* ==========================================================================
+   Full admin audit — module harmonisation
+   Keeps legacy/module-specific screens in the same Trading Floor visual system.
+   Layout/behaviour is intentionally left to each module stylesheet.
+   ========================================================================== */
+
+html[data-theme="dark"] .economic-news-header,
+html[data-theme="dark"] .funded-advisor-header,
+html[data-theme="dark"] .market-clock-header,
+html[data-theme="dark"] .pa-page-header,
+html[data-theme="dark"] .risk-reward-header,
+html[data-theme="dark"] .screener-monitor-header,
+html[data-theme="dark"] .trading-routine-header {
+    position: relative;
+    border: 1px solid var(--tx-border-gold) !important;
+    border-radius: var(--tx-radius-xl) !important;
+    background:
+        radial-gradient(circle at 0% 50%, rgba(216,174,90,.085), transparent 34%),
+        linear-gradient(145deg, rgba(16,25,37,.98), rgba(7,13,20,.98)) !important;
+    box-shadow:
+        0 18px 45px rgba(0,0,0,.20),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+    overflow: hidden;
+}
+
+html[data-theme="dark"] .economic-news-header::before,
+html[data-theme="dark"] .funded-advisor-header::before,
+html[data-theme="dark"] .market-clock-header::before,
+html[data-theme="dark"] .pa-page-header::before,
+html[data-theme="dark"] .risk-reward-header::before,
+html[data-theme="dark"] .screener-monitor-header::before,
+html[data-theme="dark"] .trading-routine-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    background: linear-gradient(180deg, transparent, var(--tx-gold), transparent);
+    box-shadow: 0 0 18px rgba(216,174,90,.48);
+}
+
+/* Module panels */
+html[data-theme="dark"] .economic-news-panel,
+html[data-theme="dark"] .funded-advisor-form-panel,
+html[data-theme="dark"] .funded-advisor-side-panel,
+html[data-theme="dark"] .funded-advisor-plan-panel,
+html[data-theme="dark"] .funded-advisor-rule-panel,
+html[data-theme="dark"] .funded-advisor-partner-table-panel,
+html[data-theme="dark"] .funded-advisor-warning-panel,
+html[data-theme="dark"] .funded-advisor-danger-zone,
+html[data-theme="dark"] .market-dial-panel,
+html[data-theme="dark"] .market-session-panel,
+html[data-theme="dark"] .market-summary-panel,
+html[data-theme="dark"] .risk-reward-market-panel,
+html[data-theme="dark"] .risk-reward-form-panel,
+html[data-theme="dark"] .risk-reward-result-panel,
+html[data-theme="dark"] .risk-reward-binance-subpanel,
+html[data-theme="dark"] .screener-provider-panel,
+html[data-theme="dark"] .screener-policy-card,
+html[data-theme="dark"] .trading-routine-table-panel,
+html[data-theme="dark"] .pa-provider-card,
+html[data-theme="dark"] .pa-owner-guide,
+html[data-theme="dark"] .pa-account-card,
+html[data-theme="dark"] .pa-managed-section {
+    border-color: var(--tx-border) !important;
+    border-radius: var(--tx-radius-lg) !important;
+    background:
+        linear-gradient(165deg, rgba(15,22,32,.97), rgba(7,12,19,.96)) !important;
+    box-shadow:
+        var(--tx-shadow-panel),
+        inset 0 1px 0 rgba(255,255,255,.022) !important;
+}
+
+/* Module summary/stat cards */
+html[data-theme="dark"] .economic-news-stat,
+html[data-theme="dark"] .funded-advisor-metric,
+html[data-theme="dark"] .funded-advisor-stop-card,
+html[data-theme="dark"] .market-info-card,
+html[data-theme="dark"] .market-insight-card,
+html[data-theme="dark"] .pa-summary-card,
+html[data-theme="dark"] .risk-reward-result-card,
+html[data-theme="dark"] .risk-reward-primary-result,
+html[data-theme="dark"] .risk-reward-spec-card,
+html[data-theme="dark"] .screener-summary-card,
+html[data-theme="dark"] .trading-routine-stat {
+    border-color: var(--tx-border) !important;
+    border-radius: 16px !important;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(216,174,90,.05), transparent 34%),
+        linear-gradient(145deg, rgba(12,28,43,.96), rgba(8,20,32,.96)) !important;
+    box-shadow:
+        0 14px 32px rgba(0,0,0,.15),
+        inset 0 1px 0 rgba(255,255,255,.022) !important;
+}
+
+/* Tables and scroll wrappers */
+html[data-theme="dark"] .economic-news-table-wrap,
+html[data-theme="dark"] .funded-advisor-table-wrap,
+html[data-theme="dark"] .market-table-scroll,
+html[data-theme="dark"] .pa-destination-list,
+html[data-theme="dark"] .screener-table-scroll,
+html[data-theme="dark"] .trading-routine-table-wrap {
+    border-color: rgba(255,255,255,.065) !important;
+}
+
+html[data-theme="dark"] .economic-news-table thead th,
+html[data-theme="dark"] .funded-advisor-table thead th,
+html[data-theme="dark"] .market-session-table thead th,
+html[data-theme="dark"] .screener-provider-table thead th,
+html[data-theme="dark"] .trading-routine-table thead th {
+    color: #8291a6 !important;
+    background: rgba(255,255,255,.016) !important;
+    border-color: rgba(255,255,255,.05) !important;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .065em;
+}
+
+html[data-theme="dark"] .economic-news-table tbody td,
+html[data-theme="dark"] .funded-advisor-table tbody td,
+html[data-theme="dark"] .market-session-table tbody td,
+html[data-theme="dark"] .screener-provider-table tbody td,
+html[data-theme="dark"] .trading-routine-table tbody td {
+    border-color: rgba(255,255,255,.048) !important;
+}
+
+/* Tabs and secondary action controls */
+html[data-theme="dark"] .economic-news-link,
+html[data-theme="dark"] .economic-news-sync,
+html[data-theme="dark"] .risk-reward-market-tab,
+html[data-theme="dark"] .risk-reward-side-button,
+html[data-theme="dark"] .risk-reward-leverage-preset,
+html[data-theme="dark"] .pa-action-link,
+html[data-theme="dark"] .dashboard-activity-tab {
+    border-color: rgba(255,255,255,.09) !important;
+    border-radius: 10px !important;
+    color: #aeb9c6 !important;
+    background: rgba(255,255,255,.025) !important;
+}
+
+html[data-theme="dark"] .economic-news-link:hover,
+html[data-theme="dark"] .economic-news-link.active,
+html[data-theme="dark"] .risk-reward-market-tab:hover,
+html[data-theme="dark"] .risk-reward-market-tab.active,
+html[data-theme="dark"] .risk-reward-leverage-preset:hover,
+html[data-theme="dark"] .dashboard-activity-tab:hover,
+html[data-theme="dark"] .dashboard-activity-tab.active {
+    color: var(--tx-gold-soft) !important;
+    border-color: rgba(216,174,90,.32) !important;
+    background: rgba(216,174,90,.055) !important;
+}
+
+/* Module primary actions */
+html[data-theme="dark"] .economic-news-primary,
+html[data-theme="dark"] .economic-news-submit-row button[type="submit"],
+html[data-theme="dark"] .funded-advisor-submit,
+html[data-theme="dark"] .pa-action-link.primary {
+    color: #151106 !important;
+    border-color: rgba(246,220,151,.72) !important;
+    background:
+        linear-gradient(135deg, #f1d27c 0%, #d7aa50 58%, #bd8833 100%) !important;
+    box-shadow:
+        0 10px 25px rgba(193,143,50,.19),
+        inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+/* Keep destructive actions visually distinct, but within the same component language. */
+html[data-theme="dark"] .economic-news-danger,
+html[data-theme="dark"] .economic-news-source-delete {
+    border-radius: 10px !important;
+    border-color: rgba(255,113,129,.24) !important;
+    color: #ff9aa5 !important;
+    background: rgba(255,113,129,.065) !important;
+}
+
+/* Module fields that do not use the shared .form-group wrapper. */
+html[data-theme="dark"] .economic-news-field input,
+html[data-theme="dark"] .economic-news-field select,
+html[data-theme="dark"] .economic-news-field textarea,
+html[data-theme="dark"] .funded-advisor-field input,
+html[data-theme="dark"] .funded-advisor-field select,
+html[data-theme="dark"] .risk-reward-field input,
+html[data-theme="dark"] .risk-reward-field select,
+html[data-theme="dark"] .risk-reward-search-control,
+html[data-theme="dark"] .risk-reward-money-control,
+html[data-theme="dark"] .market-timezone-field select {
+    border-color: rgba(255,255,255,.08) !important;
+    border-radius: 12px !important;
+    color: #dde6ee !important;
+    background-color: var(--tx-input) !important;
+}
+
+/* Empty states / notes */
+html[data-theme="dark"] .economic-news-empty,
+html[data-theme="dark"] .funded-advisor-empty,
+html[data-theme="dark"] .pa-empty-state,
+html[data-theme="dark"] .trading-routine-empty,
+html[data-theme="dark"] .risk-reward-notice,
+html[data-theme="dark"] .market-disclaimer {
+    border-color: rgba(255,255,255,.07) !important;
+    border-radius: 14px !important;
+    color: var(--tx-muted) !important;
+    background: rgba(255,255,255,.02) !important;
+}
+
+/* Pagination language */
+html[data-theme="dark"] .economic-news-pagination a,
+html[data-theme="dark"] .trading-routine-pagination a,
+html[data-theme="dark"] .admin-pagination a {
+    border-color: rgba(255,255,255,.09) !important;
+    border-radius: 9px !important;
+    color: #aeb9c6 !important;
+    background: rgba(255,255,255,.025) !important;
+}
+
+html[data-theme="dark"] .economic-news-pagination a:hover,
+html[data-theme="dark"] .trading-routine-pagination a:hover,
+html[data-theme="dark"] .admin-pagination a:hover {
+    color: var(--tx-gold-soft) !important;
+    border-color: rgba(216,174,90,.32) !important;
+}
+
+/* Light theme keeps its existing semantic palette; only geometry is shared. */
+html[data-theme="light"] .admin-content .page-header,
+html[data-theme="light"] .economic-news-header,
+html[data-theme="light"] .funded-advisor-header,
+html[data-theme="light"] .market-clock-header,
+html[data-theme="light"] .pa-page-header,
+html[data-theme="light"] .risk-reward-header,
+html[data-theme="light"] .screener-monitor-header,
+html[data-theme="light"] .trading-routine-header {
+    border-radius: var(--tx-radius-xl);
+}
+
+@media (max-width: 760px) {
+    html[data-theme="dark"] .economic-news-header,
+    html[data-theme="dark"] .funded-advisor-header,
+    html[data-theme="dark"] .market-clock-header,
+    html[data-theme="dark"] .pa-page-header,
+    html[data-theme="dark"] .risk-reward-header,
+    html[data-theme="dark"] .screener-monitor-header,
+    html[data-theme="dark"] .trading-routine-header {
+        border-radius: 17px !important;
+    }
+}
