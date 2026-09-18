@@ -165,6 +165,11 @@
             }
         }
     </style>
+
+    <link
+        rel="stylesheet"
+        href="{{ asset('admin/css/auth-theme.css') }}"
+    >
 </head>
 
 <body>
