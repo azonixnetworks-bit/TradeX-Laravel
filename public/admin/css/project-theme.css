@@ -1,0 +1,492 @@
+/* ==========================================================================
+   TradeX Premium Admin Theme — project-wide visual layer
+   Based on the Trading Floor Customer Directory design language.
+   Presentation only: no routes, RBAC, forms, validation, API or JS behaviour.
+   ========================================================================== */
+
+:root {
+    --tx-gold: #d8ae5a;
+    --tx-gold-soft: #f2d88d;
+    --tx-gold-deep: #b88735;
+    --tx-blue: #2388ff;
+    --tx-green: #42dd91;
+    --tx-red: #ff7181;
+
+    --tx-bg: #050b12;
+    --tx-bg-soft: #07111c;
+    --tx-sidebar: #061421;
+    --tx-topbar: rgba(5, 13, 22, .94);
+    --tx-panel: #0b1520;
+    --tx-panel-soft: #0d1926;
+    --tx-input: #07121d;
+
+    --tx-border: rgba(255,255,255,.075);
+    --tx-border-strong: rgba(255,255,255,.105);
+    --tx-border-gold: rgba(216,174,90,.27);
+
+    --tx-text: #eef3f8;
+    --tx-text-soft: #b5c0cd;
+    --tx-muted: #8595a8;
+    --tx-muted-2: #66778c;
+
+    --tx-radius-sm: 10px;
+    --tx-radius-md: 14px;
+    --tx-radius-lg: 18px;
+    --tx-radius-xl: 21px;
+
+    --tx-shadow-card: 0 16px 40px rgba(0,0,0,.18);
+    --tx-shadow-panel: 0 20px 48px rgba(0,0,0,.19);
+}
+
+/* --------------------------------------------------------------------------
+   Shell
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] body {
+    background:
+        radial-gradient(circle at 78% 2%, rgba(35,136,255,.055), transparent 31%),
+        radial-gradient(circle at 18% 0%, rgba(216,174,90,.04), transparent 27%),
+        var(--tx-bg);
+    color: var(--tx-text);
+}
+
+html[data-theme="dark"] .admin-app {
+    color-scheme: dark;
+}
+
+html[data-theme="dark"] .admin-main {
+    background: transparent;
+}
+
+html[data-theme="dark"] .admin-content {
+    position: relative;
+    padding-top: 38px;
+    color: var(--tx-text);
+}
+
+html[data-theme="dark"] .admin-content::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 330px;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 13% 3%, rgba(216,174,90,.055), transparent 33%),
+        radial-gradient(circle at 83% 10%, rgba(35,136,255,.05), transparent 35%);
+    z-index: 0;
+}
+
+html[data-theme="dark"] .admin-content > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .sidebar {
+    background:
+        linear-gradient(180deg, #071724 0%, #05111c 55%, #040d16 100%);
+    border-right: 1px solid rgba(255,255,255,.07);
+    box-shadow: 18px 0 48px rgba(0,0,0,.08);
+}
+
+html[data-theme="dark"] .sidebar-brand {
+    border-bottom-color: rgba(255,255,255,.065);
+    background: rgba(2,9,15,.15);
+}
+
+html[data-theme="dark"] .nav-section-title {
+    color: #52677c;
+    letter-spacing: .17em;
+}
+
+html[data-theme="dark"] .nav-link {
+    min-height: 48px;
+    border-radius: 12px;
+    color: #8398ad;
+    font-weight: 600;
+}
+
+html[data-theme="dark"] .nav-link:hover {
+    color: #eef5fb;
+    background: rgba(255,255,255,.038);
+}
+
+html[data-theme="dark"] .nav-link.active {
+    color: #f2f6fb;
+    background:
+        linear-gradient(90deg, rgba(24,122,241,.25), rgba(22,103,205,.105));
+    box-shadow:
+        inset 3px 0 0 #2388ff,
+        inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+html[data-theme="dark"] .nav-link.active .nav-icon {
+    color: #bcd9ff;
+}
+
+html[data-theme="dark"] .sidebar-footer {
+    border-top-color: rgba(255,255,255,.065);
+    background: rgba(2,8,14,.22);
+}
+
+html[data-theme="dark"] .sidebar-logout {
+    min-height: 44px;
+    border-radius: 11px;
+    border-color: rgba(255,255,255,.085);
+    color: #9aabba;
+    background: rgba(255,255,255,.025);
+}
+
+/* --------------------------------------------------------------------------
+   Top bar
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .topbar {
+    min-height: 88px;
+    height: 88px;
+    border-bottom-color: rgba(255,255,255,.07);
+    background: var(--tx-topbar);
+    -webkit-backdrop-filter: blur(20px) saturate(120%);
+    backdrop-filter: blur(20px) saturate(120%);
+    box-shadow: 0 10px 32px rgba(0,0,0,.08);
+}
+
+html[data-theme="dark"] .topbar-title {
+    color: #f0f4f9;
+    font-weight: 780;
+    letter-spacing: -.02em;
+}
+
+html[data-theme="dark"] .topbar-breadcrumb,
+html[data-theme="dark"] .system-status,
+html[data-theme="dark"] .topbar-admin-info span {
+    color: #71869a;
+}
+
+html[data-theme="dark"] .sidebar-toggle {
+    border: 1px solid rgba(255,255,255,.065);
+    background: #0a1c2d;
+}
+
+/* --------------------------------------------------------------------------
+   Page hero/header
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .admin-content .page-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 26px 28px !important;
+    margin-bottom: 24px !important;
+    border: 1px solid var(--tx-border-gold) !important;
+    border-radius: var(--tx-radius-xl) !important;
+    background:
+        radial-gradient(circle at 0% 50%, rgba(216,174,90,.085), transparent 34%),
+        linear-gradient(145deg, rgba(16,25,37,.98), rgba(7,13,20,.98)) !important;
+    box-shadow:
+        0 18px 45px rgba(0,0,0,.20),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+    overflow: hidden;
+}
+
+html[data-theme="dark"] .admin-content .page-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, transparent, var(--tx-gold), transparent);
+    box-shadow: 0 0 18px rgba(216,174,90,.48);
+}
+
+html[data-theme="dark"] .admin-content .page-header > div:last-child:not(:first-child) {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px !important;
+}
+
+html[data-theme="dark"] .page-eyebrow,
+html[data-theme="dark"] .panel-eyebrow {
+    color: #d9af59 !important;
+    font-size: 10px !important;
+    font-weight: 850 !important;
+    letter-spacing: .15em !important;
+    text-transform: uppercase;
+}
+
+html[data-theme="dark"] .page-header h1 {
+    margin: 7px 0 0 !important;
+    color: var(--tx-text) !important;
+    letter-spacing: -.035em;
+}
+
+html[data-theme="dark"] .page-header h1 span {
+    color: var(--tx-gold-soft) !important;
+    text-shadow: 0 0 20px rgba(216,174,90,.14);
+}
+
+html[data-theme="dark"] .page-header p {
+    margin-top: 9px !important;
+    color: var(--tx-muted) !important;
+    line-height: 1.62;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.admin-content .btn,
+.admin-content .primary-btn,
+.admin-content .secondary-btn,
+.admin-content .page-button,
+.admin-content button[class*="btn"],
+.admin-content input[type="submit"],
+.admin-content input[type="button"] {
+    min-height: 44px;
+    border-radius: 11px !important;
+    font-weight: 750;
+}
+
+html[data-theme="dark"] .admin-content .btn,
+html[data-theme="dark"] .admin-content .secondary-btn,
+html[data-theme="dark"] .admin-content .page-button,
+html[data-theme="dark"] .admin-content .page-header a,
+html[data-theme="dark"] .admin-content .panel-header a {
+    border: 1px solid rgba(255,255,255,.10) !important;
+    color: #b7c1cf !important;
+    background:
+        linear-gradient(145deg, rgba(17,27,39,.94), rgba(9,17,27,.96)) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.03),
+        0 8px 20px rgba(0,0,0,.10) !important;
+}
+
+html[data-theme="dark"] .admin-content .btn:hover,
+html[data-theme="dark"] .admin-content .secondary-btn:hover,
+html[data-theme="dark"] .admin-content .page-button:not(.disabled):hover,
+html[data-theme="dark"] .admin-content .page-header a:hover,
+html[data-theme="dark"] .admin-content .panel-header a:hover {
+    color: var(--tx-gold-soft) !important;
+    border-color: rgba(216,174,90,.34) !important;
+    transform: translateY(-1px);
+}
+
+html[data-theme="dark"] .admin-content .btn-primary,
+html[data-theme="dark"] .admin-content .primary-btn,
+html[data-theme="dark"] .admin-content button.btn-primary,
+html[data-theme="dark"] .admin-content input[type="submit"].btn-primary {
+    color: #151106 !important;
+    border: 1px solid rgba(246,220,151,.72) !important;
+    background:
+        linear-gradient(135deg, #f1d27c 0%, #d7aa50 58%, #bd8833 100%) !important;
+    box-shadow:
+        0 10px 25px rgba(193,143,50,.19),
+        inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+html[data-theme="dark"] .admin-content .btn-primary:hover,
+html[data-theme="dark"] .admin-content .primary-btn:hover,
+html[data-theme="dark"] .admin-content button.btn-primary:hover {
+    color: #0e0b04 !important;
+    border-color: rgba(255,235,183,.90) !important;
+    background:
+        linear-gradient(135deg, #f6dc91 0%, #e0b65c 58%, #c9953b 100%) !important;
+    transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   Cards / panels / stat blocks
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .user-stat-card,
+html[data-theme="dark"] .quick-card,
+html[data-theme="dark"] .admin-form-panel,
+html[data-theme="dark"] .admin-form-callout,
+html[data-theme="dark"] .dashboard-brand-lockup {
+    border-color: var(--tx-border) !important;
+    box-shadow:
+        var(--tx-shadow-card),
+        inset 0 1px 0 rgba(255,255,255,.022) !important;
+}
+
+html[data-theme="dark"] .panel {
+    border-radius: var(--tx-radius-lg) !important;
+    background:
+        linear-gradient(165deg, rgba(15,22,32,.97), rgba(7,12,19,.96)) !important;
+}
+
+html[data-theme="dark"] .panel-header {
+    border-bottom-color: rgba(255,255,255,.055) !important;
+}
+
+html[data-theme="dark"] .panel-header h2,
+html[data-theme="dark"] .panel-header h3 {
+    color: #edf2f7 !important;
+}
+
+html[data-theme="dark"] .panel-body {
+    color: #c5cfda;
+}
+
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .user-stat-card {
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(216,174,90,.05), transparent 33%),
+        linear-gradient(145deg, rgba(12,28,43,.96), rgba(8,20,32,.96)) !important;
+}
+
+html[data-theme="dark"] .stat-card__label,
+html[data-theme="dark"] .stat-content span {
+    color: #8b9aac !important;
+}
+
+html[data-theme="dark"] .stat-card__value,
+html[data-theme="dark"] .stat-content strong {
+    color: #f1f4f8 !important;
+}
+
+html[data-theme="dark"] .quick-card {
+    border-radius: 14px !important;
+    background: rgba(255,255,255,.025) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Forms / filters / search
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+html[data-theme="dark"] .admin-app select,
+html[data-theme="dark"] .admin-app textarea {
+    border-color: rgba(255,255,255,.08);
+    border-radius: 12px;
+    color: #dde6ee;
+    background-color: var(--tx-input);
+}
+
+html[data-theme="dark"] .admin-app input::placeholder,
+html[data-theme="dark"] .admin-app textarea::placeholder {
+    color: #53677b;
+}
+
+html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+html[data-theme="dark"] .admin-app select:focus,
+html[data-theme="dark"] .admin-app textarea:focus {
+    border-color: rgba(35,136,255,.55) !important;
+    box-shadow: 0 0 0 3px rgba(35,136,255,.07) !important;
+    outline: none;
+}
+
+html[data-theme="dark"] .admin-app select option,
+html[data-theme="dark"] .admin-app select optgroup {
+    color: #e6edf4;
+    background: #081725;
+}
+
+html[data-theme="dark"] .filter-bar,
+html[data-theme="dark"] .filters,
+html[data-theme="dark"] .search-panel,
+html[data-theme="dark"] .filter-panel {
+    border-color: var(--tx-border) !important;
+    border-radius: var(--tx-radius-lg) !important;
+    background:
+        linear-gradient(165deg, rgba(14,22,32,.96), rgba(8,14,21,.96)) !important;
+}
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] table {
+    color: #c7d1dc;
+}
+
+html[data-theme="dark"] .data-table,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .table-wrapper {
+    border-color: rgba(255,255,255,.065) !important;
+}
+
+html[data-theme="dark"] .data-table thead th,
+html[data-theme="dark"] table thead th {
+    color: #8190a5;
+    background: rgba(255,255,255,.016);
+    border-color: rgba(255,255,255,.05);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .075em;
+    text-transform: uppercase;
+}
+
+html[data-theme="dark"] .data-table tbody td,
+html[data-theme="dark"] table tbody td {
+    border-color: rgba(255,255,255,.048);
+}
+
+html[data-theme="dark"] .data-table tbody tr:hover,
+html[data-theme="dark"] table tbody tr:hover {
+    background: rgba(255,255,255,.018);
+}
+
+/* --------------------------------------------------------------------------
+   Badges / status
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .badge,
+html[data-theme="dark"] [class*="status-badge"],
+html[data-theme="dark"] [class*="badge-"] {
+    border-radius: 999px;
+}
+
+/* --------------------------------------------------------------------------
+   Theme toggle — keep behaviour, align visual language
+   -------------------------------------------------------------------------- */
+html[data-theme="dark"] .theme-toggle {
+    min-height: 42px;
+    border-radius: 11px;
+    border-color: rgba(255,255,255,.085);
+    color: #aab6c4;
+    background: rgba(255,255,255,.022);
+}
+
+html[data-theme="dark"] .theme-toggle:hover {
+    color: var(--tx-gold-soft);
+    border-color: rgba(216,174,90,.30);
+    background: rgba(216,174,90,.05);
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+    html[data-theme="dark"] .admin-content .page-header {
+        align-items: flex-start;
+        padding: 22px 20px !important;
+    }
+}
+
+@media (max-width: 640px) {
+    html[data-theme="dark"] .admin-content {
+        padding-top: 22px;
+    }
+
+    html[data-theme="dark"] .admin-content .page-header {
+        border-radius: 17px !important;
+    }
+
+    .admin-content .btn,
+    .admin-content .primary-btn,
+    .admin-content .secondary-btn,
+    .admin-content .page-button {
+        min-height: 42px;
+    }
+}
+
+/* Forced-colors stays semantic and native. */
+@media (forced-colors: active) {
+    .admin-app * {
+        box-shadow: none !important;
+    }
+}
