@@ -6,14 +6,14 @@ use App\Exceptions\AuthApiException;
 use App\Models\AuditLog;
 use App\Models\PaymentOrder;
 use App\Models\User;
+use App\Services\Products\ProductPurchaseEligibilityService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class PayPalOrderService
 {
     public function __construct(
-        private readonly PaymentMethodService
-            $methods,
+        private readonly ProductPurchaseEligibilityService
+            $productEligibility,
         private readonly PaymentOrderService
             $orders,
         private readonly PayPalGatewayService
@@ -28,12 +28,16 @@ class PayPalOrderService
     public function create(
         User $user,
         string $idempotencyKey,
-        Request $request
+        Request $request,
+        ?string $productUuid = null
     ): array {
-        $method = $this->methods
-            ->assertAvailable(
+        $product = $this->productEligibility
+            ->resolve($productUuid);
+
+        $method = $this->productEligibility
+            ->assertPayPal(
                 $user,
-                PaymentOrder::PROVIDER_PAYPAL
+                $product
             );
 
         $hash = $this->orders
@@ -53,9 +57,10 @@ class PayPalOrderService
             ->first();
 
         if ($existing instanceof PaymentOrder) {
-            $this->assertIdempotentProvider(
+            $this->assertIdempotentRequest(
                 $existing,
-                PaymentOrder::PROVIDER_PAYPAL
+                PaymentOrder::PROVIDER_PAYPAL,
+                (string) $product->code
             );
 
             return $this->presenter
@@ -75,7 +80,7 @@ class PayPalOrderService
                 'user_id' =>
                     $user->getKey(),
                 'product_code' =>
-                    PaymentOrder::PRODUCT_EDUCATION_PREMIUM,
+                    $product->code,
                 'provider' =>
                     PaymentOrder::PROVIDER_PAYPAL,
                 'country_code' =>
@@ -142,6 +147,8 @@ class PayPalOrderService
                     $order->uuid,
                 'provider' =>
                     $order->provider,
+                'product_uuid' =>
+                    $product->uuid,
                 'product_code' =>
                     $order->product_code,
                 'currency' =>
@@ -265,6 +272,8 @@ class PayPalOrderService
             newValues: [
                 'payment_order_uuid' =>
                     $order->uuid,
+                'product_code' =>
+                    $order->product_code,
                 'status' =>
                     PaymentOrder::STATUS_CLEARED,
             ],
@@ -282,11 +291,15 @@ class PayPalOrderService
             );
     }
 
-    private function assertIdempotentProvider(
+    private function assertIdempotentRequest(
         PaymentOrder $order,
-        string $provider
+        string $provider,
+        string $productCode
     ): void {
-        if ($order->provider !== $provider) {
+        if (
+            $order->provider !== $provider
+            || $order->product_code !== $productCode
+        ) {
             throw new AuthApiException(
                 409,
                 'IDEMPOTENCY_KEY_CONFLICT',

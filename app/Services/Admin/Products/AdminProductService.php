@@ -10,6 +10,87 @@ use Illuminate\Support\Facades\DB;
 
 class AdminProductService
 {
+    public function create(
+        AdminUser $admin,
+        array $data,
+        Request $request
+    ): Product {
+        return DB::transaction(
+            function () use (
+                $admin,
+                $data,
+                $request
+            ): Product {
+                $product = Product::query()->create([
+                    'code' => strtoupper(
+                        trim((string) $data['code'])
+                    ),
+                    'name' => trim(
+                        (string) $data['name']
+                    ),
+                    'description' => filled(
+                        $data['description'] ?? null
+                    )
+                        ? trim(
+                            (string) $data['description']
+                        )
+                        : null,
+                    'billing_type' => strtoupper(
+                        trim((string) $data['billing_type'])
+                    ),
+                    'currency' => strtoupper(
+                        trim((string) $data['currency'])
+                    ),
+                    'amount_minor' =>
+                        (int) $data['amount_minor'],
+                    'is_active' =>
+                        (bool) $data['is_active'],
+                    'created_by_admin_id' =>
+                        $admin->getKey(),
+                    'updated_by_admin_id' =>
+                        $admin->getKey(),
+                ]);
+
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->getKey(),
+                    action:
+                        'PRODUCT_CATALOG_CREATED',
+                    module:
+                        'PRODUCTS',
+                    targetType:
+                        'PRODUCT',
+                    targetId:
+                        $product->getKey(),
+                    oldValues: null,
+                    newValues: [
+                        'product_code' =>
+                            $product->code,
+                        'name' =>
+                            $product->name,
+                        'description' =>
+                            $product->description,
+                        'billing_type' =>
+                            $product->billing_type,
+                        'currency' =>
+                            $product->currency,
+                        'amount_minor' =>
+                            (int) $product->amount_minor,
+                        'is_active' =>
+                            (bool) $product->is_active,
+                    ],
+                    ipAddress:
+                        $request->ip(),
+                    userAgent:
+                        $request->userAgent()
+                );
+
+                return $product->fresh();
+            },
+            3
+        );
+    }
+
     public function update(
         Product $product,
         AdminUser $admin,

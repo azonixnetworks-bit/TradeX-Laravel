@@ -64,6 +64,17 @@
         rel="stylesheet"
         href="{{ asset('admin/css/themes.css') }}"
     >
+
+    @if(request()->routeIs('admin.trading_floor.*'))
+        <link
+            rel="stylesheet"
+            href="{{ asset('admin/css/trading-floor-premium.css') }}"
+        >
+        <link
+            rel="stylesheet"
+            href="{{ asset('admin/css/trading-floor-theme-lock.css') }}"
+        >
+    @endif
 </head>
 
 <body>

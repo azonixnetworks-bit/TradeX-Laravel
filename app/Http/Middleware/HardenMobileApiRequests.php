@@ -161,12 +161,15 @@ class HardenMobileApiRequests
             'none'
         );
 
+        $deviceRequest = filled($request->header('X-TradeX-Device-Code'))
+            || filled($request->header('X-TradeX-Device-Token'));
+
         if (
             (bool) config(
                 'tradex_mobile_api_hardening.headers.authenticated_no_store',
                 true
             )
-            && filled($request->bearerToken())
+            && (filled($request->bearerToken()) || $deviceRequest)
         ) {
             $response->headers->set(
                 'Cache-Control',

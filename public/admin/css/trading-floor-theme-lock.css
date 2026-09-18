@@ -1,0 +1,633 @@
+/* ADMIN-30 — Trading Floor visual consistency lock.
+ * Presentation only. Loaded only on admin.trading_floor.* routes.
+ * Keeps every Trading Floor screen aligned to the Customer Directory premium card/button language.
+ */
+
+:root {
+    --tf-lock-gold: #d8ae5a;
+    --tf-lock-gold-soft: #f2d88d;
+    --tf-lock-gold-deep: #b88735;
+    --tf-lock-bg: #07111c;
+    --tf-lock-panel: #0b1622;
+    --tf-lock-panel-soft: #0d1a28;
+    --tf-lock-input: #07121d;
+    --tf-lock-border: rgba(255,255,255,.08);
+    --tf-lock-border-gold: rgba(216,174,90,.28);
+    --tf-lock-text: #eef3f8;
+    --tf-lock-muted: #8595aa;
+    --tf-lock-muted-2: #6d7d92;
+    --tf-lock-green: #62dca8;
+    --tf-lock-red: #ff7586;
+}
+
+/* ------------------------------------------------------------
+   PAGE SHELL + HERO CARD
+------------------------------------------------------------ */
+.admin-content {
+    color: var(--tf-lock-text);
+}
+
+.admin-content > .page-header,
+.admin-content .page-header {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 26px 28px !important;
+    margin-bottom: 24px !important;
+    border: 1px solid var(--tf-lock-border-gold) !important;
+    border-radius: 21px !important;
+    background:
+        radial-gradient(circle at 0% 50%, rgba(216,174,90,.09), transparent 34%),
+        linear-gradient(145deg, rgba(16,25,37,.98), rgba(7,13,20,.98)) !important;
+    box-shadow:
+        0 18px 45px rgba(0,0,0,.20),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+    overflow: hidden;
+}
+
+.admin-content .page-header::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 2px;
+    border-radius: 0 2px 2px 0;
+    background: linear-gradient(180deg, transparent, var(--tf-lock-gold), transparent);
+    box-shadow: 0 0 18px rgba(216,174,90,.50);
+}
+
+.admin-content .page-header > div:last-child:not(:first-child) {
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px !important;
+}
+
+.admin-content .page-eyebrow,
+.admin-content .panel-eyebrow {
+    color: #d9ae55 !important;
+    font-size: 10px !important;
+    font-weight: 850 !important;
+    letter-spacing: .15em !important;
+    text-transform: uppercase;
+}
+
+.admin-content .page-header h1 {
+    margin: 7px 0 0 !important;
+    color: var(--tf-lock-text) !important;
+    letter-spacing: -.035em;
+}
+
+.admin-content .page-header h1 span {
+    color: var(--tf-lock-gold-soft) !important;
+    text-shadow: 0 0 20px rgba(216,174,90,.15);
+}
+
+.admin-content .page-header p {
+    margin-top: 9px !important;
+    color: var(--tf-lock-muted) !important;
+    line-height: 1.62;
+}
+
+/* ------------------------------------------------------------
+   ONE BUTTON LANGUAGE ACROSS THE MODULE
+------------------------------------------------------------ */
+.admin-content .btn,
+.admin-content .page-header a,
+.admin-content .panel-header a,
+.admin-content .data-table a.btn {
+    min-height: 46px !important;
+    padding: 0 16px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 11px !important;
+    border: 1px solid rgba(255,255,255,.10) !important;
+    text-decoration: none !important;
+    white-space: nowrap;
+    font: inherit;
+    font-size: 13px !important;
+    font-weight: 750 !important;
+    line-height: 1;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition:
+        transform .18s ease,
+        border-color .18s ease,
+        color .18s ease,
+        background .18s ease,
+        box-shadow .18s ease;
+}
+
+.admin-content .btn-secondary,
+.admin-content .page-header a.btn-secondary,
+.admin-content .panel-header a.btn-secondary,
+.admin-content .data-table a.btn-secondary,
+.admin-content button.btn-secondary {
+    color: #b7c1cf !important;
+    background:
+        linear-gradient(145deg, rgba(17,27,39,.94), rgba(9,17,27,.96)) !important;
+    border-color: rgba(255,255,255,.10) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.03),
+        0 8px 20px rgba(0,0,0,.12) !important;
+}
+
+.admin-content .btn-secondary:hover,
+.admin-content .btn-secondary:focus-visible,
+.admin-content .page-header a.btn-secondary:hover,
+.admin-content .panel-header a.btn-secondary:hover,
+.admin-content .data-table a.btn-secondary:hover {
+    color: var(--tf-lock-gold-soft) !important;
+    border-color: rgba(216,174,90,.34) !important;
+    background:
+        linear-gradient(145deg, rgba(25,35,46,.98), rgba(12,21,31,.98)) !important;
+    box-shadow:
+        0 11px 25px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.035) !important;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.admin-content .btn-primary,
+.admin-content button.btn-primary,
+.admin-content input[type="submit"].btn-primary,
+.admin-content .page-header a.btn-primary {
+    color: #151106 !important;
+    border-color: rgba(246,220,151,.72) !important;
+    background:
+        linear-gradient(135deg, #f1d27c 0%, #d7aa50 58%, #bd8833 100%) !important;
+    box-shadow:
+        0 10px 25px rgba(193,143,50,.20),
+        inset 0 1px 0 rgba(255,255,255,.34) !important;
+}
+
+.admin-content .btn-primary:hover,
+.admin-content .btn-primary:focus-visible,
+.admin-content button.btn-primary:hover,
+.admin-content .page-header a.btn-primary:hover {
+    color: #0d0a04 !important;
+    border-color: rgba(255,235,183,.90) !important;
+    background:
+        linear-gradient(135deg, #f6dc91 0%, #e0b65c 58%, #c9953b 100%) !important;
+    box-shadow:
+        0 13px 31px rgba(193,143,50,.25),
+        inset 0 1px 0 rgba(255,255,255,.38) !important;
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.admin-content .data-table .btn {
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    border-radius: 9px !important;
+    font-size: 11px !important;
+}
+
+.admin-content .btn:disabled,
+.admin-content .btn[aria-disabled="true"] {
+    opacity: .5;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+/* ------------------------------------------------------------
+   STAT CARDS
+------------------------------------------------------------ */
+.admin-content .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px !important;
+    margin-bottom: 20px;
+}
+
+.admin-content .stat-card {
+    position: relative;
+    min-height: 130px !important;
+    padding: 22px 23px !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    border: 1px solid var(--tf-lock-border) !important;
+    border-radius: 18px !important;
+    background:
+        radial-gradient(circle at 92% 0%, rgba(216,174,90,.055), transparent 33%),
+        linear-gradient(145deg, rgba(12,28,43,.96), rgba(8,20,32,.96)) !important;
+    box-shadow:
+        0 14px 32px rgba(0,0,0,.16),
+        inset 0 1px 0 rgba(255,255,255,.025) !important;
+    overflow: hidden;
+}
+
+.admin-content .stat-card::after {
+    content: "";
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(216,174,90,.20), transparent);
+}
+
+.admin-content .stat-card__label {
+    color: #8d9bad !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .07em !important;
+    text-transform: uppercase;
+}
+
+.admin-content .stat-card__value {
+    color: #f1f4f8 !important;
+    font-size: 25px;
+    font-weight: 760 !important;
+    line-height: 1.24;
+    letter-spacing: -.035em;
+}
+
+/* ------------------------------------------------------------
+   PANELS / CARDS
+------------------------------------------------------------ */
+.admin-content .panel {
+    position: relative;
+    border: 1px solid var(--tf-lock-border) !important;
+    border-radius: 19px !important;
+    background:
+        linear-gradient(165deg, rgba(14,23,34,.97), rgba(7,13,20,.97)) !important;
+    box-shadow:
+        0 17px 42px rgba(0,0,0,.17),
+        inset 0 1px 0 rgba(255,255,255,.018) !important;
+    overflow: hidden;
+}
+
+.admin-content .panel-header {
+    min-height: 74px;
+    padding: 19px 22px !important;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    border-bottom: 1px solid rgba(255,255,255,.055) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.018), transparent) !important;
+}
+
+.admin-content .panel-header h2,
+.admin-content .panel-header h3 {
+    margin: 5px 0 0;
+    color: #edf2f7 !important;
+    letter-spacing: -.02em;
+}
+
+.admin-content .panel-header > span {
+    color: #75859b !important;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.admin-content .panel-body {
+    padding: 22px !important;
+    color: #c5cfdb;
+}
+
+/* Dashboard operation tiles use the same card language. */
+.admin-content .panel-body a.panel,
+.admin-content .panel-body > div[style*="grid-template-columns"] > .panel {
+    min-height: 136px;
+    border-radius: 16px !important;
+    border-color: rgba(255,255,255,.07) !important;
+    background:
+        linear-gradient(145deg, rgba(15,28,42,.92), rgba(8,17,27,.92)) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.02) !important;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.admin-content .panel-body a.panel:hover,
+.admin-content .panel-body a.panel:focus-visible {
+    transform: translateY(-2px);
+    border-color: rgba(216,174,90,.28) !important;
+    background:
+        linear-gradient(145deg, rgba(216,174,90,.055), rgba(9,18,29,.96)) !important;
+    box-shadow: 0 13px 30px rgba(0,0,0,.14) !important;
+    outline: none;
+}
+
+.admin-content .panel-body a.panel h3 {
+    color: #ecf0f5 !important;
+}
+
+.admin-content .panel-body a.panel p {
+    color: #7f8fa4 !important;
+}
+
+/* ------------------------------------------------------------
+   FORMS / FILTER BARS
+------------------------------------------------------------ */
+.admin-content .form-group {
+    margin-bottom: 15px;
+}
+
+.admin-content .form-group label,
+.admin-content form label {
+    color: #a1aebe !important;
+    font-size: 11px;
+    font-weight: 750;
+}
+
+.admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+.admin-content select,
+.admin-content textarea {
+    min-height: 52px !important;
+    width: 100%;
+    padding: 0 15px !important;
+    border: 1px solid rgba(255,255,255,.09) !important;
+    border-radius: 12px !important;
+    color: #e8edf4 !important;
+    background: rgba(5,13,22,.78) !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.018) !important;
+    transition: border-color .18s ease, background .18s ease, box-shadow .18s ease;
+}
+
+.admin-content textarea {
+    min-height: 108px !important;
+    padding-top: 13px !important;
+    padding-bottom: 13px !important;
+    resize: vertical;
+}
+
+.admin-content input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+.admin-content select:focus,
+.admin-content textarea:focus {
+    outline: none !important;
+    border-color: rgba(216,174,90,.48) !important;
+    background: rgba(7,16,26,.92) !important;
+    box-shadow:
+        0 0 0 3px rgba(216,174,90,.07),
+        inset 0 1px 0 rgba(255,255,255,.02) !important;
+}
+
+.admin-content input::placeholder,
+.admin-content textarea::placeholder {
+    color: #53647a !important;
+}
+
+.admin-content select option {
+    color: #e8edf4;
+    background: #0a1521;
+}
+
+.admin-content input[type="file"] {
+    padding: 11px 13px !important;
+}
+
+.admin-content input[type="checkbox"] {
+    width: 17px;
+    height: 17px;
+    margin-right: 8px;
+    accent-color: var(--tf-lock-gold);
+    vertical-align: -3px;
+}
+
+.admin-content form small,
+.admin-content .panel-body small {
+    color: #738399 !important;
+    line-height: 1.5;
+}
+
+/* Settings checkbox rows become mini dark cards. */
+.admin-content form > div[style*="display:grid"][style*="gap:10px"] > label {
+    min-height: 42px;
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    border: 1px solid rgba(255,255,255,.065);
+    border-radius: 10px;
+    background: rgba(255,255,255,.018);
+    color: #aeb8c5 !important;
+}
+
+/* ------------------------------------------------------------
+   TABLES
+------------------------------------------------------------ */
+.admin-content .data-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    overflow: hidden;
+}
+
+.admin-content .data-table thead {
+    background: rgba(255,255,255,.015) !important;
+}
+
+.admin-content .data-table th {
+    padding: 13px 14px !important;
+    color: #77879c !important;
+    font-size: 9px !important;
+    font-weight: 850 !important;
+    letter-spacing: .12em !important;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,.06) !important;
+}
+
+.admin-content .data-table td {
+    padding: 15px 14px !important;
+    color: #c4ced9 !important;
+    border-bottom: 1px solid rgba(255,255,255,.042) !important;
+    vertical-align: middle;
+}
+
+.admin-content .data-table tbody tr {
+    transition: background .16s ease;
+}
+
+.admin-content .data-table tbody tr:hover {
+    background: rgba(216,174,90,.022) !important;
+}
+
+.admin-content .data-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+.admin-content .data-table td strong {
+    color: #e7edf4 !important;
+}
+
+.admin-content .data-table a:not(.btn) {
+    color: #d9bd70 !important;
+    text-decoration: none !important;
+    font-weight: 750;
+}
+
+.admin-content .data-table a:not(.btn):hover {
+    color: var(--tf-lock-gold-soft) !important;
+}
+
+.admin-content .data-table td form[style*="inline-flex"] input {
+    min-height: 36px !important;
+    height: 36px;
+    padding: 0 11px !important;
+    border-radius: 9px !important;
+}
+
+/* ------------------------------------------------------------
+   BADGES / STATUS / CODE / ALERTS
+------------------------------------------------------------ */
+.admin-content .badge {
+    min-height: 27px;
+    padding: 5px 10px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(98,220,168,.22) !important;
+    border-radius: 999px !important;
+    color: #76dfb1 !important;
+    background: rgba(98,220,168,.06) !important;
+    font-size: 9px;
+    font-weight: 850;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+}
+
+.admin-content code {
+    display: inline-block;
+    padding: 5px 8px;
+    border: 1px solid rgba(216,174,90,.17);
+    border-radius: 8px;
+    color: #ead28b;
+    background: rgba(216,174,90,.045);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.admin-content .alert,
+.admin-content .alert-danger {
+    border: 1px solid rgba(255,117,134,.24) !important;
+    border-radius: 14px !important;
+    color: #f2c3c9 !important;
+    background: rgba(255,117,134,.055) !important;
+}
+
+.admin-content .data-table td[colspan] {
+    color: #68798e !important;
+}
+
+/* One-time token panel keeps same card style but gets a gold accent. */
+.admin-content .panel[style*="245,190,70"] {
+    border-color: rgba(216,174,90,.36) !important;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(216,174,90,.07), transparent 38%),
+        linear-gradient(165deg, rgba(15,23,34,.98), rgba(7,13,20,.98)) !important;
+}
+
+/* ------------------------------------------------------------
+   PAGINATION
+------------------------------------------------------------ */
+.admin-content nav[role="navigation"] {
+    color: #7f8fa4;
+}
+
+.admin-content nav[role="navigation"] a,
+.admin-content nav[role="navigation"] span {
+    border-color: rgba(255,255,255,.08) !important;
+    background: rgba(255,255,255,.02) !important;
+    color: #9aa8b9 !important;
+    border-radius: 8px;
+}
+
+.admin-content nav[role="navigation"] a:hover {
+    border-color: rgba(216,174,90,.28) !important;
+    color: var(--tf-lock-gold-soft) !important;
+    background: rgba(216,174,90,.05) !important;
+}
+
+/* ------------------------------------------------------------
+   RESPONSIVE CONSISTENCY
+------------------------------------------------------------ */
+@media (max-width: 1100px) {
+    .admin-content .page-header {
+        padding: 23px 22px !important;
+    }
+
+    .admin-content .page-header > div:last-child:not(:first-child) {
+        justify-content: flex-start;
+    }
+
+    .admin-content .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 900px) {
+    .admin-content .page-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-content .page-header > div:last-child:not(:first-child) {
+        width: 100%;
+    }
+
+    .admin-content .panel-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .admin-content div[style*="grid-template-columns:minmax(0,1fr) 360px"],
+    .admin-content div[style*="grid-template-columns:minmax(0,1fr) 340px"],
+    .admin-content div[style*="grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr)"],
+    .admin-content div[style*="grid-template-columns:minmax(0,1fr) minmax(340px,.8fr)"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 720px) {
+    .admin-content .page-header {
+        padding: 19px 17px !important;
+        border-radius: 16px !important;
+    }
+
+    .admin-content .page-header > div:last-child:not(:first-child) > *,
+    .admin-content .page-header > .btn {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .admin-content .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-content .stat-card {
+        min-height: 108px !important;
+    }
+
+    .admin-content .panel {
+        border-radius: 15px !important;
+    }
+
+    .admin-content .panel-header,
+    .admin-content .panel-body {
+        padding-left: 17px !important;
+        padding-right: 17px !important;
+    }
+
+    .admin-content form[style*="grid-template-columns"],
+    .admin-content .panel-body > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    .admin-content form > div:last-child[style*="display:flex"] {
+        flex-wrap: wrap;
+    }
+
+    .admin-content form > div:last-child[style*="display:flex"] .btn {
+        flex: 1 1 auto;
+    }
+}

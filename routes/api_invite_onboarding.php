@@ -77,3 +77,6 @@ Route::middleware([
             ->middleware('throttle:api-register-totp')
             ->name('recovery-codes.regenerate');
     });
+
+/* ADMIN-30 device-facing Trading Floor access routes. */
+require __DIR__.'/api_trading_floor.php';
