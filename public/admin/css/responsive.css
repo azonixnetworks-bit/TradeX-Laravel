@@ -341,6 +341,15 @@ body.sidebar-open {
         padding: 12px 14px;
         text-align: center;
     }
+
+    .primary-btn,
+    .secondary-btn,
+    .economic-news-link,
+    .economic-news-tabs a,
+    .page-button:not(.disabled) {
+        min-height: 44px;
+        box-sizing: border-box;
+    }
 }
 
 @media (max-width: 520px) {
@@ -424,6 +433,11 @@ body.sidebar-open {
     .sidebar-toggle,
     .sidebar-close,
     .topbar-totp-link,
+    .primary-btn,
+    .secondary-btn,
+    .economic-news-link,
+    .economic-news-tabs a,
+    .page-button:not(.disabled),
     button,
     input,
     select,

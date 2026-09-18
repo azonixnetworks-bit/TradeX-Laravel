@@ -63,6 +63,11 @@ class FundedAccountPartner extends Model
         return $this->hasMany(FundedAdvisorReport::class, 'partner_id');
     }
 
+    public function noTradeRules(): HasMany
+    {
+        return $this->hasMany(FundedNoTradeRule::class, 'funded_account_partner_id');
+    }
+
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(AdminUser::class, 'created_by_admin_id');
