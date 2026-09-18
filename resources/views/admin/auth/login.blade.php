@@ -469,6 +469,9 @@
                 Sign in to TradeX Administration.
             </div>
 
+            @error('device')
+                <div class="message error" role="alert">{{ $message }}</div>
+            @enderror
             @if(session('error'))
                 <div class="message error">
                     {{ session('error') }}

@@ -65,6 +65,8 @@ return Application::configure(basePath: dirname(__DIR__))
             ForceAdminTotp::class
         );
 
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureAdminDevice::class);
+
         $middleware->alias([
             'admin.auth' => AdminAuthenticate::class,
             'tradex.mobile' => EnsureTradeXMobileApiSession::class,

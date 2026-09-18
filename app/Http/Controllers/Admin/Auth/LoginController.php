@@ -414,6 +414,8 @@ class LoginController extends Controller
         Request $request,
         AdminUser $admin
     ): RedirectResponse {
+        app(\App\Services\Admin\Security\AdminDeviceSecurityService::class)->bind($admin, $request);
+
         $admin->update([
             'failed_login_attempts' => 0,
             'locked_until' => null,

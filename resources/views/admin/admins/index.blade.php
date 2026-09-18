@@ -142,6 +142,9 @@
                     <td>{{ $adminUser->created_at?->format('Y-m-d') ?? '—' }}</td>
                     <td>
                         <a class="secondary-btn" href="{{ route('admin.administration.admins.edit', $adminUser) }}">Inspect</a>
+                        @if(auth('admin')->user()->isSuperAdmin())
+                            <a class="secondary-btn" href="{{ route('admin.administration.admins.devices.index', $adminUser) }}">Devices</a>
+                        @endif
                     </td>
                 </tr>
             @empty

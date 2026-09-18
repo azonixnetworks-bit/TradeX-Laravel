@@ -161,6 +161,8 @@ class TotpController extends Controller
             $key
         );
 
+        app(\App\Services\Admin\Security\AdminDeviceSecurityService::class)->bind($admin, $request);
+
         $remember =
             (bool) $request
                 ->session()
@@ -298,6 +300,8 @@ class TotpController extends Controller
             ),
             $request
         );
+
+        app(\App\Services\Admin\Security\AdminDeviceSecurityService::class)->bind($admin, $request);
 
         if (
             (bool) config(

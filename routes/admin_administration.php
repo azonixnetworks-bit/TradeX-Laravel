@@ -12,6 +12,10 @@ Route::prefix('admin/administration')
         Route::prefix('admins')
             ->name('admins.')
             ->group(function (): void {
+                Route::get('/{adminUser}/devices', [\App\Http\Controllers\Admin\Administration\AdminDeviceController::class, 'index'])
+                    ->whereNumber('adminUser')->middleware('throttle:60,1')->name('devices.index');
+                Route::patch('/{adminUser}/devices/{device}', [\App\Http\Controllers\Admin\Administration\AdminDeviceController::class, 'update'])
+                    ->whereNumber(['adminUser', 'device'])->middleware('throttle:10,1')->name('devices.update');
                 Route::get(
                     '/',
                     [AdminUserController::class, 'index']

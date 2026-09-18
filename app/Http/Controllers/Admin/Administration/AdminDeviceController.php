@@ -1,0 +1,38 @@
+<?php
+
+namespace App\Http\Controllers\Admin\Administration;
+
+use App\Http\Controllers\Controller;
+use App\Models\AdminDevice;
+use App\Models\AdminDeviceAlert;
+use App\Models\AdminDeviceIncident;
+use App\Models\AdminUser;
+use App\Services\Admin\Security\AdminDeviceSecurityService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\View\View;
+
+class AdminDeviceController extends Controller
+{
+    public function index(AdminUser $adminUser): View
+    {
+        abort_unless(auth('admin')->user()?->isSuperAdmin(), 403);
+        $incidents = AdminDeviceIncident::where('admin_user_id', $adminUser->id)->latest('id')->limit(30)->get();
+
+        return view('admin.admins.devices', [
+            'adminUser' => $adminUser,
+            'devices' => AdminDevice::where('admin_user_id', $adminUser->id)->latest('id')->paginate(20),
+            'incidents' => $incidents,
+            'alerts' => AdminDeviceAlert::whereIn('admin_device_incident_id', $incidents->pluck('id'))->get()->groupBy('admin_device_incident_id'),
+        ]);
+    }
+
+    public function update(Request $request, AdminUser $adminUser, AdminDevice $device, AdminDeviceSecurityService $security): RedirectResponse
+    {
+        abort_unless(auth('admin')->user()?->isSuperAdmin(), 403);
+        $data = $request->validate(['action' => ['required', 'in:revoke,approve'], 'reason' => ['required', 'string', 'min:5', 'max:500']]);
+        $security->manage(auth('admin')->user(), $adminUser, $device, $data['action'], $data['reason'], $request);
+
+        return back()->with('success', 'Device access updated. The admin must sign in again on an approved device.');
+    }
+}

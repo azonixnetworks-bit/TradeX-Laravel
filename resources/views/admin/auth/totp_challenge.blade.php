@@ -235,6 +235,9 @@
                 required
             >
 
+            @error('device')
+                <div class="error" role="alert">{{ $message }}</div>
+            @enderror
             @error('code')
                 <div class="error">
                     {{ $message }}

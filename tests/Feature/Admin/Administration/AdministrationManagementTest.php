@@ -555,7 +555,7 @@ class AdministrationManagementTest extends TestCase
             );
 
         $this->assertCount(
-            15,
+            17, // Includes Super Admin device listing and access updates.
             $routes
         );
 
