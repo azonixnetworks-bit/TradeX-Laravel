@@ -1,0 +1,18 @@
+{
+  "name": "tradex_admin_device_security",
+  "language": "en_US",
+  "category": "UTILITY",
+  "components": [
+    {
+      "type": "BODY",
+      "text": "TradeX admin account security notice: A sign-in attempt from an additional device was blocked after credential verification. Incident details: {{1}}. Your approved devices remain available. Review this event in TradeX Admin Users > Devices. If you do not recognize this activity, contact the system owner to secure the account.",
+      "example": {
+        "body_text": [
+          [
+            "Admin: Example Admin (admin@example.test); Device ID: 42; Category: DESKTOP; IP: 203.0.113.10; UTC: 2026-09-19T00:00:00Z; Reason: DEVICE_SLOT_OCCUPIED; Browser/OS: Chrome on Windows"
+          ]
+        ]
+      }
+    }
+  ]
+}

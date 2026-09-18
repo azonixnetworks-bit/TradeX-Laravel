@@ -30,7 +30,19 @@ TRADEX_ADMIN_SECURITY_WHATSAPP_LANGUAGE=en_US
 
 The sender reuses `META_WHATSAPP_GRAPH_VERSION`, `META_WHATSAPP_PHONE_NUMBER_ID` and `META_WHATSAPP_ACCESS_TOKEN`. Create a separate approved utility template with exactly one text body parameter, for example: `TradeX admin security alert: {{1}}. Review the device in Admin Users.` Do not reuse the authentication/OTP template. Meta decides template approval and categorization.
 
+A ready-to-submit template specification is in [templates/admin-device-security.json](templates/admin-device-security.json). It uses `tradex_admin_device_security`, English (US), one positional body parameter, and fictional example data. This file is a draft, not evidence that Meta has created or approved the template. Submit it in the correct WhatsApp Business account and wait for APPROVED status before testing delivery.
+
 Provider reference: [Meta's template-message API](https://www.postman.com/meta/whatsapp-business-platform/request/o65u5m5/send-message-template-text).
+
+After entering credentials and the exact approved template name/language in the server `.env`, run:
+
+```sh
+php artisan config:cache
+php artisan queue:restart
+php artisan tradex:whatsapp-security-alert-check
+```
+
+The check displays only PASS/MISSING results, never tokens or recipient numbers. It is offline and does not prove Meta approval or delivery. Keep real tokens and recipient numbers out of Git. Have an authorized Super Admin verify receipt during a controlled blocked-device login; inspect the incident's WhatsApp delivery status. Do not manufacture a blocked-device incident just to send a test alert.
 
 Configure production SMTP and a working Laravel queue worker. Each recipient/channel has a database delivery record. Missing WhatsApp recipients are shown as FAILED, not silently treated as sent. Provider failures do not unblock login. Jobs retry up to three times; ambiguous provider timeouts may result in duplicate alerts. Repeated denied attempts for the same device/reason are deduplicated for one hour. ACCEPTED only indicates transport/provider acceptance, not receipt.
 
