@@ -16,6 +16,7 @@ final class AdminAccessMap
      */
     private const LANDING_ROUTES = [
         ['permission' => 'dashboard.view', 'route' => 'admin.dashboard'],
+        ['permission' => 'trading_floor.view', 'route' => 'admin.trading_floor.index'],
         ['permission' => 'users.view', 'route' => 'admin.customers.dashboard'],
         ['permission' => 'users.invite', 'route' => 'admin.customers.create'],
         ['permission' => 'education.view', 'route' => 'admin.education.courses.index'],

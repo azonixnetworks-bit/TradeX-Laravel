@@ -44,6 +44,17 @@ class TradingFloorPermissionSeeder extends Seeder
 
         $superAdmin = AdminRole::where('code', 'SUPER_ADMIN')->first();
 
+        $floorAdmin = AdminRole::updateOrCreate(
+            ['code' => 'TRADING_FLOOR_ADMIN'],
+            [
+                'name' => 'Trading Floor Admin',
+                'description' => 'Trading Floor customers, access, commissions, resources, memberships and reports only.',
+                'is_system' => true,
+                'is_active' => true,
+            ]
+        );
+        $floorAdmin->permissions()->sync($permissionIds);
+
         if ($superAdmin !== null) {
             $superAdmin->permissions()->syncWithoutDetaching($permissionIds);
         }

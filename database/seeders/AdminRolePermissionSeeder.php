@@ -10,6 +10,8 @@ class AdminRolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(TradingFloorPermissionSeeder::class);
+
         $rolePermissions = [
             'CONTENT_ADMIN' => [
                 'dashboard.view',
