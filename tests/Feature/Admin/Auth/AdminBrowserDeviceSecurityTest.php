@@ -301,6 +301,50 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $this->assertDatabaseHas('admin_device_incidents', ['reason' => 'DEVICE_CATEGORY_CHANGED']);
     }
 
+    public function test_dashboard_counts_devices_separately_from_sessions_and_excludes_expired_sessions(): void
+    {
+        $admin = $this->admin(true);
+        $first = $this->request('a');
+        $second = $this->request('a');
+        $tracker = app(\App\Services\Admin\Security\AdminDeviceSessionService::class);
+        foreach ([$first, $second] as $request) {
+            $this->security()->bind($admin, $request);
+            $tracker->touch($admin, $request);
+        }
+        $summary = $tracker->summary()->first();
+        $this->assertSame(1, $summary->approved_devices_count);
+        $this->assertSame(1, $summary->signed_in_devices_count);
+        $this->assertSame(2, $summary->signed_in_sessions_count);
+        $this->travel(31)->minutes();
+        $summary = $tracker->summary()->first();
+        $this->assertSame(1, $summary->approved_devices_count);
+        $this->assertSame(0, $summary->signed_in_sessions_count);
+    }
+
+    public function test_logout_ends_session_but_preserves_registered_device_slot(): void
+    {
+        $admin = $this->admin(true);
+        $this->withCookie(AdminDeviceSecurityService::COOKIE, str_repeat('a', 64))->withHeader('User-Agent', self::DESKTOP);
+        $this->post(route('admin.login.submit'), ['email' => $admin->email, 'password' => 'StrongAdmin#2026!'])->assertRedirect();
+        $this->assertSame(1, \App\Models\AdminDeviceSession::live()->count());
+        $this->withCookie(config('session.cookie'), session()->getId());
+        $this->get(route('admin.dashboard'))->assertOk()->assertSee('Admin Devices &amp; Sessions', false)->assertSee('View Devices');
+        $this->post(route('admin.logout'))->assertRedirect(route('admin.login'));
+        $this->assertSame(0, \App\Models\AdminDeviceSession::live()->count());
+        $this->assertSame(1, AdminDevice::where('status', 'ACTIVE')->count());
+    }
+
+    public function test_delegated_dashboard_cannot_see_other_admin_devices(): void
+    {
+        config(['tradex_admin_devices.enabled' => false]);
+        $admin = $this->admin();
+        $role = AdminRole::create(['code' => 'DASH_TEST', 'name' => 'Dashboard', 'is_active' => true]);
+        $permission = \App\Models\AdminPermission::firstOrCreate(['code' => 'dashboard.view'], ['name' => 'Dashboard', 'module' => 'DASHBOARD']);
+        $role->permissions()->attach($permission);
+        $admin->roles()->attach($role);
+        $this->actingAs($admin, 'admin')->get(route('admin.dashboard'))->assertOk()->assertDontSee('View Devices')->assertViewHas('adminDeviceSummary', null);
+    }
+
     private function admin(bool $super = false): AdminUser
     {
         $admin = AdminUser::create(['uuid' => (string) Str::uuid(), 'name' => 'Device Test', 'email' => Str::uuid().'@example.test', 'password' => 'StrongAdmin#2026!', 'is_active' => true]);

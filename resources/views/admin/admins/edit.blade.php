@@ -12,6 +12,9 @@
     </div>
 
     <a class="secondary-btn" href="{{ route('admin.administration.admins.index') }}">Back</a>
+    @if(auth('admin')->user()->isSuperAdmin())
+        <a class="primary-btn" href="{{ route('admin.administration.admins.devices.index', $adminUser) }}">Devices &amp; Sessions</a>
+    @endif
 </div>
 
 @if($protected)

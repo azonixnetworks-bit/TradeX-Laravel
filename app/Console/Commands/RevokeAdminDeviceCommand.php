@@ -33,6 +33,7 @@ class RevokeAdminDeviceCommand extends Command
                 return self::FAILURE;
             }
             $device->update(['status' => 'REVOKED', 'active_slot' => null, 'revoked_at' => now(), 'session_version' => $device->session_version + 1]);
+            \App\Models\AdminDeviceSession::where('admin_device_id', $device->id)->whereNull('ended_at')->update(['ended_at' => now()]);
             AuditLog::record(actorType: 'SYSTEM', actorId: null, action: 'ADMIN_DEVICE_SERVER_RECOVERY_REVOKE', module: 'SECURITY', newValues: ['device_id' => $device->id, 'admin_user_id' => $admin->id, 'reason' => $reason]);
             $this->info('Device revoked. Sign in from a new browser with the required credentials.');
 

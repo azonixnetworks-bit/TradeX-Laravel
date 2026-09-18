@@ -2,6 +2,10 @@
 
 Every admin, including Super Admin, is allowed one MOBILE and one DESKTOP browser installation. An additional device in an occupied category is blocked after successful password/TOTP authentication. Existing approved devices remain usable. Blocked devices show **Contact Super Admin** and cannot automatically become trusted when a slot is freed.
 
+The Super Admin dashboard includes **Admin Devices & Sessions**, showing every admin (paginated), approved mobile/desktop slots, distinct signed-in devices, signed-in sessions, blocked devices and last activity. **View Devices** opens the device/session details and approve/revoke controls. The same link is available from each admin's account details. Only Super Admin sees these cross-admin details.
+
+Sessions are tracked by a hash of the session ID, never the session credential itself. They expire with the configured idle/absolute admin timeouts and end on logout, revocation or session rotation. Closing a tab/browser does not send a reliable logout event; a recently closed browser may remain listed until timeout. Multiple sessions in one browser are counted separately from registered devices. No old unbound sessions are automatically trusted during rollout: they must sign in again, so the previously open browsers cannot all keep their access.
+
 In **Admin Users → Devices**, only an active Super Admin can inspect devices, revoke a previous device, or approve a blocked replacement. Every change requires a reason and is audited. Delegated permissions do not grant these actions. Revocation invalidates all sessions bound to that device on their next request. Approval requires a new login and does not revive old sessions. Logout does not free the device slot.
 
 ## Browser limitations

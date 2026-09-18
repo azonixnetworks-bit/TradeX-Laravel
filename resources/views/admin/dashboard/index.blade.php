@@ -9,6 +9,10 @@
 
 @section('content')
 
+@if($adminDeviceSummary !== null)
+    @include('admin.admins.device-summary', ['deviceAdmins' => $adminDeviceSummary])
+@endif
+
 <div class="page-header">
     <div>
         <div class="page-eyebrow">TRADEX ADMINISTRATION</div>

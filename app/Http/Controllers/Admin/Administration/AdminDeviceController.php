@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminDevice;
 use App\Models\AdminDeviceAlert;
 use App\Models\AdminDeviceIncident;
+use App\Models\AdminDeviceSession;
 use App\Models\AdminUser;
 use App\Services\Admin\Security\AdminDeviceSecurityService;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,8 @@ class AdminDeviceController extends Controller
 
         return view('admin.admins.devices', [
             'adminUser' => $adminUser,
-            'devices' => AdminDevice::where('admin_user_id', $adminUser->id)->latest('id')->paginate(20),
+            'devices' => AdminDevice::where('admin_user_id', $adminUser->id)->withCount(['sessions as live_sessions_count' => fn ($query) => $query->live()])->latest('id')->paginate(20),
+            'sessions' => AdminDeviceSession::where('admin_user_id', $adminUser->id)->live()->latest('last_seen_at')->limit(100)->get(),
             'incidents' => $incidents,
             'alerts' => AdminDeviceAlert::whereIn('admin_device_incident_id', $incidents->pluck('id'))->get()->groupBy('admin_device_incident_id'),
         ]);

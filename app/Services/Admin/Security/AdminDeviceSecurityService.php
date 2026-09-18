@@ -133,6 +133,7 @@ class AdminDeviceSecurityService
             AdminUser::whereKey($owner->id)->lockForUpdate()->firstOrFail();
             $device = AdminDevice::whereKey($device->id)->lockForUpdate()->firstOrFail();
             $device->increment('session_version');
+            \App\Models\AdminDeviceSession::where('admin_device_id', $device->id)->whereNull('ended_at')->update(['ended_at' => now()]);
             if ($action === 'approve') {
                 if (AdminDevice::where('admin_user_id', $owner->id)->where('active_slot', $device->device_slot)->where('id', '!=', $device->id)->exists()) {
                     throw ValidationException::withMessages(['device' => 'Revoke the existing device in this category before approving another.']);

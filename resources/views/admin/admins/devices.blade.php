@@ -23,7 +23,7 @@
             @forelse($devices as $device)
                 <tr>
                     <td>#{{ $device->id }} · {{ $device->device_slot }} @if(session('tradex_admin_device_id') == $device->id)<strong>(Current)</strong>@endif</td>
-                    <td>{{ $device->status }}</td>
+                    <td>{{ $device->status }}<br><small>{{ $device->live_sessions_count }} signed-in session(s)</small></td>
                     <td>{{ $device->ip_address }}<br>{{ $device->last_seen_at?->utc()->format('Y-m-d H:i:s') }} UTC</td>
                     <td style="max-width:360px;overflow-wrap:anywhere">{{ $device->user_agent }}</td>
                     <td>
@@ -47,6 +47,16 @@
         </table>
     </div>
     {{ $devices->links() }}
+</section>
+<section class="panel" style="padding:16px">
+    <h2>Signed-in Sessions</h2>
+    <p>Sessions disappear after logout, revoke or timeout. Closing a browser does not immediately end its server session.</p>
+    <div style="overflow-x:auto"><table class="data-table" style="width:100%;min-width:580px">
+        <thead><tr><th>Device</th><th>IP</th><th>Last activity (UTC)</th><th>Expires (UTC)</th></tr></thead>
+        <tbody>@forelse($sessions as $deviceSession)
+            <tr><td>#{{ $deviceSession->admin_device_id }}</td><td>{{ $deviceSession->ip_address }}</td><td>{{ $deviceSession->last_seen_at?->utc()->format('Y-m-d H:i:s') }}</td><td>{{ $deviceSession->expires_at?->utc()->format('Y-m-d H:i:s') }}</td></tr>
+        @empty<tr><td colspan="4">No signed-in sessions.</td></tr>@endforelse</tbody>
+    </table></div>
 </section>
 <section class="panel" style="padding:16px">
     <h2>Recent blocked attempts and alerts</h2>

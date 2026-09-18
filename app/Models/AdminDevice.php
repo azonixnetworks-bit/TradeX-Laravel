@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AdminDevice extends Model
 {
@@ -15,5 +16,10 @@ class AdminDevice extends Model
     protected function casts(): array
     {
         return ['last_seen_at' => 'datetime', 'revoked_at' => 'datetime'];
+    }
+
+    public function sessions(): HasMany
+    {
+        return $this->hasMany(AdminDeviceSession::class);
     }
 }

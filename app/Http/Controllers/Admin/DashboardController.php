@@ -86,6 +86,9 @@ class DashboardController extends Controller
 
         return view('admin.dashboard.index', [
             'admin' => $admin,
+            'adminDeviceSummary' => $admin->isSuperAdmin()
+                ? app(\App\Services\Admin\Security\AdminDeviceSessionService::class)->summary()
+                : null,
             'stats' => $stats,
             'money' => $money,
             'activityTabs' => $activityTabs,

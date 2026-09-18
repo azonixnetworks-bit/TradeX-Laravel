@@ -73,6 +73,16 @@ class AdminUser extends Authenticatable
         return $this->hasMany(AdminEmailDelivery::class);
     }
 
+    public function adminDevices(): HasMany
+    {
+        return $this->hasMany(AdminDevice::class);
+    }
+
+    public function deviceSessions(): HasMany
+    {
+        return $this->hasMany(AdminDeviceSession::class);
+    }
+
     public function latestEmailDelivery(): HasOne
     {
         return $this->hasOne(AdminEmailDelivery::class)->latestOfMany();
