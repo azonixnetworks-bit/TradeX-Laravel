@@ -359,7 +359,7 @@ html[data-theme="dark"] .quick-card {
 /* --------------------------------------------------------------------------
    Forms / filters / search
    -------------------------------------------------------------------------- */
-html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]),
 html[data-theme="dark"] .admin-app select,
 html[data-theme="dark"] .admin-app textarea {
     border-color: rgba(255,255,255,.08);
@@ -373,7 +373,7 @@ html[data-theme="dark"] .admin-app textarea::placeholder {
     color: #53677b;
 }
 
-html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
+html[data-theme="dark"] .admin-app input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):focus,
 html[data-theme="dark"] .admin-app select:focus,
 html[data-theme="dark"] .admin-app textarea:focus {
     border-color: rgba(35,136,255,.55) !important;
