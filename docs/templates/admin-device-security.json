@@ -5,7 +5,7 @@
   "components": [
     {
       "type": "BODY",
-      "text": "TradeX admin account security notice: A sign-in attempt from an additional device was blocked after credential verification. Incident details: {{1}}. Your approved devices remain available. Review this event in TradeX Admin Users > Devices. If you do not recognize this activity, contact the system owner to secure the account.",
+      "text": "TradeX account security alert: An additional device was blocked because your admin account has reached its allowed device limit. Security event: {{1}}. Your approved devices remain available. Review the device activity in TradeX Admin Users > Devices. If you do not recognize this activity, contact the system owner to secure your account.",
       "example": {
         "body_text": [
           [
