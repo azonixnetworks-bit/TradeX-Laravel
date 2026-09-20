@@ -194,7 +194,9 @@ return [
 
         'countries' =>
             $countryList(
-                'TRADEX_NOWPAYMENTS_COUNTRIES'
+                'TRADEX_NOWPAYMENTS_COUNTRIES',
+                '',
+                true
             ),
 
         'environment' =>

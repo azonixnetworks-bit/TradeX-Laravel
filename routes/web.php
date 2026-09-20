@@ -18,6 +18,18 @@ Route::view(
     ['result' => 'cancel']
 )->name('payments.paypal.cancel');
 
+Route::view(
+    '/payments/nowpayments/return',
+    'payments.nowpayments-result',
+    ['result' => 'return']
+)->name('payments.nowpayments.return');
+
+Route::view(
+    '/payments/nowpayments/cancel',
+    'payments.nowpayments-result',
+    ['result' => 'cancel']
+)->name('payments.nowpayments.cancel');
+
 require __DIR__ . '/customer_onboarding.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/admin_video_playback.php';
