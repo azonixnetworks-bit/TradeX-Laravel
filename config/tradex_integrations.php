@@ -87,44 +87,6 @@ $nowPaymentsEnvironment =
         )
     );
 
-$nowPaymentsBaseUrlReady =
-    $nowPaymentsEnvironment === 'LIVE'
-        ? filled(
-            env(
-                'TRADEX_NOWPAYMENTS_LIVE_BASE_URL',
-                'https://api.nowpayments.io'
-            )
-        )
-        : filled(
-            env(
-                'TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL'
-            )
-        );
-
-$nowPaymentsAdapterReady =
-    $nowPaymentsEnabled
-    && filled(
-        env(
-            'TRADEX_NOWPAYMENTS_API_KEY'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_NOWPAYMENTS_IPN_SECRET'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_NOWPAYMENTS_SUCCESS_URL'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_NOWPAYMENTS_CANCEL_URL'
-        )
-    )
-    && $nowPaymentsBaseUrlReady;
-
 return [
     'providers' => [
         'PAYPAL' => [
@@ -150,10 +112,7 @@ return [
             'display_name' => 'NOWPayments',
             'kind' => 'CRYPTO_PAYMENT_GATEWAY',
             'transaction_owner' => 'Payments API / API-21',
-            'runtime_adapter_status' =>
-                $nowPaymentsAdapterReady
-                    ? 'ACTIVE_EXISTING'
-                    : 'NOT_WIRED_ADMIN16',
+            'runtime_adapter_status' => 'ACTIVE_EXISTING',
             'environment_options' => ['SANDBOX', 'LIVE'],
         ],
 
@@ -253,7 +212,8 @@ return [
 
         'sandbox_base_url' =>
             env(
-                'TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL'
+                'TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL',
+                'https://api.sandbox.nowpayments.io'
             ),
 
         'live_base_url' =>

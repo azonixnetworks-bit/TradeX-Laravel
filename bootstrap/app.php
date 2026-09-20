@@ -2,6 +2,7 @@
 
 use App\Console\Commands\AdminReleaseCheckCommand;
 use App\Console\Commands\MobileApiReleaseCheckCommand;
+use App\Console\Commands\NowPaymentsCheckCommand;
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminSecurityHeaders;
 use App\Http\Middleware\EnsureTradeXMobileApiSession;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         AdminReleaseCheckCommand::class,
         MobileApiReleaseCheckCommand::class,
+        NowPaymentsCheckCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*

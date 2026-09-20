@@ -164,14 +164,14 @@ TRADEX_NOWPAYMENTS_COUNTRIES=LK,IN
 TRADEX_NOWPAYMENTS_ENVIRONMENT=SANDBOX
 TRADEX_NOWPAYMENTS_API_KEY=
 TRADEX_NOWPAYMENTS_IPN_SECRET=
-TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL=
+TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL=https://api.sandbox.nowpayments.io
 TRADEX_NOWPAYMENTS_LIVE_BASE_URL=https://api.nowpayments.io
 TRADEX_NOWPAYMENTS_SUCCESS_URL=
 TRADEX_NOWPAYMENTS_CANCEL_URL=
 TRADEX_NOWPAYMENTS_TIMEOUT_SECONDS=15
 ```
 
-Sandbox base URL is intentionally not guessed. It must be explicitly configured when SANDBOX is selected.
+The runtime safety check accepts only NOWPayments' official endpoint for the selected environment. See `docs/NOWPAYMENTS-LIVE-SETUP.md` for production activation and validation.
 
 ## Default safety state
 

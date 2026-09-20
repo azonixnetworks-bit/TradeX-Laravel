@@ -9,7 +9,8 @@ class PaymentProviderRuntimeGate
 {
     public function __construct(
         private readonly StripeConfigurationSafety $stripeConfiguration,
-        private readonly PayPalConfigurationSafety $paypalConfiguration
+        private readonly PayPalConfigurationSafety $paypalConfiguration,
+        private readonly NowPaymentsConfigurationSafety $nowPaymentsConfiguration
     ) {
     }
 
@@ -187,18 +188,8 @@ class PaymentProviderRuntimeGate
                     ->configured(),
 
             'NOWPAYMENTS' =>
-                filled(config(
-                    'tradex_integrations.nowpayments.api_key'
-                ))
-                && filled(config(
-                    'tradex_integrations.nowpayments.ipn_secret'
-                ))
-                && filled(config(
-                    'tradex_integrations.nowpayments.success_url'
-                ))
-                && filled(config(
-                    'tradex_integrations.nowpayments.cancel_url'
-                )),
+                $this->nowPaymentsConfiguration
+                    ->configured(),
 
             default => false,
         };

@@ -15,12 +15,13 @@ class NowPaymentsInvoiceService
     public function __construct(
         private readonly PaymentMethodService $methods,
         private readonly PaymentOrderService $orders,
-        private readonly PaymentApiPresenter $presenter
-    ) {
-    }
+        private readonly PaymentApiPresenter $presenter,
+        private readonly NowPaymentsConfigurationSafety $configuration
+    ) {}
 
     public function create(User $user, string $idempotencyKey, Request $request): array
     {
+        $this->configuration->assertConfigured();
         $method = $this->methods->assertAvailable($user, PaymentOrder::PROVIDER_NOWPAYMENTS);
         $hash = $this->orders->idempotencyHash($idempotencyKey);
         $existing = PaymentOrder::query()
@@ -32,6 +33,7 @@ class NowPaymentsInvoiceService
             if ($existing->provider !== PaymentOrder::PROVIDER_NOWPAYMENTS) {
                 throw new AuthApiException(409, 'PAYMENT_IDEMPOTENCY_CONFLICT', 'The idempotency key is already used by another payment provider.');
             }
+
             return $this->presenter->order($existing);
         }
 
@@ -77,7 +79,10 @@ class NowPaymentsInvoiceService
 
         $invoiceId = trim((string) $response->json('id'));
         $invoiceUrl = trim((string) $response->json('invoice_url'));
-        if ($invoiceId === '' || $invoiceUrl === '') {
+        if (
+            $invoiceId === ''
+            || ! $this->configuration->invoiceUrlIsAllowed($invoiceUrl)
+        ) {
             $this->markFailed($order, 'NOWPAYMENTS_INVOICE_RESPONSE_INVALID');
             throw new AuthApiException(502, 'NOWPAYMENTS_INVOICE_RESPONSE_INVALID', 'NOWPayments returned an incomplete invoice response.');
         }
@@ -106,13 +111,11 @@ class NowPaymentsInvoiceService
 
     private function baseUrl(): string
     {
-        $environment = strtoupper((string) config('tradex_integrations.nowpayments.environment', 'SANDBOX'));
-        $url = $environment === 'LIVE'
-            ? config('tradex_integrations.nowpayments.live_base_url', 'https://api.nowpayments.io')
-            : config('tradex_integrations.nowpayments.sandbox_base_url');
+        $url = $this->configuration->selectedBaseUrl();
         if (! filled($url)) {
             throw new AuthApiException(503, 'NOWPAYMENTS_BASE_URL_NOT_CONFIGURED', 'NOWPayments runtime endpoint is not configured.');
         }
+
         return rtrim((string) $url, '/');
     }
 

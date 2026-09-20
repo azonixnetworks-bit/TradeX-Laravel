@@ -5,6 +5,7 @@ namespace App\Services\Admin\Integrations;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\IntegrationProviderState;
+use App\Services\Payments\NowPaymentsConfigurationSafety;
 use App\Services\Payments\PayPalConfigurationSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\DB;
 class AdminIntegrationService
 {
     public function __construct(
-        private readonly PayPalConfigurationSafety $paypalConfiguration
+        private readonly PayPalConfigurationSafety $paypalConfiguration,
+        private readonly NowPaymentsConfigurationSafety $nowPaymentsConfiguration
     ) {
     }
 
@@ -583,35 +585,8 @@ class AdminIntegrationService
                 ],
             ],
 
-            'NOWPAYMENTS' => [
-                'configured' =>
-                    filled(
-                        config(
-                            'tradex_integrations.nowpayments.api_key'
-                        )
-                    )
-                    && filled(
-                        config(
-                            'tradex_integrations.nowpayments.ipn_secret'
-                        )
-                    ),
-
-                'checks' => [
-                    'API key configured' =>
-                        filled(
-                            config(
-                                'tradex_integrations.nowpayments.api_key'
-                            )
-                        ),
-
-                    'IPN secret configured' =>
-                        filled(
-                            config(
-                                'tradex_integrations.nowpayments.ipn_secret'
-                            )
-                        ),
-                ],
-            ],
+            'NOWPAYMENTS' =>
+                $this->nowPaymentsReadiness(),
 
             'LOCAL_BANK' =>
                 $this->localBankReadiness(),
@@ -709,6 +684,45 @@ class AdminIntegrationService
                         ]
                         ?? false
                     ),
+            ],
+        ];
+    }
+
+    private function nowPaymentsReadiness(): array
+    {
+        $checks =
+            $this->nowPaymentsConfiguration
+                ->checks();
+
+        return [
+            'configured' =>
+                ! in_array(
+                    false,
+                    $checks,
+                    true
+                ),
+
+            'checks' => [
+                'Environment supported' =>
+                    (bool) ($checks['environment_supported'] ?? false),
+
+                'API key configured' =>
+                    (bool) ($checks['api_key_configured'] ?? false),
+
+                'IPN secret configured' =>
+                    (bool) ($checks['ipn_secret_configured'] ?? false),
+
+                'Official NOWPayments API endpoint' =>
+                    (bool) ($checks['official_api_endpoint'] ?? false),
+
+                'Success URL safe' =>
+                    (bool) ($checks['success_url_valid'] ?? false),
+
+                'Cancel URL safe' =>
+                    (bool) ($checks['cancel_url_valid'] ?? false),
+
+                'IPN callback URL safe' =>
+                    (bool) ($checks['webhook_url_valid'] ?? false),
             ],
         ];
     }

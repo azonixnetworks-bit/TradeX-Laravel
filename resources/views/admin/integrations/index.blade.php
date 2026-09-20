@@ -51,10 +51,10 @@
     style="padding:18px;margin-bottom:18px;"
 >
     <strong>Runtime boundary:</strong>
-    PayPal and Local Bank already have existing Payments API adapters.
-    Stripe and NOWPayments are registered and readiness-managed here, but
-    customer checkout/capture remains unavailable until a dedicated Payments
-    API provider extension is implemented and regression-tested.
+    PayPal, Stripe, NOWPayments and Local Bank have Payments API adapters.
+    A provider becomes available to customers only after its environment
+    configuration passes the safety checks and a Super Admin approves its
+    country scope here.
 </section>
 
 <div class="integration-card-grid">
