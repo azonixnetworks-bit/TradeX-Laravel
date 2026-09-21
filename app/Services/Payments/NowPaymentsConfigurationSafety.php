@@ -8,7 +8,7 @@ class NowPaymentsConfigurationSafety
 {
     public const LIVE_BASE_URL = 'https://api.nowpayments.io';
 
-    public const SANDBOX_BASE_URL = 'https://api.sandbox.nowpayments.io';
+    public const SANDBOX_BASE_URL = 'https://api-sandbox.nowpayments.io';
 
     public function configured(): bool
     {

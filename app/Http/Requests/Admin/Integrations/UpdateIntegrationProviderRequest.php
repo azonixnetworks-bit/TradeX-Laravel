@@ -36,10 +36,9 @@ class UpdateIntegrationProviderRequest extends FormRequest
                             array_map(
                                 static fn (
                                     string $country
-                                ): string =>
-                                    strtoupper(
-                                        trim($country)
-                                    ),
+                                ): string => strtoupper(
+                                    trim($country)
+                                ),
                                 explode(
                                     ',',
                                     $countriesRaw
@@ -56,12 +55,11 @@ class UpdateIntegrationProviderRequest extends FormRequest
                             array_map(
                                 static fn (
                                     mixed $country
-                                ): string =>
-                                    strtoupper(
-                                        trim(
-                                            (string) $country
-                                        )
-                                    ),
+                                ): string => strtoupper(
+                                    trim(
+                                        (string) $country
+                                    )
+                                ),
                                 $countriesRaw
                             )
                         )
@@ -71,43 +69,42 @@ class UpdateIntegrationProviderRequest extends FormRequest
             $countries = [];
         }
 
+        if (in_array('*', $countries, true)) {
+            $countries = ['*'];
+        }
+
         $this->merge([
-            'is_enabled' =>
-                filter_var(
-                    $this->input(
-                        'is_enabled',
-                        false
-                    ),
-                    FILTER_VALIDATE_BOOL
+            'is_enabled' => filter_var(
+                $this->input(
+                    'is_enabled',
+                    false
                 ),
+                FILTER_VALIDATE_BOOL
+            ),
 
-            'eligibility_confirmed' =>
-                filter_var(
-                    $this->input(
-                        'eligibility_confirmed',
-                        false
-                    ),
-                    FILTER_VALIDATE_BOOL
+            'eligibility_confirmed' => filter_var(
+                $this->input(
+                    'eligibility_confirmed',
+                    false
                 ),
+                FILTER_VALIDATE_BOOL
+            ),
 
-            'environment' =>
-                strtoupper(
-                    trim(
-                        (string) $this->input(
-                            'environment'
-                        )
-                    )
-                ),
-
-            'countries' =>
-                $countries,
-
-            'change_reason' =>
+            'environment' => strtoupper(
                 trim(
                     (string) $this->input(
-                        'change_reason'
+                        'environment'
                     )
-                ),
+                )
+            ),
+
+            'countries' => $countries,
+
+            'change_reason' => trim(
+                (string) $this->input(
+                    'change_reason'
+                )
+            ),
         ]);
     }
 
@@ -164,7 +161,7 @@ class UpdateIntegrationProviderRequest extends FormRequest
                     if (
                         in_array(
                             $providerCode,
-                            ['PAYPAL', 'STRIPE'],
+                            ['PAYPAL', 'STRIPE', 'NOWPAYMENTS'],
                             true
                         )
                         && $country === '*'
@@ -179,7 +176,7 @@ class UpdateIntegrationProviderRequest extends FormRequest
                         ) !== 1
                     ) {
                         $fail(
-                            'Country scope must use ISO 2-letter codes; PayPal or Stripe may use * for all customer countries.'
+                            'Country scope must use ISO 2-letter codes; PayPal, Stripe or NOWPayments may use * for all customer countries.'
                         );
                     }
                 },

@@ -9,8 +9,7 @@ $countryList = static function (
         array_unique(
             array_filter(
                 array_map(
-                    static fn (string $value): string =>
-                        strtoupper(trim($value)),
+                    static fn (string $value): string => strtoupper(trim($value)),
                     explode(
                         ',',
                         (string) env(
@@ -19,11 +18,10 @@ $countryList = static function (
                         )
                     )
                 ),
-                static fn (string $value): bool =>
-                    (
-                        $allowWildcard
-                        && $value === '*'
-                    )
+                static fn (string $value): bool => (
+                    $allowWildcard
+                    && $value === '*'
+                )
                     || preg_match(
                         '/^[A-Z]{2}$/',
                         $value
@@ -95,118 +93,97 @@ return [
     ],
 
     'stripe' => [
-        'enabled' =>
-            $stripeEnabled,
+        'enabled' => $stripeEnabled,
 
-        'countries' =>
-            $countryList(
-                'TRADEX_STRIPE_COUNTRIES',
-                '',
-                true
-            ),
+        'countries' => $countryList(
+            'TRADEX_STRIPE_COUNTRIES',
+            '',
+            true
+        ),
 
-        'environment' =>
-            strtoupper(
-                (string) env(
-                    'TRADEX_STRIPE_ENVIRONMENT',
-                    'SANDBOX'
-                )
-            ),
+        'environment' => strtoupper(
+            (string) env(
+                'TRADEX_STRIPE_ENVIRONMENT',
+                'SANDBOX'
+            )
+        ),
 
-        'publishable_key' =>
-            env(
-                'TRADEX_STRIPE_PUBLISHABLE_KEY'
-            ),
+        'publishable_key' => env(
+            'TRADEX_STRIPE_PUBLISHABLE_KEY'
+        ),
 
-        'secret_key' =>
-            env(
-                'TRADEX_STRIPE_SECRET_KEY'
-            ),
+        'secret_key' => env(
+            'TRADEX_STRIPE_SECRET_KEY'
+        ),
 
-        'webhook_secret' =>
-            env(
-                'TRADEX_STRIPE_WEBHOOK_SECRET'
-            ),
+        'webhook_secret' => env(
+            'TRADEX_STRIPE_WEBHOOK_SECRET'
+        ),
 
-        'base_url' =>
-            env(
-                'TRADEX_STRIPE_BASE_URL',
-                'https://api.stripe.com'
-            ),
+        'base_url' => env(
+            'TRADEX_STRIPE_BASE_URL',
+            'https://api.stripe.com'
+        ),
 
-        'success_url' =>
-            env(
-                'TRADEX_STRIPE_SUCCESS_URL'
-            ),
+        'success_url' => env(
+            'TRADEX_STRIPE_SUCCESS_URL'
+        ),
 
-        'cancel_url' =>
-            env(
-                'TRADEX_STRIPE_CANCEL_URL'
-            ),
+        'cancel_url' => env(
+            'TRADEX_STRIPE_CANCEL_URL'
+        ),
 
-        'timeout_seconds' =>
-            (int) env(
-                'TRADEX_STRIPE_TIMEOUT_SECONDS',
-                15
-            ),
+        'timeout_seconds' => (int) env(
+            'TRADEX_STRIPE_TIMEOUT_SECONDS',
+            15
+        ),
 
-        'webhook_tolerance_seconds' =>
-            (int) env(
-                'TRADEX_STRIPE_WEBHOOK_TOLERANCE_SECONDS',
-                300
-            ),
+        'webhook_tolerance_seconds' => (int) env(
+            'TRADEX_STRIPE_WEBHOOK_TOLERANCE_SECONDS',
+            300
+        ),
     ],
 
     'nowpayments' => [
-        'enabled' =>
-            $nowPaymentsEnabled,
+        'enabled' => $nowPaymentsEnabled,
 
-        'countries' =>
-            $countryList(
-                'TRADEX_NOWPAYMENTS_COUNTRIES',
-                '',
-                true
-            ),
+        'countries' => $countryList(
+            'TRADEX_NOWPAYMENTS_COUNTRIES',
+            '',
+            true
+        ),
 
-        'environment' =>
-            $nowPaymentsEnvironment,
+        'environment' => $nowPaymentsEnvironment,
 
-        'api_key' =>
-            env(
-                'TRADEX_NOWPAYMENTS_API_KEY'
-            ),
+        'api_key' => env(
+            'TRADEX_NOWPAYMENTS_API_KEY'
+        ),
 
-        'ipn_secret' =>
-            env(
-                'TRADEX_NOWPAYMENTS_IPN_SECRET'
-            ),
+        'ipn_secret' => env(
+            'TRADEX_NOWPAYMENTS_IPN_SECRET'
+        ),
 
-        'sandbox_base_url' =>
-            env(
-                'TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL',
-                'https://api.sandbox.nowpayments.io'
-            ),
+        'sandbox_base_url' => env(
+            'TRADEX_NOWPAYMENTS_SANDBOX_BASE_URL',
+            'https://api-sandbox.nowpayments.io'
+        ),
 
-        'live_base_url' =>
-            env(
-                'TRADEX_NOWPAYMENTS_LIVE_BASE_URL',
-                'https://api.nowpayments.io'
-            ),
+        'live_base_url' => env(
+            'TRADEX_NOWPAYMENTS_LIVE_BASE_URL',
+            'https://api.nowpayments.io'
+        ),
 
-        'success_url' =>
-            env(
-                'TRADEX_NOWPAYMENTS_SUCCESS_URL'
-            ),
+        'success_url' => env(
+            'TRADEX_NOWPAYMENTS_SUCCESS_URL'
+        ),
 
-        'cancel_url' =>
-            env(
-                'TRADEX_NOWPAYMENTS_CANCEL_URL'
-            ),
+        'cancel_url' => env(
+            'TRADEX_NOWPAYMENTS_CANCEL_URL'
+        ),
 
-        'timeout_seconds' =>
-            (int) env(
-                'TRADEX_NOWPAYMENTS_TIMEOUT_SECONDS',
-                15
-            ),
+        'timeout_seconds' => (int) env(
+            'TRADEX_NOWPAYMENTS_TIMEOUT_SECONDS',
+            15
+        ),
     ],
 ];

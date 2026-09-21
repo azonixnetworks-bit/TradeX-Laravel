@@ -7,6 +7,7 @@ use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\IntegrationProviderState;
+use App\Models\PaymentReceivingAccount;
 use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -139,8 +140,7 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'countries' =>
-                        'LK,IN',
+                    'countries' => 'LK,IN',
                 ])
             )
             ->assertRedirect();
@@ -186,8 +186,7 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'countries' =>
-                        'lk, IN,lk',
+                    'countries' => 'lk, IN,lk',
                 ])
             )
             ->assertRedirect();
@@ -222,8 +221,7 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'countries' =>
-                        'LKA',
+                    'countries' => 'LKA',
                 ])
             )
             ->assertSessionHasErrors(
@@ -251,14 +249,11 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'is_enabled' =>
-                        true,
+                    'is_enabled' => true,
 
-                    'eligibility_confirmed' =>
-                        true,
+                    'eligibility_confirmed' => true,
 
-                    'countries' =>
-                        '',
+                    'countries' => '',
                 ])
             )
             ->assertStatus(422);
@@ -266,11 +261,9 @@ class IntegrationManagementTest extends TestCase
         $this->assertDatabaseMissing(
             'integration_provider_states',
             [
-                'provider_code' =>
-                    'STRIPE',
+                'provider_code' => 'STRIPE',
 
-                'is_enabled' =>
-                    true,
+                'is_enabled' => true,
             ]
         );
     }
@@ -295,11 +288,9 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'is_enabled' =>
-                        true,
+                    'is_enabled' => true,
 
-                    'eligibility_confirmed' =>
-                        false,
+                    'eligibility_confirmed' => false,
                 ])
             )
             ->assertStatus(422);
@@ -338,11 +329,9 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'is_enabled' =>
-                        true,
+                    'is_enabled' => true,
 
-                    'eligibility_confirmed' =>
-                        true,
+                    'eligibility_confirmed' => true,
                 ])
             )
             ->assertStatus(409);
@@ -368,14 +357,11 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'is_enabled' =>
-                        true,
+                    'is_enabled' => true,
 
-                    'eligibility_confirmed' =>
-                        true,
+                    'eligibility_confirmed' => true,
 
-                    'countries' =>
-                        'LK',
+                    'countries' => 'LK',
                 ])
             )
             ->assertRedirect();
@@ -397,6 +383,103 @@ class IntegrationManagementTest extends TestCase
             ->assertSee(
                 'ACTIVE_EXISTING'
             );
+    }
+
+    public function test_nowpayments_wildcard_enables_all_countries_when_configuration_is_ready(): void
+    {
+        config()->set('tradex_integrations.nowpayments.enabled', true);
+        config()->set('tradex_integrations.nowpayments.countries', ['*']);
+        config()->set('tradex_integrations.nowpayments.environment', 'SANDBOX');
+        config()->set('tradex_integrations.nowpayments.api_key', 'sandbox-api-key');
+        config()->set('tradex_integrations.nowpayments.ipn_secret', 'sandbox-ipn-secret');
+        config()->set('tradex_integrations.nowpayments.sandbox_base_url', 'https://api-sandbox.nowpayments.io');
+        config()->set('tradex_integrations.nowpayments.success_url', 'https://tradex.example.test/payments/nowpayments/return');
+        config()->set('tradex_integrations.nowpayments.cancel_url', 'https://tradex.example.test/payments/nowpayments/cancel');
+
+        $admin = $this->adminWithPermissions([
+            'integrations.view',
+            'integrations.manage',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->patch(
+                route('admin.integrations.update', 'NOWPAYMENTS'),
+                $this->updatePayload([
+                    'is_enabled' => true,
+                    'eligibility_confirmed' => true,
+                    'countries' => '*',
+                ])
+            )
+            ->assertRedirect();
+
+        $state = IntegrationProviderState::query()
+            ->where('provider_code', 'NOWPAYMENTS')
+            ->firstOrFail();
+
+        $this->assertTrue($state->is_enabled);
+        $this->assertSame(['*'], $state->countries);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.integrations.show', 'NOWPAYMENTS'))
+            ->assertOk()
+            ->assertSee('READY')
+            ->assertSee('All Countries')
+            ->assertSee('APPROVED_EXISTING_RUNTIME')
+            ->assertSee('ACTIVE_EXISTING_RUNTIME');
+    }
+
+    public function test_active_database_bank_account_allows_local_bank_integration_to_be_enabled(): void
+    {
+        config()->set('tradex_payments.local_bank.enabled', true);
+        config()->set('tradex_payments.local_bank.countries', ['LK']);
+        config()->set('tradex_payments.product.education_premium.local_bank.amount_minor', 0);
+        config()->set('tradex_payments.local_bank.bank_name', null);
+        config()->set('tradex_payments.local_bank.branch', null);
+        config()->set('tradex_payments.local_bank.account_holder', null);
+        config()->set('tradex_payments.local_bank.account_number', null);
+
+        PaymentReceivingAccount::query()->create([
+            'type' => PaymentReceivingAccount::TYPE_BANK,
+            'display_name' => 'Primary Local Bank',
+            'country_code' => 'LK',
+            'currency' => 'LKR',
+            'tender_amount_decimal' => '25000.00',
+            'amount_scale' => 2,
+            'bank_name' => 'TradeX Test Bank',
+            'bank_branch' => 'Colombo',
+            'account_holder' => 'TradeX',
+            'account_number' => '001234567890',
+            'is_active' => true,
+        ]);
+
+        $admin = $this->adminWithPermissions([
+            'integrations.view',
+            'integrations.manage',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->patch(
+                route('admin.integrations.update', 'LOCAL_BANK'),
+                $this->updatePayload([
+                    'is_enabled' => true,
+                    'eligibility_confirmed' => true,
+                    'environment' => 'MANUAL',
+                    'countries' => 'LK',
+                ])
+            )
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('integration_provider_states', [
+            'provider_code' => 'LOCAL_BANK',
+            'is_enabled' => true,
+            'environment' => 'MANUAL',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.integrations.show', 'LOCAL_BANK'))
+            ->assertOk()
+            ->assertSee('READY')
+            ->assertSee('Active payment receiving account configured');
     }
 
     public function test_nowpayments_api_and_ipn_secrets_are_never_rendered(): void
@@ -572,8 +655,7 @@ class IntegrationManagementTest extends TestCase
                     'LOCAL_BANK'
                 ),
                 $this->updatePayload([
-                    'environment' =>
-                        'LIVE',
+                    'environment' => 'LIVE',
                 ])
             )
             ->assertStatus(422);
@@ -589,26 +671,19 @@ class IntegrationManagementTest extends TestCase
 
         IntegrationProviderState::query()
             ->create([
-                'provider_code' =>
-                    'STRIPE',
+                'provider_code' => 'STRIPE',
 
-                'is_enabled' =>
-                    false,
+                'is_enabled' => false,
 
-                'environment' =>
-                    'SANDBOX',
+                'environment' => 'SANDBOX',
 
-                'countries' =>
-                    ['LK'],
+                'countries' => ['LK'],
 
-                'eligibility_confirmed' =>
-                    false,
+                'eligibility_confirmed' => false,
 
-                'version' =>
-                    2,
+                'version' => 2,
 
-                'updated_by_admin_id' =>
-                    $admin->id,
+                'updated_by_admin_id' => $admin->id,
             ]);
 
         $this->actingAs(
@@ -621,8 +696,7 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'version' =>
-                        1,
+                    'version' => 1,
                 ])
             )
             ->assertStatus(409);
@@ -681,14 +755,11 @@ class IntegrationManagementTest extends TestCase
                     'STRIPE'
                 ),
                 $this->updatePayload([
-                    'is_enabled' =>
-                        true,
+                    'is_enabled' => true,
 
-                    'eligibility_confirmed' =>
-                        true,
+                    'eligibility_confirmed' => true,
 
-                    'change_reason' =>
-                        $reasonCanary,
+                    'change_reason' => $reasonCanary,
                 ])
             )
             ->assertRedirect();
@@ -820,11 +891,10 @@ class IntegrationManagementTest extends TestCase
                     ->getRoutes()
             )
                 ->filter(
-                    fn ($route): bool =>
-                        str_starts_with(
-                            (string) $route->uri(),
-                            'admin/integrations'
-                        )
+                    fn ($route): bool => str_starts_with(
+                        (string) $route->uri(),
+                        'admin/integrations'
+                    )
                 );
 
         $this->assertCount(
@@ -833,8 +903,7 @@ class IntegrationManagementTest extends TestCase
         );
 
         foreach (
-            $routes
-            as $route
+            $routes as $route
         ) {
             $this->assertNotContains(
                 'DELETE',
@@ -886,23 +955,17 @@ class IntegrationManagementTest extends TestCase
     ): array {
         return array_merge(
             [
-                'is_enabled' =>
-                    false,
+                'is_enabled' => false,
 
-                'eligibility_confirmed' =>
-                    false,
+                'eligibility_confirmed' => false,
 
-                'environment' =>
-                    'SANDBOX',
+                'environment' => 'SANDBOX',
 
-                'countries' =>
-                    'LK',
+                'countries' => 'LK',
 
-                'version' =>
-                    0,
+                'version' => 0,
 
-                'change_reason' =>
-                    'ADMIN-16 test change reason.',
+                'change_reason' => 'ADMIN-16 test change reason.',
             ],
             $overrides
         );
@@ -914,60 +977,47 @@ class IntegrationManagementTest extends TestCase
         $admin =
             AdminUser::query()
                 ->create([
-                    'uuid' =>
-                        Str::uuid()
-                            ->toString(),
+                    'uuid' => Str::uuid()
+                        ->toString(),
 
-                    'name' =>
-                        'ADMIN-16 Test Actor',
+                    'name' => 'ADMIN-16 Test Actor',
 
-                    'email' =>
-                        'admin16-'
+                    'email' => 'admin16-'
                         .Str::lower(
                             Str::random(10)
                         )
                         .'@example.test',
 
-                    'email_verified_at' =>
-                        now(),
+                    'email_verified_at' => now(),
 
-                    'password' =>
-                        'Testing-Admin-Pass-123!',
+                    'password' => 'Testing-Admin-Pass-123!',
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'failed_login_attempts' =>
-                        0,
+                    'failed_login_attempts' => 0,
                 ]);
 
         $role =
             AdminRole::query()
                 ->create([
-                    'code' =>
-                        'ADMIN16_TEST_'
+                    'code' => 'ADMIN16_TEST_'
                         .Str::upper(
                             Str::random(8)
                         ),
 
-                    'name' =>
-                        'ADMIN-16 Test Role',
+                    'name' => 'ADMIN-16 Test Role',
 
-                    'description' =>
-                        null,
+                    'description' => null,
 
-                    'is_system' =>
-                        false,
+                    'is_system' => false,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ]);
 
         $permissionIds = [];
 
         foreach (
-            $codes
-            as $code
+            $codes as $code
         ) {
             $permission =
                 AdminPermission::query()

@@ -130,9 +130,11 @@
                 <tr>
                     <th>Source Countries</th>
                     <td>
-                        {{ $provider['source_runtime_countries'] === []
-                            ? 'None'
-                            : implode(', ', $provider['source_runtime_countries']) }}
+                        {{ in_array('*', $provider['source_runtime_countries'], true)
+                            ? 'All Countries'
+                            : ($provider['source_runtime_countries'] === []
+                                ? 'None'
+                                : implode(', ', $provider['source_runtime_countries'])) }}
                     </td>
                 </tr>
                 <tr>
@@ -268,8 +270,9 @@
                     autocomplete="off"
                 >
                 <small class="form-help">
-                    ISO 2-letter codes only. Provider/merchant eligibility must
-                    be checked before approval.
+                    Use ISO 2-letter codes separated by commas. PayPal, Stripe
+                    and NOWPayments accept <code>*</code> for All Countries.
+                    Provider/merchant eligibility must be checked before approval.
                 </small>
                 @error('countries')
                     <small class="form-error">{{ $message }}</small>

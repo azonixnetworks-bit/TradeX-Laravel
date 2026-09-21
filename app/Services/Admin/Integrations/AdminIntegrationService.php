@@ -5,6 +5,7 @@ namespace App\Services\Admin\Integrations;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\IntegrationProviderState;
+use App\Models\PaymentReceivingAccount;
 use App\Services\Payments\NowPaymentsConfigurationSafety;
 use App\Services\Payments\PayPalConfigurationSafety;
 use App\Services\Payments\StripeConfigurationSafety;
@@ -17,8 +18,7 @@ class AdminIntegrationService
         private readonly PayPalConfigurationSafety $paypalConfiguration,
         private readonly StripeConfigurationSafety $stripeConfiguration,
         private readonly NowPaymentsConfigurationSafety $nowPaymentsConfiguration
-    ) {
-    }
+    ) {}
 
     public const PROVIDERS = [
         'PAYPAL',
@@ -46,8 +46,7 @@ class AdminIntegrationService
         $providers = [];
 
         foreach (
-            self::PROVIDERS
-            as $providerCode
+            self::PROVIDERS as $providerCode
         ) {
             $providers[] =
                 $this->snapshot(
@@ -59,44 +58,39 @@ class AdminIntegrationService
         }
 
         return [
-            'providers' =>
-                $providers,
+            'providers' => $providers,
 
             'summary' => [
-                'total' =>
-                    count(
-                        $providers
-                    ),
+                'total' => count(
+                    $providers
+                ),
 
-                'configured' =>
-                    collect(
-                        $providers
+                'configured' => collect(
+                    $providers
+                )
+                    ->where(
+                        'configured',
+                        true
                     )
-                        ->where(
-                            'configured',
-                            true
-                        )
-                        ->count(),
+                    ->count(),
 
-                'control_enabled' =>
-                    collect(
-                        $providers
+                'control_enabled' => collect(
+                    $providers
+                )
+                    ->where(
+                        'control_enabled',
+                        true
                     )
-                        ->where(
-                            'control_enabled',
-                            true
-                        )
-                        ->count(),
+                    ->count(),
 
-                'runtime_existing' =>
-                    collect(
-                        $providers
+                'runtime_existing' => collect(
+                    $providers
+                )
+                    ->where(
+                        'runtime_adapter_status',
+                        'ACTIVE_EXISTING'
                     )
-                        ->where(
-                            'runtime_adapter_status',
-                            'ACTIVE_EXISTING'
-                        )
-                        ->count(),
+                    ->count(),
             ],
         ];
     }
@@ -121,11 +115,10 @@ class AdminIntegrationService
                 ->first();
 
         return [
-            'provider' =>
-                $this->snapshot(
-                    $providerCode,
-                    $state
-                ),
+            'provider' => $this->snapshot(
+                $providerCode,
+                $state
+            ),
         ];
     }
 
@@ -224,32 +217,24 @@ class AdminIntegrationService
             ): array {
                 IntegrationProviderState::query()
                     ->insertOrIgnore([
-                        'provider_code' =>
-                            $providerCode,
+                        'provider_code' => $providerCode,
 
-                        'is_enabled' =>
-                            false,
+                        'is_enabled' => false,
 
-                        'environment' =>
-                            $environment,
+                        'environment' => $environment,
 
-                        'countries' =>
-                            json_encode(
-                                [],
-                                JSON_THROW_ON_ERROR
-                            ),
+                        'countries' => json_encode(
+                            [],
+                            JSON_THROW_ON_ERROR
+                        ),
 
-                        'eligibility_confirmed' =>
-                            false,
+                        'eligibility_confirmed' => false,
 
-                        'version' =>
-                            0,
+                        'version' => 0,
 
-                        'created_at' =>
-                            now(),
+                        'created_at' => now(),
 
-                        'updated_at' =>
-                            now(),
+                        'updated_at' => now(),
                     ]);
 
                 $state =
@@ -282,56 +267,40 @@ class AdminIntegrationService
                     );
 
                 $state->forceFill([
-                    'is_enabled' =>
-                        $isEnabled,
+                    'is_enabled' => $isEnabled,
 
-                    'environment' =>
-                        $environment,
+                    'environment' => $environment,
 
-                    'countries' =>
-                        $countries,
+                    'countries' => $countries,
 
-                    'eligibility_confirmed' =>
-                        $eligibilityConfirmed,
+                    'eligibility_confirmed' => $eligibilityConfirmed,
 
-                    'version' =>
-                        $state->version + 1,
+                    'version' => $state->version + 1,
 
-                    'updated_by_admin_id' =>
-                        $admin->getKey(),
+                    'updated_by_admin_id' => $admin->getKey(),
                 ])->save();
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
-                    actorId:
-                        $admin->getKey(),
-                    action:
-                        'INTEGRATION_PROVIDER_STATE_UPDATED',
-                    module:
-                        'INTEGRATIONS',
-                    targetType:
-                        'INTEGRATION_PROVIDER',
-                    targetId:
-                        $state->getKey(),
-                    oldValues:
-                        $old,
+                    actorType: 'ADMIN',
+                    actorId: $admin->getKey(),
+                    action: 'INTEGRATION_PROVIDER_STATE_UPDATED',
+                    module: 'INTEGRATIONS',
+                    targetType: 'INTEGRATION_PROVIDER',
+                    targetId: $state->getKey(),
+                    oldValues: $old,
                     newValues: [
                         ...$this->safeState(
                             $state
                         ),
 
-                        'change_reason_provided' =>
-                            trim(
-                                (string) $data[
-                                    'change_reason'
-                                ]
-                            ) !== '',
+                        'change_reason_provided' => trim(
+                            (string) $data[
+                                'change_reason'
+                            ]
+                        ) !== '',
                     ],
-                    ipAddress:
-                        $request->ip(),
-                    userAgent:
-                        $request->userAgent()
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
                 );
 
                 return $this->snapshot(
@@ -412,108 +381,84 @@ class AdminIntegrationService
             );
 
         return [
-            'code' =>
-                $providerCode,
+            'code' => $providerCode,
 
-            'display_name' =>
-                $definition[
+            'display_name' => $definition[
                     'display_name'
                 ],
 
-            'kind' =>
-                $definition['kind'],
+            'kind' => $definition['kind'],
 
-            'transaction_owner' =>
-                $definition[
+            'transaction_owner' => $definition[
                     'transaction_owner'
                 ],
 
-            'runtime_adapter_status' =>
-                $definition[
+            'runtime_adapter_status' => $definition[
                     'runtime_adapter_status'
                 ],
 
-            'environment_options' =>
-                $definition[
+            'environment_options' => $definition[
                     'environment_options'
                 ],
 
-            'configured' =>
-                $readiness[
+            'configured' => $readiness[
                     'configured'
                 ],
 
-            'configuration_checks' =>
-                $readiness[
+            'configuration_checks' => $readiness[
                     'checks'
                 ],
 
-            'source_runtime_enabled' =>
-                $source['enabled'],
+            'source_runtime_enabled' => $source['enabled'],
 
-            'source_runtime_countries' =>
-                $source['countries'],
+            'source_runtime_countries' => $source['countries'],
 
-            'source_runtime_environment' =>
-                $source[
+            'source_runtime_environment' => $source[
                     'environment'
                 ],
 
-            'control_enabled' =>
-                $controlEnabled,
+            'control_enabled' => $controlEnabled,
 
-            'eligibility_confirmed' =>
-                $eligibilityConfirmed,
+            'eligibility_confirmed' => $eligibilityConfirmed,
 
-            'environment' =>
-                $environment,
+            'environment' => $environment,
 
-            'countries' =>
-                $countries,
+            'countries' => $countries,
 
-            'version' =>
-                (int) (
-                    $state?->version
-                    ?? 0
-                ),
+            'version' => (int) (
+                $state?->version
+                ?? 0
+            ),
 
-            'updated_by' =>
-                $state
-                    ?->updatedByAdmin
-                    ?->name,
+            'updated_by' => $state
+                ?->updatedByAdmin
+                ?->name,
 
-            'updated_at' =>
-                $state
-                    ?->updated_at,
+            'updated_at' => $state
+                ?->updated_at,
 
-            'control_status' =>
-                $this->controlStatus(
-                    controlEnabled:
-                        $controlEnabled,
-                    eligibilityConfirmed:
-                        $eligibilityConfirmed,
-                    configured:
-                        $readiness[
-                            'configured'
-                        ],
-                    runtimeAdapterStatus:
-                        $definition[
-                            'runtime_adapter_status'
-                        ]
-                ),
-
-            'runtime_status' =>
-                $this->runtimeStatus(
-                    $source[
-                        'enabled'
-                    ],
-                    $readiness[
+            'control_status' => $this->controlStatus(
+                controlEnabled: $controlEnabled,
+                eligibilityConfirmed: $eligibilityConfirmed,
+                configured: $readiness[
                         'configured'
                     ],
-                    $definition[
+                runtimeAdapterStatus: $definition[
                         'runtime_adapter_status'
                     ]
-                ),
+            ),
+
+            'runtime_status' => $this->runtimeStatus(
+                $source[
+                    'enabled'
+                ],
+                $readiness[
+                    'configured'
+                ],
+                $definition[
+                    'runtime_adapter_status'
+                ]
+            ),
         ];
     }
 
@@ -542,22 +487,17 @@ class AdminIntegrationService
         return match (
             $providerCode
         ) {
-            'PAYPAL' =>
-                $this->paypalReadiness(),
+            'PAYPAL' => $this->paypalReadiness(),
 
-            'STRIPE' =>
-                $this->stripeReadiness(),
+            'STRIPE' => $this->stripeReadiness(),
 
-            'NOWPAYMENTS' =>
-                $this->nowPaymentsReadiness(),
+            'NOWPAYMENTS' => $this->nowPaymentsReadiness(),
 
-            'LOCAL_BANK' =>
-                $this->localBankReadiness(),
+            'LOCAL_BANK' => $this->localBankReadiness(),
 
-            default =>
-                abort(
-                    404
-                ),
+            default => abort(
+                404
+            ),
         };
     }
 
@@ -568,85 +508,75 @@ class AdminIntegrationService
                 ->checks();
 
         return [
-            'configured' =>
-                ! in_array(
-                    false,
-                    $checks,
-                    true
-                ),
+            'configured' => ! in_array(
+                false,
+                $checks,
+                true
+            ),
 
             'checks' => [
-                'Driver supported' =>
-                    (bool) (
-                        $checks[
-                            'driver_supported'
-                        ]
-                        ?? false
-                    ),
+                'Driver supported' => (bool) (
+                    $checks[
+                        'driver_supported'
+                    ]
+                    ?? false
+                ),
 
-                'Environment supported' =>
-                    (bool) (
-                        $checks[
-                            'environment_supported'
-                        ]
-                        ?? false
-                    ),
+                'Environment supported' => (bool) (
+                    $checks[
+                        'environment_supported'
+                    ]
+                    ?? false
+                ),
 
-                'Plugin environment aligned' =>
-                    (bool) (
-                        $checks[
-                            'plugin_environment_matches'
-                        ]
-                        ?? false
-                    ),
+                'Plugin environment aligned' => (bool) (
+                    $checks[
+                        'plugin_environment_matches'
+                    ]
+                    ?? false
+                ),
 
-                'Client identifier configured' =>
-                    (bool) (
-                        $checks[
-                            'client_id_configured'
-                        ]
-                        ?? false
-                    ),
+                'Client identifier configured' => (bool) (
+                    $checks[
+                        'client_id_configured'
+                    ]
+                    ?? false
+                ),
 
-                'Client secret configured' =>
-                    (bool) (
-                        $checks[
-                            'client_secret_configured'
-                        ]
-                        ?? false
-                    ),
+                'Client secret configured' => (bool) (
+                    $checks[
+                        'client_secret_configured'
+                    ]
+                    ?? false
+                ),
 
-                'Webhook identifier configured' =>
-                    (bool) (
-                        $checks[
-                            'webhook_id_configured'
-                        ]
-                        ?? false
-                    ),
+                'Webhook identifier configured' => (bool) (
+                    $checks[
+                        'webhook_id_configured'
+                    ]
+                    ?? false
+                ),
 
-                'Official PayPal API endpoint' =>
-                    (bool) (
-                        $checks[
-                            'official_api_endpoint'
-                        ]
-                        ?? false
-                    ),
+                'Official PayPal API endpoint' => (bool) (
+                    $checks[
+                        'official_api_endpoint'
+                    ]
+                    ?? false
+                ),
 
-                'Return URL safe' =>
-                    (bool) (
-                        $checks[
-                            'return_url_valid'
-                        ]
-                        ?? false
-                    ),
+                'Return URL safe' => (bool) (
+                    $checks[
+                        'return_url_valid'
+                    ]
+                    ?? false
+                ),
 
-                'Cancel URL safe' =>
-                    (bool) (
-                        $checks[
-                            'cancel_url_valid'
-                        ]
-                        ?? false
-                    ),
+                'Cancel URL safe' => (bool) (
+                    $checks[
+                        'cancel_url_valid'
+                    ]
+                    ?? false
+                ),
             ],
         ];
     }
@@ -658,34 +588,26 @@ class AdminIntegrationService
                 ->checks();
 
         return [
-            'configured' =>
-                ! in_array(
-                    false,
-                    $checks,
-                    true
-                ),
+            'configured' => ! in_array(
+                false,
+                $checks,
+                true
+            ),
 
             'checks' => [
-                'Environment supported' =>
-                    (bool) ($checks['environment_supported'] ?? false),
+                'Environment supported' => (bool) ($checks['environment_supported'] ?? false),
 
-                'API key configured' =>
-                    (bool) ($checks['api_key_configured'] ?? false),
+                'API key configured' => (bool) ($checks['api_key_configured'] ?? false),
 
-                'IPN secret configured' =>
-                    (bool) ($checks['ipn_secret_configured'] ?? false),
+                'IPN secret configured' => (bool) ($checks['ipn_secret_configured'] ?? false),
 
-                'Official NOWPayments API endpoint' =>
-                    (bool) ($checks['official_api_endpoint'] ?? false),
+                'Official NOWPayments API endpoint' => (bool) ($checks['official_api_endpoint'] ?? false),
 
-                'Success URL safe' =>
-                    (bool) ($checks['success_url_valid'] ?? false),
+                'Success URL safe' => (bool) ($checks['success_url_valid'] ?? false),
 
-                'Cancel URL safe' =>
-                    (bool) ($checks['cancel_url_valid'] ?? false),
+                'Cancel URL safe' => (bool) ($checks['cancel_url_valid'] ?? false),
 
-                'IPN callback URL safe' =>
-                    (bool) ($checks['webhook_url_valid'] ?? false),
+                'IPN callback URL safe' => (bool) ($checks['webhook_url_valid'] ?? false),
             ],
         ];
     }
@@ -697,34 +619,26 @@ class AdminIntegrationService
                 ->checks();
 
         return [
-            'configured' =>
-                ! in_array(
-                    false,
-                    $checks,
-                    true
-                ),
+            'configured' => ! in_array(
+                false,
+                $checks,
+                true
+            ),
 
             'checks' => [
-                'Environment supported' =>
-                    (bool) ($checks['environment_supported'] ?? false),
+                'Environment supported' => (bool) ($checks['environment_supported'] ?? false),
 
-                'Publishable key matches environment' =>
-                    (bool) ($checks['publishable_key_matches_environment'] ?? false),
+                'Publishable key matches environment' => (bool) ($checks['publishable_key_matches_environment'] ?? false),
 
-                'Secret key matches environment' =>
-                    (bool) ($checks['secret_key_matches_environment'] ?? false),
+                'Secret key matches environment' => (bool) ($checks['secret_key_matches_environment'] ?? false),
 
-                'Webhook signing secret configured' =>
-                    (bool) ($checks['webhook_secret_valid'] ?? false),
+                'Webhook signing secret configured' => (bool) ($checks['webhook_secret_valid'] ?? false),
 
-                'Official Stripe API endpoint' =>
-                    (bool) ($checks['official_api_endpoint'] ?? false),
+                'Official Stripe API endpoint' => (bool) ($checks['official_api_endpoint'] ?? false),
 
-                'Success URL safe' =>
-                    (bool) ($checks['success_url_valid'] ?? false),
+                'Success URL safe' => (bool) ($checks['success_url_valid'] ?? false),
 
-                'Cancel URL safe' =>
-                    (bool) ($checks['cancel_url_valid'] ?? false),
+                'Cancel URL safe' => (bool) ($checks['cancel_url_valid'] ?? false),
             ],
         ];
     }
@@ -765,29 +679,69 @@ class AdminIntegrationService
                 )
             );
 
+        $databaseAccount =
+            PaymentReceivingAccount::query()
+                ->where(
+                    'type',
+                    PaymentReceivingAccount::TYPE_BANK
+                )
+                ->where(
+                    'is_active',
+                    true
+                )
+                ->whereNotNull(
+                    'tender_amount_decimal'
+                )
+                ->where(
+                    'tender_amount_decimal',
+                    '!=',
+                    ''
+                )
+                ->whereNotNull(
+                    'bank_name'
+                )
+                ->whereNotNull(
+                    'bank_branch'
+                )
+                ->whereNotNull(
+                    'account_holder'
+                )
+                ->whereNotNull(
+                    'account_number'
+                )
+                ->exists();
+
+        $legacyConfiguration =
+            $amount > 0
+            && $bank
+            && $branch
+            && $holder
+            && $account;
+
+        $paymentAccountConfigured =
+            $databaseAccount
+            || $legacyConfiguration;
+
         return [
-            'configured' =>
-                $amount > 0
-                && $bank
-                && $branch
-                && $holder
-                && $account,
+            'configured' => $paymentAccountConfigured,
 
             'checks' => [
-                'Product LKR amount configured' =>
-                    $amount > 0,
+                'Active payment receiving account configured' => $paymentAccountConfigured,
 
-                'Bank name configured' =>
-                    $bank,
+                'Product LKR amount configured' => $databaseAccount
+                    || $amount > 0,
 
-                'Branch configured' =>
-                    $branch,
+                'Bank name configured' => $databaseAccount
+                    || $bank,
 
-                'Account holder configured' =>
-                    $holder,
+                'Branch configured' => $databaseAccount
+                    || $branch,
 
-                'Account number configured' =>
-                    $account,
+                'Account holder configured' => $databaseAccount
+                    || $holder,
+
+                'Account number configured' => $databaseAccount
+                    || $account,
             ],
         ];
     }
@@ -799,100 +753,87 @@ class AdminIntegrationService
             $providerCode
         ) {
             'PAYPAL' => [
-                'enabled' =>
-                    (bool) config(
-                        'tradex_payments.paypal.enabled',
-                        false
-                    ),
+                'enabled' => (bool) config(
+                    'tradex_payments.paypal.enabled',
+                    false
+                ),
 
-                'countries' =>
-                    $this->normalizeCountries(
-                        (array) config(
-                            'tradex_payments.paypal.countries',
-                            []
-                        )
-                    ),
+                'countries' => $this->normalizeCountries(
+                    (array) config(
+                        'tradex_payments.paypal.countries',
+                        []
+                    )
+                ),
 
-                'environment' =>
-                    strtoupper(
-                        (string) config(
-                            'tradex_payments.paypal.environment',
-                            'SANDBOX'
-                        )
-                    ),
+                'environment' => strtoupper(
+                    (string) config(
+                        'tradex_payments.paypal.environment',
+                        'SANDBOX'
+                    )
+                ),
             ],
 
             'STRIPE' => [
-                'enabled' =>
-                    (bool) config(
-                        'tradex_integrations.stripe.enabled',
-                        false
-                    ),
+                'enabled' => (bool) config(
+                    'tradex_integrations.stripe.enabled',
+                    false
+                ),
 
-                'countries' =>
-                    $this->normalizeCountries(
-                        (array) config(
-                            'tradex_integrations.stripe.countries',
-                            []
-                        )
-                    ),
+                'countries' => $this->normalizeCountries(
+                    (array) config(
+                        'tradex_integrations.stripe.countries',
+                        []
+                    )
+                ),
 
-                'environment' =>
-                    strtoupper(
-                        (string) config(
-                            'tradex_integrations.stripe.environment',
-                            'SANDBOX'
-                        )
-                    ),
+                'environment' => strtoupper(
+                    (string) config(
+                        'tradex_integrations.stripe.environment',
+                        'SANDBOX'
+                    )
+                ),
             ],
 
             'NOWPAYMENTS' => [
-                'enabled' =>
-                    (bool) config(
-                        'tradex_integrations.nowpayments.enabled',
-                        false
-                    ),
+                'enabled' => (bool) config(
+                    'tradex_integrations.nowpayments.enabled',
+                    false
+                ),
 
-                'countries' =>
-                    $this->normalizeCountries(
-                        (array) config(
-                            'tradex_integrations.nowpayments.countries',
-                            []
-                        )
-                    ),
+                'countries' => $this->normalizeCountries(
+                    (array) config(
+                        'tradex_integrations.nowpayments.countries',
+                        []
+                    )
+                ),
 
-                'environment' =>
-                    strtoupper(
-                        (string) config(
-                            'tradex_integrations.nowpayments.environment',
-                            'SANDBOX'
-                        )
-                    ),
+                'environment' => strtoupper(
+                    (string) config(
+                        'tradex_integrations.nowpayments.environment',
+                        'SANDBOX'
+                    )
+                ),
             ],
 
             'LOCAL_BANK' => [
-                'enabled' =>
-                    (bool) config(
-                        'tradex_payments.local_bank.enabled',
-                        false
-                    ),
+                'enabled' => (bool) config(
+                    'tradex_payments.local_bank.enabled',
+                    false
+                ),
 
-                'countries' =>
-                    $this->normalizeCountries(
-                        (array) config(
-                            'tradex_payments.local_bank.countries',
-                            []
-                        )
-                    ),
+                'countries' => $this->normalizeCountries(
+                    (array) config(
+                        'tradex_payments.local_bank.countries',
+                        []
+                    )
+                ),
 
-                'environment' =>
-                    'MANUAL',
+                'environment' => 'MANUAL',
             ],
 
-            default =>
-                abort(
-                    404
-                ),
+            default => abort(
+                404
+            ),
         };
     }
 
@@ -902,8 +843,7 @@ class AdminIntegrationService
         $normalized = [];
 
         foreach (
-            $countries
-            as $country
+            $countries as $country
         ) {
             $country =
                 strtoupper(
@@ -924,6 +864,10 @@ class AdminIntegrationService
 
             $normalized[] =
                 $country;
+        }
+
+        if (in_array('*', $normalized, true)) {
+            return ['*'];
         }
 
         return array_values(
@@ -984,28 +928,22 @@ class AdminIntegrationService
         IntegrationProviderState $state
     ): array {
         return [
-            'provider_code' =>
-                $state->provider_code,
+            'provider_code' => $state->provider_code,
 
-            'is_enabled' =>
-                (bool) $state
-                    ->is_enabled,
+            'is_enabled' => (bool) $state
+                ->is_enabled,
 
-            'environment' =>
-                $state->environment,
+            'environment' => $state->environment,
 
-            'countries' =>
-                $this->normalizeCountries(
-                    $state->countries
-                    ?? []
-                ),
+            'countries' => $this->normalizeCountries(
+                $state->countries
+                ?? []
+            ),
 
-            'eligibility_confirmed' =>
-                (bool) $state
-                    ->eligibility_confirmed,
+            'eligibility_confirmed' => (bool) $state
+                ->eligibility_confirmed,
 
-            'version' =>
-                (int) $state->version,
+            'version' => (int) $state->version,
         ];
     }
 }

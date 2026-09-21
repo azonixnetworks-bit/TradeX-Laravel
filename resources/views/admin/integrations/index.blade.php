@@ -93,9 +93,11 @@
                 <tr>
                     <th>Countries</th>
                     <td>
-                        {{ $provider['countries'] === []
-                            ? 'None approved'
-                            : implode(', ', $provider['countries']) }}
+                        {{ in_array('*', $provider['countries'], true)
+                            ? 'All Countries'
+                            : ($provider['countries'] === []
+                                ? 'None approved'
+                                : implode(', ', $provider['countries'])) }}
                     </td>
                 </tr>
                 <tr>

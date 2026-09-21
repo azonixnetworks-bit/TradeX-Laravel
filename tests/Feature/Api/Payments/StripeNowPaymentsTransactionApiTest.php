@@ -171,7 +171,7 @@ class StripeNowPaymentsTransactionApiTest extends TestCase
         $token = $this->issueBoundToken($user);
 
         Http::fake([
-            'https://api.sandbox.nowpayments.io/v1/invoice' => Http::response([
+            'https://api-sandbox.nowpayments.io/v1/invoice' => Http::response([
                 'id' => 'np_invoice_api21',
                 'invoice_url' => 'https://invoice.nowpayments.test/np_invoice_api21',
             ], 200),
@@ -195,7 +195,7 @@ class StripeNowPaymentsTransactionApiTest extends TestCase
         $this->assertDatabaseCount('payment_orders', 1);
         Http::assertSentCount(1);
         Http::assertSent(function (HttpRequest $request) use ($uuid): bool {
-            return $request->url() === 'https://api.sandbox.nowpayments.io/v1/invoice'
+            return $request->url() === 'https://api-sandbox.nowpayments.io/v1/invoice'
                 && $request->hasHeader('x-api-key', 'now-api-api21')
                 && (string) data_get($request->data(), 'order_id') === $uuid
                 && (float) data_get($request->data(), 'price_amount') === 79.0
@@ -318,7 +318,7 @@ class StripeNowPaymentsTransactionApiTest extends TestCase
         config()->set('tradex_integrations.nowpayments.environment', 'SANDBOX');
         config()->set('tradex_integrations.nowpayments.api_key', 'now-api-api21');
         config()->set('tradex_integrations.nowpayments.ipn_secret', 'now-ipn-api21');
-        config()->set('tradex_integrations.nowpayments.sandbox_base_url', 'https://api.sandbox.nowpayments.io');
+        config()->set('tradex_integrations.nowpayments.sandbox_base_url', 'https://api-sandbox.nowpayments.io');
         config()->set('tradex_integrations.nowpayments.success_url', 'https://app.tradex.test/payments/success');
         config()->set('tradex_integrations.nowpayments.cancel_url', 'https://app.tradex.test/payments/cancel');
 
