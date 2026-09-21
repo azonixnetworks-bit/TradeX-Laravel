@@ -27,7 +27,8 @@
         <p>Store one protected master video and publish it through approved TradeX platform integrations.</p>
     </div>
 
-    <div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="secondary-btn" href="{{ route('admin.our_channel.connections.index') }}">Channel Connections</a>
         <a class="secondary-btn" href="{{ route('admin.our_channel.index') }}">← Back</a>
     </div>
 </div>
