@@ -180,3 +180,48 @@ On Windows PowerShell:
 ```powershell
 php artisan route:list | Select-String "our-channel"
 ```
+
+
+## YouTube admin OAuth connection flow
+
+TradeX now supports a database-managed Google OAuth Web Server flow from **Admin → Our Channel → Channel Connections**.
+
+### Google Cloud setup
+
+1. Create or select a Google Cloud project.
+2. Enable **YouTube Data API v3**.
+3. Configure the OAuth consent screen for the Google account that owns the TradeX YouTube channel.
+4. Create an OAuth 2.0 Client ID with application type **Web application**.
+5. In TradeX, open **Channel Connections** and copy the exact **Authorized redirect URI** displayed in the YouTube card.
+6. Add that exact URI to the Google OAuth client. The scheme, host, port and path must match exactly.
+7. Copy the OAuth Client ID and Client Secret into TradeX and save the configuration.
+8. Choose **Connect YouTube**, approve the Google consent screen and return to TradeX.
+
+TradeX requests offline access so the queue worker can refresh access tokens without an admin being present. The OAuth state is one-time, session-bound, admin-bound and expires after 10 minutes.
+
+TradeX requests these scopes:
+
+- `https://www.googleapis.com/auth/youtube.upload`
+- `https://www.googleapis.com/auth/youtube.readonly`
+
+The read-only scope is used to verify the authenticated YouTube channel identity. The upload scope is used by the existing resumable uploader.
+
+After OAuth succeeds, TradeX stores the Google refresh token encrypted in `channel_connections.credentials`, records only safe channel metadata in normal JSON, marks the connection verified and enables YouTube auto publishing.
+
+### Local development redirect URI
+
+When Laravel is served at `http://127.0.0.1:8000`, the callback shown by TradeX will be similar to:
+
+```text
+http://127.0.0.1:8000/admin/our-channel/connections/youtube/callback
+```
+
+Use the exact value rendered by the TradeX admin page rather than copying this example.
+
+### Production
+
+Production OAuth should use the public HTTPS TradeX origin. Ensure reverse-proxy / trusted-proxy configuration makes Laravel detect the correct HTTPS scheme and host before copying the callback URI into Google Cloud.
+
+### YouTube upload visibility
+
+YouTube can restrict uploads from unverified API projects to private visibility until the API project completes the applicable YouTube compliance audit. Setting TradeX default privacy to Public does not override a provider-side restriction.
