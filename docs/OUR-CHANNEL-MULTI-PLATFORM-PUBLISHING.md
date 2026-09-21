@@ -137,3 +137,46 @@ Unpublishing from TradeX does not delete already-published posts from external p
 - Master video paths are server-generated and restricted to protected filesystem disks.
 - Existing RBAC permission `our_channel.manage` gates mutation actions.
 - External publishing status is retained per platform for auditability.
+
+
+## Telegram admin connection flow
+
+TradeX now includes **Admin → Our Channel → Channel Connections**.
+
+Telegram setup no longer requires placing the bot token directly into source code or the browser after the first save.
+
+1. Create a Telegram bot with BotFather.
+2. Add the bot as an administrator of the target Telegram Channel.
+3. Give the bot permission to post messages.
+4. Open **Channel Connections** in TradeX.
+5. Enter the bot token and Channel `@username` or numeric Channel ID.
+6. Keep **Auto Publishing** disabled and choose **Save & Test Connection**.
+7. TradeX verifies:
+   - the bot token,
+   - that the destination is a Telegram Channel,
+   - that the bot is a Channel administrator,
+   - that the bot can post messages.
+8. After a successful test, enable **Auto Publishing** and save (or enable it in the same successful Save & Test request).
+
+The bot token and numeric destination are stored in the `channel_connections` table using Laravel encrypted casts. The token is never rendered back to the browser or copied into audit-log payloads.
+
+A saved database connection takes precedence over the legacy Telegram environment fallback. This allows existing deployments that use `TRADEX_CHANNEL_TELEGRAM_*` variables to continue working until they intentionally save a database-managed Telegram connection.
+
+After pulling this phase, run:
+
+```bash
+php artisan migrate
+php artisan config:clear
+```
+
+Then verify the routes:
+
+```bash
+php artisan route:list | grep our-channel
+```
+
+On Windows PowerShell:
+
+```powershell
+php artisan route:list | Select-String "our-channel"
+```
