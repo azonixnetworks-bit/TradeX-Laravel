@@ -33,7 +33,7 @@ class AdminChannelConnectionService
         array $data,
         Request $request
     ): array {
-        return DB::transaction(
+        $result = DB::transaction(
             function () use (
                 $admin,
                 $data,
@@ -102,9 +102,28 @@ class AdminChannelConnectionService
                         )
                     );
 
-                $chatId = trim(
-                    (string) $data['chat_id']
+                $submittedChatId = trim(
+                    (string) (
+                        $data['chat_id']
+                        ?? ''
+                    )
                 );
+
+                $chatId = $submittedChatId !== ''
+                    ? $submittedChatId
+                    : trim(
+                        (string) (
+                            $existing['chat_id']
+                            ?? ''
+                        )
+                    );
+
+                if ($chatId === '') {
+                    throw ValidationException::withMessages([
+                        'chat_id' =>
+                            'Enter the Telegram Channel ID or @username before saving this connection.',
+                    ]);
+                }
 
                 if ($token === '') {
                     throw ValidationException::withMessages([
@@ -211,10 +230,12 @@ class AdminChannelConnectionService
                             userAgent: $request->userAgent()
                         );
 
-                        throw ValidationException::withMessages([
-                            'bot_token' =>
+                        return [
+                            ...$this->resolver
+                                ->connectionOverview()['telegram'],
+                            '_validation_error' =>
                                 $exception->getMessage(),
-                        ]);
+                        ];
                     }
 
                     $testStatus =
@@ -302,6 +323,15 @@ class AdminChannelConnectionService
             },
             3
         );
+
+        if (isset($result['_validation_error'])) {
+            throw ValidationException::withMessages([
+                'bot_token' =>
+                    (string) $result['_validation_error'],
+            ]);
+        }
+
+        return $result;
     }
 
     private function fingerprint(
