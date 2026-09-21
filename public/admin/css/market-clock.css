@@ -144,12 +144,11 @@
 
 .market-dial-wrap {
     /*
-     * Keep the complete 24-hour dial visible in the initial viewport on
-     * common laptop/desktop heights while still allowing it to grow on
-     * larger screens. The SVG viewBox and all clock/session logic stay
-     * unchanged.
+     * Allow the 24-hour dial to grow up to 920px while remaining responsive
+     * to the available content width. The SVG viewBox and all clock/session
+     * logic stay unchanged.
      */
-    width: min(100%, 560px, 68vh);
+    width: min(100%, 920px);
     margin: 8px auto 0;
     aspect-ratio: 1;
 }
