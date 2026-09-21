@@ -10,6 +10,7 @@ use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\ChannelVideo;
 use App\Models\ChannelVideoPublication;
+use App\Services\OurChannel\ChannelConnectionResolver;
 use App\Services\OurChannel\ChannelPublicationService;
 use App\Support\YouTubeVideo;
 use Illuminate\Database\QueryException;
@@ -89,7 +90,9 @@ class ChannelVideoController extends Controller
         );
     }
 
-    public function create(): View
+    public function create(
+        ChannelConnectionResolver $connections
+    ): View
     {
         $admin = $this->authenticatedAdmin();
 
@@ -105,7 +108,7 @@ class ChannelVideoController extends Controller
                     ChannelVideoPublication::platformLabels(),
 
                 'platformStates' =>
-                    $this->platformStates(),
+                    $connections->platformStates(),
             ]
         );
     }
@@ -910,48 +913,6 @@ class ChannelVideoController extends Controller
         return $trimmed !== ''
             ? $trimmed
             : null;
-    }
-
-    private function platformStates(): array
-    {
-        return [
-            ChannelVideoPublication::PLATFORM_YOUTUBE => [
-                'mode' => 'AUTO',
-                'enabled' => (bool) config(
-                    'tradex_channels.platforms.youtube.enabled',
-                    false
-                ),
-            ],
-            ChannelVideoPublication::PLATFORM_INSTAGRAM => [
-                'mode' => 'AUTO',
-                'enabled' => (bool) config(
-                    'tradex_channels.platforms.instagram.enabled',
-                    false
-                ),
-            ],
-            ChannelVideoPublication::PLATFORM_FACEBOOK => [
-                'mode' => 'AUTO',
-                'enabled' => (bool) config(
-                    'tradex_channels.platforms.facebook.enabled',
-                    false
-                ),
-            ],
-            ChannelVideoPublication::PLATFORM_TELEGRAM => [
-                'mode' => 'AUTO',
-                'enabled' => (bool) config(
-                    'tradex_channels.platforms.telegram.enabled',
-                    false
-                ),
-            ],
-            ChannelVideoPublication::PLATFORM_TIKTOK => [
-                'mode' => 'CONFIRM',
-                'enabled' => false,
-            ],
-            ChannelVideoPublication::PLATFORM_WHATSAPP_CHANNEL => [
-                'mode' => 'MANUAL',
-                'enabled' => false,
-            ],
-        ];
     }
 
     private function authenticatedAdmin(): AdminUser
