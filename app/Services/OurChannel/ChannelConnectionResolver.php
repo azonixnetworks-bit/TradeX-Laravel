@@ -189,9 +189,9 @@ class ChannelConnectionResolver
                 'last_tested_at' =>
                     $telegram?->last_tested_at,
                 'metadata' =>
-                    is_array($telegram?->metadata)
-                        ? $telegram->metadata
-                        : [],
+                    $this->safeTelegramMetadata(
+                        $telegram?->metadata
+                    ),
                 'updated_by' =>
                     $telegram?->updatedByAdmin?->name,
                 'updated_at' =>
@@ -228,6 +228,43 @@ class ChannelConnectionResolver
                 'enabled' => false,
                 'managed_by' => 'MANUAL_API_PENDING',
             ],
+        ];
+    }
+
+    private function safeTelegramMetadata(
+        mixed $metadata
+    ): array {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        return [
+            'bot_id' =>
+                $metadata['bot_id']
+                ?? null,
+            'bot_username' =>
+                $metadata['bot_username']
+                ?? null,
+            'bot_display_name' =>
+                $metadata['bot_display_name']
+                ?? null,
+            'channel_id' =>
+                $metadata['channel_id']
+                ?? null,
+            'channel_title' =>
+                $metadata['channel_title']
+                ?? null,
+            'channel_username' =>
+                $metadata['channel_username']
+                ?? null,
+            'member_status' =>
+                $metadata['member_status']
+                ?? null,
+            'can_post_messages' =>
+                (bool) (
+                    $metadata['can_post_messages']
+                    ?? false
+                ),
         ];
     }
 
