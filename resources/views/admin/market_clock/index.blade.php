@@ -138,7 +138,7 @@
     </div>
 
     <section class="panel world-clock-panel" aria-labelledby="worldClockHeading">
-        <div class="market-panel-heading">
+        <div class="market-panel-heading world-clock-heading">
             <div>
                 <div class="panel-eyebrow">12 HOUR ANALOG CLOCKS</div>
                 <h2 id="worldClockHeading">World Clocks & Trading Sessions</h2>
@@ -148,11 +148,21 @@
 
         <div class="world-clock-grid" id="worldClockGrid">
             <article class="world-clock-card" data-world-clock data-timezone="Pacific/Auckland" data-label="New Zealand">
-                <div class="world-clock-face" aria-label="New Zealand analog clock">
-                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
-                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
-                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
-                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                <div class="world-clock-shell">
+                    <div class="world-clock-face" aria-label="New Zealand analog clock">
+                        <span class="clock-tick-ring" aria-hidden="true"></span>
+                        <span class="clock-orbit-arc" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
+                        <span class="clock-number n12">12</span>
+                        <span class="clock-number n3">3</span>
+                        <span class="clock-number n6">6</span>
+                        <span class="clock-number n9">9</span>
+                        <span class="clock-hand hour"></span>
+                        <span class="clock-hand minute"></span>
+                        <span class="clock-hand second"></span>
+                        <span class="clock-pin"></span>
+                    </div>
                 </div>
                 <div class="world-clock-meta">
                     <strong>New Zealand</strong>
@@ -162,11 +172,21 @@
             </article>
 
             <article class="world-clock-card" data-world-clock data-timezone="device" data-label="Device Time">
-                <div class="world-clock-face" aria-label="Device local analog clock">
-                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
-                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
-                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
-                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                <div class="world-clock-shell">
+                    <div class="world-clock-face" aria-label="Device local analog clock">
+                        <span class="clock-tick-ring" aria-hidden="true"></span>
+                        <span class="clock-orbit-arc" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
+                        <span class="clock-number n12">12</span>
+                        <span class="clock-number n3">3</span>
+                        <span class="clock-number n6">6</span>
+                        <span class="clock-number n9">9</span>
+                        <span class="clock-hand hour"></span>
+                        <span class="clock-hand minute"></span>
+                        <span class="clock-hand second"></span>
+                        <span class="clock-pin"></span>
+                    </div>
                 </div>
                 <div class="world-clock-meta">
                     <strong>Device Time</strong>
@@ -176,11 +196,21 @@
             </article>
 
             <article class="world-clock-card" data-world-clock data-timezone="Europe/London" data-label="London">
-                <div class="world-clock-face" aria-label="London analog clock">
-                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
-                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
-                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
-                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                <div class="world-clock-shell">
+                    <div class="world-clock-face" aria-label="London analog clock">
+                        <span class="clock-tick-ring" aria-hidden="true"></span>
+                        <span class="clock-orbit-arc" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
+                        <span class="clock-number n12">12</span>
+                        <span class="clock-number n3">3</span>
+                        <span class="clock-number n6">6</span>
+                        <span class="clock-number n9">9</span>
+                        <span class="clock-hand hour"></span>
+                        <span class="clock-hand minute"></span>
+                        <span class="clock-hand second"></span>
+                        <span class="clock-pin"></span>
+                    </div>
                 </div>
                 <div class="world-clock-meta">
                     <strong>London</strong>
@@ -190,11 +220,21 @@
             </article>
 
             <article class="world-clock-card" data-world-clock data-timezone="America/New_York" data-label="New York">
-                <div class="world-clock-face" aria-label="New York analog clock">
-                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
-                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
-                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
-                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                <div class="world-clock-shell">
+                    <div class="world-clock-face" aria-label="New York analog clock">
+                        <span class="clock-tick-ring" aria-hidden="true"></span>
+                        <span class="clock-orbit-arc" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
+                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
+                        <span class="clock-number n12">12</span>
+                        <span class="clock-number n3">3</span>
+                        <span class="clock-number n6">6</span>
+                        <span class="clock-number n9">9</span>
+                        <span class="clock-hand hour"></span>
+                        <span class="clock-hand minute"></span>
+                        <span class="clock-hand second"></span>
+                        <span class="clock-pin"></span>
+                    </div>
                 </div>
                 <div class="world-clock-meta">
                     <strong>New York</strong>
@@ -206,19 +246,49 @@
 
         <div class="featured-session-grid" id="featuredSessionGrid">
             @foreach(($snapshot['featured_sessions'] ?? []) as $session)
-                <article class="featured-session-card" data-featured-session="{{ $session['key'] }}">
-                    <div>
-                        <span>{{ $session['region'] }}</span>
-                        <strong>{{ $session['name'] }}</strong>
-                        <small>{{ $session['configured_open_local'] }}–{{ $session['configured_close_local'] }} · {{ $session['timezone'] }}</small>
+                <article
+                    class="featured-session-card {{ $session['status'] }}"
+                    data-featured-session="{{ $session['key'] }}"
+                >
+                    <div class="featured-session-topline">
+                        <div class="featured-session-copy">
+                            <span class="featured-session-region">{{ $session['region'] }}</span>
+                            <strong>{{ $session['name'] }}</strong>
+                            <small>{{ $session['timezone'] }}</small>
+                        </div>
+
+                        <div class="featured-session-state">
+                            <span class="market-status-badge {{ $session['status'] }}">
+                                {{ strtoupper($session['status']) }}
+                            </span>
+                            <small class="featured-session-next">
+                                {{ $session['status'] === 'open'
+                                    ? 'Closes '.$session['close_at_display']
+                                    : 'Opens '.$session['next_open_at_display'] }}
+                            </small>
+                        </div>
                     </div>
-                    <div class="featured-session-state">
-                        <span class="market-status-badge {{ $session['status'] }}">{{ strtoupper($session['status']) }}</span>
-                        <small class="featured-session-next">
-                            {{ $session['status'] === 'open'
-                                ? 'Closes '.$session['close_at_display']
-                                : 'Opens '.$session['next_open_at_display'] }}
-                        </small>
+
+                    <div class="session-window" aria-label="{{ $session['name'] }} opening and closing time">
+                        <div class="session-time session-time-open">
+                            <span>OPEN</span>
+                            <strong>{{ $session['configured_open_local'] }}</strong>
+                        </div>
+
+                        <div class="session-progress-wrap">
+                            <div class="session-progress-track">
+                                <span class="session-progress-fill"></span>
+                                <span class="session-progress-marker" aria-hidden="true"></span>
+                            </div>
+                            <small class="session-progress-label">
+                                {{ $session['status'] === 'open' ? 'Session in progress' : 'Waiting for open' }}
+                            </small>
+                        </div>
+
+                        <div class="session-time session-time-close">
+                            <span>CLOSE</span>
+                            <strong>{{ $session['configured_close_local'] }}</strong>
+                        </div>
                     </div>
                 </article>
             @endforeach
