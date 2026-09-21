@@ -3,6 +3,7 @@
 namespace App\Services\OurChannel;
 
 use App\Exceptions\ChannelConnectionException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -138,6 +139,10 @@ class TelegramConnectionTester
             ];
         } catch (ChannelConnectionException $exception) {
             throw $exception;
+        } catch (ConnectionException $exception) {
+            throw $this->transportFailure(
+                $exception
+            );
         } catch (Throwable) {
             throw new ChannelConnectionException(
                 'NETWORK_ERROR',
@@ -154,13 +159,20 @@ class TelegramConnectionTester
         int $timeout
     ): array {
         try {
-            $response = Http::timeout($timeout)
+            $response = Http::connectTimeout(
+                    min(10, $timeout)
+                )
+                ->timeout($timeout)
                 ->acceptJson()
                 ->asForm()
                 ->post(
                     $base.'/bot'.$botToken.'/'.$method,
                     $payload
                 );
+        } catch (ConnectionException $exception) {
+            throw $this->transportFailure(
+                $exception
+            );
         } catch (Throwable) {
             throw new ChannelConnectionException(
                 'NETWORK_ERROR',
@@ -171,6 +183,65 @@ class TelegramConnectionTester
         return $this->parseResponse(
             $response,
             $method
+        );
+    }
+
+    private function transportFailure(
+        ConnectionException $exception
+    ): ChannelConnectionException {
+        $message = strtolower(
+            $exception->getMessage()
+        );
+
+        if (
+            str_contains($message, 'certificate')
+            || str_contains($message, 'ssl')
+            || str_contains($message, 'ca bundle')
+            || str_contains($message, 'unable to get local issuer')
+        ) {
+            return new ChannelConnectionException(
+                'TLS_CERTIFICATE_ERROR',
+                'PHP could not verify Telegram HTTPS. Configure a trusted CA bundle for PHP cURL/OpenSSL; do not disable TLS verification.'
+            );
+        }
+
+        if (
+            str_contains($message, 'could not resolve')
+            || str_contains($message, 'name resolution')
+            || str_contains($message, 'getaddrinfo')
+            || str_contains($message, 'dns')
+        ) {
+            return new ChannelConnectionException(
+                'DNS_ERROR',
+                'PHP could not resolve api.telegram.org. Check DNS, VPN/proxy and firewall settings.'
+            );
+        }
+
+        if (
+            str_contains($message, 'timed out')
+            || str_contains($message, 'timeout')
+            || str_contains($message, 'operation timed out')
+        ) {
+            return new ChannelConnectionException(
+                'CONNECTION_TIMEOUT',
+                'The Telegram HTTPS connection timed out. Check firewall, proxy/VPN and outbound port 443 access.'
+            );
+        }
+
+        if (
+            str_contains($message, 'connection refused')
+            || str_contains($message, 'failed to connect')
+            || str_contains($message, 'could not connect')
+        ) {
+            return new ChannelConnectionException(
+                'CONNECTION_FAILED',
+                'PHP could not open an HTTPS connection to api.telegram.org on port 443.'
+            );
+        }
+
+        return new ChannelConnectionException(
+            'NETWORK_ERROR',
+            'TradeX could not reach Telegram for connection verification.'
         );
     }
 
