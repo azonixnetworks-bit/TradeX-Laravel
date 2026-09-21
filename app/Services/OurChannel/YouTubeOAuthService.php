@@ -282,6 +282,29 @@ class YouTubeOAuthService
             );
         }
 
+        $grantedScopes = $this->scopeList(
+            $tokenData['scope']
+            ?? null
+        );
+
+        $requiredScopes = [
+            'https://www.googleapis.com/auth/youtube.upload',
+            'https://www.googleapis.com/auth/youtube.readonly',
+        ];
+
+        if (
+            $grantedScopes !== []
+            && array_diff(
+                $requiredScopes,
+                $grantedScopes
+            ) !== []
+        ) {
+            throw new ChannelConnectionException(
+                'OAUTH_SCOPE_MISSING',
+                'Google did not grant all YouTube permissions required for channel verification and video upload.'
+            );
+        }
+
         $channel = $this->loadChannel(
             $accessToken
         );
@@ -294,7 +317,7 @@ class YouTubeOAuthService
                 $credentials,
                 $refreshToken,
                 $channel,
-                $tokenData
+                $grantedScopes
             ): ChannelConnection {
                 $locked = ChannelConnection::query()
                     ->whereKey(
@@ -326,10 +349,7 @@ class YouTubeOAuthService
                         'thumbnail_url' =>
                             $channel['thumbnail_url'],
                         'scopes' =>
-                            $this->scopeList(
-                                $tokenData['scope']
-                                ?? null
-                            ),
+                            $grantedScopes,
                     ],
                     'is_enabled' => true,
                     'last_test_status' =>
@@ -485,13 +505,22 @@ class YouTubeOAuthService
             ? $snippet['thumbnails']
             : [];
 
+        $channelId = trim(
+            (string) (
+                $item['id']
+                ?? ''
+            )
+        );
+
+        if ($channelId === '') {
+            throw new ChannelConnectionException(
+                'YOUTUBE_CHANNEL_ID_MISSING',
+                'YouTube returned a channel without a valid channel identifier.'
+            );
+        }
+
         return [
-            'channel_id' => trim(
-                (string) (
-                    $item['id']
-                    ?? ''
-                )
-            ),
+            'channel_id' => $channelId,
             'channel_title' => trim(
                 (string) (
                     $snippet['title']
