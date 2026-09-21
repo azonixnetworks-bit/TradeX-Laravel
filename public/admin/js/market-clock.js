@@ -402,6 +402,7 @@
 
         updateCountdown();
         updateWorldClocks();
+        renderFeaturedSessions();
     };
 
     const formatDuration = (seconds) => {
@@ -522,32 +523,124 @@
         });
     };
 
+    const clampPercent = (value) => Math.max(
+        0,
+        Math.min(100, Number.isFinite(value) ? value : 0)
+    );
+
+    const sessionCardFor = (key) => Array.from(
+        document.querySelectorAll('[data-featured-session]')
+    ).find((card) => card.dataset.featuredSession === String(key));
+
+    const featuredSessionVisual = (session) => {
+        const nowMs = currentServerDate().getTime();
+
+        if (session.status === 'open') {
+            const openMs = Date.parse(session.open_at_utc || '');
+            const closeMs = Date.parse(session.close_at_utc || '');
+
+            if (Number.isFinite(openMs) && Number.isFinite(closeMs) && closeMs > openMs) {
+                const progress = clampPercent(
+                    ((nowMs - openMs) / (closeMs - openMs)) * 100
+                );
+                const remainingSeconds = Math.max(
+                    0,
+                    Math.floor((closeMs - nowMs) / 1000)
+                );
+                const closingSoon = remainingSeconds <= 3600;
+
+                return {
+                    state: closingSoon ? 'closing-soon' : 'open',
+                    progress,
+                    label: closingSoon ? 'Closing soon' : 'Session in progress',
+                    next: `Closes ${formatDuration(remainingSeconds)}`,
+                };
+            }
+
+            return {
+                state: 'open',
+                progress: 0,
+                label: 'Session in progress',
+                next: session.close_at_display
+                    ? `Closes ${session.close_at_display}`
+                    : 'Open now',
+            };
+        }
+
+        const nextOpenMs = Date.parse(session.next_open_at_utc || '');
+
+        if (Number.isFinite(nextOpenMs)) {
+            const untilOpenSeconds = Math.max(
+                0,
+                Math.floor((nextOpenMs - nowMs) / 1000)
+            );
+            const opensSoon = untilOpenSeconds <= 3600;
+            const progress = opensSoon
+                ? clampPercent((1 - (untilOpenSeconds / 3600)) * 100)
+                : 0;
+
+            return {
+                state: opensSoon ? 'opens-soon' : 'closed',
+                progress,
+                label: opensSoon ? 'Opening soon' : 'Waiting for open',
+                next: opensSoon
+                    ? `Opens ${formatDuration(untilOpenSeconds)}`
+                    : (session.next_open_at_display
+                        ? `Opens ${session.next_open_at_display}`
+                        : 'Closed'),
+            };
+        }
+
+        return {
+            state: 'closed',
+            progress: 0,
+            label: 'Waiting for open',
+            next: 'Closed',
+        };
+    };
+
     const renderFeaturedSessions = () => {
         const sessions = Array.isArray(snapshot.featured_sessions)
             ? snapshot.featured_sessions
             : [];
 
         sessions.forEach((session) => {
-            const card = document.querySelector(
-                `[data-featured-session="${CSS.escape(String(session.key))}"]`
-            );
+            const card = sessionCardFor(session.key);
 
             if (!card) {
                 return;
             }
 
+            const visual = featuredSessionVisual(session);
             const badge = card.querySelector('.market-status-badge');
             const next = card.querySelector('.featured-session-next');
+            const progressLabel = card.querySelector('.session-progress-label');
+
+            card.classList.remove(
+                'open',
+                'closed',
+                'closing-soon',
+                'opens-soon'
+            );
+            card.classList.add(visual.state);
+            card.style.setProperty(
+                '--session-progress',
+                `${visual.progress.toFixed(2)}%`
+            );
 
             if (badge) {
-                badge.className = `market-status-badge ${session.status}`;
-                badge.textContent = String(session.status || '').toUpperCase();
+                badge.className = `market-status-badge ${visual.state}`;
+                badge.textContent = visual.state
+                    .replaceAll('-', ' ')
+                    .toUpperCase();
             }
 
             if (next) {
-                next.textContent = session.status === 'open'
-                    ? `Closes ${session.close_at_display || ''}`
-                    : `Opens ${session.next_open_at_display || ''}`;
+                next.textContent = visual.next;
+            }
+
+            if (progressLabel) {
+                progressLabel.textContent = visual.label;
             }
         });
     };
