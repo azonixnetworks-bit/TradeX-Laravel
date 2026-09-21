@@ -143,7 +143,12 @@
 }
 
 .market-dial-wrap {
-    width: min(100%, 720px);
+    /*
+     * Allow the 24-hour dial to grow up to 920px while remaining responsive
+     * to the available content width. The SVG viewBox and all clock/session
+     * logic stay unchanged.
+     */
+    width: min(100%, 920px);
     margin: 8px auto 0;
     aspect-ratio: 1;
 }
@@ -532,5 +537,439 @@
     .market-timezone-chip {
         max-width: 100%;
         align-self: flex-start;
+    }
+}
+
+
+.world-clock-panel {
+    margin-top: 18px;
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 88% 4%, rgba(255, 122, 0, .035), transparent 28%),
+        var(--surface);
+}
+
+.world-clock-heading {
+    align-items: center;
+}
+
+.world-clock-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 20px;
+}
+
+.world-clock-card {
+    min-width: 0;
+    padding: 20px 14px 18px;
+    border: 1px solid rgba(113, 142, 171, .17);
+    border-radius: 18px;
+    background:
+        linear-gradient(180deg, rgba(8, 30, 50, .74), rgba(5, 24, 42, .92));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, .018),
+        0 16px 34px rgba(0, 0, 0, .10);
+}
+
+.world-clock-shell {
+    display: grid;
+    place-items: center;
+    min-height: 182px;
+}
+
+.world-clock-face.classic-clock-face {
+    position: relative;
+    width: min(164px, 84%);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 5px solid #111b2e;
+    background: #ffffff;
+    box-shadow:
+        0 10px 24px rgba(0, 0, 0, .18),
+        inset 0 0 0 1px rgba(17, 27, 46, .04);
+}
+
+.world-clock-face .clock-number {
+    position: absolute;
+    z-index: 2;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1;
+    transform: translate(-50%, -50%);
+    text-shadow: none;
+    user-select: none;
+}
+
+.world-clock-face .clock-number.n12 { left: 50%; top: 10%; }
+.world-clock-face .clock-number.n1  { left: 68%; top: 15%; }
+.world-clock-face .clock-number.n2  { left: 82%; top: 29%; }
+.world-clock-face .clock-number.n3  { left: 88%; top: 50%; }
+.world-clock-face .clock-number.n4  { left: 82%; top: 71%; }
+.world-clock-face .clock-number.n5  { left: 68%; top: 85%; }
+.world-clock-face .clock-number.n6  { left: 50%; top: 90%; }
+.world-clock-face .clock-number.n7  { left: 32%; top: 85%; }
+.world-clock-face .clock-number.n8  { left: 18%; top: 71%; }
+.world-clock-face .clock-number.n9  { left: 12%; top: 50%; }
+.world-clock-face .clock-number.n10 { left: 18%; top: 29%; }
+.world-clock-face .clock-number.n11 { left: 32%; top: 15%; }
+
+.world-clock-face .clock-hand {
+    position: absolute;
+    z-index: 4;
+    left: 50%;
+    bottom: 50%;
+    transform-origin: 50% 100%;
+    border-radius: 999px;
+    transform: translateX(-50%) rotate(0deg);
+}
+
+.world-clock-face .clock-hand.hour {
+    width: 6px;
+    height: 28%;
+    background: #111b2e;
+    box-shadow: none;
+}
+
+.world-clock-face .clock-hand.minute {
+    width: 4px;
+    height: 39%;
+    background: #111b2e;
+}
+
+.world-clock-face .clock-hand.second {
+    z-index: 5;
+    width: 1.5px;
+    height: 43%;
+    background: #ef2b2d;
+}
+
+.world-clock-face .clock-pin {
+    position: absolute;
+    z-index: 6;
+    left: 50%;
+    top: 50%;
+    width: 11px;
+    height: 11px;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: #ef2b2d;
+    box-shadow: 0 0 0 2px rgba(239, 43, 45, .08);
+}
+
+.world-clock-meta {
+    display: grid;
+    gap: 6px;
+    text-align: center;
+}
+
+.world-clock-meta strong {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 850;
+}
+
+.world-clock-digital {
+    color: var(--market-teal);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: .015em;
+    font-variant-numeric: tabular-nums;
+}
+
+.world-clock-meta small {
+    color: var(--text-muted);
+    font-size: 10px;
+    overflow-wrap: anywhere;
+}
+
+.featured-session-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 18px;
+}
+
+.featured-session-card {
+    --session-color: #8393a7;
+    --session-soft: rgba(131, 147, 167, .09);
+    position: relative;
+    min-width: 0;
+    padding: 17px;
+    overflow: hidden;
+    border: 1px solid rgba(131, 147, 167, .16);
+    border-radius: 16px;
+    background:
+        linear-gradient(145deg, var(--session-soft), rgba(4, 18, 33, .08)),
+        rgba(4, 20, 35, .42);
+    transition:
+        border-color .25s ease,
+        box-shadow .25s ease,
+        background .25s ease;
+}
+
+.featured-session-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--session-color);
+    opacity: .78;
+}
+
+.featured-session-card.open {
+    --session-color: #20c7a1;
+    --session-soft: rgba(32, 199, 161, .09);
+    border-color: rgba(32, 199, 161, .22);
+}
+
+.featured-session-card.closing-soon {
+    --session-color: #ff9a3d;
+    --session-soft: rgba(255, 154, 61, .10);
+    border-color: rgba(255, 154, 61, .25);
+    box-shadow: 0 0 0 1px rgba(255, 154, 61, .035);
+}
+
+.featured-session-card.opens-soon {
+    --session-color: #5f8fff;
+    --session-soft: rgba(95, 143, 255, .10);
+    border-color: rgba(95, 143, 255, .24);
+}
+
+.featured-session-card.closed {
+    --session-color: #8393a7;
+    --session-soft: rgba(131, 147, 167, .065);
+}
+
+.featured-session-topline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.featured-session-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.featured-session-region {
+    color: var(--market-orange);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .09em;
+}
+
+.featured-session-copy strong {
+    color: var(--text);
+    font-size: 14px;
+}
+
+.featured-session-copy small,
+.featured-session-card small {
+    color: var(--text-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.featured-session-state {
+    flex: 0 0 auto;
+    display: grid;
+    justify-items: end;
+    gap: 7px;
+    text-align: right;
+}
+
+.featured-session-next {
+    max-width: 170px;
+}
+
+.market-status-badge.closing-soon {
+    color: #ff9a3d;
+    background: rgba(255, 154, 61, .14);
+}
+
+.market-status-badge.opens-soon {
+    color: #79a3ff;
+    background: rgba(95, 143, 255, .14);
+}
+
+.session-window {
+    display: grid;
+    grid-template-columns: auto minmax(90px, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.session-time {
+    min-width: 66px;
+    padding: 8px 9px;
+    border-radius: 11px;
+    display: grid;
+    gap: 2px;
+    text-align: center;
+    border: 1px solid transparent;
+}
+
+.session-time span {
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .10em;
+}
+
+.session-time strong {
+    font-size: 12px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.session-time-open {
+    color: #2ad7b1;
+    background: rgba(32, 199, 161, .12);
+    border-color: rgba(32, 199, 161, .17);
+}
+
+.session-time-close {
+    color: #ff9a3d;
+    background: rgba(255, 154, 61, .12);
+    border-color: rgba(255, 154, 61, .17);
+}
+
+.session-progress-wrap {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.session-progress-track {
+    position: relative;
+    height: 10px;
+    overflow: visible;
+    border-radius: 999px;
+    background: rgba(133, 154, 177, .13);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .025);
+}
+
+.session-progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--session-progress, 0%);
+    max-width: 100%;
+    border-radius: inherit;
+    background: var(--session-color);
+    box-shadow: 0 0 12px rgba(32, 199, 161, .08);
+    transition: width .45s ease, background-color .25s ease;
+}
+
+.session-progress-marker {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: var(--session-progress, 0%);
+    width: 10px;
+    height: 10px;
+    border: 3px solid var(--session-color);
+    border-radius: 50%;
+    background: #071a2c;
+    transform: translate(-50%, -50%);
+    transition: left .45s ease, border-color .25s ease;
+}
+
+.featured-session-card.closed .session-progress-marker {
+    opacity: .35;
+}
+
+.session-progress-label {
+    min-height: 14px;
+    text-align: center;
+    font-size: 9px !important;
+    color: var(--session-color) !important;
+    font-weight: 750;
+}
+
+@media (max-width: 1100px) {
+    .world-clock-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .featured-session-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 620px) {
+    .world-clock-panel {
+        padding: 16px;
+    }
+
+    .world-clock-heading {
+        align-items: stretch;
+    }
+
+    .world-clock-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .world-clock-card {
+        padding: 15px 8px;
+    }
+
+    .world-clock-shell {
+        min-height: 150px;
+    }
+
+    .world-clock-face {
+        width: min(136px, 92%);
+    }
+
+    .world-clock-digital {
+        font-size: 14px;
+    }
+
+    .featured-session-topline {
+        gap: 10px;
+    }
+}
+
+@media (max-width: 430px) {
+    .world-clock-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .world-clock-card {
+        padding: 18px 12px;
+    }
+
+    .world-clock-shell {
+        min-height: 164px;
+    }
+
+    .world-clock-face {
+        width: 150px;
+    }
+
+    .featured-session-topline {
+        flex-direction: column;
+    }
+
+    .featured-session-state {
+        justify-items: start;
+        text-align: left;
+    }
+
+    .session-window {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .session-progress-wrap {
+        grid-column: 1 / -1;
+        grid-row: 2;
     }
 }

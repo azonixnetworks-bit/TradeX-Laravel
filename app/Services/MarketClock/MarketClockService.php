@@ -36,6 +36,17 @@ class MarketClockService
             static fn (array $session): bool => $session['status'] === 'open'
         ));
 
+        $featuredSessions = [];
+
+        foreach ((array) config('market_clock.featured_sessions', []) as $index => $definition) {
+            $featuredSessions[] = $this->buildSession(
+                (array) $definition,
+                (int) $index,
+                $displayTimezone,
+                $nowUtc
+            );
+        }
+
         $nextSession = $this->nextSession($sessions, $nowUtc);
         $activeNames = array_column($activeSessions, 'name');
 
@@ -73,6 +84,7 @@ class MarketClockService
                 'insight' => $this->insight($activeNames),
             ],
             'sessions' => $sessions,
+            'featured_sessions' => $featuredSessions,
         ];
     }
 
