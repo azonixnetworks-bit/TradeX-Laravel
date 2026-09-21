@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\OurChannel\ChannelConnectionController;
 use App\Http\Controllers\Admin\OurChannel\ChannelVideoController;
 use App\Http\Controllers\ChannelMediaDeliveryController;
 use Illuminate\Support\Facades\Route;
@@ -31,6 +32,20 @@ Route::prefix('admin')
                     '/',
                     [ChannelVideoController::class, 'index']
                 )->name('index');
+
+                Route::get(
+                    '/connections',
+                    [ChannelConnectionController::class, 'index']
+                )
+                    ->middleware('throttle:60,1')
+                    ->name('connections.index');
+
+                Route::patch(
+                    '/connections/telegram',
+                    [ChannelConnectionController::class, 'updateTelegram']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.telegram.update');
 
                 Route::get(
                     '/create',
