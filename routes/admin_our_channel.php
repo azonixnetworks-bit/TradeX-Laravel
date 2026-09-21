@@ -41,6 +41,27 @@ Route::prefix('admin')
                     ->name('connections.index');
 
                 Route::patch(
+                    '/connections/youtube',
+                    [ChannelConnectionController::class, 'updateYouTube']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.youtube.update');
+
+                Route::get(
+                    '/connections/youtube/connect',
+                    [ChannelConnectionController::class, 'startYouTube']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.youtube.connect');
+
+                Route::get(
+                    '/connections/youtube/callback',
+                    [ChannelConnectionController::class, 'youtubeCallback']
+                )
+                    ->middleware('throttle:20,1')
+                    ->name('connections.youtube.callback');
+
+                Route::patch(
                     '/connections/telegram',
                     [ChannelConnectionController::class, 'updateTelegram']
                 )
