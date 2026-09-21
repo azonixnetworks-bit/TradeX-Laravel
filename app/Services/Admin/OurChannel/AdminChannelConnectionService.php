@@ -326,7 +326,7 @@ class AdminChannelConnectionService
 
         if (isset($result['_validation_error'])) {
             throw ValidationException::withMessages([
-                'bot_token' =>
+                'connection_test' =>
                     (string) $result['_validation_error'],
             ]);
         }
