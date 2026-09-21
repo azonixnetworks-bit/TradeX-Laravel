@@ -543,7 +543,7 @@
     border-radius: 18px;
     overflow: hidden;
     background:
-        radial-gradient(circle at 88% 4%, rgba(91, 100, 255, .07), transparent 28%),
+        radial-gradient(circle at 88% 4%, rgba(255, 122, 0, .035), transparent 28%),
         var(--surface);
 }
 
@@ -573,99 +573,47 @@
 .world-clock-shell {
     display: grid;
     place-items: center;
-    min-height: 174px;
+    min-height: 182px;
 }
 
-.world-clock-face {
-    --clock-accent: #5965f2;
+.world-clock-face.classic-clock-face {
     position: relative;
-    width: min(160px, 82%);
+    width: min(164px, 84%);
     aspect-ratio: 1;
     border-radius: 50%;
-    border: 2px solid rgba(111, 126, 255, .72);
-    background:
-        radial-gradient(circle at 45% 42%, rgba(24, 50, 73, .78), rgba(5, 22, 39, .98) 68%);
+    border: 5px solid #111b2e;
+    background: #ffffff;
     box-shadow:
-        inset 0 0 0 1px rgba(255, 255, 255, .025),
-        0 18px 30px rgba(0, 0, 0, .17);
+        0 10px 24px rgba(0, 0, 0, .18),
+        inset 0 0 0 1px rgba(17, 27, 46, .04);
 }
 
-.clock-tick-ring {
-    position: absolute;
-    inset: 17px;
-    border-radius: 50%;
-    background:
-        repeating-conic-gradient(
-            from -90deg,
-            rgba(226, 235, 247, .62) 0deg .75deg,
-            transparent .75deg 6deg
-        );
-    -webkit-mask:
-        radial-gradient(circle, transparent 0 74%, #000 75% 100%);
-    mask:
-        radial-gradient(circle, transparent 0 74%, #000 75% 100%);
-    pointer-events: none;
-}
-
-.clock-orbit-arc {
-    position: absolute;
-    inset: -8px;
-    border-radius: 50%;
-    background:
-        conic-gradient(
-            from 318deg,
-            transparent 0deg 30deg,
-            var(--clock-accent) 31deg 183deg,
-            transparent 184deg 360deg
-        );
-    -webkit-mask:
-        radial-gradient(circle, transparent 0 84%, #000 85% 100%);
-    mask:
-        radial-gradient(circle, transparent 0 84%, #000 85% 100%);
-    filter: drop-shadow(0 0 8px rgba(89, 101, 242, .13));
-    pointer-events: none;
-}
-
-.clock-orbit-dot {
+.world-clock-face .clock-number {
     position: absolute;
     z-index: 2;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    background: var(--surface);
-    border: 5px solid var(--clock-accent);
-    box-sizing: content-box;
-    box-shadow: 0 0 0 2px rgba(89, 101, 242, .05);
-    pointer-events: none;
-}
-
-.clock-orbit-dot-start {
-    top: 4px;
-    right: 27px;
-}
-
-.clock-orbit-dot-end {
-    right: 1px;
-    bottom: 28px;
-}
-
-.clock-number {
-    position: absolute;
-    z-index: 3;
-    color: #dbe7f3;
-    font-size: 11px;
-    font-weight: 850;
+    color: #111827;
+    font-size: 12px;
+    font-weight: 800;
     line-height: 1;
     transform: translate(-50%, -50%);
-    text-shadow: 0 1px 8px rgba(0, 0, 0, .35);
+    text-shadow: none;
+    user-select: none;
 }
 
-.clock-number.n12 { left: 50%; top: 16%; }
-.clock-number.n3 { left: 84%; top: 50%; }
-.clock-number.n6 { left: 50%; top: 84%; }
-.clock-number.n9 { left: 16%; top: 50%; }
+.world-clock-face .clock-number.n12 { left: 50%; top: 10%; }
+.world-clock-face .clock-number.n1  { left: 68%; top: 15%; }
+.world-clock-face .clock-number.n2  { left: 82%; top: 29%; }
+.world-clock-face .clock-number.n3  { left: 88%; top: 50%; }
+.world-clock-face .clock-number.n4  { left: 82%; top: 71%; }
+.world-clock-face .clock-number.n5  { left: 68%; top: 85%; }
+.world-clock-face .clock-number.n6  { left: 50%; top: 90%; }
+.world-clock-face .clock-number.n7  { left: 32%; top: 85%; }
+.world-clock-face .clock-number.n8  { left: 18%; top: 71%; }
+.world-clock-face .clock-number.n9  { left: 12%; top: 50%; }
+.world-clock-face .clock-number.n10 { left: 18%; top: 29%; }
+.world-clock-face .clock-number.n11 { left: 32%; top: 15%; }
 
-.clock-hand {
+.world-clock-face .clock-hand {
     position: absolute;
     z-index: 4;
     left: 50%;
@@ -675,38 +623,37 @@
     transform: translateX(-50%) rotate(0deg);
 }
 
-.clock-hand.hour {
-    width: 5px;
+.world-clock-face .clock-hand.hour {
+    width: 6px;
     height: 28%;
-    background: #eef5fb;
-    box-shadow: 0 0 8px rgba(238, 245, 251, .08);
+    background: #111b2e;
+    box-shadow: none;
 }
 
-.clock-hand.minute {
-    width: 3px;
-    height: 37%;
-    background: #bfd0df;
+.world-clock-face .clock-hand.minute {
+    width: 4px;
+    height: 39%;
+    background: #111b2e;
 }
 
-.clock-hand.second {
-    width: 1px;
-    height: 41%;
-    background: var(--market-orange);
-}
-
-.clock-pin {
-    position: absolute;
+.world-clock-face .clock-hand.second {
     z-index: 5;
+    width: 1.5px;
+    height: 43%;
+    background: #ef2b2d;
+}
+
+.world-clock-face .clock-pin {
+    position: absolute;
+    z-index: 6;
     left: 50%;
     top: 50%;
     width: 11px;
     height: 11px;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: var(--market-orange);
-    box-shadow:
-        0 0 0 4px rgba(255, 122, 0, .11),
-        0 0 12px rgba(255, 122, 0, .16);
+    background: #ef2b2d;
+    box-shadow: 0 0 0 2px rgba(239, 43, 45, .08);
 }
 
 .world-clock-meta {
