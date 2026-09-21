@@ -28,6 +28,249 @@ class AdminChannelConnectionService
         ];
     }
 
+
+    public function youtubeConnection(): ChannelConnection
+    {
+        ChannelConnection::query()
+            ->insertOrIgnore([
+                'platform' =>
+                    ChannelConnection::PLATFORM_YOUTUBE,
+                'is_enabled' => false,
+                'credentials' => null,
+                'settings' => json_encode(
+                    [
+                        'privacy_status' => 'private',
+                        'category_id' => '27',
+                    ],
+                    JSON_THROW_ON_ERROR
+                ),
+                'metadata' => json_encode(
+                    [],
+                    JSON_THROW_ON_ERROR
+                ),
+                'last_test_status' =>
+                    ChannelConnection::TEST_UNTESTED,
+                'version' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        return ChannelConnection::query()
+            ->where(
+                'platform',
+                ChannelConnection::PLATFORM_YOUTUBE
+            )
+            ->firstOrFail();
+    }
+
+    public function updateYouTube(
+        AdminUser $admin,
+        array $data,
+        Request $request
+    ): array {
+        return DB::transaction(
+            function () use (
+                $admin,
+                $data,
+                $request
+            ): array {
+                $this->youtubeConnection();
+
+                $connection = ChannelConnection::query()
+                    ->where(
+                        'platform',
+                        ChannelConnection::PLATFORM_YOUTUBE
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (
+                    (int) $data['version']
+                    !== (int) $connection->version
+                ) {
+                    abort(
+                        409,
+                        'YouTube connection settings changed in another session. Refresh and try again.'
+                    );
+                }
+
+                $existing = is_array(
+                    $connection->credentials
+                )
+                    ? $connection->credentials
+                    : [];
+
+                $submittedClientId = trim(
+                    (string) (
+                        $data['client_id']
+                        ?? ''
+                    )
+                );
+
+                $submittedClientSecret = trim(
+                    (string) (
+                        $data['client_secret']
+                        ?? ''
+                    )
+                );
+
+                $clientId = $submittedClientId !== ''
+                    ? $submittedClientId
+                    : trim(
+                        (string) (
+                            $existing['client_id']
+                            ?? ''
+                        )
+                    );
+
+                $clientSecret = $submittedClientSecret !== ''
+                    ? $submittedClientSecret
+                    : trim(
+                        (string) (
+                            $existing['client_secret']
+                            ?? ''
+                        )
+                    );
+
+                if (
+                    $clientId === ''
+                    || ! str_ends_with(
+                        strtolower($clientId),
+                        '.apps.googleusercontent.com'
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'client_id' =>
+                            'Enter a valid Google OAuth Web application Client ID ending in .apps.googleusercontent.com.',
+                    ]);
+                }
+
+                if ($clientSecret === '') {
+                    throw ValidationException::withMessages([
+                        'client_secret' =>
+                            'Enter the Google OAuth Client Secret.',
+                    ]);
+                }
+
+                $credentialsChanged =
+                    $clientId
+                        !== trim(
+                            (string) (
+                                $existing['client_id']
+                                ?? ''
+                            )
+                        )
+                    || $clientSecret
+                        !== trim(
+                            (string) (
+                                $existing['client_secret']
+                                ?? ''
+                            )
+                        );
+
+                $credentials = [
+                    'client_id' => $clientId,
+                    'client_secret' => $clientSecret,
+                    'refresh_token' =>
+                        $credentialsChanged
+                            ? null
+                            : (
+                                $existing['refresh_token']
+                                ?? null
+                            ),
+                ];
+
+                $metadata = $credentialsChanged
+                    ? []
+                    : (
+                        is_array($connection->metadata)
+                            ? $connection->metadata
+                            : []
+                    );
+
+                $testStatus = $credentialsChanged
+                    ? ChannelConnection::TEST_UNTESTED
+                    : $connection->last_test_status;
+
+                $testMessage = $credentialsChanged
+                    ? 'Google OAuth client changed. Connect YouTube again.'
+                    : $connection->last_test_message;
+
+                $lastTestedAt = $credentialsChanged
+                    ? null
+                    : $connection->last_tested_at;
+
+                $enable = (bool) (
+                    $data['is_enabled']
+                    ?? false
+                );
+
+                if (
+                    $enable
+                    && (
+                        $testStatus
+                            !== ChannelConnection::TEST_SUCCESS
+                        || ! filled(
+                            $credentials['refresh_token']
+                            ?? null
+                        )
+                    )
+                ) {
+                    throw ValidationException::withMessages([
+                        'is_enabled' =>
+                            'Connect and verify the YouTube channel before enabling automatic publishing.',
+                    ]);
+                }
+
+                $before = $this->safeYouTubeSnapshot(
+                    $connection
+                );
+
+                $connection->forceFill([
+                    'credentials' => $credentials,
+                    'settings' => [
+                        'privacy_status' =>
+                            $data['privacy_status']
+                            ?? 'private',
+                        'category_id' =>
+                            (string) (
+                                $data['category_id']
+                                ?? '27'
+                            ),
+                    ],
+                    'metadata' => $metadata,
+                    'is_enabled' => $enable,
+                    'last_test_status' => $testStatus,
+                    'last_test_message' => $testMessage,
+                    'last_tested_at' => $lastTestedAt,
+                    'version' =>
+                        $connection->version + 1,
+                    'updated_by_admin_id' =>
+                        $admin->getKey(),
+                ])->save();
+
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->getKey(),
+                    action: 'CHANNEL_YOUTUBE_CONNECTION_UPDATED',
+                    module: 'OUR_CHANNEL',
+                    targetType: 'CHANNEL_CONNECTION',
+                    targetId: $connection->getKey(),
+                    oldValues: $before,
+                    newValues: $this->safeYouTubeSnapshot(
+                        $connection
+                    ),
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
+                );
+
+                return $this->resolver
+                    ->connectionOverview()['youtube'];
+            },
+            3
+        );
+    }
+
     public function updateTelegram(
         AdminUser $admin,
         array $data,
@@ -332,6 +575,69 @@ class AdminChannelConnectionService
         }
 
         return $result;
+    }
+
+
+    private function safeYouTubeSnapshot(
+        ChannelConnection $connection
+    ): array {
+        $credentials = is_array(
+            $connection->credentials
+        )
+            ? $connection->credentials
+            : [];
+
+        $settings = is_array(
+            $connection->settings
+        )
+            ? $connection->settings
+            : [];
+
+        $metadata = is_array(
+            $connection->metadata
+        )
+            ? $connection->metadata
+            : [];
+
+        return [
+            'platform' => $connection->platform,
+            'is_enabled' =>
+                (bool) $connection->is_enabled,
+            'client_id_present' =>
+                filled(
+                    $credentials['client_id']
+                    ?? null
+                ),
+            'client_secret_present' =>
+                filled(
+                    $credentials['client_secret']
+                    ?? null
+                ),
+            'refresh_token_present' =>
+                filled(
+                    $credentials['refresh_token']
+                    ?? null
+                ),
+            'privacy_status' =>
+                $settings['privacy_status']
+                ?? 'private',
+            'category_id' =>
+                $settings['category_id']
+                ?? '27',
+            'channel_id' =>
+                $metadata['channel_id']
+                ?? null,
+            'channel_title' =>
+                $metadata['channel_title']
+                ?? null,
+            'last_test_status' =>
+                $connection->last_test_status,
+            'last_tested_at' =>
+                $connection->last_tested_at
+                    ?->toISOString(),
+            'version' =>
+                (int) $connection->version,
+        ];
     }
 
     private function fingerprint(
