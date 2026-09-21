@@ -17,6 +17,36 @@ return [
 
     'default_timezone' => 'UTC',
 
+    'featured_sessions' => [
+        [
+            'key' => 'asia',
+            'name' => 'Asia Session',
+            'region' => 'ASIA',
+            'timezone' => 'Asia/Tokyo',
+            'open' => '09:00',
+            'close' => '18:00',
+            'days' => [1, 2, 3, 4, 5],
+        ],
+        [
+            'key' => 'london',
+            'name' => 'London Session',
+            'region' => 'EUROPE',
+            'timezone' => 'Europe/London',
+            'open' => '08:00',
+            'close' => '17:00',
+            'days' => [1, 2, 3, 4, 5],
+        ],
+        [
+            'key' => 'nyse',
+            'name' => 'NYSE Session',
+            'region' => 'AMERICAS',
+            'timezone' => 'America/New_York',
+            'open' => '09:30',
+            'close' => '16:00',
+            'days' => [1, 2, 3, 4, 5],
+        ],
+    ],
+
     'sessions' => [
         [
             'key' => 'sydney',
