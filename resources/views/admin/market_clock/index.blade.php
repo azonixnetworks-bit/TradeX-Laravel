@@ -149,15 +149,19 @@
         <div class="world-clock-grid" id="worldClockGrid">
             <article class="world-clock-card" data-world-clock data-timezone="Pacific/Auckland" data-label="New Zealand">
                 <div class="world-clock-shell">
-                    <div class="world-clock-face" aria-label="New Zealand analog clock">
-                        <span class="clock-tick-ring" aria-hidden="true"></span>
-                        <span class="clock-orbit-arc" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
-                        <span class="clock-number n12">12</span>
+                    <div class="world-clock-face classic-clock-face" aria-label="New Zealand analog clock">
+                        <span class="clock-number n1">1</span>
+                        <span class="clock-number n2">2</span>
                         <span class="clock-number n3">3</span>
+                        <span class="clock-number n4">4</span>
+                        <span class="clock-number n5">5</span>
                         <span class="clock-number n6">6</span>
+                        <span class="clock-number n7">7</span>
+                        <span class="clock-number n8">8</span>
                         <span class="clock-number n9">9</span>
+                        <span class="clock-number n10">10</span>
+                        <span class="clock-number n11">11</span>
+                        <span class="clock-number n12">12</span>
                         <span class="clock-hand hour"></span>
                         <span class="clock-hand minute"></span>
                         <span class="clock-hand second"></span>
@@ -173,15 +177,19 @@
 
             <article class="world-clock-card" data-world-clock data-timezone="device" data-label="Device Time">
                 <div class="world-clock-shell">
-                    <div class="world-clock-face" aria-label="Device local analog clock">
-                        <span class="clock-tick-ring" aria-hidden="true"></span>
-                        <span class="clock-orbit-arc" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
-                        <span class="clock-number n12">12</span>
+                    <div class="world-clock-face classic-clock-face" aria-label="Device local analog clock">
+                        <span class="clock-number n1">1</span>
+                        <span class="clock-number n2">2</span>
                         <span class="clock-number n3">3</span>
+                        <span class="clock-number n4">4</span>
+                        <span class="clock-number n5">5</span>
                         <span class="clock-number n6">6</span>
+                        <span class="clock-number n7">7</span>
+                        <span class="clock-number n8">8</span>
                         <span class="clock-number n9">9</span>
+                        <span class="clock-number n10">10</span>
+                        <span class="clock-number n11">11</span>
+                        <span class="clock-number n12">12</span>
                         <span class="clock-hand hour"></span>
                         <span class="clock-hand minute"></span>
                         <span class="clock-hand second"></span>
@@ -197,15 +205,19 @@
 
             <article class="world-clock-card" data-world-clock data-timezone="Europe/London" data-label="London">
                 <div class="world-clock-shell">
-                    <div class="world-clock-face" aria-label="London analog clock">
-                        <span class="clock-tick-ring" aria-hidden="true"></span>
-                        <span class="clock-orbit-arc" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
-                        <span class="clock-number n12">12</span>
+                    <div class="world-clock-face classic-clock-face" aria-label="London analog clock">
+                        <span class="clock-number n1">1</span>
+                        <span class="clock-number n2">2</span>
                         <span class="clock-number n3">3</span>
+                        <span class="clock-number n4">4</span>
+                        <span class="clock-number n5">5</span>
                         <span class="clock-number n6">6</span>
+                        <span class="clock-number n7">7</span>
+                        <span class="clock-number n8">8</span>
                         <span class="clock-number n9">9</span>
+                        <span class="clock-number n10">10</span>
+                        <span class="clock-number n11">11</span>
+                        <span class="clock-number n12">12</span>
                         <span class="clock-hand hour"></span>
                         <span class="clock-hand minute"></span>
                         <span class="clock-hand second"></span>
@@ -221,15 +233,19 @@
 
             <article class="world-clock-card" data-world-clock data-timezone="America/New_York" data-label="New York">
                 <div class="world-clock-shell">
-                    <div class="world-clock-face" aria-label="New York analog clock">
-                        <span class="clock-tick-ring" aria-hidden="true"></span>
-                        <span class="clock-orbit-arc" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-start" aria-hidden="true"></span>
-                        <span class="clock-orbit-dot clock-orbit-dot-end" aria-hidden="true"></span>
-                        <span class="clock-number n12">12</span>
+                    <div class="world-clock-face classic-clock-face" aria-label="New York analog clock">
+                        <span class="clock-number n1">1</span>
+                        <span class="clock-number n2">2</span>
                         <span class="clock-number n3">3</span>
+                        <span class="clock-number n4">4</span>
+                        <span class="clock-number n5">5</span>
                         <span class="clock-number n6">6</span>
+                        <span class="clock-number n7">7</span>
+                        <span class="clock-number n8">8</span>
                         <span class="clock-number n9">9</span>
+                        <span class="clock-number n10">10</span>
+                        <span class="clock-number n11">11</span>
+                        <span class="clock-number n12">12</span>
                         <span class="clock-hand hour"></span>
                         <span class="clock-hand minute"></span>
                         <span class="clock-hand second"></span>
