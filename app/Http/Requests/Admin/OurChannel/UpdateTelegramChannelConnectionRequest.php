@@ -33,7 +33,7 @@ class UpdateTelegramChannelConnectionRequest extends FormRequest
                 'regex:/^\d+:[A-Za-z0-9_-]{20,}$/',
             ],
             'chat_id' => [
-                'required',
+                'nullable',
                 'string',
                 'max:128',
                 'regex:/^(?:@[A-Za-z0-9_]{5,32}|-?\d{5,25})$/',
