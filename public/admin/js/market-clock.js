@@ -631,7 +631,7 @@
             if (badge) {
                 badge.className = `market-status-badge ${visual.state}`;
                 badge.textContent = visual.state
-                    .replaceAll('-', ' ')
+                    .replace(/-/g, ' ')
                     .toUpperCase();
             }
 
