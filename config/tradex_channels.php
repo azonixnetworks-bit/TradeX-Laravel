@@ -40,7 +40,7 @@ return [
             1,
             (int) env(
                 'TRADEX_CHANNEL_JOB_TRIES',
-                3
+                1
             )
         ),
 

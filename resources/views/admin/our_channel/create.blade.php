@@ -109,6 +109,9 @@
 
             @php
                 $selectedPlatforms = old('platforms', array_keys($platforms));
+                $selectedPlatforms = is_array($selectedPlatforms)
+                    ? $selectedPlatforms
+                    : [];
             @endphp
 
             <div class="platform-grid">

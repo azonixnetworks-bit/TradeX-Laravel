@@ -3,9 +3,11 @@
 namespace App\Http\Requests\Admin\OurChannel;
 
 use App\Models\AdminUser;
+use App\Models\ChannelVideo;
 use App\Support\YouTubeVideo;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateChannelVideoRequest extends FormRequest
 {
@@ -91,6 +93,35 @@ class UpdateChannelVideoRequest extends FormRequest
             'uuid' => ['prohibited'],
             'created_by_admin_id' => ['prohibited'],
             'updated_by_admin_id' => ['prohibited'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $youtubeUrl = trim(
+                    (string) $this->input(
+                        'youtube_url',
+                        ''
+                    )
+                );
+
+                $channelVideo = $this->route(
+                    'channelVideo'
+                );
+
+                if (
+                    $channelVideo instanceof ChannelVideo
+                    && ! $channelVideo->hasSourceMedia()
+                    && $youtubeUrl === ''
+                ) {
+                    $validator->errors()->add(
+                        'youtube_url',
+                        'This legacy video has no protected master upload, so its YouTube URL cannot be removed.'
+                    );
+                }
+            },
         ];
     }
 
