@@ -924,12 +924,6 @@
         width: min(136px, 92%);
     }
 
-    .clock-orbit-dot {
-        width: 12px;
-        height: 12px;
-        border-width: 4px;
-    }
-
     .world-clock-digital {
         font-size: 14px;
     }
