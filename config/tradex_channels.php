@@ -53,6 +53,18 @@ return [
 
     'platforms' => [
         'youtube' => [
+            'authorization_url' => env(
+                'TRADEX_CHANNEL_YOUTUBE_AUTHORIZATION_URL',
+                'https://accounts.google.com/o/oauth2/v2/auth'
+            ),
+            'channels_url' => env(
+                'TRADEX_CHANNEL_YOUTUBE_CHANNELS_URL',
+                'https://www.googleapis.com/youtube/v3/channels'
+            ),
+            'scopes' => [
+                'https://www.googleapis.com/auth/youtube.upload',
+                'https://www.googleapis.com/auth/youtube.readonly',
+            ],
             'enabled' => $bool(
                 env('TRADEX_CHANNEL_YOUTUBE_ENABLED'),
                 false
