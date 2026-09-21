@@ -62,18 +62,19 @@ class StripeConfigurationSafety
         $isLive = $environment === 'LIVE';
 
         $publishablePrefix = $isLive ? 'pk_live_' : 'pk_test_';
-        $secretPrefix = $isLive ? 'sk_live_' : 'sk_test_';
+        $secretPrefixes = $isLive
+            ? ['sk_live_', 'rk_live_']
+            : ['sk_test_', 'rk_test_'];
 
         return [
             'environment_supported' => $isSandbox || $isLive,
-            'publishable_key_matches_environment' =>
-                ($isSandbox || $isLive)
+            'publishable_key_matches_environment' => ($isSandbox || $isLive)
                 && str_starts_with($publishableKey, $publishablePrefix),
-            'secret_key_matches_environment' =>
-                ($isSandbox || $isLive)
-                && str_starts_with($secretKey, $secretPrefix),
-            'webhook_secret_valid' =>
-                str_starts_with($webhookSecret, 'whsec_')
+            'secret_key_matches_environment' => ($isSandbox || $isLive)
+                && collect($secretPrefixes)->contains(
+                    static fn (string $prefix): bool => str_starts_with($secretKey, $prefix)
+                ),
+            'webhook_secret_valid' => str_starts_with($webhookSecret, 'whsec_')
                 && strlen($webhookSecret) > 6,
 
             /*

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Payments;
 
 use App\Services\Payments\StripeCheckoutService;
+use App\Services\Payments\StripeConfigurationSafety;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -30,5 +31,18 @@ class StripeLiveSetupTest extends TestCase
 
         $this->assertTrue($method->invoke($service, 'https://checkout.stripe.com/c/pay/test'));
         $this->assertFalse($method->invoke($service, 'https://stripe.example.test/c/pay/test'));
+    }
+
+    public function test_live_configuration_accepts_a_restricted_secret_key(): void
+    {
+        config()->set('tradex_integrations.stripe.environment', 'LIVE');
+        config()->set('tradex_integrations.stripe.publishable_key', 'pk_live_example');
+        config()->set('tradex_integrations.stripe.secret_key', 'rk_live_example');
+        config()->set('tradex_integrations.stripe.webhook_secret', 'whsec_example');
+        config()->set('tradex_integrations.stripe.base_url', 'https://api.stripe.com');
+        config()->set('tradex_integrations.stripe.success_url', 'https://example.com/payments/stripe/success');
+        config()->set('tradex_integrations.stripe.cancel_url', 'https://example.com/payments/stripe/cancel');
+
+        $this->assertTrue(app(StripeConfigurationSafety::class)->configured());
     }
 }
