@@ -33,8 +33,14 @@
 @endif
 
 <div class="secret-note">
-    Telegram bot tokens are encrypted at rest using the TradeX application encryption key. Saved tokens are never rendered back to the browser, audit log, or status page.
+    Google OAuth client secrets, YouTube refresh tokens and Telegram bot tokens are encrypted at rest using the TradeX application encryption key. Saved secrets are never rendered back to the browser, audit log, or status page.
 </div>
+
+@error('youtube_oauth')
+    <section class="panel" style="padding:14px;margin-bottom:18px;border-color:rgba(255,139,139,.22);color:#ff9b9b">
+        {{ $message }}
+    </section>
+@enderror
 
 @error('connection_test')
     <section class="panel" style="padding:14px;margin-bottom:18px;border-color:rgba(255,139,139,.22);color:#ff9b9b">
@@ -43,6 +49,131 @@
 @enderror
 
 <div class="connection-grid">
+    @php($youtube = $connections['youtube'])
+    <section class="connection-card" style="grid-column:1/-1">
+        <div class="panel-eyebrow">GOOGLE OAUTH · YOUTUBE DATA API</div>
+        <h2>YouTube</h2>
+        <p>Save the Google OAuth Web application credentials, add the exact callback URI in Google Cloud, then authorize the TradeX YouTube channel.</p>
+
+        <span class="connection-status {{ $youtube['enabled'] ? 'ready' : ($youtube['last_test_status'] === 'SUCCESS' ? 'ready' : 'warn') }}">
+            @if($youtube['enabled'])
+                AUTO READY
+            @elseif($youtube['last_test_status'] === 'SUCCESS')
+                VERIFIED · DISABLED
+            @elseif($youtube['client_id_present'] && $youtube['client_secret_present'])
+                READY TO CONNECT
+            @else
+                OAUTH SETUP REQUIRED
+            @endif
+        </span>
+
+        @if($youtube['last_test_status'] === 'SUCCESS')
+            <div class="verified-box">
+                <strong>Verified</strong><br>
+                Channel: {{ $youtube['metadata']['channel_title'] ?? 'YouTube Channel' }}<br>
+                @if(!empty($youtube['metadata']['channel_handle']))
+                    Handle: {{ $youtube['metadata']['channel_handle'] }}<br>
+                @endif
+                Channel ID: {{ $youtube['metadata']['channel_id'] ?? '—' }}<br>
+                Offline refresh token: {{ $youtube['refresh_token_present'] ? 'Stored securely' : 'Missing' }}<br>
+                Last verified: {{ $youtube['last_tested_at']?->format('Y-m-d H:i:s') ?? '—' }}
+            </div>
+        @elseif($youtube['last_test_message'])
+            <div class="verified-box" style="border-color:rgba(231,191,105,.18);background:rgba(231,191,105,.035)">
+                {{ $youtube['last_test_message'] }}
+            </div>
+        @endif
+
+        <div class="secret-note" style="margin-top:14px;margin-bottom:0">
+            Google Cloud → OAuth 2.0 Client → Authorized redirect URI must contain this exact value:<br>
+            <code style="user-select:all">{{ $youtubeRedirectUri }}</code>
+        </div>
+
+        @if($canManage)
+            <form class="connection-form" method="POST" action="{{ route('admin.our_channel.connections.youtube.update') }}">
+                @csrf
+                @method('PATCH')
+
+                <input type="hidden" name="version" value="{{ $youtube['version'] }}">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="youtube_client_id">GOOGLE OAUTH CLIENT ID</label>
+                        <input
+                            id="youtube_client_id"
+                            name="client_id"
+                            value=""
+                            maxlength="255"
+                            autocomplete="off"
+                            placeholder="{{ $youtube['client_id_present'] ? 'Saved securely — leave blank to keep current Client ID' : '...apps.googleusercontent.com' }}"
+                        >
+                        <div class="connection-help">Use an OAuth Client ID created as a Google Web application. Leave blank to keep the saved value.</div>
+                        @error('client_id')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="youtube_client_secret">GOOGLE OAUTH CLIENT SECRET</label>
+                        <input
+                            id="youtube_client_secret"
+                            type="password"
+                            name="client_secret"
+                            value=""
+                            maxlength="512"
+                            autocomplete="new-password"
+                            placeholder="{{ $youtube['client_secret_present'] ? 'Saved securely — leave blank to keep current secret' : 'Google OAuth client secret' }}"
+                        >
+                        <div class="connection-help">Encrypted at rest. Never commit this secret to Git or paste it into screenshots.</div>
+                        @error('client_secret')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="youtube_privacy">DEFAULT VIDEO PRIVACY</label>
+                        <select id="youtube_privacy" name="privacy_status">
+                            <option value="private" @selected(old('privacy_status', $youtube['privacy_status']) === 'private')>Private</option>
+                            <option value="unlisted" @selected(old('privacy_status', $youtube['privacy_status']) === 'unlisted')>Unlisted</option>
+                            <option value="public" @selected(old('privacy_status', $youtube['privacy_status']) === 'public')>Public</option>
+                        </select>
+                        <div class="connection-help">New/unverified YouTube API projects can still be restricted to private uploads by YouTube until the project completes the required audit.</div>
+                        @error('privacy_status')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="youtube_category">YOUTUBE CATEGORY ID</label>
+                        <input
+                            id="youtube_category"
+                            name="category_id"
+                            value="{{ old('category_id', $youtube['category_id']) }}"
+                            maxlength="3"
+                            inputmode="numeric"
+                        >
+                        <div class="connection-help">TradeX default is 27 (Education).</div>
+                        @error('category_id')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="youtube_enabled">AUTO PUBLISHING</label>
+                        <select id="youtube_enabled" name="is_enabled">
+                            <option value="0" @selected(!old('is_enabled', $youtube['control_enabled']))>Disabled</option>
+                            <option value="1" @selected((bool)old('is_enabled', $youtube['control_enabled']))>Enabled after successful OAuth verification</option>
+                        </select>
+                        <div class="connection-help">The Google OAuth callback enables publishing automatically after successful channel verification. You can disable it here later without deleting the refresh token.</div>
+                        @error('is_enabled')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+
+                <div class="connection-actions">
+                    <button class="connection-secondary" type="submit">Save OAuth Configuration</button>
+
+                    @if($youtube['client_id_present'] && $youtube['client_secret_present'])
+                        <a class="primary-btn" href="{{ route('admin.our_channel.connections.youtube.connect') }}">
+                            {{ $youtube['last_test_status'] === 'SUCCESS' ? 'Reconnect YouTube' : 'Connect YouTube' }}
+                        </a>
+                    @endif
+                </div>
+            </form>
+        @endif
+    </section>
+
     @php($telegram = $connections['telegram'])
     <section class="connection-card" style="grid-column:1/-1">
         <div class="panel-eyebrow">TELEGRAM BOT API</div>
@@ -144,13 +275,6 @@
                 </div>
             </form>
         @endif
-    </section>
-
-    <section class="connection-card">
-        <div class="panel-eyebrow">GOOGLE OAUTH</div>
-        <h2>YouTube</h2>
-        <p>OAuth client + channel authorization. The current uploader already supports refresh-token publishing.</p>
-        <span class="connection-status {{ $connections['youtube']['enabled'] ? 'ready' : 'warn' }}">{{ $connections['youtube']['enabled'] ? 'AUTO READY' : 'OAUTH SETUP NEXT' }}</span>
     </section>
 
     <section class="connection-card">
