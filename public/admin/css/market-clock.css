@@ -911,7 +911,7 @@
     max-width: 100%;
     border-radius: inherit;
     background: var(--session-color);
-    box-shadow: 0 0 12px color-mix(in srgb, var(--session-color) 26%, transparent);
+    box-shadow: 0 0 12px rgba(32, 199, 161, .08);
     transition: width .45s ease, background-color .25s ease;
 }
 
