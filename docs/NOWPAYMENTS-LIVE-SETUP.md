@@ -2,6 +2,8 @@
 
 TradeX creates a hosted NOWPayments invoice and activates the purchased entitlement only after a signed `finished` IPN callback matches the original order amount and currency.
 
+The NOWPayments dashboard may advertise zero-fee payouts to ChangeNOW Pro. That is a payout option within the same NOWPayments platform; it does not replace the NOWPayments Payments API used for customer invoices and does not change the official `https://api.nowpayments.io` payment endpoint.
+
 ## 1. Prepare the NOWPayments merchant account
 
 1. Complete the merchant account setup and add the settlement wallet(s).
@@ -15,7 +17,7 @@ Add the following values to the production `.env` file:
 
 ```env
 TRADEX_NOWPAYMENTS_ENABLED=true
-TRADEX_NOWPAYMENTS_COUNTRIES=LK
+TRADEX_NOWPAYMENTS_COUNTRIES=*
 TRADEX_NOWPAYMENTS_ENVIRONMENT=LIVE
 TRADEX_NOWPAYMENTS_API_KEY=replace-on-server
 TRADEX_NOWPAYMENTS_IPN_SECRET=replace-on-server
@@ -25,6 +27,8 @@ TRADEX_NOWPAYMENTS_SUCCESS_URL=https://tradex.10x.cloudvideo.online/payments/suc
 TRADEX_NOWPAYMENTS_CANCEL_URL=https://tradex.10x.cloudvideo.online/payments/cancel
 TRADEX_NOWPAYMENTS_TIMEOUT_SECONDS=15
 ```
+
+`TRADEX_NOWPAYMENTS_COUNTRIES=*` enables the provider for all customer countries after the Super Admin approves the same All Countries scope. Provider eligibility and applicable restrictions still remain the merchant's responsibility.
 
 The application sends each invoice callback URL as:
 
