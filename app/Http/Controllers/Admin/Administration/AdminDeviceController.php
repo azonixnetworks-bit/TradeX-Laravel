@@ -30,11 +30,11 @@ class AdminDeviceController extends Controller
         ]);
     }
 
-    public function update(Request $request, AdminUser $adminUser, AdminDevice $device, AdminDeviceSecurityService $security): RedirectResponse
+    public function update(Request $request, AdminUser $adminUser, AdminDevice $adminDevice, AdminDeviceSecurityService $security): RedirectResponse
     {
         abort_unless(auth('admin')->user()?->isSuperAdmin(), 403);
         $data = $request->validate(['action' => ['required', 'in:revoke,approve'], 'reason' => ['required', 'string', 'min:5', 'max:500']]);
-        $security->manage(auth('admin')->user(), $adminUser, $device, $data['action'], $data['reason'], $request);
+        $security->manage(auth('admin')->user(), $adminUser, $adminDevice, $data['action'], $data['reason'], $request);
 
         return back()->with('success', 'Device access updated. The admin must sign in again on an approved device.');
     }

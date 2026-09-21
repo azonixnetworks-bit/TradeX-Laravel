@@ -158,7 +158,7 @@ class AdminDeviceSecurityService
     public function manage(AdminUser $actor, AdminUser $owner, AdminDevice $device, string $action, string $reason, Request $request): void
     {
         abort_unless($actor->isSuperAdmin(), 403);
-        abort_unless($device->admin_user_id === $owner->id, 404);
+        abort_unless($owner->adminDevices()->whereKey($device->getKey())->exists(), 404);
         DB::transaction(function () use ($actor, $owner, $device, $action, $reason, $request) {
             AdminUser::whereKey($owner->id)->lockForUpdate()->firstOrFail();
             $device = AdminDevice::whereKey($device->id)->lockForUpdate()->firstOrFail();

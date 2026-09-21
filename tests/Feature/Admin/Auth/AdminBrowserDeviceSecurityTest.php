@@ -305,12 +305,33 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $super = $this->admin(true);
         $owner = $this->admin();
         $device = AdminDevice::create(['admin_user_id' => $owner->id, 'token_hash' => hash('sha256', 'test'), 'device_slot' => 'DESKTOP', 'active_slot' => 'DESKTOP', 'status' => 'ACTIVE']);
+        $session = AdminDeviceSession::create([
+            'admin_user_id' => $owner->id,
+            'admin_device_id' => $device->id,
+            'session_hash' => hash('sha256', 'live-session'),
+            'session_version' => $device->session_version,
+            'last_seen_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
         $this->actingAs($owner, 'admin')->get(route('admin.administration.admins.devices.index', $owner))->assertForbidden();
         $this->patch(route('admin.administration.admins.devices.update', [$owner, $device]), ['action' => 'revoke', 'reason' => 'Not allowed'])->assertForbidden();
         $this->actingAs($super, 'admin')->patch(route('admin.administration.admins.devices.update', [$super, $device]), ['action' => 'revoke', 'reason' => 'Wrong owner'])->assertNotFound();
         $this->get(route('admin.administration.admins.devices.index', $owner))->assertOk()->assertSee('Revoke device')->assertSee('DESKTOP');
-        $this->patch(route('admin.administration.admins.devices.update', [$owner, $device]), ['action' => 'revoke', 'reason' => 'Lost browser'])->assertRedirect();
-        $this->assertSame('REVOKED', $device->fresh()->status);
+        $this->patch(route('admin.administration.admins.devices.update', [$owner, $device]), ['action' => 'revoke', 'reason' => 'Lost browser'])
+            ->assertRedirect()
+            ->assertSessionHas('success');
+        $device->refresh();
+        $this->assertSame('REVOKED', $device->status);
+        $this->assertNull($device->active_slot);
+        $this->assertNotNull($device->revoked_at);
+        $this->assertSame(2, $device->session_version);
+        $this->assertNotNull($session->fresh()->ended_at);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_type' => 'ADMIN',
+            'actor_id' => $super->id,
+            'action' => 'ADMIN_DEVICE_REVOKE',
+            'module' => 'SECURITY',
+        ]);
     }
 
     public function test_notifications_send_to_super_admin_email_and_configured_whatsapp_with_device_details(): void

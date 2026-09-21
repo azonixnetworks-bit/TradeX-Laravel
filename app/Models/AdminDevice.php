@@ -15,7 +15,12 @@ class AdminDevice extends Model
 
     protected function casts(): array
     {
-        return ['last_seen_at' => 'datetime', 'revoked_at' => 'datetime'];
+        return [
+            'admin_user_id' => 'integer',
+            'session_version' => 'integer',
+            'last_seen_at' => 'datetime',
+            'revoked_at' => 'datetime',
+        ];
     }
 
     public function sessions(): HasMany
