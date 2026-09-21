@@ -8,6 +8,11 @@ use App\Models\ChannelVideoPublication;
 
 class ChannelPublicationService
 {
+    public function __construct(
+        private readonly ChannelConnectionResolver $connections
+    ) {
+    }
+
     public function createTargets(
         ChannelVideo $video,
         array $platforms
@@ -156,30 +161,9 @@ class ChannelPublicationService
 
     private function providerEnabled(string $platform): bool
     {
-        $key = match ($platform) {
-            ChannelVideoPublication::PLATFORM_YOUTUBE =>
-                'youtube',
-
-            ChannelVideoPublication::PLATFORM_INSTAGRAM =>
-                'instagram',
-
-            ChannelVideoPublication::PLATFORM_FACEBOOK =>
-                'facebook',
-
-            ChannelVideoPublication::PLATFORM_TELEGRAM =>
-                'telegram',
-
-            default =>
-                null,
-        };
-
-        return $key !== null
-            && (bool) config(
-                'tradex_channels.platforms.'
-                    .$key
-                    .'.enabled',
-                false
-            );
+        return $this->connections->isEnabled(
+            $platform
+        );
     }
 
     private function actionRequiredMessage(
