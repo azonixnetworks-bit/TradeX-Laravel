@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Http;
 class YouTubeChannelPublisher
 {
     public function __construct(
-        private readonly ChannelMediaSource $source
+        private readonly ChannelMediaSource $source,
+        private readonly ChannelConnectionResolver $connections
     ) {
     }
 
@@ -19,10 +20,8 @@ class YouTubeChannelPublisher
         ChannelVideo $video,
         ChannelVideoPublication $publication
     ): array {
-        $config = (array) config(
-            'tradex_channels.platforms.youtube',
-            []
-        );
+        $config = $this->connections
+            ->youtubeRuntime();
 
         $this->assertConfigured($config);
 
