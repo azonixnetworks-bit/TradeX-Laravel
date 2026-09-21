@@ -1,7 +1,24 @@
 <?php
 
 use App\Http\Controllers\Admin\OurChannel\ChannelVideoController;
+use App\Http\Controllers\ChannelMediaDeliveryController;
 use Illuminate\Support\Facades\Route;
+
+/*
+| Signed, short-lived provider fetch URL used by Meta while processing Reels.
+| It is intentionally outside /admin because external provider servers cannot
+| authenticate to the TradeX admin session. The signature expires automatically.
+*/
+Route::get(
+    '/channel-media/{channelVideo}/source',
+    ChannelMediaDeliveryController::class
+)
+    ->whereNumber('channelVideo')
+    ->middleware([
+        'signed',
+        'throttle:30,1',
+    ])
+    ->name('channel-media.source');
 
 Route::prefix('admin')
     ->name('admin.')
@@ -23,13 +40,25 @@ Route::prefix('admin')
                 Route::post(
                     '/',
                     [ChannelVideoController::class, 'store']
-                )->name('store');
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('store');
+
+                Route::post(
+                    '/{channelVideo}/publications/{publication}/retry',
+                    [ChannelVideoController::class, 'retryPublication']
+                )
+                    ->whereNumber('channelVideo')
+                    ->whereNumber('publication')
+                    ->middleware('throttle:10,1')
+                    ->name('publications.retry');
 
                 Route::patch(
                     '/{channelVideo}/publication',
                     [ChannelVideoController::class, 'publication']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:10,1')
                     ->name('publication');
 
                 Route::get(
@@ -44,6 +73,7 @@ Route::prefix('admin')
                     [ChannelVideoController::class, 'update']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:20,1')
                     ->name('update');
 
                 Route::delete(
@@ -51,6 +81,7 @@ Route::prefix('admin')
                     [ChannelVideoController::class, 'destroy']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:10,1')
                     ->name('destroy');
             });
     });

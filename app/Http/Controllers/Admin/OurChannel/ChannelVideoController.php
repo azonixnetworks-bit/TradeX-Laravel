@@ -9,13 +9,19 @@ use App\Http\Requests\Admin\OurChannel\UpdateChannelVideoRequest;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\ChannelVideo;
+use App\Models\ChannelVideoPublication;
+use App\Services\OurChannel\ChannelPublicationService;
 use App\Support\YouTubeVideo;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Throwable;
 
 class ChannelVideoController extends Controller
 {
@@ -29,8 +35,15 @@ class ChannelVideoController extends Controller
         );
 
         $videos = ChannelVideo::query()
+            ->with('publications')
             ->ordered()
             ->get();
+
+        $publicationRows = $videos
+            ->flatMap(
+                fn (ChannelVideo $video) =>
+                    $video->publications
+            );
 
         $stats = [
             'total' => $videos->count(),
@@ -40,16 +53,19 @@ class ChannelVideoController extends Controller
                     ChannelVideo::STATUS_PUBLISHED
                 )
                 ->count(),
-            'draft' => $videos
+            'external_published' => $publicationRows
                 ->where(
                     'status',
-                    ChannelVideo::STATUS_DRAFT
+                    ChannelVideoPublication::STATUS_PUBLISHED
                 )
                 ->count(),
-            'featured' => $videos
-                ->where(
-                    'is_featured',
-                    true
+            'attention' => $publicationRows
+                ->whereIn(
+                    'status',
+                    [
+                        ChannelVideoPublication::STATUS_FAILED,
+                        ChannelVideoPublication::STATUS_ACTION_REQUIRED,
+                    ]
                 )
                 ->count(),
         ];
@@ -83,12 +99,20 @@ class ChannelVideoController extends Controller
         );
 
         return view(
-            'admin.our_channel.create'
+            'admin.our_channel.create',
+            [
+                'platforms' =>
+                    ChannelVideoPublication::platformLabels(),
+
+                'platformStates' =>
+                    $this->platformStates(),
+            ]
         );
     }
 
     public function store(
-        StoreChannelVideoRequest $request
+        StoreChannelVideoRequest $request,
+        ChannelPublicationService $publicationService
     ): RedirectResponse {
         $admin = $this->authenticatedAdmin();
 
@@ -99,76 +123,151 @@ class ChannelVideoController extends Controller
 
         $validated = $request->validated();
 
-        $videoId = $this->extractVideoIdOrFail(
+        $youtubeUrl = $this->nullableText(
             $validated['youtube_url']
+            ?? null
         );
 
-        $this->assertVideoIdAvailable(
-            $videoId
+        $videoId = $this->extractVideoId(
+            $youtubeUrl
+        );
+
+        if ($videoId !== null) {
+            $this->assertVideoIdAvailable(
+                $videoId
+            );
+        }
+
+        $uuid = Str::uuid()->toString();
+        $source = $this->storeSourceUpload(
+            $request,
+            $uuid
         );
 
         try {
-            DB::transaction(function () use (
-                $validated,
-                $videoId,
-                $request,
-                $admin
-            ): void {
-                $video = ChannelVideo::query()->create([
-                    'title' => $validated['title'],
-                    'short_description' => $validated['short_description'] ?? null,
-                    'description' => $validated['description'] ?? null,
-                    'youtube_video_id' => $videoId,
-                    'youtube_url' => YouTubeVideo::canonicalUrl(
-                        $videoId
-                    ),
-                    'language_code' => $validated['language_code'],
-                    'status' => ChannelVideo::STATUS_DRAFT,
-                    'published_at' => null,
-                    'is_featured' => (bool) ($validated['is_featured'] ?? false),
-                    'sort_order' => (int) ($validated['sort_order'] ?? 0),
-                    'created_by_admin_id' => $admin->id,
-                    'updated_by_admin_id' => $admin->id,
-                ]);
+            $video = DB::transaction(
+                function () use (
+                    $validated,
+                    $videoId,
+                    $youtubeUrl,
+                    $source,
+                    $uuid,
+                    $request,
+                    $admin,
+                    $publicationService
+                ): ChannelVideo {
+                    $publishNow =
+                        ($validated['intent'] ?? 'DRAFT')
+                        === 'PUBLISH';
 
-                AuditLog::record(
-                    actorType: 'ADMIN',
-                    actorId: $admin->id,
-                    action: 'CHANNEL_VIDEO_CREATED',
-                    module: 'OUR_CHANNEL',
-                    targetType: 'CHANNEL_VIDEO',
-                    targetId: $video->id,
-                    newValues: $this->auditSnapshot(
-                        $video
-                    ),
-                    ipAddress: $request->ip(),
-                    userAgent: $request->userAgent()
-                );
-            });
-        } catch (QueryException $exception) {
-            if (
-                str_contains(
-                    strtolower(
-                        $exception->getMessage()
-                    ),
-                    'youtube_video_id'
-                )
-            ) {
-                throw ValidationException::withMessages([
-                    'youtube_url' => 'This YouTube video has already been added to Our Channel.',
-                ]);
-            }
+                    $video = ChannelVideo::query()->create([
+                        'uuid' => $uuid,
+                        'title' => $validated['title'],
+                        'short_description' =>
+                            $validated['short_description']
+                            ?? null,
+                        'description' =>
+                            $validated['description']
+                            ?? null,
+                        'hashtags' =>
+                            $validated['hashtags']
+                            ?? null,
+                        'youtube_video_id' => $videoId,
+                        'youtube_url' => $videoId !== null
+                            ? YouTubeVideo::canonicalUrl(
+                                $videoId
+                            )
+                            : $youtubeUrl,
+                        'source_disk' =>
+                            $source['disk']
+                            ?? null,
+                        'source_path' =>
+                            $source['path']
+                            ?? null,
+                        'source_original_name' =>
+                            $source['original_name']
+                            ?? null,
+                        'source_mime_type' =>
+                            $source['mime_type']
+                            ?? null,
+                        'source_size_bytes' =>
+                            $source['size_bytes']
+                            ?? null,
+                        'source_sha256' =>
+                            $source['sha256']
+                            ?? null,
+                        'language_code' =>
+                            $validated['language_code'],
+                        'status' => $publishNow
+                            ? ChannelVideo::STATUS_PUBLISHED
+                            : ChannelVideo::STATUS_DRAFT,
+                        'published_at' => $publishNow
+                            ? now()
+                            : null,
+                        'publish_requested_at' => null,
+                        'is_featured' => (bool) (
+                            $validated['is_featured']
+                            ?? false
+                        ),
+                        'sort_order' => (int) (
+                            $validated['sort_order']
+                            ?? 0
+                        ),
+                        'created_by_admin_id' => $admin->id,
+                        'updated_by_admin_id' => $admin->id,
+                    ]);
+
+                    $publicationService->createTargets(
+                        $video,
+                        $validated['platforms']
+                        ?? []
+                    );
+
+                    AuditLog::record(
+                        actorType: 'ADMIN',
+                        actorId: $admin->id,
+                        action: $publishNow
+                            ? 'CHANNEL_VIDEO_CREATED_AND_PUBLISH_REQUESTED'
+                            : 'CHANNEL_VIDEO_CREATED',
+                        module: 'OUR_CHANNEL',
+                        targetType: 'CHANNEL_VIDEO',
+                        targetId: $video->id,
+                        newValues: $this->auditSnapshot(
+                            $video
+                        ),
+                        ipAddress: $request->ip(),
+                        userAgent: $request->userAgent()
+                    );
+
+                    return $video;
+                }
+            );
+        } catch (Throwable $exception) {
+            $this->cleanupSource(
+                $source,
+                $uuid
+            );
 
             throw $exception;
         }
 
+        if (
+            ($validated['intent'] ?? 'DRAFT')
+            === 'PUBLISH'
+        ) {
+            $publicationService->queueForVideo(
+                $video->fresh('publications')
+            );
+        }
+
         return redirect()
-            ->route(
-                'admin.our_channel.index'
-            )
+            ->route('admin.our_channel.index')
             ->with(
                 'success',
-                'Our Channel video created successfully as draft.'
+                ($validated['intent'] ?? 'DRAFT')
+                    === 'PUBLISH'
+                    ? 'Video saved. Enabled platform publishing jobs were queued.'
+                    : 'Our Channel video created successfully as draft.'
             );
     }
 
@@ -184,9 +283,7 @@ class ChannelVideoController extends Controller
 
         return view(
             'admin.our_channel.edit',
-            compact(
-                'channelVideo'
-            )
+            compact('channelVideo')
         );
     }
 
@@ -203,19 +300,27 @@ class ChannelVideoController extends Controller
 
         $validated = $request->validated();
 
-        $videoId = $this->extractVideoIdOrFail(
+        $youtubeUrl = $this->nullableText(
             $validated['youtube_url']
+            ?? null
         );
 
-        $this->assertVideoIdAvailable(
-            $videoId,
-            $channelVideo->id
+        $videoId = $this->extractVideoId(
+            $youtubeUrl
         );
+
+        if ($videoId !== null) {
+            $this->assertVideoIdAvailable(
+                $videoId,
+                $channelVideo->id
+            );
+        }
 
         try {
             DB::transaction(function () use (
                 $validated,
                 $videoId,
+                $youtubeUrl,
                 $request,
                 $admin,
                 $channelVideo
@@ -232,15 +337,31 @@ class ChannelVideoController extends Controller
 
                 $locked->fill([
                     'title' => $validated['title'],
-                    'short_description' => $validated['short_description'] ?? null,
-                    'description' => $validated['description'] ?? null,
+                    'short_description' =>
+                        $validated['short_description']
+                        ?? null,
+                    'description' =>
+                        $validated['description']
+                        ?? null,
+                    'hashtags' =>
+                        $validated['hashtags']
+                        ?? null,
                     'youtube_video_id' => $videoId,
-                    'youtube_url' => YouTubeVideo::canonicalUrl(
-                        $videoId
+                    'youtube_url' => $videoId !== null
+                        ? YouTubeVideo::canonicalUrl(
+                            $videoId
+                        )
+                        : $youtubeUrl,
+                    'language_code' =>
+                        $validated['language_code'],
+                    'is_featured' => (bool) (
+                        $validated['is_featured']
+                        ?? false
                     ),
-                    'language_code' => $validated['language_code'],
-                    'is_featured' => (bool) ($validated['is_featured'] ?? false),
-                    'sort_order' => (int) ($validated['sort_order'] ?? 0),
+                    'sort_order' => (int) (
+                        $validated['sort_order']
+                        ?? 0
+                    ),
                     'updated_by_admin_id' => $admin->id,
                 ]);
 
@@ -283,7 +404,8 @@ class ChannelVideoController extends Controller
                 )
             ) {
                 throw ValidationException::withMessages([
-                    'youtube_url' => 'This YouTube video has already been added to Our Channel.',
+                    'youtube_url' =>
+                        'This YouTube video has already been added to Our Channel.',
                 ]);
             }
 
@@ -291,9 +413,7 @@ class ChannelVideoController extends Controller
         }
 
         return redirect()
-            ->route(
-                'admin.our_channel.index'
-            )
+            ->route('admin.our_channel.index')
             ->with(
                 'success',
                 'Our Channel video updated successfully.'
@@ -302,7 +422,8 @@ class ChannelVideoController extends Controller
 
     public function publication(
         UpdateChannelVideoPublicationRequest $request,
-        ChannelVideo $channelVideo
+        ChannelVideo $channelVideo,
+        ChannelPublicationService $publicationService
     ): RedirectResponse {
         $admin = $this->authenticatedAdmin();
 
@@ -314,94 +435,184 @@ class ChannelVideoController extends Controller
         $action = $request->publicationAction();
         $reason = $request->auditReason();
 
-        $message = DB::transaction(function () use (
-            $channelVideo,
-            $action,
-            $reason,
-            $request,
-            $admin
-        ): string {
-            $locked = ChannelVideo::query()
-                ->lockForUpdate()
-                ->findOrFail(
-                    $channelVideo->id
+        [
+            $message,
+            $queueExternal,
+        ] = DB::transaction(
+            function () use (
+                $channelVideo,
+                $action,
+                $reason,
+                $request,
+                $admin
+            ): array {
+                $locked = ChannelVideo::query()
+                    ->lockForUpdate()
+                    ->findOrFail(
+                        $channelVideo->id
+                    );
+
+                $before = $this->auditSnapshot(
+                    $locked
                 );
 
-            $before = $this->auditSnapshot(
-                $locked
-            );
+                if (
+                    $action
+                    === UpdateChannelVideoPublicationRequest::ACTION_PUBLISH
+                ) {
+                    abort_unless(
+                        $locked->status
+                            === ChannelVideo::STATUS_DRAFT,
+                        422,
+                        'Only a draft Our Channel video can be published.'
+                    );
 
-            if (
-                $action
-                === UpdateChannelVideoPublicationRequest::ACTION_PUBLISH
-            ) {
-                abort_unless(
-                    $locked->status
-                        === ChannelVideo::STATUS_DRAFT,
-                    422,
-                    'Only a draft Our Channel video can be published.'
+                    $locked->status =
+                        ChannelVideo::STATUS_PUBLISHED;
+                    $locked->published_at = now();
+
+                    $auditAction =
+                        'CHANNEL_VIDEO_PUBLISHED';
+
+                    $message =
+                        'Our Channel video published. Enabled external platforms were queued.';
+
+                    $queueExternal = true;
+                } else {
+                    abort_unless(
+                        $locked->status
+                            === ChannelVideo::STATUS_PUBLISHED,
+                        422,
+                        'Only a published Our Channel video can be unpublished.'
+                    );
+
+                    $locked->status =
+                        ChannelVideo::STATUS_DRAFT;
+                    $locked->published_at = null;
+
+                    $auditAction =
+                        'CHANNEL_VIDEO_UNPUBLISHED';
+
+                    $message =
+                        'TradeX catalogue video unpublished. Existing external platform posts are not deleted.';
+
+                    $queueExternal = false;
+                }
+
+                $locked->updated_by_admin_id =
+                    $admin->id;
+                $locked->save();
+
+                [
+                    $oldValues,
+                    $newValues,
+                ] = $this->auditChanges(
+                    $before,
+                    $this->auditSnapshot(
+                        $locked->fresh()
+                    )
                 );
 
-                $locked->status = ChannelVideo::STATUS_PUBLISHED;
-                $locked->published_at = now();
+                if ($reason !== null) {
+                    $newValues['reason'] = $reason;
+                }
 
-                $auditAction = 'CHANNEL_VIDEO_PUBLISHED';
-                $message = 'Our Channel video published successfully.';
-            } else {
-                abort_unless(
-                    $locked->status
-                        === ChannelVideo::STATUS_PUBLISHED,
-                    422,
-                    'Only a published Our Channel video can be unpublished.'
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->id,
+                    action: $auditAction,
+                    module: 'OUR_CHANNEL',
+                    targetType: 'CHANNEL_VIDEO',
+                    targetId: $locked->id,
+                    oldValues: $oldValues,
+                    newValues: $newValues,
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
                 );
 
-                $locked->status = ChannelVideo::STATUS_DRAFT;
-                $locked->published_at = null;
-
-                $auditAction = 'CHANNEL_VIDEO_UNPUBLISHED';
-                $message = 'Our Channel video unpublished successfully.';
+                return [
+                    $message,
+                    $queueExternal,
+                ];
             }
+        );
 
-            $locked->updated_by_admin_id = $admin->id;
-            $locked->save();
-
-            [
-                $oldValues,
-                $newValues,
-            ] = $this->auditChanges(
-                $before,
-                $this->auditSnapshot(
-                    $locked->fresh()
+        if ($queueExternal) {
+            $publicationService->queueForVideo(
+                $channelVideo->fresh(
+                    'publications'
                 )
             );
-
-            if ($reason !== null) {
-                $newValues['reason'] = $reason;
-            }
-
-            AuditLog::record(
-                actorType: 'ADMIN',
-                actorId: $admin->id,
-                action: $auditAction,
-                module: 'OUR_CHANNEL',
-                targetType: 'CHANNEL_VIDEO',
-                targetId: $locked->id,
-                oldValues: $oldValues,
-                newValues: $newValues,
-                ipAddress: $request->ip(),
-                userAgent: $request->userAgent()
-            );
-
-            return $message;
-        });
+        }
 
         return redirect()
-            ->route(
-                'admin.our_channel.index'
-            )
+            ->route('admin.our_channel.index')
             ->with(
                 'success',
                 $message
+            );
+    }
+
+    public function retryPublication(
+        Request $request,
+        ChannelVideo $channelVideo,
+        ChannelVideoPublication $publication,
+        ChannelPublicationService $publicationService
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requirePermission(
+            $admin,
+            'our_channel.manage'
+        );
+
+        abort_unless(
+            $publication->channel_video_id
+                === $channelVideo->id,
+            404
+        );
+
+        abort_if(
+            $publication->isPublished(),
+            422,
+            'A published external post cannot be retried.'
+        );
+
+        $publicationService->retry(
+            $publication
+        );
+
+        $publication->refresh();
+
+        AuditLog::record(
+            actorType: 'ADMIN',
+            actorId: $admin->id,
+            action: 'CHANNEL_VIDEO_PUBLICATION_RETRY_REQUESTED',
+            module: 'OUR_CHANNEL',
+            targetType: 'CHANNEL_VIDEO_PUBLICATION',
+            targetId: $publication->id,
+            newValues: [
+                'channel_video_id' =>
+                    $channelVideo->id,
+                'platform' =>
+                    $publication->platform,
+                'status' =>
+                    $publication->status,
+            ],
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return redirect()
+            ->route('admin.our_channel.index')
+            ->with(
+                'success',
+                $publication->status
+                    === ChannelVideoPublication::STATUS_PENDING
+                    ? $publication->platformLabel()
+                        .' publishing retry queued.'
+                    : $publication->platformLabel()
+                        .' still requires setup or manual action.'
             );
     }
 
@@ -415,6 +626,11 @@ class ChannelVideoController extends Controller
             $admin,
             'our_channel.manage'
         );
+
+        $disk = trim(
+            (string) $channelVideo->source_disk
+        );
+        $uuid = $channelVideo->uuid;
 
         DB::transaction(function () use (
             $request,
@@ -434,11 +650,23 @@ class ChannelVideoController extends Controller
                 'Unpublish the Our Channel video before deleting it.'
             );
 
+            abort_if(
+                $locked->publications()
+                    ->where(
+                        'status',
+                        ChannelVideoPublication::STATUS_PUBLISHED
+                    )
+                    ->exists(),
+                422,
+                'This video has published external posts. Keep the TradeX record for audit/history.'
+            );
+
             $before = $this->auditSnapshot(
                 $locked
             );
 
-            $locked->updated_by_admin_id = $admin->id;
+            $locked->updated_by_admin_id =
+                $admin->id;
             $locked->save();
             $locked->delete();
 
@@ -451,33 +679,195 @@ class ChannelVideoController extends Controller
                 targetId: $locked->id,
                 oldValues: $before,
                 newValues: [
-                    'deleted_at' => $locked->deleted_at?->toISOString(),
+                    'deleted_at' =>
+                        $locked->deleted_at?->toISOString(),
                 ],
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
             );
         });
 
-        return redirect()
-            ->route(
-                'admin.our_channel.index'
+        if (
+            in_array(
+                $disk,
+                [
+                    'private',
+                    's3-private',
+                ],
+                true
             )
+        ) {
+            Storage::disk($disk)->deleteDirectory(
+                'our-channel/'.$uuid
+            );
+        }
+
+        return redirect()
+            ->route('admin.our_channel.index')
             ->with(
                 'success',
                 'Our Channel video deleted successfully.'
             );
     }
 
-    private function extractVideoIdOrFail(
-        string $youtubeUrl
-    ): string {
+    private function storeSourceUpload(
+        StoreChannelVideoRequest $request,
+        string $uuid
+    ): ?array {
+        $file = $request->file('video_file');
+
+        if (! $file instanceof UploadedFile) {
+            return null;
+        }
+
+        $disk = trim(
+            (string) config(
+                'tradex_channels.source_disk',
+                'private'
+            )
+        );
+
+        if (
+            ! in_array(
+                $disk,
+                [
+                    'private',
+                    's3-private',
+                ],
+                true
+            )
+        ) {
+            throw ValidationException::withMessages([
+                'video_file' =>
+                    'The configured TradeX channel media disk is not approved.',
+            ]);
+        }
+
+        $mime = strtolower(
+            trim(
+                (string) $file->getMimeType()
+            )
+        );
+
+        $extension = $mime === 'video/quicktime'
+            ? 'mov'
+            : 'mp4';
+
+        $directory =
+            'our-channel/'
+            .$uuid
+            .'/source';
+
+        $filename =
+            'master.'
+            .$extension;
+
+        $storedPath = Storage::disk($disk)
+            ->putFileAs(
+                $directory,
+                $file,
+                $filename,
+                [
+                    'visibility' => 'private',
+                ]
+            );
+
+        if (
+            ! is_string($storedPath)
+            || trim($storedPath) === ''
+        ) {
+            throw ValidationException::withMessages([
+                'video_file' =>
+                    'TradeX could not store the protected master video.',
+            ]);
+        }
+
+        $realPath = $file->getRealPath();
+
+        $sha256 = is_string($realPath)
+            && $realPath !== ''
+            ? hash_file(
+                'sha256',
+                $realPath
+            )
+            : false;
+
+        $originalName = basename(
+            str_replace(
+                '\\',
+                '/',
+                $file->getClientOriginalName()
+            )
+        );
+
+        return [
+            'disk' => $disk,
+            'path' => $storedPath,
+            'original_name' => mb_substr(
+                $originalName,
+                0,
+                255
+            ),
+            'mime_type' => $mime,
+            'size_bytes' => max(
+                0,
+                (int) $file->getSize()
+            ),
+            'sha256' => is_string($sha256)
+                ? $sha256
+                : null,
+        ];
+    }
+
+    private function cleanupSource(
+        ?array $source,
+        string $uuid
+    ): void {
+        if (! is_array($source)) {
+            return;
+        }
+
+        $disk = trim(
+            (string) (
+                $source['disk']
+                ?? ''
+            )
+        );
+
+        if (
+            in_array(
+                $disk,
+                [
+                    'private',
+                    's3-private',
+                ],
+                true
+            )
+        ) {
+            Storage::disk($disk)->deleteDirectory(
+                'our-channel/'.$uuid
+            );
+        }
+    }
+
+    private function extractVideoId(
+        ?string $youtubeUrl
+    ): ?string {
+        if (
+            $youtubeUrl === null
+            || trim($youtubeUrl) === ''
+        ) {
+            return null;
+        }
+
         $videoId = YouTubeVideo::extractVideoId(
             $youtubeUrl
         );
 
         if ($videoId === null) {
             throw ValidationException::withMessages([
-                'youtube_url' => 'Enter a valid HTTPS YouTube video URL.',
+                'youtube_url' =>
+                    'Enter a valid HTTPS YouTube video URL.',
             ]);
         }
 
@@ -502,16 +892,71 @@ class ChannelVideoController extends Controller
 
         if ($query->exists()) {
             throw ValidationException::withMessages([
-                'youtube_url' => 'This YouTube video has already been added to Our Channel.',
+                'youtube_url' =>
+                    'This YouTube video has already been added to Our Channel.',
             ]);
         }
     }
 
+    private function nullableText(
+        mixed $value
+    ): ?string {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed !== ''
+            ? $trimmed
+            : null;
+    }
+
+    private function platformStates(): array
+    {
+        return [
+            ChannelVideoPublication::PLATFORM_YOUTUBE => [
+                'mode' => 'AUTO',
+                'enabled' => (bool) config(
+                    'tradex_channels.platforms.youtube.enabled',
+                    false
+                ),
+            ],
+            ChannelVideoPublication::PLATFORM_INSTAGRAM => [
+                'mode' => 'AUTO',
+                'enabled' => (bool) config(
+                    'tradex_channels.platforms.instagram.enabled',
+                    false
+                ),
+            ],
+            ChannelVideoPublication::PLATFORM_FACEBOOK => [
+                'mode' => 'AUTO',
+                'enabled' => (bool) config(
+                    'tradex_channels.platforms.facebook.enabled',
+                    false
+                ),
+            ],
+            ChannelVideoPublication::PLATFORM_TELEGRAM => [
+                'mode' => 'AUTO',
+                'enabled' => (bool) config(
+                    'tradex_channels.platforms.telegram.enabled',
+                    false
+                ),
+            ],
+            ChannelVideoPublication::PLATFORM_TIKTOK => [
+                'mode' => 'CONFIRM',
+                'enabled' => false,
+            ],
+            ChannelVideoPublication::PLATFORM_WHATSAPP_CHANNEL => [
+                'mode' => 'MANUAL',
+                'enabled' => false,
+            ],
+        ];
+    }
+
     private function authenticatedAdmin(): AdminUser
     {
-        $admin = auth(
-            'admin'
-        )->user();
+        $admin = auth('admin')->user();
 
         abort_unless(
             $admin instanceof AdminUser,
@@ -539,27 +984,56 @@ class ChannelVideoController extends Controller
         return [
             'uuid' => $video->uuid,
             'title' => $video->title,
-            'short_description' => $video->short_description,
-            'description_sha256' => $video->description !== null
-                ? hash(
-                    'sha256',
-                    $video->description
-                )
-                : null,
-            'description_length' => $video->description !== null
-                ? mb_strlen(
-                    $video->description
-                )
-                : 0,
-            'youtube_video_id' => $video->youtube_video_id,
-            'youtube_url' => $video->youtube_url,
-            'language_code' => $video->language_code,
-            'status' => $video->status,
-            'published_at' => $video->published_at?->toISOString(),
-            'is_featured' => $video->is_featured,
-            'sort_order' => $video->sort_order,
-            'created_by_admin_id' => $video->created_by_admin_id,
-            'updated_by_admin_id' => $video->updated_by_admin_id,
+            'short_description' =>
+                $video->short_description,
+            'description_sha256' =>
+                $video->description !== null
+                    ? hash(
+                        'sha256',
+                        $video->description
+                    )
+                    : null,
+            'description_length' =>
+                $video->description !== null
+                    ? mb_strlen(
+                        $video->description
+                    )
+                    : 0,
+            'hashtags_sha256' =>
+                $video->hashtags !== null
+                    ? hash(
+                        'sha256',
+                        $video->hashtags
+                    )
+                    : null,
+            'youtube_video_id' =>
+                $video->youtube_video_id,
+            'youtube_url' =>
+                $video->youtube_url,
+            'has_source_media' =>
+                $video->hasSourceMedia(),
+            'source_mime_type' =>
+                $video->source_mime_type,
+            'source_size_bytes' =>
+                $video->source_size_bytes,
+            'source_sha256' =>
+                $video->source_sha256,
+            'language_code' =>
+                $video->language_code,
+            'status' =>
+                $video->status,
+            'published_at' =>
+                $video->published_at?->toISOString(),
+            'publish_requested_at' =>
+                $video->publish_requested_at?->toISOString(),
+            'is_featured' =>
+                $video->is_featured,
+            'sort_order' =>
+                $video->sort_order,
+            'created_by_admin_id' =>
+                $video->created_by_admin_id,
+            'updated_by_admin_id' =>
+                $video->updated_by_admin_id,
         ];
     }
 
