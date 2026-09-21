@@ -137,6 +137,94 @@
         </div>
     </div>
 
+    <section class="panel world-clock-panel" aria-labelledby="worldClockHeading">
+        <div class="market-panel-heading">
+            <div>
+                <div class="panel-eyebrow">12 HOUR ANALOG CLOCKS</div>
+                <h2 id="worldClockHeading">World Clocks & Trading Sessions</h2>
+            </div>
+            <span class="market-refresh-note">Live · device-aware · DST-aware</span>
+        </div>
+
+        <div class="world-clock-grid" id="worldClockGrid">
+            <article class="world-clock-card" data-world-clock data-timezone="Pacific/Auckland" data-label="New Zealand">
+                <div class="world-clock-face" aria-label="New Zealand analog clock">
+                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
+                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
+                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
+                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                </div>
+                <div class="world-clock-meta">
+                    <strong>New Zealand</strong>
+                    <span class="world-clock-digital">--:--:-- --</span>
+                    <small>Pacific/Auckland</small>
+                </div>
+            </article>
+
+            <article class="world-clock-card" data-world-clock data-timezone="device" data-label="Device Time">
+                <div class="world-clock-face" aria-label="Device local analog clock">
+                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
+                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
+                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
+                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                </div>
+                <div class="world-clock-meta">
+                    <strong>Device Time</strong>
+                    <span class="world-clock-digital">--:--:-- --</span>
+                    <small class="world-clock-zone">Automatic</small>
+                </div>
+            </article>
+
+            <article class="world-clock-card" data-world-clock data-timezone="Europe/London" data-label="London">
+                <div class="world-clock-face" aria-label="London analog clock">
+                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
+                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
+                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
+                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                </div>
+                <div class="world-clock-meta">
+                    <strong>London</strong>
+                    <span class="world-clock-digital">--:--:-- --</span>
+                    <small>Europe/London</small>
+                </div>
+            </article>
+
+            <article class="world-clock-card" data-world-clock data-timezone="America/New_York" data-label="New York">
+                <div class="world-clock-face" aria-label="New York analog clock">
+                    <span class="clock-number n12">12</span><span class="clock-number n3">3</span>
+                    <span class="clock-number n6">6</span><span class="clock-number n9">9</span>
+                    <span class="clock-hand hour"></span><span class="clock-hand minute"></span>
+                    <span class="clock-hand second"></span><span class="clock-pin"></span>
+                </div>
+                <div class="world-clock-meta">
+                    <strong>New York</strong>
+                    <span class="world-clock-digital">--:--:-- --</span>
+                    <small>America/New_York</small>
+                </div>
+            </article>
+        </div>
+
+        <div class="featured-session-grid" id="featuredSessionGrid">
+            @foreach(($snapshot['featured_sessions'] ?? []) as $session)
+                <article class="featured-session-card" data-featured-session="{{ $session['key'] }}">
+                    <div>
+                        <span>{{ $session['region'] }}</span>
+                        <strong>{{ $session['name'] }}</strong>
+                        <small>{{ $session['configured_open_local'] }}–{{ $session['configured_close_local'] }} · {{ $session['timezone'] }}</small>
+                    </div>
+                    <div class="featured-session-state">
+                        <span class="market-status-badge {{ $session['status'] }}">{{ strtoupper($session['status']) }}</span>
+                        <small class="featured-session-next">
+                            {{ $session['status'] === 'open'
+                                ? 'Closes '.$session['close_at_display']
+                                : 'Opens '.$session['next_open_at_display'] }}
+                        </small>
+                    </div>
+                </article>
+            @endforeach
+        </div>
+    </section>
+
     <div class="market-clock-lower-grid">
         <section class="panel market-session-panel">
             <div class="market-panel-heading">
