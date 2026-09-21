@@ -13,7 +13,8 @@ use Throwable;
 class TelegramChannelPublisher
 {
     public function __construct(
-        private readonly ChannelMediaSource $source
+        private readonly ChannelMediaSource $source,
+        private readonly ChannelConnectionResolver $connections
     ) {
     }
 
@@ -21,10 +22,8 @@ class TelegramChannelPublisher
         ChannelVideo $video,
         ChannelVideoPublication $publication
     ): array {
-        $config = (array) config(
-            'tradex_channels.platforms.telegram',
-            []
-        );
+        $config = $this->connections
+            ->telegramRuntime();
 
         $this->assertConfigured($config);
 
