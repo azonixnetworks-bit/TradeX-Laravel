@@ -36,7 +36,7 @@ class AdminDeviceSessionService
 
     public function summary()
     {
-        return AdminUser::query()->withCount([
+        $admins = AdminUser::query()->withCount([
             'adminDevices as approved_devices_count' => fn ($query) => $query->where('status', 'ACTIVE'),
             'adminDevices as mobile_devices_count' => fn ($query) => $query->where('status', 'ACTIVE')->where('device_slot', 'MOBILE'),
             'adminDevices as desktop_devices_count' => fn ($query) => $query->where('status', 'ACTIVE')->where('device_slot', 'DESKTOP'),
@@ -44,5 +44,12 @@ class AdminDeviceSessionService
             'adminDevices as signed_in_devices_count' => fn ($query) => $query->where('status', 'ACTIVE')->whereHas('sessions', fn ($session) => $session->live()),
             'deviceSessions as signed_in_sessions_count' => fn ($query) => $query->live(),
         ])->withMax('deviceSessions', 'last_seen_at')->orderBy('name')->paginate(10, ['*'], 'admin_devices_page')->withQueryString();
+
+        $security = app(AdminDeviceSecurityService::class);
+        $admins->getCollection()->each(function (AdminUser $admin) use ($security): void {
+            $admin->setAttribute('device_policy', $security->policy($admin));
+        });
+
+        return $admins;
     }
 }

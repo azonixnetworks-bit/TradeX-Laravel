@@ -26,6 +26,7 @@ class AdminDeviceController extends Controller
             'sessions' => AdminDeviceSession::where('admin_user_id', $adminUser->id)->live()->latest('last_seen_at')->limit(100)->get(),
             'incidents' => $incidents,
             'alerts' => AdminDeviceAlert::whereIn('admin_device_incident_id', $incidents->pluck('id'))->get()->groupBy('admin_device_incident_id'),
+            'devicePolicy' => app(AdminDeviceSecurityService::class)->policy($adminUser),
         ]);
     }
 

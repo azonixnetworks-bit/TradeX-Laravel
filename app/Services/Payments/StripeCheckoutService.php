@@ -17,8 +17,7 @@ class StripeCheckoutService
         private readonly PaymentOrderService $orders,
         private readonly PaymentApiPresenter $presenter,
         private readonly StripeConfigurationSafety $stripeConfiguration
-    ) {
-    }
+    ) {}
 
     public function create(User $user, string $idempotencyKey, Request $request): array
     {
@@ -157,6 +156,7 @@ class StripeCheckoutService
                 $checkoutUrl,
                 PHP_URL_SCHEME
             )) !== 'https'
+            || ! $this->checkoutHostIsAllowed($checkoutUrl)
         ) {
             $this->markFailed($order, 'STRIPE_CHECKOUT_RESPONSE_INVALID');
 
@@ -201,6 +201,17 @@ class StripeCheckoutService
             'tradex_integrations.stripe.base_url',
             'https://api.stripe.com'
         ), '/');
+    }
+
+    private function checkoutHostIsAllowed(string $url): bool
+    {
+        if (strtoupper((string) config('tradex_integrations.stripe.environment')) !== 'LIVE') {
+            return true;
+        }
+
+        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
+
+        return $host === 'stripe.com' || str_ends_with($host, '.stripe.com');
     }
 
     private function markFailed(PaymentOrder $order, string $code): void

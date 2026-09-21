@@ -30,6 +30,18 @@ Route::view(
     ['result' => 'cancel']
 )->name('payments.nowpayments.cancel');
 
+Route::view(
+    '/payments/stripe/success',
+    'payments.stripe-result',
+    ['result' => 'success']
+)->name('payments.stripe.success');
+
+Route::view(
+    '/payments/stripe/cancel',
+    'payments.stripe-result',
+    ['result' => 'cancel']
+)->name('payments.stripe.cancel');
+
 require __DIR__ . '/customer_onboarding.php';
 require __DIR__ . '/admin.php';
 require __DIR__ . '/admin_video_playback.php';

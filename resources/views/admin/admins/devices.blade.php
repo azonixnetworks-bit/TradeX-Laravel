@@ -7,14 +7,14 @@
 <div class="page-header">
     <div>
         <h1>Devices · {{ $adminUser->name }}</h1>
-        <p>One mobile and one desktop browser. Blocked attempts do not interrupt approved devices.</p>
+        <p>{{ $devicePolicy['label'] }}. Blocked attempts do not interrupt approved devices.</p>
     </div>
     <a class="secondary-btn" href="{{ route('admin.administration.admins.index') }}">Back to Admin Users</a>
 </div>
 @if(session('success'))<div class="panel" role="status" style="padding:16px">{{ session('success') }}</div>@endif
 @if($errors->any())<div class="panel" role="alert" style="padding:16px">{{ $errors->first() }}</div>@endif
 <section class="panel" style="padding:16px;margin-bottom:20px">
-    <p>Only Super Admin can approve or revoke devices. Revoke the existing device in a category before approving its replacement. Revoking your current device signs you out on your next request.</p>
+    <p>Only Super Admin can approve or revoke devices. This account allows {{ $devicePolicy['label'] }}. Revoke an approved device before approving a replacement when the limit is full. Revoking your current device signs you out on your next request.</p>
     <p>Device identity is tied to this browser’s secure cookie. Another browser, private browsing or cleared cookies counts as a new device. Browser/OS details are reported by the browser; IMEI and hardware serial numbers are unavailable.</p>
     <div style="overflow-x:auto">
         <table class="data-table" style="width:100%;min-width:760px">

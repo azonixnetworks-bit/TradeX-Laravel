@@ -5,9 +5,12 @@ namespace Tests\Feature\Admin\Auth;
 use App\Jobs\SendAdminDeviceAlert;
 use App\Models\AdminDevice;
 use App\Models\AdminDeviceAlert;
+use App\Models\AdminDeviceSession;
+use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Services\Admin\Security\AdminDeviceSecurityService;
+use App\Services\Admin\Security\AdminDeviceSessionService;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -31,7 +34,12 @@ class AdminBrowserDeviceSecurityTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        config(['tradex_admin_devices.enabled' => true, 'tradex_admin_hardening.totp.required' => false]);
+        config([
+            'tradex_admin_devices.enabled' => true,
+            'tradex_admin_devices.admin_desktop_limit' => 1,
+            'tradex_admin_devices.admin_mobile_limit' => 1,
+            'tradex_admin_hardening.totp.required' => false,
+        ]);
         Queue::fake();
         Http::preventStrayRequests();
     }
@@ -71,6 +79,40 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $this->security()->bind($admin, $this->request('b', self::MOBILE));
         $this->deny($admin, $this->request('c', self::MOBILE));
         $this->assertSame(2, AdminDevice::where('status', 'ACTIVE')->count());
+    }
+
+    public function test_production_policy_allows_configured_super_admin_five_devices_in_any_mix(): void
+    {
+        $admin = $this->admin(true);
+        config([
+            'tradex.super_admin.email' => $admin->email,
+            'tradex_admin_devices.super_admin_total_limit' => 5,
+        ]);
+
+        foreach (['a', 'b', 'c', 'd', 'e'] as $token) {
+            $this->security()->bind($admin, $this->request($token));
+        }
+
+        $this->deny($admin, $this->request('f', self::MOBILE));
+        $this->assertSame(5, AdminDevice::where('status', 'ACTIVE')->count());
+        $this->assertDatabaseHas('admin_device_incidents', ['reason' => 'DEVICE_LIMIT_REACHED']);
+    }
+
+    public function test_production_policy_allows_other_admins_two_desktops_and_one_mobile(): void
+    {
+        config([
+            'tradex_admin_devices.admin_desktop_limit' => 2,
+            'tradex_admin_devices.admin_mobile_limit' => 1,
+        ]);
+        $admin = $this->admin();
+
+        $this->security()->bind($admin, $this->request('a'));
+        $this->security()->bind($admin, $this->request('b'));
+        $this->security()->bind($admin, $this->request('c', self::MOBILE));
+        $this->deny($admin, $this->request('d'));
+
+        $this->assertSame(3, AdminDevice::where('status', 'ACTIVE')->count());
+        $this->assertDatabaseHas('admin_device_incidents', ['reason' => 'DEVICE_LIMIT_REACHED']);
     }
 
     public function test_revoke_and_reapprove_cannot_resurrect_old_sessions(): void
@@ -306,7 +348,7 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $admin = $this->admin(true);
         $first = $this->request('a');
         $second = $this->request('a');
-        $tracker = app(\App\Services\Admin\Security\AdminDeviceSessionService::class);
+        $tracker = app(AdminDeviceSessionService::class);
         foreach ([$first, $second] as $request) {
             $this->security()->bind($admin, $request);
             $tracker->touch($admin, $request);
@@ -326,11 +368,11 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $admin = $this->admin(true);
         $this->withCookie(AdminDeviceSecurityService::COOKIE, str_repeat('a', 64))->withHeader('User-Agent', self::DESKTOP);
         $this->post(route('admin.login.submit'), ['email' => $admin->email, 'password' => 'StrongAdmin#2026!'])->assertRedirect();
-        $this->assertSame(1, \App\Models\AdminDeviceSession::live()->count());
+        $this->assertSame(1, AdminDeviceSession::live()->count());
         $this->withCookie(config('session.cookie'), session()->getId());
         $this->get(route('admin.dashboard'))->assertOk()->assertSee('Admin Devices &amp; Sessions', false)->assertSee('View Devices');
         $this->post(route('admin.logout'))->assertRedirect(route('admin.login'));
-        $this->assertSame(0, \App\Models\AdminDeviceSession::live()->count());
+        $this->assertSame(0, AdminDeviceSession::live()->count());
         $this->assertSame(1, AdminDevice::where('status', 'ACTIVE')->count());
     }
 
@@ -339,7 +381,7 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         config(['tradex_admin_devices.enabled' => false]);
         $admin = $this->admin();
         $role = AdminRole::create(['code' => 'DASH_TEST', 'name' => 'Dashboard', 'is_active' => true]);
-        $permission = \App\Models\AdminPermission::firstOrCreate(['code' => 'dashboard.view'], ['name' => 'Dashboard', 'module' => 'DASHBOARD']);
+        $permission = AdminPermission::firstOrCreate(['code' => 'dashboard.view'], ['name' => 'Dashboard', 'module' => 'DASHBOARD']);
         $role->permissions()->attach($permission);
         $admin->roles()->attach($role);
         $this->actingAs($admin, 'admin')->get(route('admin.dashboard'))->assertOk()->assertDontSee('View Devices')->assertViewHas('adminDeviceSummary', null);

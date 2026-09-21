@@ -4,6 +4,7 @@ namespace App\Services\Admin\Security;
 
 use App\Models\AdminDevice;
 use App\Models\AdminDeviceIncident;
+use App\Models\AdminDeviceSession;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use Illuminate\Http\Request;
@@ -32,6 +33,35 @@ class AdminDeviceSecurityService
         return is_string($token) && preg_match('/^[a-f0-9]{64}$/D', $token) ? $token : null;
     }
 
+    public function policy(AdminUser $admin): array
+    {
+        $configuredSuperAdmin = strtolower(trim((string) config('tradex.super_admin.email')));
+        $isConfiguredSuperAdmin = $admin->isSuperAdmin()
+            && $configuredSuperAdmin !== ''
+            && hash_equals($configuredSuperAdmin, strtolower(trim((string) $admin->email)));
+
+        if ($isConfiguredSuperAdmin) {
+            $limit = max(1, (int) config('tradex_admin_devices.super_admin_total_limit', 5));
+
+            return [
+                'total_limit' => $limit,
+                'desktop_limit' => null,
+                'mobile_limit' => null,
+                'label' => $limit.' devices in any desktop/mobile mix',
+            ];
+        }
+
+        $desktop = max(0, (int) config('tradex_admin_devices.admin_desktop_limit', 2));
+        $mobile = max(0, (int) config('tradex_admin_devices.admin_mobile_limit', 1));
+
+        return [
+            'total_limit' => $desktop + $mobile,
+            'desktop_limit' => $desktop,
+            'mobile_limit' => $mobile,
+            'label' => $desktop.' desktop + '.$mobile.' mobile',
+        ];
+    }
+
     // Called only after all required authentication factors succeed.
     public function bind(AdminUser $admin, Request $request): void
     {
@@ -54,15 +84,15 @@ class AdminDeviceSecurityService
                 $reason = 'DEVICE_'.$device->status;
             } elseif ($device && $device->device_slot !== $slot) {
                 $reason = 'DEVICE_CATEGORY_CHANGED';
-            } elseif (! $device && AdminDevice::where('admin_user_id', $admin->id)->where('active_slot', $slot)->exists()) {
-                $reason = 'DEVICE_SLOT_OCCUPIED';
+            } elseif (! $device) {
+                $reason = $this->capacityReason($locked, $slot);
             }
             if (! $device) {
                 $device = AdminDevice::create([
                     'admin_user_id' => $admin->id,
                     'token_hash' => hash('sha256', $token),
                     'device_slot' => $slot,
-                    'active_slot' => $reason ? null : $slot,
+                    'active_slot' => $reason ? null : $this->nextActiveSlot($locked, $slot),
                     'status' => $reason ? 'BLOCKED' : 'ACTIVE',
                     'ip_address' => $request->ip(),
                     'user_agent' => mb_substr((string) $request->userAgent(), 0, 2000),
@@ -133,16 +163,57 @@ class AdminDeviceSecurityService
             AdminUser::whereKey($owner->id)->lockForUpdate()->firstOrFail();
             $device = AdminDevice::whereKey($device->id)->lockForUpdate()->firstOrFail();
             $device->increment('session_version');
-            \App\Models\AdminDeviceSession::where('admin_device_id', $device->id)->whereNull('ended_at')->update(['ended_at' => now()]);
+            AdminDeviceSession::where('admin_device_id', $device->id)->whereNull('ended_at')->update(['ended_at' => now()]);
             if ($action === 'approve') {
-                if (AdminDevice::where('admin_user_id', $owner->id)->where('active_slot', $device->device_slot)->where('id', '!=', $device->id)->exists()) {
-                    throw ValidationException::withMessages(['device' => 'Revoke the existing device in this category before approving another.']);
+                $reason = $this->capacityReason($owner, $device->device_slot, $device->id);
+                if ($reason !== null) {
+                    throw ValidationException::withMessages(['device' => 'This admin has reached the allowed device limit. Revoke an approved device before approving another.']);
                 }
-                $device->update(['status' => 'ACTIVE', 'active_slot' => $device->device_slot, 'revoked_at' => null]);
+                $device->update(['status' => 'ACTIVE', 'active_slot' => $this->nextActiveSlot($owner, $device->device_slot), 'revoked_at' => null]);
             } else {
                 $device->update(['status' => 'REVOKED', 'active_slot' => null, 'revoked_at' => now()]);
             }
             AuditLog::record(actorType: 'ADMIN', actorId: $actor->id, action: 'ADMIN_DEVICE_'.strtoupper($action), module: 'SECURITY', newValues: ['device_id' => $device->id, 'admin_user_id' => $owner->id, 'reason' => $reason], ipAddress: $request->ip(), userAgent: $request->userAgent());
         }, 3);
+    }
+
+    private function capacityReason(AdminUser $admin, string $slot, ?int $excludeDeviceId = null): ?string
+    {
+        $policy = $this->policy($admin);
+        $active = AdminDevice::where('admin_user_id', $admin->id)
+            ->where('status', 'ACTIVE')
+            ->when($excludeDeviceId, fn ($query) => $query->whereKeyNot($excludeDeviceId));
+
+        if ((clone $active)->count() >= $policy['total_limit']) {
+            return 'DEVICE_LIMIT_REACHED';
+        }
+
+        $categoryLimit = $slot === 'MOBILE' ? $policy['mobile_limit'] : $policy['desktop_limit'];
+        if ($categoryLimit !== null && (clone $active)->where('device_slot', $slot)->count() >= $categoryLimit) {
+            return 'DEVICE_SLOT_OCCUPIED';
+        }
+
+        return null;
+    }
+
+    private function nextActiveSlot(AdminUser $admin, string $slot): string
+    {
+        $policy = $this->policy($admin);
+        $prefix = $policy['desktop_limit'] === null ? 'ANY' : $slot;
+        $occupied = AdminDevice::where('admin_user_id', $admin->id)
+            ->whereNotNull('active_slot')
+            ->pluck('active_slot')
+            ->all();
+
+        for ($number = 1; $number <= $policy['total_limit']; $number++) {
+            $candidate = $prefix !== 'ANY' && $number === 1
+                ? $prefix
+                : $prefix.':'.$number;
+            if (! in_array($candidate, $occupied, true)) {
+                return $candidate;
+            }
+        }
+
+        throw ValidationException::withMessages(['device' => 'No approved device slot is available.']);
     }
 }

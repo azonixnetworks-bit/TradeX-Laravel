@@ -42,34 +42,6 @@ $stripeEnabled =
         FILTER_VALIDATE_BOOL
     );
 
-$stripeAdapterReady =
-    $stripeEnabled
-    && filled(
-        env(
-            'TRADEX_STRIPE_PUBLISHABLE_KEY'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_STRIPE_SECRET_KEY'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_STRIPE_WEBHOOK_SECRET'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_STRIPE_SUCCESS_URL'
-        )
-    )
-    && filled(
-        env(
-            'TRADEX_STRIPE_CANCEL_URL'
-        )
-    );
-
 $nowPaymentsEnabled =
     filter_var(
         env(
@@ -101,10 +73,7 @@ return [
             'display_name' => 'Stripe',
             'kind' => 'PAYMENT_GATEWAY',
             'transaction_owner' => 'Payments API / API-21',
-            'runtime_adapter_status' =>
-                $stripeAdapterReady
-                    ? 'ACTIVE_EXISTING'
-                    : 'NOT_WIRED_ADMIN16',
+            'runtime_adapter_status' => 'ACTIVE_EXISTING',
             'environment_options' => ['SANDBOX', 'LIVE'],
         ],
 

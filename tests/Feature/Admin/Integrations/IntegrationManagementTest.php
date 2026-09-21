@@ -348,7 +348,7 @@ class IntegrationManagementTest extends TestCase
             ->assertStatus(409);
     }
 
-    public function test_configured_stripe_can_be_approved_but_is_not_claimed_as_live_runtime(): void
+    public function test_configured_stripe_can_be_approved_with_existing_runtime(): void
     {
         $this->configureStripe();
 
@@ -392,10 +392,10 @@ class IntegrationManagementTest extends TestCase
             )
             ->assertOk()
             ->assertSee(
-                'APPROVED_NOT_WIRED'
+                'APPROVED_EXISTING_RUNTIME'
             )
             ->assertSee(
-                'NO_TRANSACTION_ADAPTER'
+                'ACTIVE_EXISTING'
             );
     }
 
@@ -643,7 +643,9 @@ class IntegrationManagementTest extends TestCase
     public function test_update_audit_contains_safe_state_only(): void
     {
         $secretCanary =
-            'STRIPE-SECRET-CANARY-DO-NOT-AUDIT';
+            'sk_test_STRIPE-SECRET-CANARY-DO-NOT-AUDIT';
+
+        $this->configureStripe();
 
         config()->set(
             'tradex_integrations.stripe.publishable_key',
@@ -844,6 +846,11 @@ class IntegrationManagementTest extends TestCase
     private function configureStripe(): void
     {
         config()->set(
+            'tradex_integrations.stripe.environment',
+            'SANDBOX'
+        );
+
+        config()->set(
             'tradex_integrations.stripe.publishable_key',
             'pk_test_admin16'
         );
@@ -856,6 +863,21 @@ class IntegrationManagementTest extends TestCase
         config()->set(
             'tradex_integrations.stripe.webhook_secret',
             'whsec_admin16'
+        );
+
+        config()->set(
+            'tradex_integrations.stripe.base_url',
+            'https://api.stripe.com'
+        );
+
+        config()->set(
+            'tradex_integrations.stripe.success_url',
+            'https://tradex.example.test/payments/stripe/success'
+        );
+
+        config()->set(
+            'tradex_integrations.stripe.cancel_url',
+            'https://tradex.example.test/payments/stripe/cancel'
         );
     }
 

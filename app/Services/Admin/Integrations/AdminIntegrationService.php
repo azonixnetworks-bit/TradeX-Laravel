@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\IntegrationProviderState;
 use App\Services\Payments\NowPaymentsConfigurationSafety;
 use App\Services\Payments\PayPalConfigurationSafety;
+use App\Services\Payments\StripeConfigurationSafety;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -14,6 +15,7 @@ class AdminIntegrationService
 {
     public function __construct(
         private readonly PayPalConfigurationSafety $paypalConfiguration,
+        private readonly StripeConfigurationSafety $stripeConfiguration,
         private readonly NowPaymentsConfigurationSafety $nowPaymentsConfiguration
     ) {
     }
@@ -543,47 +545,8 @@ class AdminIntegrationService
             'PAYPAL' =>
                 $this->paypalReadiness(),
 
-            'STRIPE' => [
-                'configured' =>
-                    filled(
-                        config(
-                            'tradex_integrations.stripe.publishable_key'
-                        )
-                    )
-                    && filled(
-                        config(
-                            'tradex_integrations.stripe.secret_key'
-                        )
-                    )
-                    && filled(
-                        config(
-                            'tradex_integrations.stripe.webhook_secret'
-                        )
-                    ),
-
-                'checks' => [
-                    'Publishable key configured' =>
-                        filled(
-                            config(
-                                'tradex_integrations.stripe.publishable_key'
-                            )
-                        ),
-
-                    'Secret key configured' =>
-                        filled(
-                            config(
-                                'tradex_integrations.stripe.secret_key'
-                            )
-                        ),
-
-                    'Webhook signing secret configured' =>
-                        filled(
-                            config(
-                                'tradex_integrations.stripe.webhook_secret'
-                            )
-                        ),
-                ],
-            ],
+            'STRIPE' =>
+                $this->stripeReadiness(),
 
             'NOWPAYMENTS' =>
                 $this->nowPaymentsReadiness(),
@@ -723,6 +686,45 @@ class AdminIntegrationService
 
                 'IPN callback URL safe' =>
                     (bool) ($checks['webhook_url_valid'] ?? false),
+            ],
+        ];
+    }
+
+    private function stripeReadiness(): array
+    {
+        $checks =
+            $this->stripeConfiguration
+                ->checks();
+
+        return [
+            'configured' =>
+                ! in_array(
+                    false,
+                    $checks,
+                    true
+                ),
+
+            'checks' => [
+                'Environment supported' =>
+                    (bool) ($checks['environment_supported'] ?? false),
+
+                'Publishable key matches environment' =>
+                    (bool) ($checks['publishable_key_matches_environment'] ?? false),
+
+                'Secret key matches environment' =>
+                    (bool) ($checks['secret_key_matches_environment'] ?? false),
+
+                'Webhook signing secret configured' =>
+                    (bool) ($checks['webhook_secret_valid'] ?? false),
+
+                'Official Stripe API endpoint' =>
+                    (bool) ($checks['official_api_endpoint'] ?? false),
+
+                'Success URL safe' =>
+                    (bool) ($checks['success_url_valid'] ?? false),
+
+                'Cancel URL safe' =>
+                    (bool) ($checks['cancel_url_valid'] ?? false),
             ],
         ];
     }
