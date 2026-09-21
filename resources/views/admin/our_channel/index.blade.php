@@ -30,7 +30,8 @@
     </div>
 
     @if($permissions['manage'] ?? false)
-        <div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="secondary-btn" href="{{ route('admin.our_channel.connections.index') }}">Channel Connections</a>
             <a class="primary-btn" href="{{ route('admin.our_channel.create') }}">+ Upload Video</a>
         </div>
     @endif
