@@ -36,6 +36,12 @@
     Telegram bot tokens are encrypted at rest using the TradeX application encryption key. Saved tokens are never rendered back to the browser, audit log, or status page.
 </div>
 
+@error('connection_test')
+    <section class="panel" style="padding:14px;margin-bottom:18px;border-color:rgba(255,139,139,.22);color:#ff9b9b">
+        {{ $message }}
+    </section>
+@enderror
+
 <div class="connection-grid">
     @php($telegram = $connections['telegram'])
     <section class="connection-card" style="grid-column:1/-1">
