@@ -101,11 +101,10 @@
                             maxlength="128"
                             placeholder="@tradex_channel or -1001234567890"
                             autocomplete="off"
-                            required
                         >
                         <div class="connection-help">
                             @if($telegram['chat_id_masked'] && !str_starts_with($telegram['chat_id_masked'], '@'))
-                                Saved destination: {{ $telegram['chat_id_masked'] }}. Re-enter the numeric Channel ID to change or retest it.
+                                Saved destination: {{ $telegram['chat_id_masked'] }}. Leave blank to keep the saved numeric Channel ID.
                             @else
                                 Use the public @username or Telegram numeric Channel ID.
                             @endif
