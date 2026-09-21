@@ -401,6 +401,7 @@
         }
 
         updateCountdown();
+        updateWorldClocks();
     };
 
     const formatDuration = (seconds) => {
@@ -440,6 +441,115 @@
         );
         const viewTime = snapshot.next_session?.opens_at_display || '';
         countdown.textContent = `${formatDuration(seconds)}${viewTime ? ` · ${viewTime}` : ''}`;
+    };
+
+    const worldClockCards = () => Array.from(
+        document.querySelectorAll('[data-world-clock]')
+    );
+
+    const resolvedDeviceTimezone = () => {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+        } catch (error) {
+            return 'UTC';
+        }
+    };
+
+    const worldClockParts = (date, timezone) => {
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            hour12: true,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+        });
+        const parts = formatter.formatToParts(date);
+        const values = {};
+
+        parts.forEach((part) => {
+            if (part.type !== 'literal') {
+                values[part.type] = part.value;
+            }
+        });
+
+        return values;
+    };
+
+    const setAnalogHand = (card, selector, degrees) => {
+        const hand = card.querySelector(selector);
+
+        if (hand) {
+            hand.style.transform = `translateX(-50%) rotate(${degrees}deg)`;
+        }
+    };
+
+    const updateWorldClocks = () => {
+        const now = currentServerDate();
+
+        worldClockCards().forEach((card) => {
+            const requested = card.dataset.timezone || 'UTC';
+            const timezone = requested === 'device'
+                ? resolvedDeviceTimezone()
+                : requested;
+
+            let parts;
+
+            try {
+                parts = worldClockParts(now, timezone);
+            } catch (error) {
+                return;
+            }
+
+            const hour = Number(parts.hour || 0) % 12;
+            const minute = Number(parts.minute || 0);
+            const second = Number(parts.second || 0);
+
+            setAnalogHand(card, '.clock-hand.hour', (hour * 30) + (minute / 2));
+            setAnalogHand(card, '.clock-hand.minute', (minute * 6) + (second / 10));
+            setAnalogHand(card, '.clock-hand.second', second * 6);
+
+            const digital = card.querySelector('.world-clock-digital');
+            if (digital) {
+                digital.textContent = `${parts.hour}:${parts.minute}:${parts.second} ${parts.dayPeriod || ''}`.trim();
+            }
+
+            if (requested === 'device') {
+                const zone = card.querySelector('.world-clock-zone');
+                if (zone) {
+                    zone.textContent = timezone;
+                }
+            }
+        });
+    };
+
+    const renderFeaturedSessions = () => {
+        const sessions = Array.isArray(snapshot.featured_sessions)
+            ? snapshot.featured_sessions
+            : [];
+
+        sessions.forEach((session) => {
+            const card = document.querySelector(
+                `[data-featured-session="${CSS.escape(String(session.key))}"]`
+            );
+
+            if (!card) {
+                return;
+            }
+
+            const badge = card.querySelector('.market-status-badge');
+            const next = card.querySelector('.featured-session-next');
+
+            if (badge) {
+                badge.className = `market-status-badge ${session.status}`;
+                badge.textContent = String(session.status || '').toUpperCase();
+            }
+
+            if (next) {
+                next.textContent = session.status === 'open'
+                    ? `Closes ${session.close_at_display || ''}`
+                    : `Opens ${session.next_open_at_display || ''}`;
+            }
+        });
     };
 
     const renderSessionRows = () => {
@@ -534,8 +644,10 @@
         syncServerClock();
         renderDial();
         renderSessionRows();
+        renderFeaturedSessions();
         renderSummary();
         updateLiveClock();
+        updateWorldClocks();
     };
 
     const fetchSnapshot = async (timezone) => {
