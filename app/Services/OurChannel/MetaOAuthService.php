@@ -824,6 +824,18 @@ class MetaOAuthService
                 )
                 : null;
 
+            if (
+                is_array($instagram)
+                && trim(
+                    (string) (
+                        $instagram['id']
+                        ?? ''
+                    )
+                ) === ''
+            ) {
+                $instagram = null;
+            }
+
             $pages[] = [
                 'page_id' => $pageId,
                 'page_name' => trim(
@@ -884,6 +896,18 @@ class MetaOAuthService
                 $response['instagram_business_account']
             )
             : null;
+
+        if (
+            is_array($instagram)
+            && trim(
+                (string) (
+                    $instagram['id']
+                    ?? ''
+                )
+            ) === ''
+        ) {
+            $instagram = null;
+        }
 
         return [
             'page_name' => trim(
