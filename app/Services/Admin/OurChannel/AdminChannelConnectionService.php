@@ -29,6 +29,275 @@ class AdminChannelConnectionService
     }
 
 
+
+    public function metaConnection(): ChannelConnection
+    {
+        ChannelConnection::query()
+            ->insertOrIgnore([
+                'platform' =>
+                    ChannelConnection::PLATFORM_META,
+                'is_enabled' => false,
+                'credentials' => null,
+                'settings' => json_encode(
+                    [
+                        'graph_version' => 'v26.0',
+                        'facebook_enabled' => false,
+                        'instagram_enabled' => false,
+                    ],
+                    JSON_THROW_ON_ERROR
+                ),
+                'metadata' => json_encode(
+                    [],
+                    JSON_THROW_ON_ERROR
+                ),
+                'last_test_status' =>
+                    ChannelConnection::TEST_UNTESTED,
+                'version' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+        return ChannelConnection::query()
+            ->where(
+                'platform',
+                ChannelConnection::PLATFORM_META
+            )
+            ->firstOrFail();
+    }
+
+    public function updateMeta(
+        AdminUser $admin,
+        array $data,
+        Request $request
+    ): array {
+        return DB::transaction(
+            function () use (
+                $admin,
+                $data,
+                $request
+            ): array {
+                $this->metaConnection();
+
+                $connection = ChannelConnection::query()
+                    ->where(
+                        'platform',
+                        ChannelConnection::PLATFORM_META
+                    )
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (
+                    (int) $data['version']
+                    !== (int) $connection->version
+                ) {
+                    abort(
+                        409,
+                        'Meta connection settings changed in another session. Refresh and try again.'
+                    );
+                }
+
+                $existing = is_array(
+                    $connection->credentials
+                )
+                    ? $connection->credentials
+                    : [];
+
+                $submittedAppId = trim(
+                    (string) (
+                        $data['app_id']
+                        ?? ''
+                    )
+                );
+
+                $submittedSecret = trim(
+                    (string) (
+                        $data['app_secret']
+                        ?? ''
+                    )
+                );
+
+                $appId = $submittedAppId !== ''
+                    ? $submittedAppId
+                    : trim(
+                        (string) (
+                            $existing['app_id']
+                            ?? ''
+                        )
+                    );
+
+                $appSecret = $submittedSecret !== ''
+                    ? $submittedSecret
+                    : trim(
+                        (string) (
+                            $existing['app_secret']
+                            ?? ''
+                        )
+                    );
+
+                if ($appId === '') {
+                    throw ValidationException::withMessages([
+                        'app_id' =>
+                            'Enter the Meta App ID before saving the connection.',
+                    ]);
+                }
+
+                if ($appSecret === '') {
+                    throw ValidationException::withMessages([
+                        'app_secret' =>
+                            'Enter the Meta App Secret before saving the connection.',
+                    ]);
+                }
+
+                $credentialsChanged =
+                    $appId
+                        !== trim(
+                            (string) (
+                                $existing['app_id']
+                                ?? ''
+                            )
+                        )
+                    || $appSecret
+                        !== trim(
+                            (string) (
+                                $existing['app_secret']
+                                ?? ''
+                            )
+                        );
+
+                $metadata = $credentialsChanged
+                    ? []
+                    : (
+                        is_array($connection->metadata)
+                            ? $connection->metadata
+                            : []
+                    );
+
+                $credentials = [
+                    'app_id' => $appId,
+                    'app_secret' => $appSecret,
+                    'page_access_token' =>
+                        $credentialsChanged
+                            ? null
+                            : (
+                                $existing['page_access_token']
+                                ?? null
+                            ),
+                    'candidate_pages' =>
+                        $credentialsChanged
+                            ? null
+                            : (
+                                $existing['candidate_pages']
+                                ?? null
+                            ),
+                ];
+
+                $testStatus = $credentialsChanged
+                    ? ChannelConnection::TEST_UNTESTED
+                    : $connection->last_test_status;
+
+                $testMessage = $credentialsChanged
+                    ? 'Meta App credentials changed. Connect Meta again.'
+                    : $connection->last_test_message;
+
+                $lastTestedAt = $credentialsChanged
+                    ? null
+                    : $connection->last_tested_at;
+
+                $facebookEnabled = (bool) (
+                    $data['facebook_enabled']
+                    ?? false
+                );
+
+                $instagramEnabled = (bool) (
+                    $data['instagram_enabled']
+                    ?? false
+                );
+
+                $verified =
+                    $testStatus
+                        === ChannelConnection::TEST_SUCCESS
+                    && filled(
+                        $credentials['page_access_token']
+                        ?? null
+                    );
+
+                if (
+                    ($facebookEnabled || $instagramEnabled)
+                    && ! $verified
+                ) {
+                    throw ValidationException::withMessages([
+                        'facebook_enabled' =>
+                            'Connect and verify a Facebook Page before enabling Meta auto publishing.',
+                    ]);
+                }
+
+                $instagramId = trim(
+                    (string) (
+                        $metadata['instagram']['id']
+                        ?? ''
+                    )
+                );
+
+                if (
+                    $instagramEnabled
+                    && $instagramId === ''
+                ) {
+                    throw ValidationException::withMessages([
+                        'instagram_enabled' =>
+                            'The selected Facebook Page does not have a linked Instagram Professional account.',
+                    ]);
+                }
+
+                $before = $this->safeMetaSnapshot(
+                    $connection
+                );
+
+                $connection->forceFill([
+                    'credentials' => $credentials,
+                    'settings' => [
+                        'graph_version' =>
+                            $data['graph_version']
+                            ?? 'v26.0',
+                        'facebook_enabled' =>
+                            $facebookEnabled,
+                        'instagram_enabled' =>
+                            $instagramEnabled,
+                    ],
+                    'metadata' => $metadata,
+                    'is_enabled' =>
+                        $facebookEnabled
+                        || $instagramEnabled,
+                    'last_test_status' => $testStatus,
+                    'last_test_message' => $testMessage,
+                    'last_tested_at' => $lastTestedAt,
+                    'version' =>
+                        $connection->version + 1,
+                    'updated_by_admin_id' =>
+                        $admin->getKey(),
+                ])->save();
+
+                AuditLog::record(
+                    actorType: 'ADMIN',
+                    actorId: $admin->getKey(),
+                    action: 'CHANNEL_META_CONNECTION_UPDATED',
+                    module: 'OUR_CHANNEL',
+                    targetType: 'CHANNEL_CONNECTION',
+                    targetId: $connection->getKey(),
+                    oldValues: $before,
+                    newValues: $this->safeMetaSnapshot(
+                        $connection
+                    ),
+                    ipAddress: $request->ip(),
+                    userAgent: $request->userAgent()
+                );
+
+                return $this->resolver
+                    ->connectionOverview()['meta'];
+            },
+            3
+        );
+    }
+
     public function youtubeConnection(): ChannelConnection
     {
         ChannelConnection::query()
@@ -577,6 +846,88 @@ class AdminChannelConnectionService
         return $result;
     }
 
+
+
+    private function safeMetaSnapshot(
+        ChannelConnection $connection
+    ): array {
+        $credentials = is_array(
+            $connection->credentials
+        )
+            ? $connection->credentials
+            : [];
+
+        $settings = is_array(
+            $connection->settings
+        )
+            ? $connection->settings
+            : [];
+
+        $metadata = is_array(
+            $connection->metadata
+        )
+            ? $connection->metadata
+            : [];
+
+        return [
+            'platform' => $connection->platform,
+            'is_enabled' =>
+                (bool) $connection->is_enabled,
+            'app_id_present' =>
+                filled(
+                    $credentials['app_id']
+                    ?? null
+                ),
+            'app_secret_present' =>
+                filled(
+                    $credentials['app_secret']
+                    ?? null
+                ),
+            'page_access_token_present' =>
+                filled(
+                    $credentials['page_access_token']
+                    ?? null
+                ),
+            'candidate_page_count' =>
+                is_array(
+                    $credentials['candidate_pages']
+                    ?? null
+                )
+                    ? count(
+                        $credentials['candidate_pages']
+                    )
+                    : 0,
+            'graph_version' =>
+                $settings['graph_version']
+                ?? null,
+            'facebook_enabled' =>
+                (bool) (
+                    $settings['facebook_enabled']
+                    ?? false
+                ),
+            'instagram_enabled' =>
+                (bool) (
+                    $settings['instagram_enabled']
+                    ?? false
+                ),
+            'page_id' =>
+                $metadata['page_id']
+                ?? null,
+            'page_name' =>
+                $metadata['page_name']
+                ?? null,
+            'instagram_id' =>
+                $metadata['instagram']['id']
+                ?? null,
+            'last_test_status' =>
+                $connection->last_test_status,
+            'last_tested_at' =>
+                $connection->last_tested_at
+                    ?->toISOString(),
+            'version' =>
+                (int) $connection->version,
+        ];
+    }
 
     private function safeYouTubeSnapshot(
         ChannelConnection $connection
