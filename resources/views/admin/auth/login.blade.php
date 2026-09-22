@@ -443,7 +443,7 @@
         <form
             class="form"
             method="POST"
-            action="{{ route('admin.login.submit') }}"
+            action="{{ route('admin.login.submit', [], false) }}"
         >
 
             @csrf
@@ -546,7 +546,7 @@
                 </label>
 
                 <a
-                    href="{{ route('admin.password.request') }}"
+                    href="{{ route('admin.password.request', [], false) }}"
                     style="color: var(--gold-light); font-size: 13px; font-weight: 700; text-decoration: none;"
                 >
                     Forgot password?
