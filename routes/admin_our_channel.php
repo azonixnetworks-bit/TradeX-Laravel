@@ -41,6 +41,34 @@ Route::prefix('admin')
                     ->name('connections.index');
 
                 Route::patch(
+                    '/connections/meta',
+                    [ChannelConnectionController::class, 'updateMeta']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.update');
+
+                Route::get(
+                    '/connections/meta/connect',
+                    [ChannelConnectionController::class, 'startMeta']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.connect');
+
+                Route::get(
+                    '/connections/meta/callback',
+                    [ChannelConnectionController::class, 'metaCallback']
+                )
+                    ->middleware('throttle:20,1')
+                    ->name('connections.meta.callback');
+
+                Route::post(
+                    '/connections/meta/select-page',
+                    [ChannelConnectionController::class, 'selectMetaPage']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.select_page');
+
+                Route::patch(
                     '/connections/youtube',
                     [ChannelConnectionController::class, 'updateYouTube']
                 )
