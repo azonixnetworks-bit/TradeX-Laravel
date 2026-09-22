@@ -64,3 +64,94 @@ body.sidebar-collapsed .admin-main {
         margin-left: 0;
     }
 }
+
+
+/* ============================================================
+   2ND BRAIN — TRADE IDEAS NESTED NAVIGATION
+============================================================ */
+
+.nav-submenu-group {
+    margin: 4px 0;
+}
+
+.nav-submenu-group > summary {
+    list-style: none;
+}
+
+.nav-submenu-group > summary::-webkit-details-marker {
+    display: none;
+}
+
+.nav-submenu-summary {
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: 11px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #8297ac;
+    font-size: 13px;
+    font-weight: 650;
+    cursor: pointer;
+    user-select: none;
+    transition:
+        color .18s ease,
+        background .18s ease;
+}
+
+.nav-submenu-summary:hover,
+.nav-submenu-summary:focus-visible,
+.nav-submenu-group[open] > .nav-submenu-summary {
+    color: #fff;
+    background: rgba(255,255,255,.035);
+    outline: none;
+}
+
+.nav-submenu-chevron {
+    margin-left: auto;
+    color: #52697f;
+    font-size: 14px;
+    transition: transform .18s ease;
+}
+
+.nav-submenu-group[open] > .nav-submenu-summary .nav-submenu-chevron {
+    transform: rotate(180deg);
+}
+
+.nav-submenu-panel {
+    margin: 2px 0 7px 31px;
+    padding: 5px 0 5px 13px;
+    border-left: 1px solid rgba(217,168,60,.16);
+}
+
+.nav-submenu-link {
+    min-height: 35px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    color: #6f8499;
+    font-size: 11px;
+    font-weight: 550;
+    text-decoration: none;
+}
+
+.nav-submenu-link::before {
+    content: "›";
+    margin-right: 8px;
+    color: #b78e35;
+}
+
+.nav-submenu-link-disabled {
+    cursor: default;
+}
+
+@media (max-width: 1000px) {
+    .nav-submenu-summary {
+        min-height: 48px;
+    }
+
+    .nav-submenu-panel {
+        margin-left: 29px;
+    }
+}
