@@ -235,7 +235,7 @@
                             <option value="{{ $page['page_id'] }}">
                                 {{ $page['page_name'] ?: 'Facebook Page' }}
                                 @if(!empty($page['instagram']['username']))
-                                    · Instagram @{{ $page['instagram']['username'] }}
+                                    · Instagram {{ '@'.$page['instagram']['username'] }}
                                 @elseif(!empty($page['instagram']))
                                     · Instagram linked
                                 @endif
