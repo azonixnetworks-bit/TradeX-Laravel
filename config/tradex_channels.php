@@ -106,7 +106,10 @@ return [
                 'TRADEX_CHANNEL_META_GRAPH_BASE_URL',
                 'https://graph.facebook.com'
             ),
-            'graph_version' => env('TRADEX_CHANNEL_META_GRAPH_VERSION'),
+            'graph_version' => env(
+                'TRADEX_CHANNEL_META_GRAPH_VERSION',
+                'v26.0'
+            ),
             'ig_user_id' => env('TRADEX_CHANNEL_INSTAGRAM_USER_ID'),
             'access_token' => env('TRADEX_CHANNEL_INSTAGRAM_ACCESS_TOKEN'),
             'share_to_feed' => $bool(
@@ -145,7 +148,10 @@ return [
                 'TRADEX_CHANNEL_META_GRAPH_BASE_URL',
                 'https://graph.facebook.com'
             ),
-            'graph_version' => env('TRADEX_CHANNEL_META_GRAPH_VERSION'),
+            'graph_version' => env(
+                'TRADEX_CHANNEL_META_GRAPH_VERSION',
+                'v26.0'
+            ),
             'page_access_token' => env('TRADEX_CHANNEL_FACEBOOK_PAGE_ACCESS_TOKEN'),
             'timeout_seconds' => max(
                 10,
