@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ChannelConnection extends Model
 {
+    public const PLATFORM_META = 'META';
     public const PLATFORM_YOUTUBE = 'YOUTUBE';
     public const PLATFORM_TELEGRAM = 'TELEGRAM';
 
