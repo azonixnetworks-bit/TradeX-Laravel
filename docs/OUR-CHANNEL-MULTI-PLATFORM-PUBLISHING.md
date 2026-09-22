@@ -225,3 +225,65 @@ Production OAuth should use the public HTTPS TradeX origin. Ensure reverse-proxy
 ### YouTube upload visibility
 
 YouTube can restrict uploads from unverified API projects to private visibility until the API project completes the applicable YouTube compliance audit. Setting TradeX default privacy to Public does not override a provider-side restriction.
+
+
+## Meta admin OAuth connection flow
+
+TradeX now supports a unified Meta connection from **Admin → Our Channel → Channel Connections**. One Meta OAuth flow can connect:
+
+- a Facebook Page for Reels publishing;
+- the Instagram Professional account linked to that Page for Instagram Reels publishing.
+
+TradeX uses the Facebook Login configuration of the Instagram API because the existing Instagram publisher uses the Page-linked Professional account model.
+
+### Current Graph API version
+
+TradeX defaults to **Graph API v26.0**. The version is pinned in the connection settings so upgrades are deliberate rather than automatic.
+
+### Required Meta permissions
+
+The OAuth request asks for:
+
+- `pages_show_list`
+- `pages_read_engagement`
+- `pages_manage_posts`
+- `instagram_basic`
+- `instagram_content_publish`
+
+These are the minimum permissions TradeX requests for Page discovery, Facebook organic publishing and Instagram Professional content publishing in this flow.
+
+### Meta App setup
+
+1. Open Meta for Developers and create/select the app used by TradeX.
+2. Add/configure Facebook Login for the app.
+3. Configure the Instagram API / Instagram API with Facebook Login for the same app.
+4. In TradeX, copy the exact Meta callback URI displayed in the Meta card.
+5. Add that URI to the app's valid OAuth redirect URIs.
+6. Save the Meta App ID and App Secret in TradeX.
+7. Click **Connect Facebook & Instagram**.
+8. Sign in with the Facebook account that has access to the target Page.
+9. Grant the requested permissions.
+10. If Meta returns more than one manageable Page, TradeX displays a Page selector. Pick the Page that should receive TradeX posts.
+11. TradeX verifies the Page access token and detects any linked Instagram Professional account.
+
+After successful verification, the Page access token is stored encrypted in `channel_connections.credentials`. The browser receives only safe Page/Instagram metadata.
+
+### Instagram account requirement
+
+For this Facebook Login flow, the Instagram account must be a Professional account (Business or Creator) linked to the selected Facebook Page. Consumer/personal Instagram accounts are not supported by this API configuration.
+
+If a Page is verified but no linked Instagram Professional account exists, Facebook can be AUTO READY while Instagram remains SETUP REQUIRED.
+
+### Development mode and App Review
+
+When a Meta app is in Development mode, only accounts with appropriate app roles/test access can normally authorize the app. Publishing for arbitrary external users requires the applicable Meta App Review / advanced-access process for the requested permissions.
+
+TradeX should be tested first with the business assets owned or managed by the app developer/admin.
+
+### Publisher behavior
+
+Facebook Reels uses the verified Page access token with the Reels Publishing API.
+
+Instagram Reels uses the same verified Page access token together with the linked Instagram Professional account ID. The existing TradeX publisher creates a Reel media container, waits for processing, and then publishes it.
+
+Meta-hosted publishing requires TradeX's signed media URL to be publicly reachable over HTTPS in production.
