@@ -52,10 +52,10 @@ class ChannelConnectionResolver
                 (bool) $this->youtubeRuntime()['enabled'],
 
             ChannelVideoPublication::PLATFORM_INSTAGRAM =>
-                $this->configProviderEnabled('instagram'),
+                (bool) $this->metaRuntime()['instagram_enabled'],
 
             ChannelVideoPublication::PLATFORM_FACEBOOK =>
-                $this->configProviderEnabled('facebook'),
+                (bool) $this->metaRuntime()['facebook_enabled'],
 
             ChannelVideoPublication::PLATFORM_TELEGRAM =>
                 (bool) $this->telegramRuntime()['enabled'],
@@ -63,6 +63,164 @@ class ChannelConnectionResolver
             default =>
                 false,
         };
+    }
+
+
+    public function metaRuntime(): array
+    {
+        $facebookConfig = (array) config(
+            'tradex_channels.platforms.facebook',
+            []
+        );
+
+        $instagramConfig = (array) config(
+            'tradex_channels.platforms.instagram',
+            []
+        );
+
+        $connection = ChannelConnection::query()
+            ->where(
+                'platform',
+                ChannelConnection::PLATFORM_META
+            )
+            ->first();
+
+        if (! $connection instanceof ChannelConnection) {
+            return [
+                'source' => 'ENV',
+                'graph_base_url' =>
+                    $facebookConfig['graph_base_url']
+                    ?? $instagramConfig['graph_base_url']
+                    ?? 'https://graph.facebook.com',
+                'graph_version' =>
+                    $facebookConfig['graph_version']
+                    ?? $instagramConfig['graph_version']
+                    ?? 'v26.0',
+                'facebook_enabled' =>
+                    (bool) (
+                        $facebookConfig['enabled']
+                        ?? false
+                    ),
+                'instagram_enabled' =>
+                    (bool) (
+                        $instagramConfig['enabled']
+                        ?? false
+                    ),
+                'page_access_token' =>
+                    $facebookConfig['page_access_token']
+                    ?? $instagramConfig['access_token']
+                    ?? null,
+                'ig_user_id' =>
+                    $instagramConfig['ig_user_id']
+                    ?? null,
+                'facebook_timeout_seconds' =>
+                    $facebookConfig['timeout_seconds']
+                    ?? 90,
+                'instagram_timeout_seconds' =>
+                    $instagramConfig['timeout_seconds']
+                    ?? 60,
+                'instagram_share_to_feed' =>
+                    (bool) (
+                        $instagramConfig['share_to_feed']
+                        ?? true
+                    ),
+                'instagram_poll_attempts' =>
+                    $instagramConfig['poll_attempts']
+                    ?? 30,
+                'instagram_poll_seconds' =>
+                    $instagramConfig['poll_seconds']
+                    ?? 5,
+            ];
+        }
+
+        $credentials = is_array(
+            $connection->credentials
+        )
+            ? $connection->credentials
+            : [];
+
+        $settings = is_array(
+            $connection->settings
+        )
+            ? $connection->settings
+            : [];
+
+        $metadata = is_array(
+            $connection->metadata
+        )
+            ? $connection->metadata
+            : [];
+
+        $verified =
+            $connection->isTestedSuccessfully()
+            && filled(
+                $credentials['page_access_token']
+                ?? null
+            );
+
+        $instagramId = trim(
+            (string) (
+                $metadata['instagram']['id']
+                ?? ''
+            )
+        );
+
+        return [
+            'source' => 'DATABASE',
+            'graph_base_url' =>
+                $facebookConfig['graph_base_url']
+                ?? $instagramConfig['graph_base_url']
+                ?? 'https://graph.facebook.com',
+            'graph_version' =>
+                $settings['graph_version']
+                ?? (
+                    $facebookConfig['graph_version']
+                    ?? 'v26.0'
+                ),
+            'page_access_token' =>
+                $credentials['page_access_token']
+                ?? null,
+            'facebook_enabled' =>
+                (bool) $connection->is_enabled
+                && $verified
+                && (bool) (
+                    $settings['facebook_enabled']
+                    ?? false
+                ),
+            'instagram_enabled' =>
+                (bool) $connection->is_enabled
+                && $verified
+                && $instagramId !== ''
+                && (bool) (
+                    $settings['instagram_enabled']
+                    ?? false
+                ),
+            'ig_user_id' =>
+                $instagramId !== ''
+                    ? $instagramId
+                    : null,
+            'facebook_timeout_seconds' =>
+                $facebookConfig['timeout_seconds']
+                ?? 90,
+            'instagram_timeout_seconds' =>
+                $instagramConfig['timeout_seconds']
+                ?? 60,
+            'instagram_share_to_feed' =>
+                (bool) (
+                    $instagramConfig['share_to_feed']
+                    ?? true
+                ),
+            'instagram_poll_attempts' =>
+                $instagramConfig['poll_attempts']
+                ?? 30,
+            'instagram_poll_seconds' =>
+                $instagramConfig['poll_seconds']
+                ?? 5,
+            'last_test_status' =>
+                $connection->last_test_status,
+            'last_tested_at' =>
+                $connection->last_tested_at,
+        ];
     }
 
     public function youtubeRuntime(): array
@@ -202,6 +360,14 @@ class ChannelConnectionResolver
 
     public function connectionOverview(): array
     {
+        $meta = ChannelConnection::query()
+            ->with('updatedByAdmin:id,name,email')
+            ->where(
+                'platform',
+                ChannelConnection::PLATFORM_META
+            )
+            ->first();
+
         $youtube = ChannelConnection::query()
             ->with('updatedByAdmin:id,name,email')
             ->where(
@@ -218,10 +384,99 @@ class ChannelConnectionResolver
             )
             ->first();
 
+        $metaRuntime = $this->metaRuntime();
         $youtubeRuntime = $this->youtubeRuntime();
         $telegramRuntime = $this->telegramRuntime();
 
         return [
+            'meta' => [
+                'exists' =>
+                    $meta instanceof ChannelConnection,
+                'version' => (int) (
+                    $meta?->version
+                    ?? 0
+                ),
+                'app_id_present' =>
+                    filled(
+                        is_array($meta?->credentials)
+                            ? (
+                                $meta->credentials['app_id']
+                                ?? null
+                            )
+                            : null
+                    ),
+                'app_secret_present' =>
+                    filled(
+                        is_array($meta?->credentials)
+                            ? (
+                                $meta->credentials['app_secret']
+                                ?? null
+                            )
+                            : null
+                    ),
+                'graph_version' =>
+                    $metaRuntime['graph_version']
+                    ?? 'v26.0',
+                'facebook_enabled' =>
+                    (bool) (
+                        $metaRuntime['facebook_enabled']
+                        ?? false
+                    ),
+                'instagram_enabled' =>
+                    (bool) (
+                        $metaRuntime['instagram_enabled']
+                        ?? false
+                    ),
+                'control_facebook_enabled' =>
+                    (bool) (
+                        is_array($meta?->settings)
+                            ? (
+                                $meta->settings[
+                                    'facebook_enabled'
+                                ]
+                                ?? false
+                            )
+                            : false
+                    ),
+                'control_instagram_enabled' =>
+                    (bool) (
+                        is_array($meta?->settings)
+                            ? (
+                                $meta->settings[
+                                    'instagram_enabled'
+                                ]
+                                ?? false
+                            )
+                            : false
+                    ),
+                'last_test_status' =>
+                    $meta?->last_test_status
+                    ?? (
+                        (
+                            ($metaRuntime['facebook_enabled'] ?? false)
+                            || ($metaRuntime['instagram_enabled'] ?? false)
+                        )
+                            ? ChannelConnection::TEST_SUCCESS
+                            : ChannelConnection::TEST_UNTESTED
+                    ),
+                'last_test_message' =>
+                    $meta?->last_test_message,
+                'last_tested_at' =>
+                    $meta?->last_tested_at,
+                'metadata' =>
+                    $this->safeMetaMetadata(
+                        $meta?->metadata
+                    ),
+                'candidate_pages' =>
+                    $this->safeMetaCandidatePages(
+                        $meta?->metadata
+                    ),
+                'updated_by' =>
+                    $meta?->updatedByAdmin?->name,
+                'updated_at' =>
+                    $meta?->updated_at,
+            ],
+
             'youtube' => [
                 'exists' =>
                     $youtube instanceof ChannelConnection,
@@ -347,14 +602,14 @@ class ChannelConnectionResolver
                 'enabled' => $this->isEnabled(
                     ChannelVideoPublication::PLATFORM_INSTAGRAM
                 ),
-                'managed_by' => 'SERVER_META_CONFIG',
+                'managed_by' => 'META_OAUTH',
             ],
 
             'facebook' => [
                 'enabled' => $this->isEnabled(
                     ChannelVideoPublication::PLATFORM_FACEBOOK
                 ),
-                'managed_by' => 'SERVER_META_CONFIG',
+                'managed_by' => 'META_OAUTH',
             ],
 
             'tiktok' => [
@@ -367,6 +622,100 @@ class ChannelConnectionResolver
                 'managed_by' => 'MANUAL_API_PENDING',
             ],
         ];
+    }
+
+
+    private function safeMetaMetadata(
+        mixed $metadata
+    ): array {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        $instagram = is_array(
+            $metadata['instagram']
+            ?? null
+        )
+            ? $metadata['instagram']
+            : null;
+
+        return [
+            'page_id' =>
+                $metadata['page_id']
+                ?? null,
+            'page_name' =>
+                $metadata['page_name']
+                ?? null,
+            'instagram' => $instagram === null
+                ? null
+                : [
+                    'id' =>
+                        $instagram['id']
+                        ?? null,
+                    'username' =>
+                        $instagram['username']
+                        ?? null,
+                    'name' =>
+                        $instagram['name']
+                        ?? null,
+                    'profile_picture_url' =>
+                        $instagram[
+                            'profile_picture_url'
+                        ]
+                        ?? null,
+                ],
+            'granted_permissions' =>
+                is_array(
+                    $metadata['granted_permissions']
+                    ?? null
+                )
+                    ? $metadata['granted_permissions']
+                    : [],
+        ];
+    }
+
+    private function safeMetaCandidatePages(
+        mixed $metadata
+    ): array {
+        if (! is_array($metadata)) {
+            return [];
+        }
+
+        $pages = is_array(
+            $metadata['candidate_pages']
+            ?? null
+        )
+            ? $metadata['candidate_pages']
+            : [];
+
+        return array_values(
+            array_filter(
+                array_map(
+                    static function (mixed $page): ?array {
+                        if (! is_array($page)) {
+                            return null;
+                        }
+
+                        return [
+                            'page_id' =>
+                                $page['page_id']
+                                ?? null,
+                            'page_name' =>
+                                $page['page_name']
+                                ?? null,
+                            'instagram' =>
+                                is_array(
+                                    $page['instagram']
+                                    ?? null
+                                )
+                                    ? $page['instagram']
+                                    : null,
+                        ];
+                    },
+                    $pages
+                )
+            )
+        );
     }
 
     private function safeYouTubeMetadata(
