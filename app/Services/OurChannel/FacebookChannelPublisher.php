@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 class FacebookChannelPublisher
 {
     public function __construct(
-        private readonly ChannelMediaSource $source
+        private readonly ChannelMediaSource $source,
+        private readonly ChannelConnectionResolver $connections
     ) {
     }
 
@@ -20,10 +21,28 @@ class FacebookChannelPublisher
         ChannelVideo $video,
         ChannelVideoPublication $publication
     ): array {
-        $config = (array) config(
-            'tradex_channels.platforms.facebook',
-            []
-        );
+        $runtime = $this->connections
+            ->metaRuntime();
+
+        $config = [
+            'enabled' =>
+                (bool) (
+                    $runtime['facebook_enabled']
+                    ?? false
+                ),
+            'graph_base_url' =>
+                $runtime['graph_base_url']
+                ?? 'https://graph.facebook.com',
+            'graph_version' =>
+                $runtime['graph_version']
+                ?? 'v26.0',
+            'page_access_token' =>
+                $runtime['page_access_token']
+                ?? null,
+            'timeout_seconds' =>
+                $runtime['facebook_timeout_seconds']
+                ?? 90,
+        ];
 
         $this->assertConfigured($config);
 
