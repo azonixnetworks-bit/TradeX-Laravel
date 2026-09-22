@@ -33,8 +33,14 @@
 @endif
 
 <div class="secret-note">
-    Google OAuth client secrets, YouTube refresh tokens and Telegram bot tokens are encrypted at rest using the TradeX application encryption key. Saved secrets are never rendered back to the browser, audit log, or status page.
+    Google OAuth secrets, YouTube refresh tokens, Meta app/page tokens and Telegram bot tokens are encrypted at rest using the TradeX application encryption key. Saved secrets are never rendered back to the browser, audit log, or status page.
 </div>
+
+@error('meta_oauth')
+    <section class="panel" style="padding:14px;margin-bottom:18px;border-color:rgba(255,139,139,.22);color:#ff9b9b">
+        {{ $message }}
+    </section>
+@enderror
 
 @error('youtube_oauth')
     <section class="panel" style="padding:14px;margin-bottom:18px;border-color:rgba(255,139,139,.22);color:#ff9b9b">
@@ -174,6 +180,167 @@
         @endif
     </section>
 
+
+    @php($meta = $connections['meta'])
+    <section class="connection-card" style="grid-column:1/-1">
+        <div class="panel-eyebrow">META OAUTH · FACEBOOK + INSTAGRAM</div>
+        <h2>Facebook Page & Instagram Reels</h2>
+        <p>One Meta login connects the Facebook Page and, when linked, its Instagram Professional account. Page access tokens are stored encrypted and used by both publishers.</p>
+
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            <span class="connection-status {{ $meta['facebook_enabled'] ? 'ready' : 'warn' }}">
+                FACEBOOK · {{ $meta['facebook_enabled'] ? 'AUTO READY' : 'SETUP REQUIRED' }}
+            </span>
+            <span class="connection-status {{ $meta['instagram_enabled'] ? 'ready' : 'warn' }}">
+                INSTAGRAM · {{ $meta['instagram_enabled'] ? 'AUTO READY' : 'SETUP REQUIRED' }}
+            </span>
+        </div>
+
+        @if($meta['last_test_status'] === 'SUCCESS')
+            <div class="verified-box">
+                <strong>Verified Meta Connection</strong><br>
+                Facebook Page: {{ $meta['metadata']['page_name'] ?? 'Facebook Page' }}
+                @if(!empty($meta['metadata']['page_id']))
+                    · ID {{ $meta['metadata']['page_id'] }}
+                @endif
+                <br>
+                @if(!empty($meta['metadata']['instagram']))
+                    Instagram:
+                    {{ $meta['metadata']['instagram']['username'] ? '@'.$meta['metadata']['instagram']['username'] : ($meta['metadata']['instagram']['name'] ?? 'Professional account') }}
+                    @if(!empty($meta['metadata']['instagram']['id']))
+                        · ID {{ $meta['metadata']['instagram']['id'] }}
+                    @endif
+                    <br>
+                @else
+                    Instagram: No linked Professional account detected<br>
+                @endif
+                Last verified: {{ $meta['last_tested_at']?->format('Y-m-d H:i:s') ?? '—' }}
+            </div>
+        @elseif($meta['last_test_message'])
+            <div class="verified-box" style="border-color:rgba(231,191,105,.18);background:rgba(231,191,105,.035)">
+                {{ $meta['last_test_message'] }}
+            </div>
+        @endif
+
+        @if(!empty($meta['candidate_pages']))
+            <form class="connection-form" method="POST" action="{{ route('admin.our_channel.connections.meta.select_page') }}">
+                @csrf
+                <input type="hidden" name="version" value="{{ $meta['version'] }}">
+
+                <div class="form-group full">
+                    <label for="meta_page_id">SELECT FACEBOOK PAGE</label>
+                    <select id="meta_page_id" name="page_id" required>
+                        <option value="">Choose the Page TradeX should publish to</option>
+                        @foreach($meta['candidate_pages'] as $page)
+                            <option value="{{ $page['page_id'] }}">
+                                {{ $page['page_name'] ?: 'Facebook Page' }}
+                                @if(!empty($page['instagram']['username']))
+                                    · Instagram @{{ $page['instagram']['username'] }}
+                                @elseif(!empty($page['instagram']))
+                                    · Instagram linked
+                                @endif
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('page_id')<div class="connection-error">{{ $message }}</div>@enderror
+                </div>
+
+                <div class="connection-actions">
+                    <button class="primary-btn" type="submit">Use Selected Page</button>
+                </div>
+            </form>
+        @endif
+
+        <div class="secret-note" style="margin-top:14px;margin-bottom:0">
+            Meta App Dashboard → Facebook Login / Valid OAuth Redirect URIs must contain this exact callback:<br>
+            <code style="user-select:all">{{ $metaRedirectUri }}</code>
+        </div>
+
+        @if($canManage)
+            <form class="connection-form" method="POST" action="{{ route('admin.our_channel.connections.meta.update') }}">
+                @csrf
+                @method('PATCH')
+
+                <input type="hidden" name="version" value="{{ $meta['version'] }}">
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="meta_app_id">META APP ID</label>
+                        <input
+                            id="meta_app_id"
+                            name="app_id"
+                            value=""
+                            maxlength="64"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="{{ $meta['app_id_present'] ? 'Saved securely — leave blank to keep current App ID' : 'Meta App ID' }}"
+                        >
+                        <div class="connection-help">Use the App ID from the Meta for Developers app that has Facebook Login and Instagram API permissions.</div>
+                        @error('app_id')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="meta_app_secret">META APP SECRET</label>
+                        <input
+                            id="meta_app_secret"
+                            type="password"
+                            name="app_secret"
+                            value=""
+                            maxlength="255"
+                            autocomplete="new-password"
+                            placeholder="{{ $meta['app_secret_present'] ? 'Saved securely — leave blank to keep current secret' : 'Meta App Secret' }}"
+                        >
+                        <div class="connection-help">Encrypted at rest. Never place the App Secret in Git, screenshots or client-side JavaScript.</div>
+                        @error('app_secret')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="meta_graph_version">GRAPH API VERSION</label>
+                        <input
+                            id="meta_graph_version"
+                            name="graph_version"
+                            value="{{ old('graph_version', $meta['graph_version']) }}"
+                            maxlength="8"
+                            placeholder="v26.0"
+                            required
+                        >
+                        <div class="connection-help">TradeX defaults to v26.0. Keep this pinned and update deliberately when Meta releases a version you have tested.</div>
+                        @error('graph_version')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group">
+                        <label for="meta_facebook_enabled">FACEBOOK AUTO PUBLISHING</label>
+                        <select id="meta_facebook_enabled" name="facebook_enabled">
+                            <option value="0" @selected(!old('facebook_enabled', $meta['control_facebook_enabled']))>Disabled</option>
+                            <option value="1" @selected((bool)old('facebook_enabled', $meta['control_facebook_enabled']))>Enabled after successful Meta verification</option>
+                        </select>
+                        @error('facebook_enabled')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+
+                    <div class="form-group full">
+                        <label for="meta_instagram_enabled">INSTAGRAM AUTO PUBLISHING</label>
+                        <select id="meta_instagram_enabled" name="instagram_enabled">
+                            <option value="0" @selected(!old('instagram_enabled', $meta['control_instagram_enabled']))>Disabled</option>
+                            <option value="1" @selected((bool)old('instagram_enabled', $meta['control_instagram_enabled']))>Enabled when a linked Instagram Professional account is verified</option>
+                        </select>
+                        <div class="connection-help">Instagram publishing requires a Professional account linked to the selected Facebook Page when using this Facebook Login flow.</div>
+                        @error('instagram_enabled')<div class="connection-error">{{ $message }}</div>@enderror
+                    </div>
+                </div>
+
+                <div class="connection-actions">
+                    <button class="connection-secondary" type="submit">Save Meta Configuration</button>
+
+                    @if($meta['app_id_present'] && $meta['app_secret_present'])
+                        <a class="primary-btn" href="{{ route('admin.our_channel.connections.meta.connect') }}">
+                            {{ $meta['last_test_status'] === 'SUCCESS' ? 'Reconnect Meta' : 'Connect Facebook & Instagram' }}
+                        </a>
+                    @endif
+                </div>
+            </form>
+        @endif
+    </section>
+
     @php($telegram = $connections['telegram'])
     <section class="connection-card" style="grid-column:1/-1">
         <div class="panel-eyebrow">TELEGRAM BOT API</div>
@@ -275,20 +442,6 @@
                 </div>
             </form>
         @endif
-    </section>
-
-    <section class="connection-card">
-        <div class="panel-eyebrow">META GRAPH API</div>
-        <h2>Instagram Reels</h2>
-        <p>Professional Instagram account authorization and publishing permissions will be connected in the Meta OAuth phase.</p>
-        <span class="connection-status {{ $connections['instagram']['enabled'] ? 'ready' : 'warn' }}">{{ $connections['instagram']['enabled'] ? 'AUTO READY' : 'META SETUP NEXT' }}</span>
-    </section>
-
-    <section class="connection-card">
-        <div class="panel-eyebrow">META GRAPH API</div>
-        <h2>Facebook Reels</h2>
-        <p>Facebook Page authorization and Page access token management will share the Meta OAuth connection flow.</p>
-        <span class="connection-status {{ $connections['facebook']['enabled'] ? 'ready' : 'warn' }}">{{ $connections['facebook']['enabled'] ? 'AUTO READY' : 'META SETUP NEXT' }}</span>
     </section>
 
     <section class="connection-card">
