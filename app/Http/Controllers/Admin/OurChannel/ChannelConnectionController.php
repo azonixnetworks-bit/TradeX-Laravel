@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Admin\OurChannel;
 
 use App\Http\Controllers\Controller;
 use App\Exceptions\ChannelConnectionException;
+use App\Http\Requests\Admin\OurChannel\SelectMetaPageRequest;
+use App\Http\Requests\Admin\OurChannel\UpdateMetaChannelConnectionRequest;
 use App\Http\Requests\Admin\OurChannel\UpdateTelegramChannelConnectionRequest;
 use App\Http\Requests\Admin\OurChannel\UpdateYouTubeChannelConnectionRequest;
 use App\Models\AdminUser;
 use App\Services\Admin\OurChannel\AdminChannelConnectionService;
+use App\Services\OurChannel\MetaOAuthService;
 use App\Services\OurChannel\YouTubeOAuthService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +43,10 @@ class ChannelConnectionController extends Controller
                     $this->youtubeRedirectUri(
                         $request
                     ),
+                'metaRedirectUri' =>
+                    $this->metaRedirectUri(
+                        $request
+                    ),
             ],
             200,
             [
@@ -55,6 +62,182 @@ class ChannelConnectionController extends Controller
         );
     }
 
+
+
+    public function updateMeta(
+        UpdateMetaChannelConnectionRequest $request,
+        AdminChannelConnectionService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission(
+                'our_channel.manage'
+            ),
+            403
+        );
+
+        $service->updateMeta(
+            $admin,
+            $request->validated(),
+            $request
+        );
+
+        return redirect()
+            ->route(
+                'admin.our_channel.connections.index'
+            )
+            ->with(
+                'success',
+                'Meta OAuth configuration saved securely.'
+            );
+    }
+
+    public function startMeta(
+        Request $request,
+        AdminChannelConnectionService $service,
+        MetaOAuthService $oauth
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission(
+                'our_channel.manage'
+            ),
+            403
+        );
+
+        $connection =
+            $service->metaConnection();
+
+        try {
+            $url = $oauth->authorizationUrl(
+                $connection,
+                $admin,
+                $request,
+                $this->metaRedirectUri(
+                    $request
+                )
+            );
+        } catch (ChannelConnectionException $exception) {
+            return redirect()
+                ->route(
+                    'admin.our_channel.connections.index'
+                )
+                ->withErrors([
+                    'meta_oauth' =>
+                        '['
+                        .$exception->providerCode
+                        .'] '
+                        .$exception->getMessage(),
+                ]);
+        }
+
+        return redirect()->away($url);
+    }
+
+    public function metaCallback(
+        Request $request,
+        AdminChannelConnectionService $service,
+        MetaOAuthService $oauth
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission(
+                'our_channel.manage'
+            ),
+            403
+        );
+
+        $connection =
+            $service->metaConnection();
+
+        try {
+            $connected = $oauth->complete(
+                $connection,
+                $admin,
+                $request
+            );
+        } catch (ChannelConnectionException $exception) {
+            return redirect()
+                ->route(
+                    'admin.our_channel.connections.index'
+                )
+                ->withErrors([
+                    'meta_oauth' =>
+                        '['
+                        .$exception->providerCode
+                        .'] '
+                        .$exception->getMessage(),
+                ]);
+        }
+
+        return redirect()
+            ->route(
+                'admin.our_channel.connections.index'
+            )
+            ->with(
+                'success',
+                $connected->last_test_status
+                    === 'SUCCESS'
+                    ? 'Meta connection verified. Facebook and linked Instagram publishing are ready.'
+                    : 'Meta login succeeded. Select the Facebook Page TradeX should publish to.'
+            );
+    }
+
+    public function selectMetaPage(
+        SelectMetaPageRequest $request,
+        AdminChannelConnectionService $service,
+        MetaOAuthService $oauth
+    ): RedirectResponse {
+        $admin = $this->admin();
+
+        abort_unless(
+            $admin->hasPermission(
+                'our_channel.manage'
+            ),
+            403
+        );
+
+        $connection =
+            $service->metaConnection();
+
+        try {
+            $oauth->selectPage(
+                $connection,
+                $admin,
+                $request,
+                (string) $request->validated(
+                    'page_id'
+                ),
+                (int) $request->validated(
+                    'version'
+                )
+            );
+        } catch (ChannelConnectionException $exception) {
+            return redirect()
+                ->route(
+                    'admin.our_channel.connections.index'
+                )
+                ->withErrors([
+                    'meta_oauth' =>
+                        '['
+                        .$exception->providerCode
+                        .'] '
+                        .$exception->getMessage(),
+                ]);
+        }
+
+        return redirect()
+            ->route(
+                'admin.our_channel.connections.index'
+            )
+            ->with(
+                'success',
+                'Facebook Page selected and Meta publishing connection verified.'
+            );
+    }
 
     public function updateYouTube(
         UpdateYouTubeChannelConnectionRequest $request,
@@ -208,6 +391,21 @@ class ChannelConnectionController extends Controller
             );
     }
 
+
+
+    private function metaRedirectUri(
+        Request $request
+    ): string {
+        return rtrim(
+            $request->getSchemeAndHttpHost(),
+            '/'
+        )
+            .route(
+                'admin.our_channel.connections.meta.callback',
+                [],
+                false
+            );
+    }
 
     private function youtubeRedirectUri(
         Request $request
