@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 class InstagramChannelPublisher
 {
     public function __construct(
-        private readonly ChannelMediaSource $source
+        private readonly ChannelMediaSource $source,
+        private readonly ChannelConnectionResolver $connections
     ) {
     }
 
@@ -20,10 +21,42 @@ class InstagramChannelPublisher
         ChannelVideo $video,
         ChannelVideoPublication $publication
     ): array {
-        $config = (array) config(
-            'tradex_channels.platforms.instagram',
-            []
-        );
+        $runtime = $this->connections
+            ->metaRuntime();
+
+        $config = [
+            'enabled' =>
+                (bool) (
+                    $runtime['instagram_enabled']
+                    ?? false
+                ),
+            'graph_base_url' =>
+                $runtime['graph_base_url']
+                ?? 'https://graph.facebook.com',
+            'graph_version' =>
+                $runtime['graph_version']
+                ?? 'v26.0',
+            'ig_user_id' =>
+                $runtime['ig_user_id']
+                ?? null,
+            'access_token' =>
+                $runtime['page_access_token']
+                ?? null,
+            'share_to_feed' =>
+                (bool) (
+                    $runtime['instagram_share_to_feed']
+                    ?? true
+                ),
+            'poll_attempts' =>
+                $runtime['instagram_poll_attempts']
+                ?? 30,
+            'poll_seconds' =>
+                $runtime['instagram_poll_seconds']
+                ?? 5,
+            'timeout_seconds' =>
+                $runtime['instagram_timeout_seconds']
+                ?? 60,
+        ];
 
         $this->assertConfigured($config);
 
