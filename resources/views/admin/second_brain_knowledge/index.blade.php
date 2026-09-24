@@ -30,14 +30,34 @@
             <h1>{{ $title }}</h1>
             <p>{{ $description }}</p>
         </div>
-        <div class="sbk-status-pill"><span></span>FOUNDATION MODE</div>
+
+        <div class="sbk-header-actions">
+            <a class="secondary-btn" href="{{ route('admin.second_brain_knowledge.subjects') }}">Manage Subjects</a>
+            <a class="primary-btn" href="{{ route('admin.second_brain_knowledge.library.create') }}">+ Add Knowledge</a>
+        </div>
     </div>
 
-    <section class="sbk-summary-grid" aria-label="Second Brain knowledge foundation status">
-        <article class="panel sbk-summary-card"><span>Markets</span><strong>4</strong><small>Forex · Crypto · Deriv · Stocks</small></article>
-        <article class="panel sbk-summary-card"><span>Knowledge Lifecycle</span><strong>Review First</strong><small>Only founder-approved knowledge becomes active</small></article>
-        <article class="panel sbk-summary-card"><span>RAG / Vector</span><strong>Not Enabled</strong><small>Reserved for the ingestion phase</small></article>
-        <article class="panel sbk-summary-card"><span>MCP Sync</span><strong>Not Enabled</strong><small>Reserved for approved knowledge only</small></article>
+    <section class="sbk-summary-grid" aria-label="Knowledge metrics">
+        <article class="panel sbk-summary-card">
+            <span>Subjects</span>
+            <strong>{{ number_format($metrics['subjects']) }}</strong>
+            <small>Founder-defined knowledge categories</small>
+        </article>
+        <article class="panel sbk-summary-card">
+            <span>Knowledge Items</span>
+            <strong>{{ number_format($metrics['items']) }}</strong>
+            <small>{{ number_format($metrics['drafts']) }} currently in DRAFT</small>
+        </article>
+        <article class="panel sbk-summary-card">
+            <span>Founder Approved</span>
+            <strong>{{ number_format($metrics['approved']) }}</strong>
+            <small>Approval is required before future AI activation</small>
+        </article>
+        <article class="panel sbk-summary-card">
+            <span>Source Media</span>
+            <strong>{{ number_format($metrics['images'] + $metrics['pdfs'] + $metrics['videos']) }}</strong>
+            <small>{{ $metrics['images'] }} images · {{ $metrics['pdfs'] }} PDFs · {{ $metrics['videos'] }} videos</small>
+        </article>
     </section>
 
     <section class="panel sbk-workspace">
@@ -46,28 +66,53 @@
                 <div class="panel-eyebrow">KNOWLEDGE OPERATING SYSTEM</div>
                 <h2>{{ $title }}</h2>
             </div>
-            <span class="sbk-stage">ADMIN FOUNDATION</span>
+            <span class="sbk-stage">FOUNDATION ACTIVE</span>
         </div>
 
         <div class="sbk-module-grid">
             @foreach($modules as $module)
-                <a href="{{ route($module['route']) }}" class="sbk-module-card {{ $section === $module['key'] ? 'active' : '' }}">
+                <a
+                    href="{{ route($module['route']) }}"
+                    class="sbk-module-card {{ $section === $module['key'] ? 'active' : '' }}"
+                >
                     <span class="sbk-module-icon">{{ $module['icon'] }}</span>
-                    <span><strong>{{ $module['label'] }}</strong><small>{{ $section === $module['key'] ? 'Current module' : 'Open module' }}</small></span>
+                    <span>
+                        <strong>{{ $module['label'] }}</strong>
+                        <small>
+                            @if(in_array($module['key'], ['dashboard', 'subjects', 'library'], true))
+                                Available now
+                            @else
+                                Reserved for next phase
+                            @endif
+                        </small>
+                    </span>
                     <b>›</b>
                 </a>
             @endforeach
         </div>
     </section>
 
-    <section class="panel sbk-foundation-note">
-        <div class="panel-eyebrow">CURRENT BUILD SCOPE</div>
-        <h2>Knowledge capture before automation</h2>
-        <p>
-            This branch establishes the administration shell only. Database ingestion,
-            PDF/image/video processing, chunking, embeddings, RAG, MCP synchronization,
-            rule execution and signal generation are intentionally not active yet.
-        </p>
-    </section>
+    @if($section === 'dashboard')
+        <section class="panel sbk-foundation-note">
+            <div class="panel-eyebrow">CURRENT SAFE WORKFLOW</div>
+            <h2>Capture first. Approve before AI.</h2>
+            <p>
+                Add your personal trading knowledge as text, images, PDFs and videos.
+                New entries are stored as DRAFT in protected storage. Vector indexing,
+                RAG retrieval, MCP synchronization, rule execution and signal generation
+                remain disabled until later phases are deliberately activated.
+            </p>
+        </section>
+    @else
+        <section class="panel sbk-foundation-note">
+            <div class="panel-eyebrow">RESERVED MODULE</div>
+            <h2>{{ $title }} is intentionally not automated yet</h2>
+            <p>
+                The Knowledge Library is the source foundation. This module will be connected
+                only after the capture schema and founder-review workflow contain enough
+                real examples from your methodology.
+            </p>
+        </section>
+    @endif
 </div>
 @endsection
