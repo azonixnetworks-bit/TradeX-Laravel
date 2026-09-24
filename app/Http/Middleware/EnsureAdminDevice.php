@@ -21,10 +21,38 @@ class EnsureAdminDevice
         $security = app(AdminDeviceSecurityService::class);
         $sessions = app(AdminDeviceSessionService::class);
         $previousSessionId = $request->session()->getId();
-        if (! $security->token($request)) {
-            // Laravel encrypts this server-generated HttpOnly cookie. Never accept a client fingerprint as proof.
-            Cookie::queue(Cookie::make(AdminDeviceSecurityService::COOKIE, bin2hex(random_bytes(32)), 525600, '/admin', null, $request->isSecure(), true, false, 'strict'));
+        $deviceToken = $security->token($request);
+
+        if (! $deviceToken) {
+            $deviceToken = bin2hex(
+                random_bytes(32)
+            );
         }
+
+        /*
+         * The admin device token is a server-generated, encrypted, HttpOnly
+         * binding cookie. SameSite=Lax is required for trusted top-level OAuth
+         * redirects (for example Google -> TradeX YouTube callback). Strict
+         * prevents the browser from sending this cookie on that callback and
+         * incorrectly invalidates an otherwise valid admin device session.
+         *
+         * Re-issuing the current token also upgrades existing Strict cookies
+         * without changing the registered device identity.
+         */
+        Cookie::queue(
+            Cookie::make(
+                AdminDeviceSecurityService::COOKIE,
+                $deviceToken,
+                525600,
+                '/admin',
+                null,
+                $request->isSecure(),
+                true,
+                false,
+                'lax'
+            )
+        );
+
         $admin = Auth::guard('admin')->user();
         if ($admin instanceof AdminUser
             && ! $request->session()->get('tradex_admin_totp_enrollment_only')

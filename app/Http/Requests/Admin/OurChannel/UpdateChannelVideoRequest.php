@@ -3,17 +3,17 @@
 namespace App\Http\Requests\Admin\OurChannel;
 
 use App\Models\AdminUser;
+use App\Models\ChannelVideo;
 use App\Support\YouTubeVideo;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class UpdateChannelVideoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $admin = auth(
-            'admin'
-        )->user();
+        $admin = auth('admin')->user();
 
         return $admin instanceof AdminUser
             && $admin->hasPermission(
@@ -39,8 +39,13 @@ class UpdateChannelVideoRequest extends FormRequest
                 'string',
                 'max:20000',
             ],
+            'hashtags' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
             'youtube_url' => [
-                'required',
+                'nullable',
                 'string',
                 'max:2048',
                 function (
@@ -49,9 +54,10 @@ class UpdateChannelVideoRequest extends FormRequest
                     Closure $fail
                 ): void {
                     if (
-                        ! is_string($value)
-                        || YouTubeVideo::extractVideoId(
-                            $value
+                        $value !== null
+                        && trim((string) $value) !== ''
+                        && YouTubeVideo::extractVideoId(
+                            (string) $value
                         ) === null
                     ) {
                         $fail(
@@ -77,24 +83,45 @@ class UpdateChannelVideoRequest extends FormRequest
                 'min:0',
                 'max:1000000',
             ],
-            'status' => [
-                'prohibited',
-            ],
-            'published_at' => [
-                'prohibited',
-            ],
-            'youtube_video_id' => [
-                'prohibited',
-            ],
-            'uuid' => [
-                'prohibited',
-            ],
-            'created_by_admin_id' => [
-                'prohibited',
-            ],
-            'updated_by_admin_id' => [
-                'prohibited',
-            ],
+            'status' => ['prohibited'],
+            'published_at' => ['prohibited'],
+            'publish_requested_at' => ['prohibited'],
+            'youtube_video_id' => ['prohibited'],
+            'source_disk' => ['prohibited'],
+            'source_path' => ['prohibited'],
+            'source_sha256' => ['prohibited'],
+            'uuid' => ['prohibited'],
+            'created_by_admin_id' => ['prohibited'],
+            'updated_by_admin_id' => ['prohibited'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $youtubeUrl = trim(
+                    (string) $this->input(
+                        'youtube_url',
+                        ''
+                    )
+                );
+
+                $channelVideo = $this->route(
+                    'channelVideo'
+                );
+
+                if (
+                    $channelVideo instanceof ChannelVideo
+                    && ! $channelVideo->hasSourceMedia()
+                    && $youtubeUrl === ''
+                ) {
+                    $validator->errors()->add(
+                        'youtube_url',
+                        'This legacy video has no protected master upload, so its YouTube URL cannot be removed.'
+                    );
+                }
+            },
         ];
     }
 

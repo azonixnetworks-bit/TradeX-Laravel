@@ -38,6 +38,24 @@ return Application::configure(basePath: dirname(__DIR__))
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*
+         * Local HTTPS tunnels such as ngrok terminate TLS before forwarding
+         * the request to Laravel over loopback HTTP. Trust loopback proxies
+         * only, so Laravel can safely honor the forwarded HTTPS scheme/host
+         * without trusting arbitrary internet-supplied proxy headers.
+         */
+        $middleware->trustProxies(
+            at: [
+                '127.0.0.1',
+                '::1',
+            ],
+            headers:
+                Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
+
+        /*
          * API-23 final hardening is installed once on Laravel's api group.
          * This covers routes/api.php plus provider-loaded API route files
          * without rewriting frozen API-01...22 route contracts.

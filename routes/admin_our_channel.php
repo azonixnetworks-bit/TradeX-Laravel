@@ -1,7 +1,25 @@
 <?php
 
+use App\Http\Controllers\Admin\OurChannel\ChannelConnectionController;
 use App\Http\Controllers\Admin\OurChannel\ChannelVideoController;
+use App\Http\Controllers\ChannelMediaDeliveryController;
 use Illuminate\Support\Facades\Route;
+
+/*
+| Signed, short-lived provider fetch URL used by Meta while processing Reels.
+| It is intentionally outside /admin because external provider servers cannot
+| authenticate to the TradeX admin session. The signature expires automatically.
+*/
+Route::get(
+    '/channel-media/{channelVideo}/source',
+    ChannelMediaDeliveryController::class
+)
+    ->whereNumber('channelVideo')
+    ->middleware([
+        'signed',
+        'throttle:30,1',
+    ])
+    ->name('channel-media.source');
 
 Route::prefix('admin')
     ->name('admin.')
@@ -16,6 +34,69 @@ Route::prefix('admin')
                 )->name('index');
 
                 Route::get(
+                    '/connections',
+                    [ChannelConnectionController::class, 'index']
+                )
+                    ->middleware('throttle:60,1')
+                    ->name('connections.index');
+
+                Route::patch(
+                    '/connections/meta',
+                    [ChannelConnectionController::class, 'updateMeta']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.update');
+
+                Route::get(
+                    '/connections/meta/connect',
+                    [ChannelConnectionController::class, 'startMeta']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.connect');
+
+                Route::get(
+                    '/connections/meta/callback',
+                    [ChannelConnectionController::class, 'metaCallback']
+                )
+                    ->middleware('throttle:20,1')
+                    ->name('connections.meta.callback');
+
+                Route::post(
+                    '/connections/meta/select-page',
+                    [ChannelConnectionController::class, 'selectMetaPage']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.meta.select_page');
+
+                Route::patch(
+                    '/connections/youtube',
+                    [ChannelConnectionController::class, 'updateYouTube']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.youtube.update');
+
+                Route::get(
+                    '/connections/youtube/connect',
+                    [ChannelConnectionController::class, 'startYouTube']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.youtube.connect');
+
+                Route::get(
+                    '/connections/youtube/callback',
+                    [ChannelConnectionController::class, 'youtubeCallback']
+                )
+                    ->middleware('throttle:20,1')
+                    ->name('connections.youtube.callback');
+
+                Route::patch(
+                    '/connections/telegram',
+                    [ChannelConnectionController::class, 'updateTelegram']
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('connections.telegram.update');
+
+                Route::get(
                     '/create',
                     [ChannelVideoController::class, 'create']
                 )->name('create');
@@ -23,13 +104,25 @@ Route::prefix('admin')
                 Route::post(
                     '/',
                     [ChannelVideoController::class, 'store']
-                )->name('store');
+                )
+                    ->middleware('throttle:10,1')
+                    ->name('store');
+
+                Route::post(
+                    '/{channelVideo}/publications/{publication}/retry',
+                    [ChannelVideoController::class, 'retryPublication']
+                )
+                    ->whereNumber('channelVideo')
+                    ->whereNumber('publication')
+                    ->middleware('throttle:10,1')
+                    ->name('publications.retry');
 
                 Route::patch(
                     '/{channelVideo}/publication',
                     [ChannelVideoController::class, 'publication']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:10,1')
                     ->name('publication');
 
                 Route::get(
@@ -44,6 +137,7 @@ Route::prefix('admin')
                     [ChannelVideoController::class, 'update']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:20,1')
                     ->name('update');
 
                 Route::delete(
@@ -51,6 +145,7 @@ Route::prefix('admin')
                     [ChannelVideoController::class, 'destroy']
                 )
                     ->whereNumber('channelVideo')
+                    ->middleware('throttle:10,1')
                     ->name('destroy');
             });
     });

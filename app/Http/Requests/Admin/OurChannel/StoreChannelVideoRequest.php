@@ -3,17 +3,18 @@
 namespace App\Http\Requests\Admin\OurChannel;
 
 use App\Models\AdminUser;
+use App\Models\ChannelVideoPublication;
 use App\Support\YouTubeVideo;
 use Closure;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreChannelVideoRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        $admin = auth(
-            'admin'
-        )->user();
+        $admin = auth('admin')->user();
 
         return $admin instanceof AdminUser
             && $admin->hasPermission(
@@ -39,8 +40,13 @@ class StoreChannelVideoRequest extends FormRequest
                 'string',
                 'max:20000',
             ],
+            'hashtags' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
             'youtube_url' => [
-                'required',
+                'nullable',
                 'string',
                 'max:2048',
                 function (
@@ -49,9 +55,10 @@ class StoreChannelVideoRequest extends FormRequest
                     Closure $fail
                 ): void {
                     if (
-                        ! is_string($value)
-                        || YouTubeVideo::extractVideoId(
-                            $value
+                        $value !== null
+                        && trim((string) $value) !== ''
+                        && YouTubeVideo::extractVideoId(
+                            (string) $value
                         ) === null
                     ) {
                         $fail(
@@ -59,6 +66,37 @@ class StoreChannelVideoRequest extends FormRequest
                         );
                     }
                 },
+            ],
+            'video_file' => [
+                'nullable',
+                'file',
+                'mimetypes:video/mp4,video/quicktime',
+                'max:'.max(
+                    1024,
+                    (int) config(
+                        'tradex_channels.max_upload_kb',
+                        2097152
+                    )
+                ),
+            ],
+            'platforms' => [
+                'nullable',
+                'array',
+                'max:6',
+            ],
+            'platforms.*' => [
+                'string',
+                'distinct',
+                Rule::in(
+                    ChannelVideoPublication::allPlatforms()
+                ),
+            ],
+            'intent' => [
+                'required',
+                Rule::in([
+                    'DRAFT',
+                    'PUBLISH',
+                ]),
             ],
             'language_code' => [
                 'required',
@@ -77,24 +115,62 @@ class StoreChannelVideoRequest extends FormRequest
                 'min:0',
                 'max:1000000',
             ],
-            'status' => [
-                'prohibited',
-            ],
-            'published_at' => [
-                'prohibited',
-            ],
-            'youtube_video_id' => [
-                'prohibited',
-            ],
-            'uuid' => [
-                'prohibited',
-            ],
-            'created_by_admin_id' => [
-                'prohibited',
-            ],
-            'updated_by_admin_id' => [
-                'prohibited',
-            ],
+            'status' => ['prohibited'],
+            'published_at' => ['prohibited'],
+            'publish_requested_at' => ['prohibited'],
+            'youtube_video_id' => ['prohibited'],
+            'source_disk' => ['prohibited'],
+            'source_path' => ['prohibited'],
+            'source_sha256' => ['prohibited'],
+            'uuid' => ['prohibited'],
+            'created_by_admin_id' => ['prohibited'],
+            'updated_by_admin_id' => ['prohibited'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $youtubeUrl = trim(
+                    (string) $this->input(
+                        'youtube_url',
+                        ''
+                    )
+                );
+
+                if (
+                    ! $this->hasFile('video_file')
+                    && $youtubeUrl === ''
+                ) {
+                    $validator->errors()->add(
+                        'video_file',
+                        'Upload a master MP4/MOV video or provide an existing YouTube URL.'
+                    );
+                }
+
+                $platforms = $this->input(
+                    'platforms',
+                    []
+                );
+
+                if (
+                    strtoupper(
+                        (string) $this->input(
+                            'intent',
+                            'DRAFT'
+                        )
+                    ) === 'PUBLISH'
+                    && is_array($platforms)
+                    && $platforms !== []
+                    && ! $this->hasFile('video_file')
+                ) {
+                    $validator->errors()->add(
+                        'video_file',
+                        'A master video file is required to publish to external platforms.'
+                    );
+                }
+            },
         ];
     }
 
@@ -117,6 +193,32 @@ class StoreChannelVideoRequest extends FormRequest
                 'youtube_url' => trim(
                     (string) $this->input(
                         'youtube_url'
+                    )
+                ),
+            ]);
+        }
+
+        if ($this->has('intent')) {
+            $this->merge([
+                'intent' => strtoupper(
+                    trim(
+                        (string) $this->input(
+                            'intent'
+                        )
+                    )
+                ),
+            ]);
+        }
+
+        if (is_array($this->input('platforms'))) {
+            $this->merge([
+                'platforms' => array_values(
+                    array_map(
+                        static fn (mixed $platform): string =>
+                            strtoupper(
+                                trim((string) $platform)
+                            ),
+                        $this->input('platforms')
                     )
                 ),
             ]);
