@@ -251,6 +251,47 @@
                 <span class="nav-icon">◈</span>
                 <span>Daily Trade Ideas</span>
             </a>
+
+            <details class="nav-submenu-group">
+                <summary class="nav-submenu-summary">
+                    <span class="nav-icon">FX</span>
+                    <span>2ND Brain Forex</span>
+                    <span class="nav-submenu-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <div class="nav-submenu-panel" aria-label="2ND Brain Forex submenu">
+                    <span class="nav-submenu-link nav-submenu-link-disabled">CRT Entry</span>
+                    <span class="nav-submenu-link nav-submenu-link-disabled">Session (LKZ, NYKZ)</span>
+                    <span class="nav-submenu-link nav-submenu-link-disabled">Brain Entry</span>
+                    <span class="nav-submenu-link nav-submenu-link-disabled">News Trade</span>
+                </div>
+            </details>
+
+            <details class="nav-submenu-group">
+                <summary class="nav-submenu-summary">
+                    <span class="nav-icon">₿</span>
+                    <span>2ND Brain Crypto</span>
+                    <span class="nav-submenu-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <div class="nav-submenu-panel" aria-label="2ND Brain Crypto submenu">
+                    <span class="nav-submenu-link nav-submenu-link-disabled">CRT Entry</span>
+                    <span class="nav-submenu-link nav-submenu-link-disabled">Brain Entry</span>
+                </div>
+            </details>
+
+            <details class="nav-submenu-group">
+                <summary class="nav-submenu-summary">
+                    <span class="nav-icon">D</span>
+                    <span>2ND Brain Deriv</span>
+                    <span class="nav-submenu-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <div class="nav-submenu-panel" aria-label="2ND Brain Deriv submenu">
+                    <span class="nav-submenu-link nav-submenu-link-disabled">CRT Entry</span>
+                    <span class="nav-submenu-link nav-submenu-link-disabled">Brain Entry</span>
+                </div>
+            </details>
         @endif
 
         @if($hasCopyTradingNavigation)
