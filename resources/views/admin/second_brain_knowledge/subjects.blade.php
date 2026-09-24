@@ -4,11 +4,11 @@
 @section('page-title', '2ND Brain Knowledge')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/second-brain-knowledge.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/second-brain-knowledge.css') }}?v=20260924-2">
 @endpush
 
 @section('content')
-<div class="second-brain-knowledge-page">
+<div class="second-brain-knowledge-page sbk-subjects-page">
     <div class="page-header">
         <div>
             <div class="page-eyebrow">KNOWLEDGE STRUCTURE</div>
