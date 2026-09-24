@@ -21,6 +21,34 @@ class DailyTradeIdeaNavigationTest extends TestCase
         $this->assertStringContainsString("admin.daily_trade_ideas.index", $sidebar);
     }
 
+    public function test_second_brain_navigation_is_separate_from_trade_ideas(): void
+    {
+        $sidebar = File::get(
+            resource_path('views/admin/layouts/sidebar.blade.php')
+        );
+
+        $tradeIdeas = strpos($sidebar, '<div class="nav-section-title">TRADE IDEAS</div>');
+        $secondBrain = strpos($sidebar, '<div class="nav-section-title">2ND BRAIN</div>');
+        $copyTrading = strpos($sidebar, '<div class="nav-section-title">COPY TRADING</div>');
+
+        $this->assertNotFalse($tradeIdeas);
+        $this->assertNotFalse($secondBrain);
+        $this->assertNotFalse($copyTrading);
+        $this->assertLessThan($secondBrain, $tradeIdeas);
+        $this->assertLessThan($copyTrading, $secondBrain);
+
+        $tradeIdeasMarkup = substr($sidebar, $tradeIdeas, $secondBrain - $tradeIdeas);
+        $secondBrainMarkup = substr($sidebar, $secondBrain, $copyTrading - $secondBrain);
+
+        $this->assertStringContainsString('Long-Term Trade Ideas', $tradeIdeasMarkup);
+        $this->assertStringContainsString('Daily Trade Ideas', $tradeIdeasMarkup);
+        $this->assertStringNotContainsString('2ND Brain Forex', $tradeIdeasMarkup);
+        $this->assertStringContainsString('2ND Brain Forex', $secondBrainMarkup);
+        $this->assertStringContainsString('2ND Brain Crypto', $secondBrainMarkup);
+        $this->assertStringContainsString('2ND Brain Deriv', $secondBrainMarkup);
+        $this->assertStringContainsString('Knowledge Center', $secondBrainMarkup);
+    }
+
     public function test_daily_trade_idea_lifecycle_routes_are_registered(): void
     {
         foreach ([

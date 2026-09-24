@@ -15,6 +15,10 @@
         || $admin->hasPermission('our_channel.view')
         || $admin->hasPermission('notifications.view');
 
+    $hasSecondBrainNavigation =
+        $admin->hasPermission('trade_ideas.view')
+        || $admin->isSuperAdmin();
+
     $hasCopyTradingCoreNavigation =
         $admin->hasPermission('copy_trading.view')
         || $admin->hasPermission('copy_trading.accounts.view');
@@ -251,7 +255,12 @@
                 <span class="nav-icon">◈</span>
                 <span>Daily Trade Ideas</span>
             </a>
+        @endif
 
+        @if($hasSecondBrainNavigation)
+            <div class="nav-section-title">2ND BRAIN</div>
+
+            @if($admin->hasPermission('trade_ideas.view'))
             <details class="nav-submenu-group">
                 <summary class="nav-submenu-summary">
                     <span class="nav-icon">FX</span>
@@ -292,11 +301,9 @@
                     <span class="nav-submenu-link nav-submenu-link-disabled">Brain Entry</span>
                 </div>
             </details>
-        @endif
+            @endif
 
-        @if($admin->isSuperAdmin())
-            <div class="nav-section-title">2ND BRAIN KNOWLEDGE</div>
-
+            @if($admin->isSuperAdmin())
             <a
                 href="{{ route('admin.second_brain_knowledge.index') }}"
                 class="nav-link {{ request()->routeIs('admin.second_brain_knowledge.*') ? 'active' : '' }}"
@@ -304,6 +311,7 @@
                 <span class="nav-icon">✦</span>
                 <span>Knowledge Center</span>
             </a>
+            @endif
         @endif
 
         @if($hasCopyTradingNavigation)

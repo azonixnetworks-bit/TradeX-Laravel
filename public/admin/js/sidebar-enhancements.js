@@ -254,6 +254,10 @@ document.addEventListener(
                             function (item) {
                                 return item.matches(
                                     '.nav-link.active'
+                                ) || Boolean(
+                                    item.querySelector?.(
+                                        '.nav-link.active'
+                                    )
                                 );
                             }
                         );
