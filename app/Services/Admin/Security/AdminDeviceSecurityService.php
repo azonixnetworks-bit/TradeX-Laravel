@@ -177,6 +177,41 @@ class AdminDeviceSecurityService
         }, 3);
     }
 
+    public function deleteDevice(AdminUser $actor, AdminUser $owner, AdminDevice $device, Request $request): void
+    {
+        abort_unless($actor->isSuperAdmin(), 403);
+        abort_unless($owner->adminDevices()->whereKey($device->getKey())->exists(), 404);
+
+        DB::transaction(function () use ($actor, $owner, $device, $request): void {
+            AdminUser::whereKey($owner->id)->lockForUpdate()->firstOrFail();
+            $device = AdminDevice::whereKey($device->id)->lockForUpdate()->firstOrFail();
+            $snapshot = [
+                'device_id' => $device->id,
+                'admin_user_id' => $owner->id,
+                'device_slot' => $device->device_slot,
+                'status' => $device->status,
+                'active_slot' => $device->active_slot,
+                'ip_address' => $device->ip_address,
+                'last_seen_at' => $device->last_seen_at?->toISOString(),
+            ];
+
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $actor->id,
+                action: 'ADMIN_DEVICE_DELETE',
+                module: 'SECURITY',
+                targetType: AdminDevice::class,
+                targetId: $device->id,
+                oldValues: $snapshot,
+                newValues: ['reason' => 'Deleted by Super Admin from device management'],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+
+            $device->delete();
+        }, 3);
+    }
+
     private function capacityReason(AdminUser $admin, string $slot, ?int $excludeDeviceId = null): ?string
     {
         $policy = $this->policy($admin);

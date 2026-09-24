@@ -17,6 +17,8 @@ Route::prefix('admin/administration')
                     ->whereNumber('adminUser')->middleware('throttle:60,1')->name('devices.index');
                 Route::patch('/{adminUser}/devices/{adminDevice}', [AdminDeviceController::class, 'update'])
                     ->whereNumber(['adminUser', 'adminDevice'])->scopeBindings()->middleware('throttle:10,1')->name('devices.update');
+                Route::delete('/{adminUser}/devices/{adminDevice}', [AdminDeviceController::class, 'destroy'])
+                    ->whereNumber(['adminUser', 'adminDevice'])->scopeBindings()->middleware('throttle:10,1')->name('devices.destroy');
                 Route::get(
                     '/',
                     [AdminUserController::class, 'index']

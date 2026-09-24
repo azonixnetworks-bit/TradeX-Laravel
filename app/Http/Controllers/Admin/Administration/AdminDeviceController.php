@@ -11,6 +11,7 @@ use App\Models\AdminUser;
 use App\Services\Admin\Security\AdminDeviceSecurityService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class AdminDeviceController extends Controller
@@ -37,5 +38,25 @@ class AdminDeviceController extends Controller
         $security->manage(auth('admin')->user(), $adminUser, $adminDevice, $data['action'], $data['reason'], $request);
 
         return back()->with('success', 'Device access updated. The admin must sign in again on an approved device.');
+    }
+
+    public function destroy(Request $request, AdminUser $adminUser, AdminDevice $adminDevice, AdminDeviceSecurityService $security): RedirectResponse
+    {
+        abort_unless(auth('admin')->user()?->isSuperAdmin(), 403);
+
+        $actor = auth('admin')->user();
+        $deletingCurrentDevice = (int) $request->session()->get(AdminDeviceSecurityService::SESSION) === (int) $adminDevice->id;
+
+        $security->deleteDevice($actor, $adminUser, $adminDevice, $request);
+
+        if ($deletingCurrentDevice) {
+            Auth::guard('admin')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('admin.login')->with('success', 'Current device record deleted. Sign in again to register this browser.');
+        }
+
+        return back()->with('success', 'Device record and its signed-in sessions were deleted.');
     }
 }

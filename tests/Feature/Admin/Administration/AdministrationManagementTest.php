@@ -539,7 +539,7 @@ class AdministrationManagementTest extends TestCase
             );
     }
 
-    public function test_admin_13_has_no_delete_routes(): void
+    public function test_administration_only_exposes_the_super_admin_device_delete_route(): void
     {
         $routes = collect(
             app('router')
@@ -555,16 +555,19 @@ class AdministrationManagementTest extends TestCase
             );
 
         $this->assertCount(
-            17, // Includes Super Admin device listing and access updates.
+            18, // Includes Super Admin device listing, access updates and record deletion.
             $routes
         );
 
-        foreach ($routes as $route) {
-            $this->assertNotContains(
-                'DELETE',
-                $route->methods()
-            );
-        }
+        $deleteRoutes = $routes->filter(
+            fn ($route): bool => in_array('DELETE', $route->methods(), true)
+        );
+
+        $this->assertCount(1, $deleteRoutes);
+        $this->assertSame(
+            'admin.administration.admins.devices.destroy',
+            $deleteRoutes->first()->getName()
+        );
     }
 
     public function test_password_is_never_copied_into_admin_creation_audit_payload(): void

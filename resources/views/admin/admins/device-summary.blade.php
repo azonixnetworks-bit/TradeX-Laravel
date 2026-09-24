@@ -16,7 +16,7 @@
                     <td>{{ $deviceAdmin->signed_in_sessions_count }}</td>
                     <td>{{ $deviceAdmin->blocked_devices_count }}</td>
                     <td>{{ $deviceAdmin->device_sessions_max_last_seen_at ?? 'Not signed in since device enforcement' }}</td>
-                    <td><a class="primary-btn" href="{{ route('admin.administration.admins.devices.index', $deviceAdmin) }}">View Devices</a></td>
+                    <td><a class="primary-btn" href="{{ route('admin.administration.admins.devices.index', $deviceAdmin) }}">Manage / Delete Devices</a></td>
                 </tr>
             @endforeach
             </tbody>

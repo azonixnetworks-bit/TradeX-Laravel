@@ -38,6 +38,10 @@
                                 <button class="secondary-btn" name="action" value="revoke">Revoke device</button>
                             @endif
                         </form>
+                        <form method="POST" action="{{ route('admin.administration.admins.devices.destroy', [$adminUser, $device]) }}" style="margin-top:8px" onsubmit="return confirm('Permanently delete this device record and all of its signed-in sessions?');">
+                            @csrf @method('DELETE')
+                            <button class="secondary-btn" type="submit" style="border-color:rgba(255,102,102,.35);color:#ee8c8c">Delete record</button>
+                        </form>
                     </td>
                 </tr>
             @empty

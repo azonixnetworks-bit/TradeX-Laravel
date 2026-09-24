@@ -334,6 +334,50 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         ]);
     }
 
+    public function test_super_admin_can_delete_any_owned_device_record_and_linked_sessions(): void
+    {
+        config(['tradex_admin_devices.enabled' => false]);
+        $super = $this->admin(true);
+        $owner = $this->admin();
+        $device = AdminDevice::create([
+            'admin_user_id' => $owner->id,
+            'token_hash' => hash('sha256', 'delete-test'),
+            'device_slot' => 'DESKTOP',
+            'active_slot' => 'DESKTOP',
+            'status' => 'ACTIVE',
+        ]);
+        AdminDeviceSession::create([
+            'admin_user_id' => $owner->id,
+            'admin_device_id' => $device->id,
+            'session_hash' => hash('sha256', 'delete-session'),
+            'session_version' => $device->session_version,
+            'last_seen_at' => now(),
+            'expires_at' => now()->addHour(),
+        ]);
+
+        $this->actingAs($owner, 'admin')
+            ->delete(route('admin.administration.admins.devices.destroy', [$owner, $device]))
+            ->assertForbidden();
+
+        $this->actingAs($super, 'admin')
+            ->delete(route('admin.administration.admins.devices.destroy', [$super, $device]))
+            ->assertNotFound();
+
+        $this->delete(route('admin.administration.admins.devices.destroy', [$owner, $device]))
+            ->assertRedirect()
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseMissing('admin_devices', ['id' => $device->id]);
+        $this->assertDatabaseMissing('admin_device_sessions', ['admin_device_id' => $device->id]);
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_type' => 'ADMIN',
+            'actor_id' => $super->id,
+            'action' => 'ADMIN_DEVICE_DELETE',
+            'module' => 'SECURITY',
+            'target_id' => $device->id,
+        ]);
+    }
+
     public function test_notifications_send_to_super_admin_email_and_configured_whatsapp_with_device_details(): void
     {
         $admin = $this->admin(true);
@@ -391,7 +435,7 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $this->post(route('admin.login.submit'), ['email' => $admin->email, 'password' => 'StrongAdmin#2026!'])->assertRedirect();
         $this->assertSame(1, AdminDeviceSession::live()->count());
         $this->withCookie(config('session.cookie'), session()->getId());
-        $this->get(route('admin.dashboard'))->assertOk()->assertSee('Admin Devices &amp; Sessions', false)->assertSee('View Devices');
+        $this->get(route('admin.dashboard'))->assertOk()->assertSee('Admin Devices &amp; Sessions', false)->assertSee('Manage / Delete Devices');
         $this->post(route('admin.logout'))->assertRedirect(route('admin.login'));
         $this->assertSame(0, AdminDeviceSession::live()->count());
         $this->assertSame(1, AdminDevice::where('status', 'ACTIVE')->count());

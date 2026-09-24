@@ -143,7 +143,7 @@
                     <td>
                         <a class="secondary-btn" href="{{ route('admin.administration.admins.edit', $adminUser) }}">Inspect</a>
                         @if(auth('admin')->user()->isSuperAdmin())
-                            <a class="secondary-btn" href="{{ route('admin.administration.admins.devices.index', $adminUser) }}">Devices</a>
+                            <a class="secondary-btn" href="{{ route('admin.administration.admins.devices.index', $adminUser) }}">Manage Devices</a>
                         @endif
                     </td>
                 </tr>
