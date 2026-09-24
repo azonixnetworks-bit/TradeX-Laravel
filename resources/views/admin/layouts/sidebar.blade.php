@@ -294,6 +294,18 @@
             </details>
         @endif
 
+        @if($admin->isSuperAdmin())
+            <div class="nav-section-title">2ND BRAIN KNOWLEDGE</div>
+
+            <a
+                href="{{ route('admin.second_brain_knowledge.index') }}"
+                class="nav-link {{ request()->routeIs('admin.second_brain_knowledge.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">✦</span>
+                <span>Knowledge Center</span>
+            </a>
+        @endif
+
         @if($hasCopyTradingNavigation)
             <div class="nav-section-title">COPY TRADING</div>
 
