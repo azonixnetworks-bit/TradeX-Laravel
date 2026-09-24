@@ -79,7 +79,12 @@ class SecondBrainKnowledgeLibraryTest extends TestCase
                 'timeframes' => ['H4', 'M15'],
                 'tags' => 'demand, confirmation, forex',
                 'images' => [
-                    UploadedFile::fake()->image('valid-demand.png', 1200, 800),
+                    UploadedFile::fake()->createWithContent(
+                        'valid-demand.png',
+                        base64_decode(
+                            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+                        )
+                    ),
                 ],
                 'pdfs' => [
                     UploadedFile::fake()->create(
