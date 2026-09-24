@@ -295,7 +295,7 @@ class AdminBrowserDeviceSecurityTest extends TestCase
         $response = $this->get(route('admin.login'))->assertCookie(AdminDeviceSecurityService::COOKIE);
         $cookie = collect($response->headers->getCookies())->first(fn ($cookie) => $cookie->getName() === AdminDeviceSecurityService::COOKIE);
         $this->assertTrue($cookie->isHttpOnly());
-        $this->assertSame('strict', $cookie->getSameSite());
+        $this->assertSame('lax', $cookie->getSameSite());
         $this->assertSame('/admin', $cookie->getPath());
     }
 

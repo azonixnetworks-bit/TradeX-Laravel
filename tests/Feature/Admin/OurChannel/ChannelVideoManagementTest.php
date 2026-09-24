@@ -63,6 +63,7 @@ class ChannelVideoManagementTest extends TestCase
                 'short_description' => 'Free education.',
                 'description' => 'Long description.',
                 'youtube_url' => 'https://youtu.be/dQw4w9WgXcQ?si=test',
+                'intent' => 'DRAFT',
                 'language_code' => 'TA',
                 'is_featured' => '1',
                 'sort_order' => '5',
@@ -174,6 +175,7 @@ class ChannelVideoManagementTest extends TestCase
             [
                 'title' => 'First',
                 'youtube_url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                'intent' => 'DRAFT',
                 'language_code' => 'en',
                 'sort_order' => 1,
             ]
@@ -197,6 +199,7 @@ class ChannelVideoManagementTest extends TestCase
             [
                 'title' => 'Duplicate',
                 'youtube_url' => 'https://youtu.be/dQw4w9WgXcQ',
+                'intent' => 'DRAFT',
                 'language_code' => 'en',
                 'sort_order' => 2,
             ]
