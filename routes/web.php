@@ -346,3 +346,17 @@ require __DIR__ . '/admin_economic_news.php';
 */
 
 require __DIR__ . '/admin_trading_floor.php';
+
+/*
+|--------------------------------------------------------------------------
+| AI Trading Second Brain — Knowledge Administration
+|--------------------------------------------------------------------------
+|
+| Founder-controlled knowledge capture and review shell. Ingestion,
+| embeddings, RAG, MCP synchronization and decision logic are introduced
+| only in later phases after the knowledge workflow is approved.
+|
+*/
+
+require __DIR__ . '/admin_second_brain_knowledge.php';
+
