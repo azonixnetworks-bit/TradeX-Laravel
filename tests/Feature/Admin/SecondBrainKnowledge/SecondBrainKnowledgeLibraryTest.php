@@ -33,6 +33,25 @@ class SecondBrainKnowledgeLibraryTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_super_admin_sees_knowledge_build_flow_in_required_order(): void
+    {
+        $admin = $this->superAdmin();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.second_brain_knowledge.index'))
+            ->assertOk()
+            ->assertSeeText('Knowledge Development Flow')
+            ->assertSeeTextInOrder([
+                'Foundation Setup',
+                'Capture & Organize',
+                'Founder Review',
+                'AI Extraction',
+                'Vector & RAG',
+                'MCP Sync',
+                'Controlled Activation',
+            ]);
+    }
+
     public function test_super_admin_can_create_personal_knowledge_subject(): void
     {
         $admin = $this->superAdmin();

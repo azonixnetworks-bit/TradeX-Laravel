@@ -21,6 +21,16 @@
         ['route' => 'admin.second_brain_knowledge.mcp_sync', 'key' => 'mcp', 'icon' => '⇄', 'label' => 'MCP Knowledge Sync'],
         ['route' => 'admin.second_brain_knowledge.versions', 'key' => 'versions', 'icon' => '◷', 'label' => 'Version History'],
     ];
+
+    $roadmap = [
+        ['number' => '01', 'title' => 'Foundation Setup', 'description' => 'Admin shell, permissions and protected source storage.', 'status' => 'ACTIVE', 'state' => 'active'],
+        ['number' => '02', 'title' => 'Capture & Organize', 'description' => 'Create subjects and add draft text, images, PDFs and videos.', 'status' => 'AVAILABLE NOW', 'state' => 'available'],
+        ['number' => '03', 'title' => 'Founder Review', 'description' => 'Review, approve, reject and version captured knowledge.', 'status' => 'NEXT', 'state' => 'next'],
+        ['number' => '04', 'title' => 'AI Extraction', 'description' => 'Convert approved sources into definitions, rules and examples.', 'status' => 'PLANNED', 'state' => 'planned'],
+        ['number' => '05', 'title' => 'Vector & RAG', 'description' => 'Index approved knowledge and validate retrieval quality.', 'status' => 'PLANNED', 'state' => 'planned'],
+        ['number' => '06', 'title' => 'MCP Sync', 'description' => 'Publish approved knowledge to controlled MCP tools.', 'status' => 'PLANNED', 'state' => 'planned'],
+        ['number' => '07', 'title' => 'Controlled Activation', 'description' => 'Enable execution only after founder and safety validation.', 'status' => 'LOCKED', 'state' => 'locked'],
+    ];
 @endphp
 
 <div class="second-brain-knowledge-page">
@@ -36,6 +46,30 @@
             <a class="primary-btn" href="{{ route('admin.second_brain_knowledge.library.create') }}">+ Add Knowledge</a>
         </div>
     </div>
+
+    <section class="panel sbk-roadmap" aria-labelledby="sbk-roadmap-title">
+        <div class="sbk-roadmap-header">
+            <div>
+                <div class="panel-eyebrow">SECOND BRAIN BUILD ORDER</div>
+                <h2 id="sbk-roadmap-title">Knowledge Development Flow</h2>
+                <p>Complete each stage in this order. The status shows what is active now and what comes next.</p>
+            </div>
+            <span class="sbk-stage">FOUNDATION ACTIVE</span>
+        </div>
+
+        <ol class="sbk-roadmap-list">
+            @foreach($roadmap as $step)
+                <li class="sbk-roadmap-step sbk-roadmap-step-{{ $step['state'] }}">
+                    <div class="sbk-roadmap-step-top">
+                        <span class="sbk-roadmap-number">{{ $step['number'] }}</span>
+                        <span class="sbk-roadmap-status">{{ $step['status'] }}</span>
+                    </div>
+                    <strong>{{ $step['title'] }}</strong>
+                    <p>{{ $step['description'] }}</p>
+                </li>
+            @endforeach
+        </ol>
+    </section>
 
     <section class="sbk-summary-grid" aria-label="Knowledge metrics">
         <article class="panel sbk-summary-card">
