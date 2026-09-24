@@ -4,7 +4,7 @@
 @section('page-title', '2ND Brain Knowledge')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/second-brain-knowledge.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/second-brain-knowledge.css') }}?v=acc06b0">
 @endpush
 
 @section('content')
