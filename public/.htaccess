@@ -23,3 +23,15 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# TradeX protected lesson videos can be up to 4 GiB. LiteSpeed reads these
+# values directly; post_max_size includes the multipart form overhead.
+php_value upload_max_filesize 4096M
+php_value post_max_size 4100M
+php_value memory_limit 1024M
+php_value max_execution_time 7200
+php_value max_input_time 7200
+
+# Leave the web-server request body uncapped. Laravel still enforces the
+# configured 4 GiB maximum for the protected lesson video field.
+LimitRequestBody 0
