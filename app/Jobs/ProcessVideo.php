@@ -624,6 +624,11 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 'scale=-2:'.$variant['height'].':flags=lanczos',
                 '-c:v',
                 'libx264',
+                '-threads',
+                (string) max(
+                    1,
+                    (int) config('tradex.media.ffmpeg_threads', 1)
+                ),
                 '-preset',
                 (string) config(
                     'tradex.media.ffmpeg_preset',
