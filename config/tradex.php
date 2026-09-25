@@ -86,6 +86,11 @@ return [
             21
         ),
 
+        'ffmpeg_threads' => (int) env(
+            'TRADEX_VIDEO_FFMPEG_THREADS',
+            1
+        ),
+
         'hls_segment_seconds' => (int) env(
             'TRADEX_VIDEO_HLS_SEGMENT_SECONDS',
             6
