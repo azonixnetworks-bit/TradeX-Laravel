@@ -13,6 +13,7 @@ use App\Models\Course;
 use App\Models\CourseModule;
 use App\Models\Lesson;
 use App\Models\LessonVideo;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -166,6 +167,8 @@ class VideoController extends Controller
                         ? $storedUpload['mime_type']
                         : ($validated['mime_type'] ?? null),
                     'processing_status' => LessonVideo::PROCESSING_PENDING,
+                    'processing_progress' => 3,
+                    'processing_stage' => 'Upload saved. Waiting for the background video worker.',
                     'processing_error' => null,
                     'processed_at' => null,
                     'status' => LessonVideo::STATUS_DRAFT,
@@ -283,6 +286,49 @@ class VideoController extends Controller
             'admin.education.videos.edit',
             compact('course', 'module', 'lesson', 'video')
         );
+    }
+
+    public function processingStatus(
+        Course $course,
+        CourseModule $module,
+        Lesson $lesson,
+        LessonVideo $video
+    ): JsonResponse {
+        $admin = $this->authenticatedAdmin();
+        $this->requirePermission($admin, 'education.view');
+        $this->requireVideoOwnership($course, $module, $lesson, $video);
+
+        $video->refresh();
+        $progress = match ($video->processing_status) {
+            LessonVideo::PROCESSING_READY => 100,
+            LessonVideo::PROCESSING_FAILED => max(1, (int) $video->processing_progress),
+            LessonVideo::PROCESSING_PROCESSING => max(10, (int) $video->processing_progress),
+            default => max(3, (int) $video->processing_progress),
+        };
+
+        $stage = trim((string) $video->processing_stage);
+
+        if ($stage === '') {
+            $stage = match ($video->processing_status) {
+                LessonVideo::PROCESSING_READY => 'HLS processing completed successfully.',
+                LessonVideo::PROCESSING_FAILED => 'Processing failed. Review the error and retry.',
+                LessonVideo::PROCESSING_PROCESSING => 'The background worker is processing this video.',
+                default => 'Waiting for the background video worker to start.',
+            };
+        }
+
+        return response()->json([
+            'status' => $video->processing_status,
+            'publication_status' => $video->status,
+            'progress' => min(100, max(0, $progress)),
+            'stage' => $stage,
+            'error' => $video->processing_status === LessonVideo::PROCESSING_FAILED
+                ? $video->processing_error
+                : null,
+            'complete' => $video->processing_status === LessonVideo::PROCESSING_READY,
+            'failed' => $video->processing_status === LessonVideo::PROCESSING_FAILED,
+            'processed_at' => $video->processed_at?->toIso8601String(),
+        ]);
     }
 
     public function update(

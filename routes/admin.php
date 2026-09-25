@@ -450,6 +450,17 @@ Route::prefix('admin')
                             ->whereNumber('video')
                             ->name('courses.modules.lessons.videos.edit');
 
+                        Route::get(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}/processing-status',
+                            [VideoController::class, 'processingStatus']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.processing-status');
+
 
                         Route::patch(
                             '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}',
