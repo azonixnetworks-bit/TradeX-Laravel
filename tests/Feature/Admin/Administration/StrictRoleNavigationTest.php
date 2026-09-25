@@ -20,11 +20,10 @@ class StrictRoleNavigationTest extends TestCase
         'Customer Dashboard',
         'All Customers',
         'Pending Onboarding',
-        'Pending Accounts',
         'Free Customers',
         'Premium Customers',
         'Suspended / Blocked',
-        'Recently Joined',
+        'Recently Added',
     ];
 
     private const KNOWN_MENU_LABELS = [
@@ -33,11 +32,10 @@ class StrictRoleNavigationTest extends TestCase
         'All Customers',
         'Add Customer',
         'Pending Onboarding',
-        'Pending Accounts',
         'Free Customers',
         'Premium Customers',
         'Suspended / Blocked',
-        'Recently Joined',
+        'Recently Added',
         'Education',
         'Our Channel',
         'Notifications',

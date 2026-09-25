@@ -37,6 +37,18 @@ body.sidebar-collapsed .admin-main {
     transition: color .18s ease;
 }
 
+.sidebar-menu-section {
+    display: block;
+}
+
+.sidebar-section-items {
+    display: block;
+}
+
+.sidebar-section-items[hidden] {
+    display: none !important;
+}
+
 .nav-section-title.sidebar-section-toggle:hover,
 .nav-section-title.sidebar-section-toggle:focus-visible {
     color: var(--gold-light);

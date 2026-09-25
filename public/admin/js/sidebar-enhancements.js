@@ -24,7 +24,7 @@ document.addEventListener(
             'tradex.admin.sidebar.desktop.collapsed.v1';
 
         const sectionStoragePrefix =
-            'tradex.admin.sidebar.section.v1.';
+            'tradex.admin.sidebar.section.v2.';
 
         const safeGet =
             function (
@@ -215,6 +215,49 @@ document.addEventListener(
                         return;
                     }
 
+                    const section =
+                        document.createElement(
+                            'section'
+                        );
+
+                    section.className =
+                        'sidebar-menu-section';
+
+                    section.dataset.sidebarSection =
+                        key;
+
+                    title.parentNode.insertBefore(
+                        section,
+                        title
+                    );
+
+                    section.appendChild(
+                        title
+                    );
+
+                    const itemsContainer =
+                        document.createElement(
+                            'div'
+                        );
+
+                    itemsContainer.className =
+                        'sidebar-section-items';
+
+                    itemsContainer.id =
+                        `sidebar-section-${key}`;
+
+                    items.forEach(
+                        function (item) {
+                            itemsContainer.appendChild(
+                                item
+                            );
+                        }
+                    );
+
+                    section.appendChild(
+                        itemsContainer
+                    );
+
                     title.classList.add(
                         'sidebar-section-toggle'
                     );
@@ -227,6 +270,11 @@ document.addEventListener(
                     title.setAttribute(
                         'tabindex',
                         '0'
+                    );
+
+                    title.setAttribute(
+                        'aria-controls',
+                        itemsContainer.id
                     );
 
                     const chevron =
@@ -250,16 +298,10 @@ document.addEventListener(
                     );
 
                     const containsActive =
-                        items.some(
-                            function (item) {
-                                return item.matches(
-                                    '.nav-link.active'
-                                ) || Boolean(
-                                    item.querySelector?.(
-                                        '.nav-link.active'
-                                    )
-                                );
-                            }
+                        Boolean(
+                            itemsContainer.querySelector(
+                                '.nav-link.active'
+                            )
                         );
 
                     const stored =
@@ -290,12 +332,8 @@ document.addEventListener(
                                     : 'false'
                             );
 
-                            items.forEach(
-                                function (item) {
-                                    item.hidden =
-                                        ! shouldExpand;
-                                }
-                            );
+                            itemsContainer.hidden =
+                                ! shouldExpand;
 
                             if (persist) {
                                 safeSet(

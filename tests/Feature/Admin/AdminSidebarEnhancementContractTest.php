@@ -56,7 +56,17 @@ class AdminSidebarEnhancementContractTest extends TestCase
         );
 
         $this->assertStringContainsString(
-            'tradex.admin.sidebar.section.v1.',
+            'tradex.admin.sidebar.section.v2.',
+            $js
+        );
+
+        $this->assertStringContainsString(
+            'sidebar-menu-section',
+            $js
+        );
+
+        $this->assertStringContainsString(
+            'sidebar-section-items',
             $js
         );
 

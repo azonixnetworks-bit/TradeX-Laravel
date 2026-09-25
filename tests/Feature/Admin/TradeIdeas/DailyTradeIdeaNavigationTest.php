@@ -8,6 +8,22 @@ use Tests\TestCase;
 
 class DailyTradeIdeaNavigationTest extends TestCase
 {
+    public function test_sidebar_uses_isolated_dropdown_containers_and_the_requested_customer_menu(): void
+    {
+        $sidebar = File::get(
+            resource_path('views/admin/layouts/sidebar.blade.php')
+        );
+        $enhancements = File::get(
+            public_path('admin/js/sidebar-enhancements.js')
+        );
+
+        $this->assertStringContainsString('Recently Added', $sidebar);
+        $this->assertStringNotContainsString('Pending Accounts', $sidebar);
+        $this->assertStringContainsString("'sidebar-menu-section'", $enhancements);
+        $this->assertStringContainsString("'sidebar-section-items'", $enhancements);
+        $this->assertStringContainsString('tradex.admin.sidebar.section.v2.', $enhancements);
+    }
+
     public function test_sidebar_exposes_long_term_and_daily_trade_idea_hierarchy(): void
     {
         $sidebar = File::get(

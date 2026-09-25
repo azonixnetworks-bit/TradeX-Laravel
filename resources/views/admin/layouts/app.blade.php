@@ -35,7 +35,7 @@
 
     <link
         rel="stylesheet"
-        href="{{ asset('admin/css/sidebar-enhancements.css') }}?v=53e683a"
+        href="{{ asset('admin/css/sidebar-enhancements.css') }}?v=20260925-1"
     >
 
     <link
@@ -201,7 +201,7 @@
 @endif
 
 <script
-    src="{{ asset('admin/js/sidebar-enhancements.js') }}?v=53e683a">
+    src="{{ asset('admin/js/sidebar-enhancements.js') }}?v=20260925-1">
 </script>
 
 <script

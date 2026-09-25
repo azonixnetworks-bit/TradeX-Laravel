@@ -24,7 +24,8 @@
         || $admin->hasPermission('copy_trading.accounts.view');
 
     $hasCopyTradingNavigation =
-        $hasCopyTradingCoreNavigation;
+        $hasCopyTradingCoreNavigation
+        || $admin->hasPermission('copy_trading.billing.view');
 
     $hasInvestmentNavigation =
         $admin->hasPermission('investments.view')
@@ -36,24 +37,15 @@
         || $admin->hasPermission('investments.settlements.view');
 
     $hasAffiliateNavigation =
-        $admin->hasPermission('affiliates.view');
-
-    $showBillingInFinance =
-        $admin->hasPermission('copy_trading.billing.view')
-        && ! $hasCopyTradingCoreNavigation;
-
-    $showCommissionsInFinance =
-        $admin->hasPermission('commissions.view')
-        && ! $admin->hasPermission('affiliates.view');
+        $admin->hasPermission('affiliates.view')
+        || $admin->hasPermission('commissions.view');
 
     $hasFinanceNavigation =
         $admin->hasPermission('products.view')
         || $admin->hasPermission('payments.view')
         || $admin->hasPermission('payment_accounts.manage')
         || $admin->hasPermission('finance.view')
-        || $admin->hasPermission('payouts.view')
-        || $showBillingInFinance
-        || $showCommissionsInFinance;
+        || $admin->hasPermission('payouts.view');
 
     $hasSecurityNavigation =
         $admin->hasPermission('kyc.view')
@@ -132,14 +124,6 @@
                 </a>
 
                 <a
-                    href="{{ route('admin.users.index', ['segment' => 'PENDING']) }}"
-                    class="nav-link {{ request()->routeIs('admin.users.index') && $customerSegment === 'PENDING' ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">◔</span>
-                    <span>Pending Accounts</span>
-                </a>
-
-                <a
                     href="{{ route('admin.users.index', ['segment' => 'FREE']) }}"
                     class="nav-link {{ request()->routeIs('admin.users.index') && $customerSegment === 'FREE' ? 'active' : '' }}"
                 >
@@ -168,7 +152,7 @@
                     class="nav-link {{ request()->routeIs('admin.users.index') && $customerSegment === 'RECENT' ? 'active' : '' }}"
                 >
                     <span class="nav-icon">◷</span>
-                    <span>Recently Joined</span>
+                    <span>Recently Added</span>
                 </a>
             @endif
         @endif
@@ -449,13 +433,15 @@
         @if($hasAffiliateNavigation)
             <div class="nav-section-title">AFFILIATES</div>
 
-            <a
-                href="{{ route('admin.affiliates.index') }}"
-                class="nav-link {{ request()->routeIs('admin.affiliates.index') || request()->routeIs('admin.affiliates.show') || request()->routeIs('admin.affiliates.tree') || request()->routeIs('admin.affiliates.analytics') || request()->routeIs('admin.affiliates.stages.*') ? 'active' : '' }}"
-            >
-                <span class="nav-icon">♢</span>
-                <span>Affiliates</span>
-            </a>
+            @if($admin->hasPermission('affiliates.view'))
+                <a
+                    href="{{ route('admin.affiliates.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.affiliates.index') || request()->routeIs('admin.affiliates.show') || request()->routeIs('admin.affiliates.tree') || request()->routeIs('admin.affiliates.analytics') || request()->routeIs('admin.affiliates.stages.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">♢</span>
+                    <span>Affiliates</span>
+                </a>
+            @endif
 
             @if($admin->hasPermission('commissions.view'))
                 <a
@@ -470,34 +456,6 @@
 
         @if($hasFinanceNavigation)
             <div class="nav-section-title">FINANCE</div>
-
-            @if($showBillingInFinance)
-                <a
-                    href="{{ route('admin.copy_trading.billing.index') }}"
-                    class="nav-link {{ request()->routeIs('admin.copy_trading.billing.index') || request()->routeIs('admin.copy_trading.billing.accounts.*') ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">$</span>
-                    <span>Copy Trade Billing</span>
-                </a>
-
-                <a
-                    href="{{ route('admin.copy_trading.billing.calendar.index') }}"
-                    class="nav-link {{ request()->routeIs('admin.copy_trading.billing.calendar.*') ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">◷</span>
-                    <span>Billing Calendar</span>
-                </a>
-            @endif
-
-            @if($showCommissionsInFinance)
-                <a
-                    href="{{ route('admin.affiliates.commissions.index') }}"
-                    class="nav-link {{ request()->routeIs('admin.affiliates.commissions.*') ? 'active' : '' }}"
-                >
-                    <span class="nav-icon">%</span>
-                    <span>Commission Ledger</span>
-                </a>
-            @endif
 
             @if($admin->hasPermission('products.view'))
                 <a
