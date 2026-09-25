@@ -14,7 +14,7 @@ use RuntimeException;
 use Symfony\Component\Process\Process;
 use Throwable;
 
-class ProcessVideo implements ShouldQueue, ShouldBeUnique
+class ProcessVideo implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -100,6 +100,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
 
         $video->forceFill([
             'processing_status' => LessonVideo::PROCESSING_PROCESSING,
+            'processing_progress' => 8,
+            'processing_stage' => 'Preparing protected source video.',
             'processing_error' => null,
             'processed_at' => null,
         ])->save();
@@ -125,6 +127,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 $workingDirectory
             );
 
+            $this->updateProgress($video, 18, 'Protected source staged. Inspecting video metadata.');
+
             $probe = $this->probeVideo(
                 $sourceFile
             );
@@ -133,6 +137,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 $probe['width'],
                 $probe['height']
             );
+
+            $this->updateProgress($video, 25, 'Video inspected. Preparing HLS renditions.');
 
             $hlsDirectory = $workingDirectory
                 .DIRECTORY_SEPARATOR
@@ -144,13 +150,20 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 true
             );
 
-            foreach ($variants as $variant) {
+            foreach ($variants as $index => $variant) {
+                $this->updateProgress(
+                    $video,
+                    30 + (int) floor(($index / max(1, count($variants))) * 45),
+                    sprintf('Encoding %s HLS rendition (%d/%d).', $variant['name'], $index + 1, count($variants))
+                );
                 $this->transcodeVariant(
                     $sourceFile,
                     $hlsDirectory,
                     $variant
                 );
             }
+
+            $this->updateProgress($video, 76, 'HLS renditions encoded. Building master playlist.');
 
             File::put(
                 $hlsDirectory
@@ -169,6 +182,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 $probe['duration_seconds']
             );
 
+            $this->updateProgress($video, 84, 'Thumbnail generated. Publishing protected HLS files.');
+
             $assetRoot = 'education/videos/'.$video->uuid;
             $hlsRoot = $assetRoot.'/hls';
             $masterPath = $hlsRoot.'/master.m3u8';
@@ -182,6 +197,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 $hlsDirectory,
                 $hlsRoot
             );
+
+            $this->updateProgress($video, 94, 'Protected HLS files uploaded. Finalizing video metadata.');
 
             $thumbnailPath = null;
 
@@ -211,6 +228,8 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                     $sourcePath
                 ),
                 'processing_status' => LessonVideo::PROCESSING_READY,
+                'processing_progress' => 100,
+                'processing_stage' => 'HLS processing completed successfully.',
                 'processing_error' => null,
                 'processed_at' => now(),
             ])->save();
@@ -1031,6 +1050,7 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
 
         $freshVideo->forceFill([
             'processing_status' => LessonVideo::PROCESSING_FAILED,
+            'processing_stage' => 'Processing failed. Review the error and retry.',
             'processing_error' => Str::limit(
                 $exception->getMessage(),
                 8000,
@@ -1050,5 +1070,16 @@ class ProcessVideo implements ShouldQueue, ShouldBeUnique
                 ),
             ]
         );
+    }
+
+    private function updateProgress(
+        LessonVideo $video,
+        int $progress,
+        string $stage
+    ): void {
+        $video->forceFill([
+            'processing_progress' => min(99, max(0, $progress)),
+            'processing_stage' => Str::limit(trim($stage), 160, ''),
+        ])->save();
     }
 }

@@ -26,7 +26,6 @@ class LessonVideo extends Model
 
     public const PROCESSING_FAILED = 'FAILED';
 
-
     /*
     |--------------------------------------------------------------------------
     | Publication Status Constants
@@ -38,7 +37,6 @@ class LessonVideo extends Model
     public const STATUS_PUBLISHED = 'PUBLISHED';
 
     public const STATUS_ARCHIVED = 'ARCHIVED';
-
 
     /*
     |--------------------------------------------------------------------------
@@ -61,6 +59,8 @@ class LessonVideo extends Model
         'file_size_bytes',
         'mime_type',
         'processing_status',
+        'processing_progress',
+        'processing_stage',
         'processing_error',
         'processed_at',
         'status',
@@ -70,7 +70,6 @@ class LessonVideo extends Model
         'created_by_admin_id',
         'updated_by_admin_id',
     ];
-
 
     /*
     |--------------------------------------------------------------------------
@@ -83,13 +82,13 @@ class LessonVideo extends Model
         return [
             'duration_seconds' => 'integer',
             'file_size_bytes' => 'integer',
+            'processing_progress' => 'integer',
             'processed_at' => 'datetime',
             'published_at' => 'datetime',
             'is_downloadable' => 'boolean',
             'sort_order' => 'integer',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -114,7 +113,6 @@ class LessonVideo extends Model
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -129,7 +127,6 @@ class LessonVideo extends Model
         );
     }
 
-
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -138,7 +135,6 @@ class LessonVideo extends Model
         );
     }
 
-
     public function updatedByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -146,7 +142,6 @@ class LessonVideo extends Model
             'updated_by_admin_id'
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -168,7 +163,6 @@ class LessonVideo extends Model
         );
     }
 
-
     public function scopePublished(
         Builder $query
     ): Builder {
@@ -187,7 +181,6 @@ class LessonVideo extends Model
             );
     }
 
-
     public function scopeReady(
         Builder $query
     ): Builder {
@@ -197,7 +190,6 @@ class LessonVideo extends Model
         );
     }
 
-
     public function scopePlaybackReady(
         Builder $query
     ): Builder {
@@ -205,7 +197,6 @@ class LessonVideo extends Model
             ->ready()
             ->published();
     }
-
 
     public function scopeDraft(
         Builder $query
@@ -216,7 +207,6 @@ class LessonVideo extends Model
         );
     }
 
-
     public function scopeArchived(
         Builder $query
     ): Builder {
@@ -225,7 +215,6 @@ class LessonVideo extends Model
             self::STATUS_ARCHIVED
         );
     }
-
 
     public function scopeOrdered(
         Builder $query
@@ -239,7 +228,6 @@ class LessonVideo extends Model
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Processing State Helpers
@@ -251,24 +239,20 @@ class LessonVideo extends Model
         return $this->processing_status === self::PROCESSING_PENDING;
     }
 
-
     public function isProcessing(): bool
     {
         return $this->processing_status === self::PROCESSING_PROCESSING;
     }
-
 
     public function isReady(): bool
     {
         return $this->processing_status === self::PROCESSING_READY;
     }
 
-
     public function hasProcessingFailed(): bool
     {
         return $this->processing_status === self::PROCESSING_FAILED;
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -281,7 +265,6 @@ class LessonVideo extends Model
         return $this->status === self::STATUS_DRAFT;
     }
 
-
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED
@@ -289,12 +272,10 @@ class LessonVideo extends Model
             && $this->published_at->lte(now());
     }
 
-
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -312,13 +293,11 @@ class LessonVideo extends Model
             && trim($this->hls_master_path) !== '';
     }
 
-
     public function hasStreamingAsset(): bool
     {
         return $this->streaming_asset_key !== null
             && trim($this->streaming_asset_key) !== '';
     }
-
 
     public function hasPlaybackReference(): bool
     {
@@ -326,14 +305,12 @@ class LessonVideo extends Model
             || $this->hasStreamingAsset();
     }
 
-
     public function isPlaybackReady(): bool
     {
         return $this->isReady()
             && $this->isPublished()
             && $this->hasPlaybackReference();
     }
-
 
     public function isDownloadable(): bool
     {

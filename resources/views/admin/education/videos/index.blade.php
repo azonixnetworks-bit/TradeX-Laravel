@@ -6,6 +6,7 @@
 @section('page-title', 'Education')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-1">
 <style>
     .edu-context {display:flex;justify-content:space-between;gap:18px;padding:20px 22px;margin-bottom:22px;align-items:flex-start}
     .edu-context h2{margin:6px 0;font-size:19px}.edu-context p{margin:0;opacity:.6;font-size:12px;line-height:1.6}
@@ -89,6 +90,7 @@
                         <span class="video-tag">{{ $video->storage_disk }}</span>
                         @if($video->is_downloadable)<span class="video-tag">DOWNLOADABLE</span>@endif
                     </div>
+                    @include('admin.education.videos.partials.processing-progress', compact('video', 'course', 'module', 'lesson'))
                 </div>
                 <div class="video-metrics">
                     <div class="video-metric"><span>Status</span><div class="user-status {{ $statusClass }}"><span class="user-status-dot"></span>{{ $video->status }}</div></div>
@@ -151,3 +153,7 @@
     </div>
 </section>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-1" defer></script>
+@endpush

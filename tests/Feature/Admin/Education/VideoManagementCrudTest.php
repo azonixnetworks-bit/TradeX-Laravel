@@ -190,6 +190,53 @@ class VideoManagementCrudTest extends TestCase
         $this->assertSoftDeleted('lesson_videos', ['id' => $safe->id]);
     }
 
+    public function test_video_list_displays_live_processing_progress_component(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.view']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_PROCESSING,
+            'processing_progress' => 47,
+            'processing_stage' => 'Encoding 720p HLS rendition (1/2).',
+        ]);
+
+        $this->actingAs($admin, 'admin')->get(
+            route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson'))
+        )
+            ->assertOk()
+            ->assertSee('data-video-processing', false)
+            ->assertSee('47%')
+            ->assertSee('Encoding 720p HLS rendition (1/2).')
+            ->assertSee(route(
+                'admin.education.courses.modules.lessons.videos.processing-status',
+                compact('course', 'module', 'lesson', 'video')
+            ), false);
+    }
+
+    public function test_authorized_admin_can_poll_video_processing_status(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.view']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_READY,
+            'processing_progress' => 100,
+            'processing_stage' => 'HLS processing completed successfully.',
+            'processed_at' => now(),
+        ]);
+
+        $this->actingAs($admin, 'admin')->getJson(
+            route('admin.education.courses.modules.lessons.videos.processing-status', compact('course', 'module', 'lesson', 'video'))
+        )
+            ->assertOk()
+            ->assertJson([
+                'status' => LessonVideo::PROCESSING_READY,
+                'progress' => 100,
+                'stage' => 'HLS processing completed successfully.',
+                'complete' => true,
+                'failed' => false,
+            ]);
+    }
+
     private function createAdminWithPermissions(array $permissions): AdminUser
     {
         $admin = AdminUser::query()->create([
