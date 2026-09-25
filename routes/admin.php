@@ -461,6 +461,17 @@ Route::prefix('admin')
                             ->whereNumber('video')
                             ->name('courses.modules.lessons.videos.processing-status');
 
+                        Route::post(
+                            '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}/retry-processing',
+                            [VideoController::class, 'retryProcessing']
+                        )
+                            ->scopeBindings()
+                            ->whereNumber('course')
+                            ->whereNumber('module')
+                            ->whereNumber('lesson')
+                            ->whereNumber('video')
+                            ->name('courses.modules.lessons.videos.retry-processing');
+
 
                         Route::patch(
                             '/courses/{course}/modules/{module}/lessons/{lesson}/videos/{video}',

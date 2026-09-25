@@ -27,6 +27,7 @@ class VideoManagementSecurityTest extends TestCase
             'admin.education.courses.modules.lessons.videos.store' => ['POST'],
             'admin.education.courses.modules.lessons.videos.publication' => ['PATCH'],
             'admin.education.courses.modules.lessons.videos.edit' => ['GET', 'HEAD'],
+            'admin.education.courses.modules.lessons.videos.retry-processing' => ['POST'],
             'admin.education.courses.modules.lessons.videos.update' => ['PATCH'],
             'admin.education.courses.modules.lessons.videos.destroy' => ['DELETE'],
         ];
@@ -41,7 +42,7 @@ class VideoManagementSecurityTest extends TestCase
                 $this->assertNumeric($route, $parameter, $name);
             }
 
-            if (str_contains($name, '.publication') || str_contains($name, '.edit') || str_contains($name, '.update') || str_contains($name, '.destroy')) {
+            if (str_contains($name, '.publication') || str_contains($name, '.edit') || str_contains($name, '.retry-processing') || str_contains($name, '.update') || str_contains($name, '.destroy')) {
                 $this->assertNumeric($route, 'video', $name);
             }
         }
@@ -161,6 +162,7 @@ class VideoManagementSecurityTest extends TestCase
     {
         $route = Route::getRoutes()->getByName($name);
         $this->assertInstanceOf(LaravelRoute::class, $route, "Missing route {$name}");
+
         return $route;
     }
 

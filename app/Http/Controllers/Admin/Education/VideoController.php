@@ -331,6 +331,98 @@ class VideoController extends Controller
         ]);
     }
 
+    public function retryProcessing(
+        Request $request,
+        Course $course,
+        CourseModule $module,
+        Lesson $lesson,
+        LessonVideo $video
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+        $this->requirePermission($admin, 'education.update');
+        $this->requireVideoOwnership($course, $module, $lesson, $video);
+
+        if ($video->processing_status !== LessonVideo::PROCESSING_FAILED) {
+            throw ValidationException::withMessages([
+                'video' => 'Only a failed video can be queued for processing again.',
+            ]);
+        }
+
+        $diskName = trim((string) $video->storage_disk);
+        $sourcePath = trim((string) $video->source_path);
+
+        if (
+            ! in_array($diskName, ['private', 's3-private'], true)
+            || $sourcePath === ''
+            || ! Storage::disk($diskName)->exists($sourcePath)
+        ) {
+            throw ValidationException::withMessages([
+                'video' => 'The original protected video file is missing. Upload the video again as a new record.',
+            ]);
+        }
+
+        DB::transaction(function () use ($video, $lesson, $admin, $request): void {
+            $lockedVideo = LessonVideo::query()
+                ->where('lesson_id', $lesson->id)
+                ->lockForUpdate()
+                ->findOrFail($video->id);
+
+            if ($lockedVideo->processing_status !== LessonVideo::PROCESSING_FAILED) {
+                throw ValidationException::withMessages([
+                    'video' => 'This video is no longer in a failed state.',
+                ]);
+            }
+
+            $before = $this->auditSnapshot($lockedVideo);
+            $lockedVideo->forceFill([
+                'hls_master_path' => null,
+                'thumbnail_path' => null,
+                'duration_seconds' => null,
+                'processing_status' => LessonVideo::PROCESSING_PENDING,
+                'processing_progress' => 3,
+                'processing_stage' => 'Retry queued. Waiting for the background video worker.',
+                'processing_error' => null,
+                'processed_at' => null,
+                'updated_by_admin_id' => $admin->id,
+            ])->save();
+
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $admin->id,
+                action: 'VIDEO_PROCESSING_RETRIED',
+                module: 'EDUCATION',
+                targetType: 'LESSON_VIDEO',
+                targetId: $lockedVideo->id,
+                oldValues: $before,
+                newValues: $this->auditSnapshot($lockedVideo->fresh()),
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        });
+
+        try {
+            ProcessVideo::dispatch($video->id);
+        } catch (Throwable $exception) {
+            $video->refresh()->forceFill([
+                'processing_status' => LessonVideo::PROCESSING_FAILED,
+                'processing_stage' => 'Retry queue dispatch failed.',
+                'processing_error' => Str::limit('Queue dispatch failed: '.$exception->getMessage(), 8000, ''),
+                'processed_at' => now(),
+            ])->save();
+
+            throw ValidationException::withMessages([
+                'video' => 'The retry could not be queued. Please try again.',
+            ]);
+        }
+
+        return redirect()
+            ->route(
+                'admin.education.courses.modules.lessons.videos.edit',
+                compact('course', 'module', 'lesson', 'video')
+            )
+            ->with('success', 'Video processing retry queued using the existing uploaded file.');
+    }
+
     public function update(
         UpdateVideoRequest $request,
         Course $course,
