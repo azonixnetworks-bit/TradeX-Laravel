@@ -184,14 +184,14 @@
 
 @if(auth('admin')->user()?->hasPermission('trading_routine.view'))
 <script
-    src="{{ asset('admin/js/trading-routine-nav.js') }}"
+    src="{{ asset('admin/js/trading-routine-nav.js') }}?v=20260925-1"
     data-routine-url="{{ route('admin.trading_routine.index') }}"
 ></script>
 @endif
 
 @if(auth('admin')->user()?->isSuperAdmin() || auth('admin')->user()?->hasPermission('economic_news.view'))
 <script
-    src="{{ asset('admin/js/economic-news-nav.js') }}"
+    src="{{ asset('admin/js/economic-news-nav.js') }}?v=20260925-1"
     data-overview-url="{{ route('admin.economic_news.index') }}"
     data-high-url="{{ route('admin.economic_news.high_impact') }}"
     data-medium-url="{{ route('admin.economic_news.medium_impact') }}"

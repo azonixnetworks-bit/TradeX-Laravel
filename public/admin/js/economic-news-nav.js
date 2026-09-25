@@ -23,8 +23,8 @@
 
     const links = [
         ['overviewUrl', '◉', 'Overview'],
-        ['highUrl', '!', 'High Impact News'],
-        ['mediumUrl', '◆', 'Medium Impact News'],
+        ['highUrl', '!', 'High Impact'],
+        ['mediumUrl', '◆', 'Medium Impact'],
         ['liveUrl', '●', 'Live Updates'],
         ['calendarUrl', '◷', 'Economic Calendar'],
     ];

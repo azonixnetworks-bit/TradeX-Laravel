@@ -43,7 +43,7 @@
     icon.textContent = '◷';
 
     const label = document.createElement('span');
-    label.textContent = 'Trading Routine';
+    label.textContent = 'Trading Routine Planner';
     link.append(icon, label);
 
     const fundedLink = Array.from(nav.querySelectorAll('.nav-link'))
