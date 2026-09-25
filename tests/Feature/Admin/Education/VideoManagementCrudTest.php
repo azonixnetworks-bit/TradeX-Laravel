@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin\Education;
 
+use App\Jobs\ProcessVideo;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
@@ -10,6 +11,8 @@ use App\Models\CourseModule;
 use App\Models\Lesson;
 use App\Models\LessonVideo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -235,6 +238,59 @@ class VideoManagementCrudTest extends TestCase
                 'complete' => true,
                 'failed' => false,
             ]);
+    }
+
+    public function test_failed_video_can_retry_using_existing_source_and_same_database_record(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+        $admin = $this->createAdminWithPermissions(['education.update']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        Storage::disk('private')->put('protected/source/video.mp4', 'existing-video');
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_FAILED,
+            'processing_progress' => 18,
+            'processing_stage' => 'Processing failed. Review the error and retry.',
+            'processing_error' => 'FFprobe could not inspect the uploaded video.',
+            'processed_at' => now(),
+        ]);
+
+        $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video'))
+        )->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.edit', compact('course', 'module', 'lesson', 'video'))
+        );
+
+        $video->refresh();
+        $this->assertSame(LessonVideo::PROCESSING_PENDING, $video->processing_status);
+        $this->assertSame(3, $video->processing_progress);
+        $this->assertSame('Retry queued. Waiting for the background video worker.', $video->processing_stage);
+        $this->assertNull($video->processing_error);
+        $this->assertNull($video->processed_at);
+        $this->assertDatabaseCount('lesson_videos', 1);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'VIDEO_PROCESSING_RETRIED',
+            'target_id' => $video->id,
+        ]);
+        Queue::assertPushed(ProcessVideo::class, fn (ProcessVideo $job): bool => $job->videoId === $video->id);
+    }
+
+    public function test_retry_is_rejected_when_original_source_is_missing(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+        $admin = $this->createAdminWithPermissions(['education.update']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_FAILED,
+        ]);
+
+        $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video'))
+        )->assertSessionHasErrors('video');
+
+        $this->assertSame(LessonVideo::PROCESSING_FAILED, $video->fresh()->processing_status);
+        Queue::assertNothingPushed();
     }
 
     private function createAdminWithPermissions(array $permissions): AdminUser

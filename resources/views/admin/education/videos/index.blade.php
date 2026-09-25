@@ -21,7 +21,7 @@
     .video-metric span{display:block;margin-bottom:3px;font-size:9px;opacity:.48;text-transform:uppercase}.video-metric strong{font-size:12px}
     .video-actions{display:grid;gap:8px}.video-actions form{margin:0}.video-actions textarea{width:100%;box-sizing:border-box;min-height:54px;margin-bottom:6px;padding:8px 9px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.025);color:inherit;font:inherit;font-size:10px;resize:vertical}
     .action-link,.action-btn,.action-disabled{display:block;width:100%;box-sizing:border-box;border-radius:9px;padding:9px 10px;text-align:center;font:inherit;font-size:10px;font-weight:700;text-decoration:none}
-    .action-link{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:inherit}.action-btn{cursor:pointer}.preview{border-color:rgba(119,217,166,.22);background:rgba(119,217,166,.06);color:#77d9a6}.publish{border:1px solid rgba(218,178,88,.25);background:rgba(218,178,88,.09);color:#e0ba65}.unpublish{border:1px solid rgba(255,179,71,.21);background:rgba(255,179,71,.07);color:#ffc173}.delete{border:1px solid rgba(255,91,91,.24);background:rgba(255,91,91,.06);color:#ff8585}.action-disabled{border:1px solid rgba(255,255,255,.06);opacity:.48;line-height:1.45}
+    .action-link{border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);color:inherit}.action-btn{cursor:pointer}.preview{border-color:rgba(119,217,166,.22);background:rgba(119,217,166,.06);color:#77d9a6}.retry{border:1px solid rgba(255,193,115,.28);background:rgba(255,193,115,.09);color:#ffc173}.publish{border:1px solid rgba(218,178,88,.25);background:rgba(218,178,88,.09);color:#e0ba65}.unpublish{border:1px solid rgba(255,179,71,.21);background:rgba(255,179,71,.07);color:#ffc173}.delete{border:1px solid rgba(255,91,91,.24);background:rgba(255,91,91,.06);color:#ff8585}.action-disabled{border:1px solid rgba(255,255,255,.06);opacity:.48;line-height:1.45}
     .empty{padding:45px 20px;text-align:center}.empty strong{display:block;margin-bottom:7px}.empty span{opacity:.58;font-size:12px}.empty .primary-btn{display:inline-block;margin-top:17px}
     @media(max-width:1120px){.video-card{grid-template-columns:58px minmax(0,1fr) 150px}.video-actions{grid-column:2/-1;grid-template-columns:repeat(3,minmax(0,1fr))}}
     @media(max-width:760px){.edu-context{flex-direction:column}.edu-meta{justify-content:flex-start}.video-card{grid-template-columns:52px minmax(0,1fr)}.video-metrics,.video-actions{grid-column:2}.video-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.video-actions{grid-template-columns:1fr}}
@@ -110,6 +110,12 @@
 
                     @if($permissions['update'] ?? false)
                         <a class="action-link" href="{{ route('admin.education.courses.modules.lessons.videos.edit', ['course'=>$course,'module'=>$module,'lesson'=>$lesson,'video'=>$video]) }}">Edit Video</a>
+                        @if($video->processing_status === \App\Models\LessonVideo::PROCESSING_FAILED)
+                            <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video')) }}" onsubmit="return confirm('Retry HLS processing with the existing uploaded video file?');">
+                                @csrf
+                                <button class="action-btn retry" type="submit">↻ Retry Processing</button>
+                            </form>
+                        @endif
                     @endif
 
                     @if($canPublish)
