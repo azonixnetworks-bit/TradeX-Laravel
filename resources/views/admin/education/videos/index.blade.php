@@ -6,7 +6,7 @@
 @section('page-title', 'Education')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-1">
+<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-2">
 <style>
     .edu-context {display:flex;justify-content:space-between;gap:18px;padding:20px 22px;margin-bottom:22px;align-items:flex-start}
     .edu-context h2{margin:6px 0;font-size:19px}.edu-context p{margin:0;opacity:.6;font-size:12px;line-height:1.6}
@@ -76,6 +76,7 @@
             @php
                 $statusClass = match($video->status){'PUBLISHED'=>'status-active','ARCHIVED'=>'status-blocked',default=>'status-pending'};
                 $processingClass = match($video->processing_status){'READY'=>'ready','FAILED'=>'failed','PROCESSING'=>'processing',default=>''};
+                $repairRequired = $video->processing_status === 'READY' && ! $video->hasPlaybackReference();
                 $canPreview = ($permissions['view'] ?? false) && $video->processing_status === 'READY' && $video->hasHlsStream();
                 $canPublish = ($permissions['publish'] ?? false) && $video->status === 'DRAFT' && $video->processing_status === 'READY' && $video->hasPlaybackReference();
                 $canDelete = ($permissions['delete'] ?? false) && $video->status !== 'PUBLISHED' && $video->processing_status !== 'PROCESSING';
@@ -106,14 +107,16 @@
                         >
                             Preview Protected HLS
                         </a>
+                    @elseif(($permissions['view'] ?? false) && $repairRequired)
+                        <div class="action-disabled">Preview Protected HLS — repair required</div>
                     @endif
 
                     @if($permissions['update'] ?? false)
                         <a class="action-link" href="{{ route('admin.education.courses.modules.lessons.videos.edit', ['course'=>$course,'module'=>$module,'lesson'=>$lesson,'video'=>$video]) }}">Edit Video</a>
-                        @if($video->processing_status === \App\Models\LessonVideo::PROCESSING_FAILED)
-                            <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video')) }}" onsubmit="return confirm('Retry HLS processing with the existing uploaded video file?');">
+                        @if($video->processing_status === \App\Models\LessonVideo::PROCESSING_FAILED || $repairRequired)
+                            <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video')) }}" onsubmit="return confirm('{{ $repairRequired ? 'Repair the missing protected HLS playback reference using the existing source video?' : 'Retry HLS processing with the existing uploaded video file?' }}');">
                                 @csrf
-                                <button class="action-btn retry" type="submit">↻ Retry Processing</button>
+                                <button class="action-btn retry" type="submit">{{ $repairRequired ? '↻ Repair Protected HLS' : '↻ Retry Processing' }}</button>
                             </form>
                         @endif
                     @endif
@@ -133,7 +136,7 @@
                             <button class="action-btn unpublish" type="submit">Unpublish Video</button>
                         </form>
                     @elseif(($permissions['publish'] ?? false) && $video->status === 'DRAFT')
-                        <div class="action-disabled">Processing must be READY and a protected playback reference must exist before publishing.</div>
+                        <div class="action-disabled">{{ $repairRequired ? 'Protected playback reference is missing. Run Repair Protected HLS before publishing.' : 'Processing must be READY and a protected playback reference must exist before publishing.' }}</div>
                     @endif
 
                     @if($canDelete)
@@ -161,5 +164,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-1" defer></script>
+<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-2" defer></script>
 @endpush
