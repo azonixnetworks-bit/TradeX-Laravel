@@ -198,6 +198,12 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 $hlsRoot
             );
 
+            if (! $disk->exists($masterPath)) {
+                throw new RuntimeException(
+                    'Protected HLS master manifest was not persisted to the configured storage disk.'
+                );
+            }
+
             $this->updateProgress($video, 94, 'Protected HLS files uploaded. Finalizing video metadata.');
 
             $thumbnailPath = null;
