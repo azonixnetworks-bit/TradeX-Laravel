@@ -224,6 +224,7 @@ class VideoManagementCrudTest extends TestCase
             'processing_status' => LessonVideo::PROCESSING_READY,
             'processing_progress' => 100,
             'processing_stage' => 'HLS processing completed successfully.',
+            'hls_master_path' => 'protected/hls/master.m3u8',
             'processed_at' => now(),
         ]);
 
@@ -273,6 +274,48 @@ class VideoManagementCrudTest extends TestCase
             'target_id' => $video->id,
         ]);
         Queue::assertPushed(ProcessVideo::class, fn (ProcessVideo $job): bool => $job->videoId === $video->id);
+    }
+
+    public function test_ready_video_with_missing_playback_reference_can_repair_using_existing_source(): void
+    {
+        Queue::fake();
+        Storage::fake('private');
+
+        $admin = $this->createAdminWithPermissions(['education.update']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        Storage::disk('private')->put('protected/source/video.mp4', 'existing-video');
+
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_READY,
+            'processing_progress' => 100,
+            'processing_stage' => 'HLS processing completed successfully.',
+            'processed_at' => now(),
+            'hls_master_path' => null,
+            'streaming_asset_key' => null,
+        ]);
+
+        $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video'))
+        )->assertRedirect(
+            route('admin.education.courses.modules.lessons.videos.edit', compact('course', 'module', 'lesson', 'video'))
+        );
+
+        $video->refresh();
+
+        $this->assertSame(LessonVideo::PROCESSING_PENDING, $video->processing_status);
+        $this->assertSame(3, $video->processing_progress);
+        $this->assertSame(
+            'Protected HLS repair queued. Waiting for the background video worker.',
+            $video->processing_stage
+        );
+        $this->assertNull($video->hls_master_path);
+        $this->assertNull($video->processed_at);
+
+        Queue::assertPushed(
+            ProcessVideo::class,
+            fn (ProcessVideo $job): bool => $job->videoId === $video->id
+        );
     }
 
     public function test_retry_is_rejected_when_original_source_is_missing(): void

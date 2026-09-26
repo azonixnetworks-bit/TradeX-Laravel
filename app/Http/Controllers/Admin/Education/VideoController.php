@@ -299,16 +299,24 @@ class VideoController extends Controller
         $this->requireVideoOwnership($course, $module, $lesson, $video);
 
         $video->refresh();
-        $progress = match ($video->processing_status) {
-            LessonVideo::PROCESSING_READY => 100,
-            LessonVideo::PROCESSING_FAILED => max(1, (int) $video->processing_progress),
-            LessonVideo::PROCESSING_PROCESSING => max(10, (int) $video->processing_progress),
+
+        $repairRequired =
+            $video->processing_status === LessonVideo::PROCESSING_READY
+            && ! $video->hasPlaybackReference();
+
+        $progress = match (true) {
+            $repairRequired => min(99, max(1, (int) $video->processing_progress)),
+            $video->processing_status === LessonVideo::PROCESSING_READY => 100,
+            $video->processing_status === LessonVideo::PROCESSING_FAILED => max(1, (int) $video->processing_progress),
+            $video->processing_status === LessonVideo::PROCESSING_PROCESSING => max(10, (int) $video->processing_progress),
             default => max(3, (int) $video->processing_progress),
         };
 
         $stage = trim((string) $video->processing_stage);
 
-        if ($stage === '') {
+        if ($repairRequired) {
+            $stage = 'Protected playback reference is missing. Run Repair Protected HLS before previewing or publishing.';
+        } elseif ($stage === '') {
             $stage = match ($video->processing_status) {
                 LessonVideo::PROCESSING_READY => 'HLS processing completed successfully.',
                 LessonVideo::PROCESSING_FAILED => 'Processing failed. Review the error and retry.',
@@ -325,8 +333,13 @@ class VideoController extends Controller
             'error' => $video->processing_status === LessonVideo::PROCESSING_FAILED
                 ? $video->processing_error
                 : null,
-            'complete' => $video->processing_status === LessonVideo::PROCESSING_READY,
+            'complete' => $video->processing_status === LessonVideo::PROCESSING_READY
+                && ! $repairRequired,
             'failed' => $video->processing_status === LessonVideo::PROCESSING_FAILED,
+            'repair_required' => $repairRequired,
+            'terminal' => $repairRequired
+                || $video->processing_status === LessonVideo::PROCESSING_READY
+                || $video->processing_status === LessonVideo::PROCESSING_FAILED,
             'processed_at' => $video->processed_at?->toIso8601String(),
         ]);
     }
@@ -342,9 +355,16 @@ class VideoController extends Controller
         $this->requirePermission($admin, 'education.update');
         $this->requireVideoOwnership($course, $module, $lesson, $video);
 
-        if ($video->processing_status !== LessonVideo::PROCESSING_FAILED) {
+        $repairingMissingPlayback =
+            $video->processing_status === LessonVideo::PROCESSING_READY
+            && ! $video->hasPlaybackReference();
+
+        if (
+            $video->processing_status !== LessonVideo::PROCESSING_FAILED
+            && ! $repairingMissingPlayback
+        ) {
             throw ValidationException::withMessages([
-                'video' => 'Only a failed video can be queued for processing again.',
+                'video' => 'Only a failed video or a READY video with a missing protected playback reference can be queued again.',
             ]);
         }
 
@@ -367,9 +387,16 @@ class VideoController extends Controller
                 ->lockForUpdate()
                 ->findOrFail($video->id);
 
-            if ($lockedVideo->processing_status !== LessonVideo::PROCESSING_FAILED) {
+            $repairRequired =
+                $lockedVideo->processing_status === LessonVideo::PROCESSING_READY
+                && ! $lockedVideo->hasPlaybackReference();
+
+            if (
+                $lockedVideo->processing_status !== LessonVideo::PROCESSING_FAILED
+                && ! $repairRequired
+            ) {
                 throw ValidationException::withMessages([
-                    'video' => 'This video is no longer in a failed state.',
+                    'video' => 'This video is no longer eligible for retry or HLS repair.',
                 ]);
             }
 
@@ -380,7 +407,9 @@ class VideoController extends Controller
                 'duration_seconds' => null,
                 'processing_status' => LessonVideo::PROCESSING_PENDING,
                 'processing_progress' => 3,
-                'processing_stage' => 'Retry queued. Waiting for the background video worker.',
+                'processing_stage' => $repairRequired
+                    ? 'Protected HLS repair queued. Waiting for the background video worker.'
+                    : 'Retry queued. Waiting for the background video worker.',
                 'processing_error' => null,
                 'processed_at' => null,
                 'updated_by_admin_id' => $admin->id,
@@ -420,7 +449,12 @@ class VideoController extends Controller
                 'admin.education.courses.modules.lessons.videos.edit',
                 compact('course', 'module', 'lesson', 'video')
             )
-            ->with('success', 'Video processing retry queued using the existing uploaded file.');
+            ->with(
+                'success',
+                $repairingMissingPlayback
+                    ? 'Protected HLS repair queued using the existing uploaded source.'
+                    : 'Video processing retry queued using the existing uploaded file.'
+            );
     }
 
     public function update(

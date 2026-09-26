@@ -4,7 +4,7 @@
 @section('page-title', 'Education')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-1">
+<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-2">
 <style>
     .form-wrap{max-width:1100px;margin:0 auto}.context{padding:18px 21px;margin-bottom:20px}.context h2{margin:5px 0;font-size:18px}.context p{margin:0;opacity:.58;font-size:12px}
     .form-panel{padding:24px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.field.full{grid-column:1/-1}
@@ -19,7 +19,7 @@
 @section('content')
 <div class="page-header"><div><div class="page-eyebrow">EDUCATION MANAGEMENT</div><h1>Edit <span>Video</span></h1><p>Update protected media metadata without changing worker processing state or publication state.</p></div><div><a class="secondary-btn" href="{{ route('admin.education.courses.modules.lessons.videos.index', ['course'=>$course,'module'=>$module,'lesson'=>$lesson]) }}">← Back to Videos</a></div></div>
 <div class="form-wrap">
-<section class="panel context"><div class="panel-eyebrow">{{ $lesson->code }} · {{ $video->processing_status }}</div><h2>{{ $video->title }}</h2><p>Publication: {{ $video->status }} · Processing: {{ $video->processing_status }}</p>@include('admin.education.videos.partials.processing-progress', compact('video', 'course', 'module', 'lesson'))@if($video->processing_status === \App\Models\LessonVideo::PROCESSING_FAILED)<form class="retry-wrap" method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video')) }}" onsubmit="return confirm('Retry HLS processing with the existing uploaded video file?');">@csrf<button class="retry-btn" type="submit">↻ Retry Processing</button></form>@endif</section>
+<section class="panel context"><div class="panel-eyebrow">{{ $lesson->code }} · {{ $video->processing_status }}</div><h2>{{ $video->title }}</h2><p>Publication: {{ $video->status }} · Processing: {{ $video->processing_status }}</p>@include('admin.education.videos.partials.processing-progress', compact('video', 'course', 'module', 'lesson'))@php($repairRequired = $video->processing_status === \App\Models\LessonVideo::PROCESSING_READY && ! $video->hasPlaybackReference())@if($video->processing_status === \App\Models\LessonVideo::PROCESSING_FAILED || $repairRequired)<form class="retry-wrap" method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.retry-processing', compact('course', 'module', 'lesson', 'video')) }}" onsubmit="return confirm('{{ $repairRequired ? 'Repair the missing protected HLS playback reference using the existing source video?' : 'Retry HLS processing with the existing uploaded video file?' }}');">@csrf<button class="retry-btn" type="submit">{{ $repairRequired ? '↻ Repair Protected HLS' : '↻ Retry Processing' }}</button></form>@endif</section>
 @if($errors->any())<div class="errors"><strong>Please correct the following fields.</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
 <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.update', ['course'=>$course,'module'=>$module,'lesson'=>$lesson,'video'=>$video]) }}">@csrf @method('PATCH')
 <section class="panel form-panel"><div class="panel-header"><div><div class="panel-eyebrow">PROTECTED MEDIA METADATA</div><h2>Video Details</h2></div></div>
@@ -45,5 +45,5 @@
 
 
 @push('scripts')
-<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-1" defer></script>
+<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-2" defer></script>
 @endpush

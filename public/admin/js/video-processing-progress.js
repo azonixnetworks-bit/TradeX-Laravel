@@ -8,13 +8,19 @@
         card.querySelector('[data-processing-percent]').textContent = `${progress}%`;
         card.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', progress);
         card.querySelector('[data-processing-stage]').textContent = data.stage || 'Processing status is being updated.';
-        card.querySelector('[data-processing-label]').textContent = data.complete ? 'Successfully completed' : data.status;
+        card.querySelector('[data-processing-label]').textContent = data.repair_required
+            ? 'HLS repair required'
+            : (data.complete ? 'Successfully completed' : data.status);
         const error = card.querySelector('[data-processing-error]');
         error.textContent = data.error || '';
         error.hidden = !data.error;
         card.classList.remove('is-pending', 'is-processing', 'is-ready', 'is-failed');
-        card.classList.add(`is-${String(data.status).toLowerCase()}`);
-        card.dataset.terminal = data.complete || data.failed ? 'true' : 'false';
+        card.classList.add(data.repair_required
+            ? 'is-failed'
+            : `is-${String(data.status).toLowerCase()}`);
+        card.dataset.terminal = data.terminal || data.complete || data.failed || data.repair_required
+            ? 'true'
+            : 'false';
     };
 
     const poll = async (card) => {
