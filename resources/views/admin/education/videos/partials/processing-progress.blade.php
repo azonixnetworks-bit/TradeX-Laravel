@@ -29,6 +29,10 @@
         : ($video->processing_status === \App\Models\LessonVideo::PROCESSING_READY
             ? 'Successfully completed'
             : $video->processing_status);
+
+    $detail = is_array($video->processing_detail_json)
+        ? $video->processing_detail_json
+        : [];
 @endphp
 <div class="video-processing-progress is-{{ $stateClass }}"
      data-video-processing
@@ -38,9 +42,62 @@
         <strong data-processing-label>{{ $label }}</strong>
         <span data-processing-percent>{{ $progress }}%</span>
     </div>
+
     <div class="video-processing-track" role="progressbar" aria-label="Video processing progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progress }}">
         <span data-processing-fill style="width: {{ $progress }}%"></span>
     </div>
-    <p data-processing-stage>{{ $stage }}</p>
+
+    <p class="video-processing-stage" data-processing-stage>{{ $stage }}</p>
+
+    <div class="video-processing-detail" data-processing-detail>
+        <div>
+            <span>Current file</span>
+            <strong data-processing-file>{{ $detail['source_file'] ?? '—' }}</strong>
+        </div>
+        <div>
+            <span>Rendition</span>
+            <strong data-processing-rendition>
+                @if(!empty($detail['rendition']))
+                    {{ $detail['rendition'] }}
+                    @if(!empty($detail['rendition_index']) && !empty($detail['rendition_total']))
+                        · {{ $detail['rendition_index'] }}/{{ $detail['rendition_total'] }}
+                    @endif
+                @else
+                    —
+                @endif
+            </strong>
+        </div>
+        <div>
+            <span>Rendition progress</span>
+            <strong data-processing-rendition-percent>
+                {{ isset($detail['rendition_percent']) && $detail['rendition_percent'] !== null ? $detail['rendition_percent'].'%' : '—' }}
+            </strong>
+        </div>
+        <div>
+            <span>Video position</span>
+            <strong data-processing-position>—</strong>
+        </div>
+        <div>
+            <span>Encoding speed</span>
+            <strong data-processing-speed>{{ $detail['speed'] ?? '—' }}</strong>
+        </div>
+        <div>
+            <span>Elapsed</span>
+            <strong data-processing-elapsed>—</strong>
+        </div>
+        <div>
+            <span>Estimated remaining</span>
+            <strong data-processing-remaining>—</strong>
+        </div>
+        <div>
+            <span>Worker heartbeat</span>
+            <strong data-processing-heartbeat>{{ $video->processing_heartbeat_at?->diffForHumans() ?? 'Waiting to start' }}</strong>
+        </div>
+    </div>
+
+    <p class="video-processing-stalled" data-processing-stalled hidden>
+        Worker heartbeat has stopped. The video worker may be stalled or unavailable.
+    </p>
+
     <p class="video-processing-error" data-processing-error @if(!$video->processing_error) hidden @endif>{{ $video->processing_error }}</p>
 </div>
