@@ -92,6 +92,9 @@ class DailyTradeIdeaController extends Controller
             'STOCKS_CSE' => $query
                 ->where('category', 'STOCKS')
                 ->where('market_region', 'SRI_LANKA'),
+            'STOCKS_INDIA' => $query
+                ->where('category', 'STOCKS')
+                ->where('market_region', 'INDIA'),
             'STOCKS_INTERNATIONAL' => $query
                 ->where('category', 'STOCKS')
                 ->where('market_region', 'INTERNATIONAL'),
