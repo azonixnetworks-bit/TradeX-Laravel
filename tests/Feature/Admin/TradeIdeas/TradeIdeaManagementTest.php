@@ -663,6 +663,73 @@ class TradeIdeaManagementTest extends TestCase
         );
     }
 
+    public function test_long_term_market_filter_separates_cse_india_and_international_stocks(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.view',
+        ]);
+
+        $cse = $this->createMinimalDraft($admin);
+        $cse->forceFill([
+            'title' => 'CSE Market Idea',
+            'category' => TradeIdea::CATEGORY_STOCKS,
+            'market_region' => TradeIdea::REGION_SRI_LANKA,
+            'symbol' => 'JKH.N0000',
+        ])->save();
+
+        $india = $this->createMinimalDraft($admin);
+        $india->forceFill([
+            'title' => 'India Market Idea',
+            'category' => TradeIdea::CATEGORY_STOCKS,
+            'market_region' => TradeIdea::REGION_INDIA,
+            'symbol' => 'RELIANCE',
+        ])->save();
+
+        $international = $this->createMinimalDraft($admin);
+        $international->forceFill([
+            'title' => 'International Market Idea',
+            'category' => TradeIdea::CATEGORY_STOCKS,
+            'market_region' => TradeIdea::REGION_INTERNATIONAL,
+            'symbol' => 'AAPL',
+        ])->save();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.trade_ideas.index', [
+                'market_filter' => 'STOCKS_INDIA',
+            ]))
+            ->assertOk()
+            ->assertSee('India Market Idea')
+            ->assertDontSee('CSE Market Idea')
+            ->assertDontSee('International Market Idea')
+            ->assertSee('Stocks · India');
+    }
+
+    public function test_long_term_today_filter_only_lists_ideas_created_today(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.view',
+        ]);
+
+        $today = $this->createMinimalDraft($admin);
+        $today->forceFill([
+            'title' => 'Today Trade Idea',
+        ])->save();
+
+        $older = $this->createMinimalDraft($admin);
+        $older->forceFill([
+            'title' => 'Older Trade Idea',
+            'created_at' => now()->subDays(2),
+        ])->save();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.trade_ideas.index', [
+                'market_filter' => 'TODAY',
+            ]))
+            ->assertOk()
+            ->assertSee('Today Trade Idea')
+            ->assertDontSee('Older Trade Idea');
+    }
+
     private function minimalPayload(): array
     {
         return [
