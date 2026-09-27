@@ -6,6 +6,7 @@
         'CRYPTO' => 'Crypto',
         'DERIV' => 'Deriv',
         'STOCKS_CSE' => 'Stocks · CSE',
+        'STOCKS_INDIA' => 'Stocks · India',
         'STOCKS_INTERNATIONAL' => 'Stocks · International',
     ];
 @endphp
