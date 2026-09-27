@@ -141,6 +141,64 @@ class DailyTradeIdeaManagementTest extends TestCase
         ], true));
     }
 
+    public function test_daily_market_filter_separates_india_stocks(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.view',
+        ]);
+
+        $cse = $this->createDraft($admin);
+        $cse->forceFill([
+            'title' => 'Daily CSE Idea',
+            'category' => TradeIdea::CATEGORY_STOCKS,
+            'market_region' => TradeIdea::REGION_SRI_LANKA,
+            'symbol' => 'JKH.N0000',
+        ])->save();
+
+        $india = $this->createDraft($admin);
+        $india->forceFill([
+            'title' => 'Daily India Idea',
+            'category' => TradeIdea::CATEGORY_STOCKS,
+            'market_region' => TradeIdea::REGION_INDIA,
+            'symbol' => 'RELIANCE',
+        ])->save();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.daily_trade_ideas.index', [
+                'market_filter' => 'STOCKS_INDIA',
+            ]))
+            ->assertOk()
+            ->assertSee('Daily India Idea')
+            ->assertDontSee('Daily CSE Idea')
+            ->assertSee('Stocks · India');
+    }
+
+    public function test_daily_today_filter_only_lists_ideas_created_today(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.view',
+        ]);
+
+        $today = $this->createDraft($admin);
+        $today->forceFill([
+            'title' => 'Daily Today Idea',
+        ])->save();
+
+        $older = $this->createDraft($admin);
+        $older->forceFill([
+            'title' => 'Daily Older Idea',
+            'created_at' => now()->subDays(2),
+        ])->save();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.daily_trade_ideas.index', [
+                'market_filter' => 'TODAY',
+            ]))
+            ->assertOk()
+            ->assertSee('Daily Today Idea')
+            ->assertDontSee('Daily Older Idea');
+    }
+
     private function minimalPayload(): array
     {
         return [
