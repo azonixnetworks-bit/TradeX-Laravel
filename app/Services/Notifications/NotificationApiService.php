@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\UserNotificationReceipt;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class NotificationApiService
@@ -112,6 +113,33 @@ class NotificationApiService
     public function summary(
         User $user
     ): array {
+        $ttlSeconds = max(
+            0,
+            (int) config(
+                'tradex.performance.notification_summary_cache_seconds',
+                5
+            )
+        );
+
+        if ($ttlSeconds === 0) {
+            return $this->buildSummary(
+                $user
+            );
+        }
+
+        return Cache::remember(
+            $this->summaryCacheKey($user),
+            now()->addSeconds($ttlSeconds),
+            fn (): array =>
+                $this->buildSummary(
+                    $user
+                )
+        );
+    }
+
+    private function buildSummary(
+        User $user
+    ): array {
         $total =
             $this->availableQuery(
                 $user
@@ -183,6 +211,10 @@ class NotificationApiService
             3
         );
 
+        $this->forgetSummaryCache(
+            $user
+        );
+
         return [
             'notification' =>
                 $this->present(
@@ -230,6 +262,10 @@ class NotificationApiService
                     ]);
         }
 
+        $this->forgetSummaryCache(
+            $user
+        );
+
         return [
             'marked_read_count' =>
                 $updated,
@@ -239,6 +275,27 @@ class NotificationApiService
                     $user
                 ),
         ];
+    }
+
+    private function summaryCacheKey(
+        User $user
+    ): string {
+        return implode(':', [
+            'tradex',
+            'notifications',
+            'summary',
+            'v1',
+            (string) $user->getKey(),
+            (string) $user->account_type,
+        ]);
+    }
+
+    private function forgetSummaryCache(
+        User $user
+    ): void {
+        Cache::forget(
+            $this->summaryCacheKey($user)
+        );
     }
 
     private function resolve(
