@@ -37,6 +37,11 @@ return [
             0,
             (int) env('TRADEX_DASHBOARD_CACHE_SECONDS', 10)
         ),
+
+        'admin_stats_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_ADMIN_STATS_CACHE_SECONDS', 30)
+        ),
     ],
 
     /*
