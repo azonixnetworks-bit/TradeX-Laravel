@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\DailyTradeIdea;
 use App\Models\DailyTradeIdeaTarget;
 use App\Support\TradingViewUrl;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -28,6 +29,7 @@ class DailyTradeIdeaController extends Controller
 
         $status = strtoupper(trim((string) $request->query('status', '')));
         $category = strtoupper(trim((string) $request->query('category', '')));
+        $marketFilter = strtoupper(trim((string) $request->query('market_filter', '')));
 
         $query = DailyTradeIdea::query()->with('targets');
 
@@ -39,7 +41,10 @@ class DailyTradeIdeaController extends Controller
             $query->where('status', $status);
         }
 
-        if (in_array($category, ['FOREX', 'CRYPTO', 'DERIV', 'STOCKS'], true)) {
+        if ($marketFilter !== '') {
+            $this->applyMarketFilter($query, $marketFilter);
+        } elseif (in_array($category, ['FOREX', 'CRYPTO', 'DERIV', 'STOCKS'], true)) {
+            // Backward compatibility for existing category query links.
             $query->where('category', $category);
         }
 
@@ -70,8 +75,57 @@ class DailyTradeIdeaController extends Controller
             'stats',
             'permissions',
             'status',
-            'category'
+            'category',
+            'marketFilter'
         ));
+    }
+
+    private function applyMarketFilter(
+        \Illuminate\Database\Eloquent\Builder $query,
+        string $marketFilter
+    ): void {
+        match ($marketFilter) {
+            'TODAY' => $this->applyTodayFilter($query),
+            'FOREX' => $query->where('category', 'FOREX'),
+            'CRYPTO' => $query->where('category', 'CRYPTO'),
+            'DERIV' => $query->where('category', 'DERIV'),
+            'STOCKS_CSE' => $query
+                ->where('category', 'STOCKS')
+                ->where('market_region', 'SRI_LANKA'),
+            'STOCKS_INTERNATIONAL' => $query
+                ->where('category', 'STOCKS')
+                ->where('market_region', 'INTERNATIONAL'),
+            default => null,
+        };
+    }
+
+    private function applyTodayFilter(
+        \Illuminate\Database\Eloquent\Builder $query
+    ): void {
+        $timezone = trim(
+            (string) config(
+                'tradex_reporting.audit_timezone',
+                config('app.timezone', 'UTC')
+            )
+        );
+
+        try {
+            $now = CarbonImmutable::now(
+                $timezone !== ''
+                    ? $timezone
+                    : 'UTC'
+            );
+        } catch (\Throwable) {
+            $now = CarbonImmutable::now('UTC');
+        }
+
+        $query->whereBetween(
+            'created_at',
+            [
+                $now->startOfDay()->utc(),
+                $now->endOfDay()->utc(),
+            ]
+        );
     }
 
     public function create(): View
