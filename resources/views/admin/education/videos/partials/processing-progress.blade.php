@@ -99,5 +99,8 @@
         Worker heartbeat has stopped. The video worker may be stalled or unavailable.
     </p>
 
-    <p class="video-processing-error" data-processing-error @if(!$video->processing_error) hidden @endif>{{ $video->processing_error }}</p>
+    <div class="video-processing-error" @if(!$video->processing_error) hidden @endif>
+        <strong>Processing error details</strong>
+        <code data-processing-error>{{ $video->processing_error }}</code>
+    </div>
 </div>

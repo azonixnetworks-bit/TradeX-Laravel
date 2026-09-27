@@ -6,6 +6,7 @@ use App\Models\LessonVideo;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -1445,19 +1446,30 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $freshVideo->forceFill([
-            'processing_status' => LessonVideo::PROCESSING_FAILED,
-            'processing_stage' => 'Processing failed. Review the error and retry.',
-            'processing_detail_json' => [
-                'current_step' => 'FAILED',
-                'last_update_at' => now()->toIso8601String(),
-            ],
-            'processing_heartbeat_at' => now(),
-            'processing_error' => Str::limit(
+        $previousError = trim(
+            (string) $freshVideo->processing_error
+        );
+        $retryLimitReached = $exception instanceof MaxAttemptsExceededException;
+        $displayError = $retryLimitReached && $previousError !== ''
+            ? $previousError
+            : Str::limit(
                 $exception->getMessage(),
                 8000,
                 ''
-            ),
+            );
+
+        $freshVideo->forceFill([
+            'processing_status' => LessonVideo::PROCESSING_FAILED,
+            'processing_stage' => $retryLimitReached && $previousError !== ''
+                ? 'Processing stopped after automatic retries. The original FFmpeg error is shown below.'
+                : 'Processing failed. Review the error and retry.',
+            'processing_detail_json' => [
+                'current_step' => 'FAILED',
+                'last_update_at' => now()->toIso8601String(),
+                'retry_limit_reached' => $retryLimitReached,
+            ],
+            'processing_heartbeat_at' => now(),
+            'processing_error' => $displayError,
             'processed_at' => now(),
         ])->save();
 
