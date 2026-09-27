@@ -4,7 +4,7 @@
 @section('page-title', 'Education')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-2">
+<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260927-hls-live-1">
 <style>
     .form-wrap{max-width:1100px;margin:0 auto}.context{padding:18px 21px;margin-bottom:20px}.context h2{margin:5px 0;font-size:18px}.context p{margin:0;opacity:.58;font-size:12px}
     .form-panel{padding:24px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.field.full{grid-column:1/-1}
@@ -45,5 +45,5 @@
 
 
 @push('scripts')
-<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-2" defer></script>
+<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260927-hls-live-1" defer></script>
 @endpush
