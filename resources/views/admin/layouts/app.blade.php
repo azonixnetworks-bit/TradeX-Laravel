@@ -222,7 +222,7 @@
 </script>
 
 <script
-    src="{{ asset('admin/js/in-place-admin-navigation.js') }}?v=20260927-1">
+    src="{{ asset('admin/js/in-place-admin-navigation.js') }}?v=20260927-2">
 </script>
 
 @stack('scripts')
