@@ -146,6 +146,11 @@ return [
             )
         ),
 
+        'scaling_filter' => env(
+            'TRADEX_VIDEO_SCALING_FILTER',
+            'bicubic'
+        ),
+
         'enabled_hls_variants' => array_values(
             array_filter(
                 array_map(
