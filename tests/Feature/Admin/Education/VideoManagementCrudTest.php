@@ -241,6 +241,87 @@ class VideoManagementCrudTest extends TestCase
             ]);
     }
 
+    public function test_processing_status_exposes_live_hls_telemetry(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.view']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_PROCESSING,
+            'processing_progress' => 43,
+            'processing_stage' => 'Encoding 720p HLS rendition (2/3) — 57%.',
+            'processing_detail_json' => [
+                'current_step' => 'ENCODING_HLS',
+                'source_file' => 'lesson-video.mp4',
+                'rendition' => '720p',
+                'rendition_index' => 2,
+                'rendition_total' => 3,
+                'rendition_percent' => 57,
+                'video_position_seconds' => 1398,
+                'duration_seconds' => 2452,
+                'speed' => '1.43x',
+                'elapsed_seconds' => 972,
+                'estimated_remaining_seconds' => 733,
+            ],
+            'processing_started_at' => now()->subMinutes(16),
+            'processing_heartbeat_at' => now(),
+        ]);
+
+        $this->actingAs($admin, 'admin')->getJson(
+            route(
+                'admin.education.courses.modules.lessons.videos.processing-status',
+                compact('course', 'module', 'lesson', 'video')
+            )
+        )
+            ->assertOk()
+            ->assertJson([
+                'status' => LessonVideo::PROCESSING_PROCESSING,
+                'progress' => 43,
+                'stalled' => false,
+                'detail' => [
+                    'current_step' => 'ENCODING_HLS',
+                    'source_file' => 'lesson-video.mp4',
+                    'rendition' => '720p',
+                    'rendition_index' => 2,
+                    'rendition_total' => 3,
+                    'rendition_percent' => 57,
+                    'speed' => '1.43x',
+                ],
+            ])
+            ->assertJsonPath('complete', false)
+            ->assertJsonPath('failed', false);
+    }
+
+    public function test_processing_status_marks_stale_worker_heartbeat_as_stalled(): void
+    {
+        $admin = $this->createAdminWithPermissions(['education.view']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        $video = $this->createVideo($lesson, [
+            'processing_status' => LessonVideo::PROCESSING_PROCESSING,
+            'processing_progress' => 38,
+            'processing_stage' => 'Encoding 360p HLS rendition (1/3) — 18%.',
+            'processing_detail_json' => [
+                'current_step' => 'ENCODING_HLS',
+                'rendition' => '360p',
+                'rendition_percent' => 18,
+            ],
+            'processing_started_at' => now()->subMinutes(8),
+            'processing_heartbeat_at' => now()->subMinutes(2),
+        ]);
+
+        $this->actingAs($admin, 'admin')->getJson(
+            route(
+                'admin.education.courses.modules.lessons.videos.processing-status',
+                compact('course', 'module', 'lesson', 'video')
+            )
+        )
+            ->assertOk()
+            ->assertJsonPath('status', LessonVideo::PROCESSING_PROCESSING)
+            ->assertJsonPath('stalled', true)
+            ->assertJsonPath('terminal', false);
+    }
+
     public function test_failed_video_can_retry_using_existing_source_and_same_database_record(): void
     {
         Queue::fake();

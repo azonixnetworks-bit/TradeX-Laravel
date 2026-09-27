@@ -10,6 +10,7 @@ use App\Models\AffiliateQualifiedSale;
 use App\Models\AffiliateStage;
 use App\Models\AuditLog;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\Request;
@@ -284,10 +285,23 @@ class AffiliateApiService
             ->pluck('id')
             ->all();
 
-        $salesByReferral =
+        $salesStatsByReferral =
             $referralIds === []
                 ? collect()
                 : AffiliateQualifiedSale::query()
+                    ->select('referred_user_id')
+                    ->selectRaw(
+                        'COUNT(*) as lifetime_count'
+                    )
+                    ->selectRaw(
+                        'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as active_count',
+                        [
+                            AffiliateQualifiedSale::STATUS_CLEARED,
+                        ]
+                    )
+                    ->selectRaw(
+                        'MAX(qualified_at) as latest_qualified_at'
+                    )
                     ->where(
                         'affiliate_user_id',
                         $user->getKey()
@@ -296,15 +310,11 @@ class AffiliateApiService
                         'referred_user_id',
                         $referralIds
                     )
-                    ->orderByDesc(
-                        'qualified_at'
-                    )
-                    ->get([
-                        'referred_user_id',
-                        'status',
-                        'qualified_at',
-                    ])
                     ->groupBy(
+                        'referred_user_id'
+                    )
+                    ->get()
+                    ->keyBy(
                         'referred_user_id'
                     );
 
@@ -315,19 +325,33 @@ class AffiliateApiService
                         function (
                             User $referral
                         ) use (
-                            $salesByReferral
+                            $salesStatsByReferral
                         ): array {
-                            $sales =
-                                $salesByReferral->get(
-                                    $referral->getKey(),
-                                    collect()
+                            $stats =
+                                $salesStatsByReferral->get(
+                                    $referral->getKey()
                                 );
 
                             $activeCount =
-                                $sales->where(
-                                    'status',
-                                    AffiliateQualifiedSale::STATUS_CLEARED
-                                )->count();
+                                (int) (
+                                    $stats?->getAttribute(
+                                        'active_count'
+                                    )
+                                    ?? 0
+                                );
+
+                            $lifetimeCount =
+                                (int) (
+                                    $stats?->getAttribute(
+                                        'lifetime_count'
+                                    )
+                                    ?? 0
+                                );
+
+                            $latestQualifiedAt =
+                                $stats?->getAttribute(
+                                    'latest_qualified_at'
+                                );
 
                             return [
                                 'uuid' =>
@@ -348,12 +372,17 @@ class AffiliateApiService
                                         $activeCount,
 
                                     'lifetime_recorded_sales_count' =>
-                                        $sales->count(),
+                                        $lifetimeCount,
 
                                     'latest_qualified_at' =>
-                                        $sales->first()
-                                            ?->qualified_at
-                                            ?->toISOString(),
+                                        filled(
+                                            $latestQualifiedAt
+                                        )
+                                            ? CarbonImmutable::parse(
+                                                (string) $latestQualifiedAt,
+                                                'UTC'
+                                            )->toISOString()
+                                            : null,
                                 ],
                             ];
                         }

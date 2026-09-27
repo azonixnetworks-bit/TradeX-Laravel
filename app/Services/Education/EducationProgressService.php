@@ -158,19 +158,25 @@ class EducationProgressService
         User $user,
         Lesson $lesson
     ): array {
-        $progress =
-            UserLessonProgress::query()
-                ->where(
-                    'user_id',
-                    $user->getKey()
-                )
-                ->where(
-                    'lesson_id',
-                    $lesson->getKey()
-                )
-                ->first();
+        if ($lesson->relationLoaded('userProgressSnapshot')) {
+            $progress = $lesson->getRelation(
+                'userProgressSnapshot'
+            );
+        } else {
+            $progress =
+                UserLessonProgress::query()
+                    ->where(
+                        'user_id',
+                        $user->getKey()
+                    )
+                    ->where(
+                        'lesson_id',
+                        $lesson->getKey()
+                    )
+                    ->first();
+        }
 
-        if (! $progress) {
+        if (! $progress instanceof UserLessonProgress) {
             return [
                 'status' =>
                     'NOT_STARTED',

@@ -15,6 +15,7 @@ use DateTimeZone;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 use Throwable;
 
@@ -43,36 +44,13 @@ class DashboardController extends Controller
             ->endOfDay()
             ->utc();
 
-        $stats = [
-            'admins' => $canViewAdmins
-                ? AdminUser::query()->count()
-                : null,
-
-            'active_admins' => $canViewAdmins
-                ? AdminUser::query()
-                    ->where('is_active', true)
-                    ->count()
-                : null,
-
-            'roles' => $canViewRoles
-                ? AdminRole::query()
-                    ->where('is_active', true)
-                    ->count()
-                : null,
-
-            'permissions' => $canViewRoles
-                ? AdminPermission::query()->count()
-                : null,
-
-            'audit_events_today' => $canViewAudit
-                ? AuditLog::query()
-                    ->whereBetween(
-                        'created_at',
-                        [$auditDayStartUtc, $auditDayEndUtc]
-                    )
-                    ->count()
-                : null,
-        ];
+        $stats = $this->dashboardStats(
+            $canViewAdmins,
+            $canViewRoles,
+            $canViewAudit,
+            $auditDayStartUtc,
+            $auditDayEndUtc
+        );
 
         $activityTabs = $this->activityTabs($admin);
         $activityType = $this->activityType(
@@ -113,6 +91,92 @@ class DashboardController extends Controller
                 )
                 : 'First Session',
         ]);
+    }
+
+    private function dashboardStats(
+        bool $canViewAdmins,
+        bool $canViewRoles,
+        bool $canViewAudit,
+        CarbonImmutable $auditDayStartUtc,
+        CarbonImmutable $auditDayEndUtc
+    ): array {
+        $ttlSeconds = max(
+            0,
+            (int) config(
+                'tradex.performance.admin_stats_cache_seconds',
+                30
+            )
+        );
+
+        $remember = static function (
+            string $key,
+            callable $resolver
+        ) use ($ttlSeconds): mixed {
+            if ($ttlSeconds === 0) {
+                return $resolver();
+            }
+
+            return Cache::remember(
+                $key,
+                now()->addSeconds($ttlSeconds),
+                $resolver
+            );
+        };
+
+        return [
+            'admins' => $canViewAdmins
+                ? $remember(
+                    'tradex:admin-dashboard:stats:admins',
+                    static fn (): int =>
+                        AdminUser::query()->count()
+                )
+                : null,
+
+            'active_admins' => $canViewAdmins
+                ? $remember(
+                    'tradex:admin-dashboard:stats:active-admins',
+                    static fn (): int =>
+                        AdminUser::query()
+                            ->where('is_active', true)
+                            ->count()
+                )
+                : null,
+
+            'roles' => $canViewRoles
+                ? $remember(
+                    'tradex:admin-dashboard:stats:active-roles',
+                    static fn (): int =>
+                        AdminRole::query()
+                            ->where('is_active', true)
+                            ->count()
+                )
+                : null,
+
+            'permissions' => $canViewRoles
+                ? $remember(
+                    'tradex:admin-dashboard:stats:permissions',
+                    static fn (): int =>
+                        AdminPermission::query()->count()
+                )
+                : null,
+
+            'audit_events_today' => $canViewAudit
+                ? $remember(
+                    'tradex:admin-dashboard:stats:audit-today:'
+                        .$auditDayStartUtc->format('Ymd'),
+                    static fn (): int =>
+                        AuditLog::query()
+                            ->whereBetween(
+                                'created_at',
+                                [
+                                    $auditDayStartUtc,
+                                    $auditDayEndUtc,
+                                ]
+                            )
+                            ->count()
+                )
+                : null,
+        ];
     }
 
     /**

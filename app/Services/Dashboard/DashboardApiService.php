@@ -13,6 +13,7 @@ use App\Models\UserLessonProgress;
 use App\Services\OurChannel\OurChannelApiService;
 use App\Services\TradeIdeas\TradeIdeaApiService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Cache;
 
 class DashboardApiService
 {
@@ -27,6 +28,30 @@ class DashboardApiService
     }
 
     public function dashboard(
+        User $user
+    ): array {
+        $ttlSeconds = max(
+            0,
+            (int) config(
+                'tradex.performance.dashboard_cache_seconds',
+                10
+            )
+        );
+
+        if ($ttlSeconds === 0) {
+            return $this->buildDashboard(
+                $user
+            );
+        }
+
+        return Cache::remember(
+            $this->dashboardCacheKey($user),
+            now()->addSeconds($ttlSeconds),
+            fn (): array => $this->buildDashboard($user)
+        );
+    }
+
+    private function buildDashboard(
         User $user
     ): array {
         return [
@@ -60,6 +85,20 @@ class DashboardApiService
                     $user
                 ),
         ];
+    }
+
+    private function dashboardCacheKey(
+        User $user
+    ): string {
+        return implode(':', [
+            'tradex',
+            'dashboard',
+            'v1',
+            (string) $user->getKey(),
+            (string) ($user->updated_at?->getTimestamp() ?? 0),
+            (string) $user->account_type,
+            (string) $user->language_code,
+        ]);
     }
 
     private function accountSummary(
@@ -271,51 +310,53 @@ class DashboardApiService
     private function learningSummary(
         User $user
     ): array {
-        $lessonIds = $this
+        $accessibleLessons = $this
             ->accessiblePublishedLessons(
                 $user
             )
-            ->pluck('id');
+            ->select('lessons.id');
 
-        $total = $lessonIds->count();
+        $total = (clone $accessibleLessons)
+            ->count();
 
         $completed = 0;
         $inProgress = 0;
         $continueProgress = null;
 
         if ($total > 0) {
-            $completed = UserLessonProgress::query()
+            $statusCounts = UserLessonProgress::query()
+                ->select('status')
+                ->selectRaw('COUNT(*) as aggregate')
                 ->where(
                     'user_id',
                     $user->getKey()
                 )
                 ->whereIn(
                     'lesson_id',
-                    $lessonIds
-                )
-                ->where(
-                    'status',
-                    UserLessonProgress::STATUS_COMPLETED
-                )
-                ->count();
-
-            $inProgress = UserLessonProgress::query()
-                ->where(
-                    'user_id',
-                    $user->getKey()
+                    clone $accessibleLessons
                 )
                 ->whereIn(
-                    'lesson_id',
-                    $lessonIds
-                )
-                ->where(
                     'status',
-                    UserLessonProgress::STATUS_IN_PROGRESS
+                    [
+                        UserLessonProgress::STATUS_COMPLETED,
+                        UserLessonProgress::STATUS_IN_PROGRESS,
+                    ]
                 )
-                ->count();
+                ->groupBy('status')
+                ->pluck('aggregate', 'status');
 
-            $continueProgress =
-                UserLessonProgress::query()
+            $completed = (int) $statusCounts->get(
+                UserLessonProgress::STATUS_COMPLETED,
+                0
+            );
+
+            $inProgress = (int) $statusCounts->get(
+                UserLessonProgress::STATUS_IN_PROGRESS,
+                0
+            );
+
+            if ($inProgress > 0) {
+                $continueProgress = UserLessonProgress::query()
                     ->with([
                         'lesson.module.course',
                         'lastVideo',
@@ -326,7 +367,7 @@ class DashboardApiService
                     )
                     ->whereIn(
                         'lesson_id',
-                        $lessonIds
+                        clone $accessibleLessons
                     )
                     ->where(
                         'status',
@@ -339,6 +380,7 @@ class DashboardApiService
                         'id'
                     )
                     ->first();
+            }
         }
 
         return [

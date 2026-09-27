@@ -7,6 +7,7 @@ use App\Http\Requests\Api\OurChannel\ChannelVideoIndexRequest;
 use App\Models\User;
 use App\Services\OurChannel\OurChannelApiService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class ChannelVideoIndexController extends Controller
 {
@@ -24,12 +25,56 @@ class ChannelVideoIndexController extends Controller
 
         $filters = $request->validated();
 
+        $ttlSeconds = max(
+            0,
+            (int) config(
+                'tradex.performance.our_channel_list_cache_seconds',
+                30
+            )
+        );
+
+        $cacheKey = 'tradex:api:our-channel:v1:'
+            .sha1(
+                json_encode(
+                    [
+                        'user_version' => [
+                            $user->getKey(),
+                            $user->updated_at?->getTimestamp(),
+                            $user->status,
+                        ],
+                        'page' => (int) $request->query('page', 1),
+                        'filters' => $filters,
+                    ],
+                    JSON_THROW_ON_ERROR
+                )
+            );
+
+        $payload = $ttlSeconds === 0
+            ? $this->payload($service, $user, $filters)
+            : Cache::remember(
+                $cacheKey,
+                now()->addSeconds($ttlSeconds),
+                fn (): array =>
+                    $this->payload(
+                        $service,
+                        $user,
+                        $filters
+                    )
+            );
+
+        return response()->json($payload);
+    }
+    private function payload(
+        OurChannelApiService $service,
+        User $user,
+        array $filters
+    ): array {
         $paginator = $service->index(
             $user,
             $filters
         );
 
-        return response()->json([
+        return [
             'success' => true,
             'data' => [
                 'videos' => $paginator
@@ -38,7 +83,8 @@ class ChannelVideoIndexController extends Controller
                         fn ($video): array =>
                             $service->summary($video)
                     )
-                    ->values(),
+                    ->values()
+                    ->all(),
                 'filters' => [
                     'language_code' =>
                         $filters['language_code']
@@ -58,6 +104,7 @@ class ChannelVideoIndexController extends Controller
                 'last_page' =>
                     $paginator->lastPage(),
             ],
-        ]);
+        ];
     }
+
 }

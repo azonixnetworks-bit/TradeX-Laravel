@@ -22,6 +22,50 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | TradeX Customer Response Performance
+    |--------------------------------------------------------------------------
+    |
+    | Keep customer-facing aggregate responses briefly cached to avoid
+    | repeating expensive relational queries during rapid refreshes. The TTL
+    | stays intentionally short because account, learning and affiliate data
+    | can change while the user is active.
+    |
+    */
+
+    'performance' => [
+        'dashboard_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_DASHBOARD_CACHE_SECONDS', 10)
+        ),
+
+        'admin_stats_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_ADMIN_STATS_CACHE_SECONDS', 30)
+        ),
+
+        'trade_ideas_list_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_TRADE_IDEAS_LIST_CACHE_SECONDS', 10)
+        ),
+
+        'our_channel_list_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_OUR_CHANNEL_LIST_CACHE_SECONDS', 30)
+        ),
+
+        'payment_methods_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_PAYMENT_METHODS_CACHE_SECONDS', 30)
+        ),
+
+        'notification_summary_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_NOTIFICATION_SUMMARY_CACHE_SECONDS', 5)
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ADMIN-03A — Protected Video Upload + HLS Processing
     |--------------------------------------------------------------------------
     |
@@ -78,7 +122,7 @@ return [
 
         'ffmpeg_preset' => env(
             'TRADEX_VIDEO_FFMPEG_PRESET',
-            'veryfast'
+            'superfast'
         ),
 
         'ffmpeg_crf' => (int) env(
@@ -86,9 +130,41 @@ return [
             21
         ),
 
-        'ffmpeg_threads' => (int) env(
-            'TRADEX_VIDEO_FFMPEG_THREADS',
-            1
+        'ffmpeg_threads' => max(
+            1,
+            (int) env(
+                'TRADEX_VIDEO_FFMPEG_THREADS',
+                2
+            )
+        ),
+
+        'progress_update_seconds' => max(
+            1,
+            (int) env(
+                'TRADEX_VIDEO_PROGRESS_UPDATE_SECONDS',
+                2
+            )
+        ),
+
+        'scaling_filter' => env(
+            'TRADEX_VIDEO_SCALING_FILTER',
+            'bicubic'
+        ),
+
+        'enabled_hls_variants' => array_values(
+            array_filter(
+                array_map(
+                    static fn (string $value): string => trim($value),
+                    explode(
+                        ',',
+                        (string) env(
+                            'TRADEX_VIDEO_HLS_VARIANTS',
+                            '360p,720p,1080p'
+                        )
+                    )
+                ),
+                static fn (string $value): bool => $value !== ''
+            )
         ),
 
         'hls_segment_seconds' => (int) env(
