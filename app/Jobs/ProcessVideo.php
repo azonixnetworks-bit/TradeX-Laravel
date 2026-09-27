@@ -102,6 +102,13 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
             'processing_status' => LessonVideo::PROCESSING_PROCESSING,
             'processing_progress' => 8,
             'processing_stage' => 'Preparing protected source video.',
+            'processing_detail_json' => [
+                'current_step' => 'STAGING_SOURCE',
+                'source_file' => basename($sourcePath),
+                'last_update_at' => now()->toIso8601String(),
+            ],
+            'processing_started_at' => now(),
+            'processing_heartbeat_at' => now(),
             'processing_error' => null,
             'processed_at' => null,
         ])->save();
@@ -154,12 +161,33 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 $this->updateProgress(
                     $video,
                     30 + (int) floor(($index / max(1, count($variants))) * 45),
-                    sprintf('Encoding %s HLS rendition (%d/%d).', $variant['name'], $index + 1, count($variants))
+                    sprintf(
+                        'Encoding %s HLS rendition (%d/%d).',
+                        $variant['name'],
+                        $index + 1,
+                        count($variants)
+                    ),
+                    [
+                        'current_step' => 'ENCODING_HLS',
+                        'source_file' => basename($sourcePath),
+                        'rendition' => $variant['name'],
+                        'rendition_index' => $index + 1,
+                        'rendition_total' => count($variants),
+                        'rendition_percent' => 0,
+                        'video_position_seconds' => 0,
+                        'duration_seconds' => $probe['duration_seconds'],
+                    ]
                 );
+
                 $this->transcodeVariant(
+                    $video,
                     $sourceFile,
                     $hlsDirectory,
-                    $variant
+                    $variant,
+                    $index,
+                    count($variants),
+                    $probe['duration_seconds'],
+                    basename($sourcePath)
                 );
             }
 
@@ -236,6 +264,12 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 'processing_status' => LessonVideo::PROCESSING_READY,
                 'processing_progress' => 100,
                 'processing_stage' => 'HLS processing completed successfully.',
+                'processing_detail_json' => [
+                    'current_step' => 'COMPLETE',
+                    'rendition_total' => count($variants),
+                    'last_update_at' => now()->toIso8601String(),
+                ],
+                'processing_heartbeat_at' => now(),
                 'processing_error' => null,
                 'processed_at' => now(),
             ])->save();
@@ -467,6 +501,21 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
 
         $variants = [];
 
+        $enabledNames = array_values(
+            array_filter(
+                array_map(
+                    static fn (mixed $name): string =>
+                        trim((string) $name),
+                    (array) config(
+                        'tradex.media.enabled_hls_variants',
+                        []
+                    )
+                ),
+                static fn (string $name): bool =>
+                    $name !== ''
+            )
+        );
+
         foreach ($profiles as $profile) {
             if (! is_array($profile)) {
                 continue;
@@ -476,6 +525,24 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 $profile['height']
                 ?? 0
             );
+
+            $profileName = trim(
+                (string) (
+                    $profile['name']
+                    ?? $height.'p'
+                )
+            );
+
+            if (
+                $enabledNames !== []
+                && ! in_array(
+                    $profileName,
+                    $enabledNames,
+                    true
+                )
+            ) {
+                continue;
+            }
 
             if (
                 $height <= 0
@@ -580,9 +647,14 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
     }
 
     private function transcodeVariant(
+        LessonVideo $video,
         string $sourceFile,
         string $hlsDirectory,
-        array $variant
+        array $variant,
+        int $variantIndex,
+        int $variantTotal,
+        ?int $durationSeconds,
+        string $sourceName
     ): void {
         $variantDirectory = $hlsDirectory
             .DIRECTORY_SEPARATOR
@@ -613,7 +685,8 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
             .DIRECTORY_SEPARATOR
             .'segment_%05d.ts';
 
-        $this->runProcess(
+        $this->runFfmpegTranscode(
+            $video,
             [
                 $this->ffmpegBinary(),
                 '-hide_banner',
@@ -627,18 +700,21 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 '-map',
                 '0:a:0?',
                 '-vf',
-                'scale=-2:'.$variant['height'].':flags=lanczos',
+                'scale=-2:'.$variant['height'].':flags=fast_bilinear',
                 '-c:v',
                 'libx264',
                 '-threads',
                 (string) max(
                     1,
-                    (int) config('tradex.media.ffmpeg_threads', 1)
+                    (int) config(
+                        'tradex.media.ffmpeg_threads',
+                        2
+                    )
                 ),
                 '-preset',
                 (string) config(
                     'tradex.media.ffmpeg_preset',
-                    'veryfast'
+                    'superfast'
                 ),
                 '-profile:v',
                 'main',
@@ -667,6 +743,9 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 'expr:gte(t,n_forced*'.$segmentSeconds.')',
                 '-sc_threshold',
                 '0',
+                '-progress',
+                'pipe:1',
+                '-nostats',
                 '-f',
                 'hls',
                 '-hls_time',
@@ -683,7 +762,12 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 300,
                 $this->timeout - 30
             ),
-            'FFmpeg failed while generating an HLS rendition.'
+            'FFmpeg failed while generating an HLS rendition.',
+            $variant,
+            $variantIndex,
+            $variantTotal,
+            $durationSeconds,
+            $sourceName
         );
 
         if (! File::exists($playlistPath)) {
@@ -691,6 +775,282 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 'FFmpeg completed without creating the expected HLS playlist.'
             );
         }
+    }
+
+    private function runFfmpegTranscode(
+        LessonVideo $video,
+        array $command,
+        int $timeoutSeconds,
+        string $failureMessage,
+        array $variant,
+        int $variantIndex,
+        int $variantTotal,
+        ?int $durationSeconds,
+        string $sourceName
+    ): void {
+        $process = new Process(
+            $command
+        );
+
+        $process->setTimeout(
+            max(
+                30,
+                $timeoutSeconds
+            )
+        );
+
+        $startedAt = microtime(true);
+        $lastPersistedAt = 0.0;
+        $stdoutBuffer = '';
+        $progressState = [];
+
+        $persist = function () use (
+            $video,
+            $variant,
+            $variantIndex,
+            $variantTotal,
+            $durationSeconds,
+            $sourceName,
+            $startedAt,
+            &$lastPersistedAt,
+            &$progressState
+        ): void {
+            $now = microtime(true);
+            $updateEvery = max(
+                1,
+                (int) config(
+                    'tradex.media.progress_update_seconds',
+                    2
+                )
+            );
+
+            if (
+                $lastPersistedAt > 0
+                && ($now - $lastPersistedAt) < $updateEvery
+                && ($progressState['progress'] ?? null) !== 'end'
+            ) {
+                return;
+            }
+
+            $positionSeconds = $this->ffmpegPositionSeconds(
+                $progressState
+            );
+
+            $renditionPercent =
+                $durationSeconds !== null
+                && $durationSeconds > 0
+                    ? min(
+                        100,
+                        max(
+                            0,
+                            (int) floor(
+                                ($positionSeconds / $durationSeconds)
+                                * 100
+                            )
+                        )
+                    )
+                    : null;
+
+            $variantSpan =
+                45 / max(1, $variantTotal);
+
+            $overallProgress =
+                30
+                + (int) floor(
+                    ($variantIndex * $variantSpan)
+                    + (
+                        (($renditionPercent ?? 0) / 100)
+                        * $variantSpan
+                    )
+                );
+
+            $elapsedSeconds = max(
+                0,
+                (int) floor(
+                    $now - $startedAt
+                )
+            );
+
+            $speed = trim(
+                (string) (
+                    $progressState['speed']
+                    ?? ''
+                )
+            );
+
+            $estimatedRemaining = null;
+
+            if (
+                $renditionPercent !== null
+                && $renditionPercent > 0
+                && $renditionPercent < 100
+            ) {
+                $estimatedRemaining = max(
+                    0,
+                    (int) round(
+                        $elapsedSeconds
+                        * (100 - $renditionPercent)
+                        / $renditionPercent
+                    )
+                );
+            }
+
+            $this->updateProgress(
+                $video,
+                min(75, $overallProgress),
+                sprintf(
+                    'Encoding %s HLS rendition (%d/%d) — %s.',
+                    $variant['name'],
+                    $variantIndex + 1,
+                    $variantTotal,
+                    $renditionPercent !== null
+                        ? $renditionPercent.'%'
+                        : 'running'
+                ),
+                [
+                    'current_step' => 'ENCODING_HLS',
+                    'source_file' => $sourceName,
+                    'rendition' => $variant['name'],
+                    'rendition_index' => $variantIndex + 1,
+                    'rendition_total' => $variantTotal,
+                    'rendition_percent' => $renditionPercent,
+                    'video_position_seconds' =>
+                        (int) floor($positionSeconds),
+                    'duration_seconds' => $durationSeconds,
+                    'speed' => $speed !== ''
+                        ? $speed
+                        : null,
+                    'elapsed_seconds' => $elapsedSeconds,
+                    'estimated_remaining_seconds' =>
+                        $estimatedRemaining,
+                ]
+            );
+
+            $lastPersistedAt = $now;
+        };
+
+        $process->run(
+            function (
+                string $type,
+                string $buffer
+            ) use (
+                &$stdoutBuffer,
+                &$progressState,
+                $persist
+            ): void {
+                if ($type !== Process::OUT) {
+                    return;
+                }
+
+                $stdoutBuffer .= $buffer;
+
+                while (
+                    ($lineEnd = strpos(
+                        $stdoutBuffer,
+                        "\n"
+                    )) !== false
+                ) {
+                    $line = trim(
+                        substr(
+                            $stdoutBuffer,
+                            0,
+                            $lineEnd
+                        )
+                    );
+
+                    $stdoutBuffer = substr(
+                        $stdoutBuffer,
+                        $lineEnd + 1
+                    );
+
+                    if (
+                        $line === ''
+                        || ! str_contains(
+                            $line,
+                            '='
+                        )
+                    ) {
+                        continue;
+                    }
+
+                    [$key, $value] = explode(
+                        '=',
+                        $line,
+                        2
+                    );
+
+                    $progressState[
+                        trim($key)
+                    ] = trim($value);
+
+                    if (
+                        in_array(
+                            trim($key),
+                            [
+                                'out_time_ms',
+                                'out_time_us',
+                                'speed',
+                                'progress',
+                            ],
+                            true
+                        )
+                    ) {
+                        $persist();
+                    }
+                }
+            }
+        );
+
+        if (! $process->isSuccessful()) {
+            $error = trim(
+                $process->getErrorOutput()
+            );
+
+            if ($error === '') {
+                $error = trim(
+                    $process->getOutput()
+                );
+            }
+
+            throw new RuntimeException(
+                $failureMessage
+                .(
+                    $error !== ''
+                        ? ' '.Str::limit(
+                            $error,
+                            2000
+                        )
+                        : ''
+                )
+            );
+        }
+
+        $progressState['progress'] = 'end';
+        $persist();
+    }
+
+    private function ffmpegPositionSeconds(
+        array $state
+    ): float {
+        foreach (
+            [
+                'out_time_us',
+                'out_time_ms',
+            ] as $key
+        ) {
+            if (
+                isset($state[$key])
+                && is_numeric($state[$key])
+            ) {
+                return max(
+                    0.0,
+                    ((float) $state[$key])
+                    / 1000000
+                );
+            }
+        }
+
+        return 0.0;
     }
 
     private function buildMasterPlaylist(
@@ -1062,6 +1422,11 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
         $freshVideo->forceFill([
             'processing_status' => LessonVideo::PROCESSING_FAILED,
             'processing_stage' => 'Processing failed. Review the error and retry.',
+            'processing_detail_json' => [
+                'current_step' => 'FAILED',
+                'last_update_at' => now()->toIso8601String(),
+            ],
+            'processing_heartbeat_at' => now(),
             'processing_error' => Str::limit(
                 $exception->getMessage(),
                 8000,
@@ -1086,11 +1451,23 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
     private function updateProgress(
         LessonVideo $video,
         int $progress,
-        string $stage
+        string $stage,
+        array $detail = []
     ): void {
+        $detail['last_update_at'] =
+            now()->toIso8601String();
+
         $video->forceFill([
-            'processing_progress' => min(99, max(0, $progress)),
-            'processing_stage' => Str::limit(trim($stage), 160, ''),
+            'processing_progress' =>
+                min(99, max(0, $progress)),
+            'processing_stage' =>
+                Str::limit(trim($stage), 160, ''),
+            'processing_detail_json' =>
+                $detail !== []
+                    ? $detail
+                    : $video->processing_detail_json,
+            'processing_heartbeat_at' =>
+                now(),
         ])->save();
     }
 }
