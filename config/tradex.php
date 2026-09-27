@@ -122,7 +122,7 @@ return [
 
         'ffmpeg_preset' => env(
             'TRADEX_VIDEO_FFMPEG_PRESET',
-            'veryfast'
+            'superfast'
         ),
 
         'ffmpeg_crf' => (int) env(
@@ -130,9 +130,36 @@ return [
             21
         ),
 
-        'ffmpeg_threads' => (int) env(
-            'TRADEX_VIDEO_FFMPEG_THREADS',
-            1
+        'ffmpeg_threads' => max(
+            1,
+            (int) env(
+                'TRADEX_VIDEO_FFMPEG_THREADS',
+                2
+            )
+        ),
+
+        'progress_update_seconds' => max(
+            1,
+            (int) env(
+                'TRADEX_VIDEO_PROGRESS_UPDATE_SECONDS',
+                2
+            )
+        ),
+
+        'enabled_hls_variants' => array_values(
+            array_filter(
+                array_map(
+                    static fn (string $value): string => trim($value),
+                    explode(
+                        ',',
+                        (string) env(
+                            'TRADEX_VIDEO_HLS_VARIANTS',
+                            '360p,720p,1080p'
+                        )
+                    )
+                ),
+                static fn (string $value): bool => $value !== ''
+            )
         ),
 
         'hls_segment_seconds' => (int) env(
