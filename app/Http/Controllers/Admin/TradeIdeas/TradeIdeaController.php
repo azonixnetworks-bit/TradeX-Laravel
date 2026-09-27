@@ -18,6 +18,7 @@ use App\Services\TradeIdeas\TradeIdeaDistributionManager;
 use App\Services\TradeIdeas\TradeIdeaShareCardService;
 use App\Services\TradeIdeas\TradeIdeaStructureValidator;
 use App\Support\TradingViewUrl;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -58,6 +59,15 @@ class TradeIdeaController extends Controller
             )
         );
 
+        $marketFilter = strtoupper(
+            trim(
+                (string) $request->query(
+                    'market_filter',
+                    ''
+                )
+            )
+        );
+
         $query = TradeIdea::query()
             ->with('targets');
 
@@ -78,7 +88,12 @@ class TradeIdeaController extends Controller
             );
         }
 
-        if (
+        if ($marketFilter !== '') {
+            $this->applyMarketFilter(
+                $query,
+                $marketFilter
+            );
+        } elseif (
             in_array(
                 $category,
                 [
@@ -90,6 +105,7 @@ class TradeIdeaController extends Controller
                 true
             )
         ) {
+            // Backward compatibility for existing category query links.
             $query->where(
                 'category',
                 $category
@@ -136,8 +152,94 @@ class TradeIdeaController extends Controller
                 'stats',
                 'permissions',
                 'status',
-                'category'
+                'category',
+                'marketFilter'
             )
+        );
+    }
+
+    private function applyMarketFilter(
+        \Illuminate\Database\Eloquent\Builder $query,
+        string $marketFilter
+    ): void {
+        match ($marketFilter) {
+            'TODAY' => $this->applyTodayFilter($query),
+
+            'FOREX' => $query->where(
+                'category',
+                TradeIdea::CATEGORY_FOREX
+            ),
+
+            'CRYPTO' => $query->where(
+                'category',
+                TradeIdea::CATEGORY_CRYPTO
+            ),
+
+            'DERIV' => $query->where(
+                'category',
+                TradeIdea::CATEGORY_DERIV
+            ),
+
+            'STOCKS_CSE' => $query
+                ->where(
+                    'category',
+                    TradeIdea::CATEGORY_STOCKS
+                )
+                ->where(
+                    'market_region',
+                    TradeIdea::REGION_SRI_LANKA
+                ),
+
+            'STOCKS_INDIA' => $query
+                ->where(
+                    'category',
+                    TradeIdea::CATEGORY_STOCKS
+                )
+                ->where(
+                    'market_region',
+                    TradeIdea::REGION_INDIA
+                ),
+
+            'STOCKS_INTERNATIONAL' => $query
+                ->where(
+                    'category',
+                    TradeIdea::CATEGORY_STOCKS
+                )
+                ->where(
+                    'market_region',
+                    TradeIdea::REGION_INTERNATIONAL
+                ),
+
+            default => null,
+        };
+    }
+
+    private function applyTodayFilter(
+        \Illuminate\Database\Eloquent\Builder $query
+    ): void {
+        $timezone = trim(
+            (string) config(
+                'tradex_reporting.audit_timezone',
+                config('app.timezone', 'UTC')
+            )
+        );
+
+        try {
+            $now = CarbonImmutable::now(
+                $timezone !== ''
+                    ? $timezone
+                    : 'UTC'
+            );
+        } catch (\Throwable) {
+            $now = CarbonImmutable::now('UTC');
+        }
+
+        $query->whereBetween(
+            'created_at',
+            [
+                $now->startOfDay()->utc(),
+                $now->endOfDay()->utc(),
+            ]
         );
     }
 
