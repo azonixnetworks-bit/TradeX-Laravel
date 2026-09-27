@@ -37,6 +37,7 @@
     };
 
     const render = (card, data) => {
+        const wasTerminal = card.dataset.terminal === 'true';
         const progress = Math.max(0, Math.min(100, Number(data.progress) || 0));
         const fill = card.querySelector('[data-processing-fill]');
         const percent = card.querySelector('[data-processing-percent]');
@@ -170,6 +171,9 @@
             || data.repair_required
                 ? 'true'
                 : 'false';
+
+        return !wasTerminal
+            && card.dataset.terminal === 'true';
     };
 
     const poll = async (card) => {
@@ -189,7 +193,17 @@
             );
 
             if (response.ok) {
-                render(card, await response.json());
+                const becameTerminal = render(
+                    card,
+                    await response.json()
+                );
+
+                if (becameTerminal) {
+                    window.setTimeout(
+                        () => window.location.reload(),
+                        500
+                    );
+                }
             }
         } catch (_) {
             // Keep the previous telemetry visible during a temporary poll failure.
