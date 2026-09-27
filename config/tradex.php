@@ -22,6 +22,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | TradeX Customer Response Performance
+    |--------------------------------------------------------------------------
+    |
+    | Keep customer-facing aggregate responses briefly cached to avoid
+    | repeating expensive relational queries during rapid refreshes. The TTL
+    | stays intentionally short because account, learning and affiliate data
+    | can change while the user is active.
+    |
+    */
+
+    'performance' => [
+        'dashboard_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_DASHBOARD_CACHE_SECONDS', 10)
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ADMIN-03A — Protected Video Upload + HLS Processing
     |--------------------------------------------------------------------------
     |
