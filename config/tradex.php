@@ -42,6 +42,16 @@ return [
             0,
             (int) env('TRADEX_ADMIN_STATS_CACHE_SECONDS', 30)
         ),
+
+        'trade_ideas_list_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_TRADE_IDEAS_LIST_CACHE_SECONDS', 10)
+        ),
+
+        'our_channel_list_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_OUR_CHANNEL_LIST_CACHE_SECONDS', 30)
+        ),
     ],
 
     /*
