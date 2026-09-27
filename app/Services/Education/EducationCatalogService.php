@@ -8,6 +8,7 @@ use App\Models\CourseModule;
 use App\Models\Lesson;
 use App\Models\LessonVideo;
 use App\Models\User;
+use App\Models\UserLessonProgress;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class EducationCatalogService
@@ -136,6 +137,15 @@ class EducationCatalogService
                 ->ordered()
                 ->get();
 
+        $this->preloadLessonProgress(
+            $user,
+            $modules
+                ->flatMap(
+                    fn (CourseModule $module) =>
+                        $module->lessons
+                )
+        );
+
         return [
             'course' =>
                 $this->presenter
@@ -194,6 +204,11 @@ class EducationCatalogService
 
         $module->setRelation(
             'lessons',
+            $lessons
+        );
+
+        $this->preloadLessonProgress(
+            $user,
             $lessons
         );
 
@@ -303,4 +318,43 @@ class EducationCatalogService
                     ->all(),
         ];
     }
+    private function preloadLessonProgress(
+        User $user,
+        iterable $lessons
+    ): void {
+        $lessonCollection = collect($lessons)
+            ->filter(
+                fn ($lesson): bool =>
+                    $lesson instanceof Lesson
+            )
+            ->values();
+
+        if ($lessonCollection->isEmpty()) {
+            return;
+        }
+
+        $progressByLessonId =
+            UserLessonProgress::query()
+                ->where(
+                    'user_id',
+                    $user->getKey()
+                )
+                ->whereIn(
+                    'lesson_id',
+                    $lessonCollection
+                        ->pluck('id')
+                )
+                ->get()
+                ->keyBy('lesson_id');
+
+        foreach ($lessonCollection as $lesson) {
+            $lesson->setRelation(
+                'userProgressSnapshot',
+                $progressByLessonId->get(
+                    $lesson->getKey()
+                )
+            );
+        }
+    }
+
 }
