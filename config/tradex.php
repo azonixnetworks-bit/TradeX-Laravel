@@ -52,6 +52,16 @@ return [
             0,
             (int) env('TRADEX_OUR_CHANNEL_LIST_CACHE_SECONDS', 30)
         ),
+
+        'payment_methods_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_PAYMENT_METHODS_CACHE_SECONDS', 30)
+        ),
+
+        'notification_summary_cache_seconds' => max(
+            0,
+            (int) env('TRADEX_NOTIFICATION_SUMMARY_CACHE_SECONDS', 5)
+        ),
     ],
 
     /*
