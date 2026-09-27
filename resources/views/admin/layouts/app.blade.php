@@ -53,6 +53,11 @@
         href="{{ asset('admin/css/notifications.css') }}"
     >
 
+    <style>
+        .admin-content { transition: opacity .16s ease; }
+        .admin-content.is-in-place-loading { opacity: .58; pointer-events: none; }
+    </style>
+
     @stack('styles')
 
     <link
@@ -214,6 +219,10 @@
 
 <script
     src="{{ asset('admin/js/theme.js') }}">
+</script>
+
+<script
+    src="{{ asset('admin/js/in-place-admin-navigation.js') }}?v=20260927-1">
 </script>
 
 @stack('scripts')
