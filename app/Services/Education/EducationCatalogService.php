@@ -126,21 +126,15 @@ class EducationCatalogService
                 ->forCourse(
                     $course
                 )
+                ->with([
+                    'lessons' =>
+                        fn ($query) =>
+                            $query
+                                ->published()
+                                ->ordered(),
+                ])
                 ->ordered()
                 ->get();
-
-        foreach ($modules as $module) {
-            $module->setRelation(
-                'lessons',
-                Lesson::query()
-                    ->published()
-                    ->forModule(
-                        $module
-                    )
-                    ->ordered()
-                    ->get()
-            );
-        }
 
         return [
             'course' =>
