@@ -6,7 +6,7 @@
 @section('page-title', 'Education')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260925-2">
+<link rel="stylesheet" href="{{ asset('admin/css/video-processing-progress.css') }}?v=20260927-hls-live-1">
 <style>
     .edu-context {display:flex;justify-content:space-between;gap:18px;padding:20px 22px;margin-bottom:22px;align-items:flex-start}
     .edu-context h2{margin:6px 0;font-size:19px}.edu-context p{margin:0;opacity:.6;font-size:12px;line-height:1.6}
@@ -164,5 +164,5 @@
 @endsection
 
 @push('scripts')
-<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260925-2" defer></script>
+<script src="{{ asset('admin/js/video-processing-progress.js') }}?v=20260927-hls-live-1" defer></script>
 @endpush
