@@ -7,6 +7,7 @@ use App\Http\Requests\Api\TradeIdeas\TradeIdeaIndexRequest;
 use App\Models\User;
 use App\Services\TradeIdeas\TradeIdeaApiService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 
 class TradeIdeaIndexController extends Controller
 {
@@ -24,12 +25,60 @@ class TradeIdeaIndexController extends Controller
 
         $filters = $request->validated();
 
+        $service->assertPremium(
+            $user
+        );
+
+        $ttlSeconds = max(
+            0,
+            (int) config(
+                'tradex.performance.trade_ideas_list_cache_seconds',
+                10
+            )
+        );
+
+        $cacheKey = 'tradex:api:trade-ideas:v1:'
+            .sha1(
+                json_encode(
+                    [
+                        'user_version' => [
+                            $user->getKey(),
+                            $user->updated_at?->getTimestamp(),
+                            $user->account_type,
+                        ],
+                        'page' => (int) $request->query('page', 1),
+                        'filters' => $filters,
+                    ],
+                    JSON_THROW_ON_ERROR
+                )
+            );
+
+        $payload = $ttlSeconds === 0
+            ? $this->payload($service, $user, $filters)
+            : Cache::remember(
+                $cacheKey,
+                now()->addSeconds($ttlSeconds),
+                fn (): array =>
+                    $this->payload(
+                        $service,
+                        $user,
+                        $filters
+                    )
+            );
+
+        return response()->json($payload);
+    }
+    private function payload(
+        TradeIdeaApiService $service,
+        User $user,
+        array $filters
+    ): array {
         $paginator = $service->index(
             $user,
             $filters
         );
 
-        return response()->json([
+        return [
             'success' => true,
             'data' => [
                 'trade_ideas' =>
@@ -41,7 +90,8 @@ class TradeIdeaIndexController extends Controller
                                     $tradeIdea
                                 )
                         )
-                        ->values(),
+                        ->values()
+                        ->all(),
 
                 'filters' => [
                     'category' =>
@@ -82,6 +132,7 @@ class TradeIdeaIndexController extends Controller
                 'last_page' =>
                     $paginator->lastPage(),
             ],
-        ]);
+        ];
     }
+
 }
