@@ -7,7 +7,7 @@
 
 @push('styles')
 <style>
-    .trade-market-filter-panel{padding:18px 20px;margin-bottom:20px}
+    .trade-market-filter-panel{padding:18px 20px;margin-bottom:20px}.trade-ideas-filterable-content{transition:opacity .16s ease}.trade-ideas-filterable-content.is-filter-loading{opacity:.58;pointer-events:none}
     .trade-market-filter-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:14px}
     .trade-market-filter-head span{display:block;font-size:9px;font-weight:800;letter-spacing:.08em;color:#ddb65e}
     .trade-market-filter-head strong{display:block;margin-top:4px;font-size:14px}
@@ -55,6 +55,7 @@
     @endif
 </div>
 
+<div id="trade-ideas-filterable-content" class="trade-ideas-filterable-content" aria-live="polite">
 <div class="user-stat-grid">
     <div class="user-stat-card">
         <span>Total</span>
@@ -398,6 +399,7 @@
         </div>
     @endforelse
 </section>
+</div>
 @endsection
 
 @push('scripts')
