@@ -700,7 +700,8 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 '-map',
                 '0:a:0?',
                 '-vf',
-                'scale=-2:'.$variant['height'].':flags=fast_bilinear',
+                'scale=-2:'.$variant['height'].':flags='.
+                    $this->scalingFilter(),
                 '-c:v',
                 'libx264',
                 '-threads',
@@ -1312,6 +1313,31 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
         }
 
         return $process;
+    }
+
+    private function scalingFilter(): string
+    {
+        $filter = strtolower(
+            trim(
+                (string) config(
+                    'tradex.media.scaling_filter',
+                    'bicubic'
+                )
+            )
+        );
+
+        return in_array(
+            $filter,
+            [
+                'fast_bilinear',
+                'bilinear',
+                'bicubic',
+                'lanczos',
+            ],
+            true
+        )
+            ? $filter
+            : 'bicubic';
     }
 
     private function ffmpegBinary(): string
