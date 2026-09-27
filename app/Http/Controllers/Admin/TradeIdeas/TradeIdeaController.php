@@ -190,6 +190,16 @@ class TradeIdeaController extends Controller
                     TradeIdea::REGION_SRI_LANKA
                 ),
 
+            'STOCKS_INDIA' => $query
+                ->where(
+                    'category',
+                    TradeIdea::CATEGORY_STOCKS
+                )
+                ->where(
+                    'market_region',
+                    TradeIdea::REGION_INDIA
+                ),
+
             'STOCKS_INTERNATIONAL' => $query
                 ->where(
                     'category',
