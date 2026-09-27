@@ -98,6 +98,9 @@ class DashboardApiService
             (string) ($user->updated_at?->getTimestamp() ?? 0),
             (string) $user->account_type,
             (string) $user->language_code,
+            $user->canAccessPremium()
+                ? 'premium'
+                : 'free',
         ]);
     }
 
