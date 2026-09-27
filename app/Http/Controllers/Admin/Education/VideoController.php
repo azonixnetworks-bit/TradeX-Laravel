@@ -169,6 +169,12 @@ class VideoController extends Controller
                     'processing_status' => LessonVideo::PROCESSING_PENDING,
                     'processing_progress' => 3,
                     'processing_stage' => 'Upload saved. Waiting for the background video worker.',
+                    'processing_detail_json' => [
+                        'current_step' => 'QUEUED',
+                        'last_update_at' => now()->toIso8601String(),
+                    ],
+                    'processing_started_at' => null,
+                    'processing_heartbeat_at' => null,
                     'processing_error' => null,
                     'processed_at' => null,
                     'status' => LessonVideo::STATUS_DRAFT,
@@ -325,11 +331,27 @@ class VideoController extends Controller
             };
         }
 
+        $heartbeatAt =
+            $video->processing_heartbeat_at;
+
+        $stalled =
+            $video->processing_status === LessonVideo::PROCESSING_PROCESSING
+            && $heartbeatAt !== null
+            && $heartbeatAt->lt(
+                now()->subSeconds(30)
+            );
+
         return response()->json([
             'status' => $video->processing_status,
             'publication_status' => $video->status,
             'progress' => min(100, max(0, $progress)),
             'stage' => $stage,
+            'detail' => is_array($video->processing_detail_json)
+                ? $video->processing_detail_json
+                : [],
+            'heartbeat_at' =>
+                $heartbeatAt?->toIso8601String(),
+            'stalled' => $stalled,
             'error' => $video->processing_status === LessonVideo::PROCESSING_FAILED
                 ? $video->processing_error
                 : null,
@@ -410,6 +432,12 @@ class VideoController extends Controller
                 'processing_stage' => $repairRequired
                     ? 'Protected HLS repair queued. Waiting for the background video worker.'
                     : 'Retry queued. Waiting for the background video worker.',
+                'processing_detail_json' => [
+                    'current_step' => 'QUEUED',
+                    'last_update_at' => now()->toIso8601String(),
+                ],
+                'processing_started_at' => null,
+                'processing_heartbeat_at' => null,
                 'processing_error' => null,
                 'processed_at' => null,
                 'updated_by_admin_id' => $admin->id,
