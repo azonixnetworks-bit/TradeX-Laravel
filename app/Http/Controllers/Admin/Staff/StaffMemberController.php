@@ -91,12 +91,32 @@ class StaffMemberController extends Controller
     public function reviewKyc(Request $request, StaffMember $staffMember): RedirectResponse
     {
         $admin = $this->superAdmin();
-        $data = $request->validate(['status'=>['required','in:APPROVED,REJECTED'],'note'=>['nullable','string','max:2000']]);
-        abort_unless($staffMember->kycDocuments()->where('status','PENDING')->doesntExist() || $data['status'] === 'REJECTED', 422, 'Review all pending KYC documents before approving staff KYC.');
-        $staffMember->forceFill(['kyc_verified_at'=>$data['status']==='APPROVED' ? now() : null,'kyc_verified_by_admin_id'=>$data['status']==='APPROVED' ? $admin->id : null])->save();
-        return back()->with('success','Staff KYC review recorded.');
-    }
+        $data = $request->validate([
+            'status' => ['required', 'in:APPROVED,REJECTED'],
+            'note' => ['nullable', 'string', 'max:2000'],
+        ]);
 
+        DB::transaction(function () use ($staffMember, $admin, $data): void {
+            $staff = StaffMember::query()->lockForUpdate()->findOrFail($staffMember->id);
+            $documents = $staff->kycDocuments()->lockForUpdate()->get();
+            abort_unless($documents->isNotEmpty(), 422, 'Staff must submit KYC documents before review.');
+
+            $staff->kycDocuments()->where('status', 'PENDING')->update([
+                'status' => $data['status'],
+                'review_note' => $data['note'] ?? null,
+                'reviewed_by_admin_id' => $admin->id,
+                'reviewed_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $staff->forceFill([
+                'kyc_verified_at' => $data['status'] === 'APPROVED' ? now() : null,
+                'kyc_verified_by_admin_id' => $data['status'] === 'APPROVED' ? $admin->id : null,
+            ])->save();
+        });
+
+        return back()->with('success', 'Staff KYC review recorded.');
+    }
     public function reviewLeave(Request $request, StaffLeaveRequest $leaveRequest): RedirectResponse
     {
         $admin = $this->authorizedReviewer();
