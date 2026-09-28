@@ -39,6 +39,16 @@ class StaffMemberController extends Controller
         return view('admin.staff.show', compact('staffMember'));
     }
 
+    public function startTermination(Request $request, StaffMember $staffMember): RedirectResponse
+    {
+        $this->superAdmin();
+        $data = $request->validate(['content' => ['required', 'string', 'max:20000']]);
+        abort_unless($staffMember->employment_status !== 'TERMINATED', 422, 'Staff employment is already terminated.');
+        $staffMember->agreements()->create(['agreement_type' => 'TERMINATION', 'version' => 'v'.now()->format('YmdHis'), 'content' => $data['content']]);
+        $staffMember->update(['employment_status' => 'TERMINATION_PENDING']);
+        return back()->with('success', 'Termination agreement is ready for staff acknowledgement.');
+    }
+
     public function recordSalary(Request $request, StaffMember $staffMember): RedirectResponse
     {
         $admin = $this->superAdmin();
