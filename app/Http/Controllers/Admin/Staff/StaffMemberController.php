@@ -52,6 +52,7 @@ class StaffMemberController extends Controller
         $this->authorizeStaffManagement();
         $data = $request->validate(['code' => ['required', 'digits:6']]);
         $otp->verify($staffMember, $channel, $data['code']);
+        $this->refreshEmploymentStatus($staffMember);
         return back()->with('success', $channel.' contact verified.');
     }
 
@@ -144,7 +145,22 @@ class StaffMemberController extends Controller
         return back()->with('success','Payout change request '.$data['status'].'.');
     }
 
+    private function refreshEmploymentStatus(StaffMember $staffMember): void
+    {
+        $staffMember->refresh();
+        if (in_array($staffMember->employment_status, ['TERMINATED', 'TERMINATION_PENDING'], true)) {
+            return;
+        }
+
+        $ready = $staffMember->email_verified_at !== null
+            && $staffMember->whatsapp_verified_at !== null
+            && $staffMember->kyc_verified_at !== null
+            && $staffMember->employment_agreement_accepted_at !== null;
+
+        $staffMember->forceFill(['employment_status' => $ready ? 'ACTIVE' : 'PENDING'])->save();
+    }
     private function authorizeStaffManagement(): void { $admin=auth('admin')->user(); abort_unless($admin instanceof AdminUser && ($admin->isSuperAdmin() || $admin->hasPermission('staff.manage')),403); }
     private function superAdmin(): AdminUser { $admin=auth('admin')->user(); abort_unless($admin instanceof AdminUser && $admin->isSuperAdmin(),403); return $admin; }
     private function authorizedReviewer(): AdminUser { $admin=auth('admin')->user(); abort_unless($admin instanceof AdminUser && ($admin->isSuperAdmin() || $admin->hasRole('SUPPORT_ADMIN')),403); return $admin; }
 }
+
