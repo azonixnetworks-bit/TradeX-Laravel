@@ -248,6 +248,7 @@
         const file = fileInput.files[0];
         const startedAt = performance.now();
         const request = new XMLHttpRequest();
+        const formData = new FormData(form);
         activeRequest = request;
         progress.classList.add('is-visible');
         cancel.classList.add('is-visible');
@@ -301,7 +302,7 @@
             fileInput.disabled = false;
             activeRequest = null;
         });
-        request.send(new FormData(form));
+        request.send(formData);
     });
     cancel.addEventListener('click', () => activeRequest?.abort());
 })();
