@@ -108,6 +108,51 @@ class VideoUploadHlsIntegrationTest extends TestCase
         );
     }
 
+    public function test_authorized_admin_imports_private_cpanel_video_and_hls_job_is_queued(): void
+    {
+        Storage::fake('private');
+        Queue::fake();
+
+        $admin = $this->createAdminWithPermissions(['education.create']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+        Storage::disk('private')->put('video-imports/lesson-01.mp4', 'private-video-bytes');
+
+        $response = $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.videos.store', compact('course', 'module', 'lesson')),
+            [
+                'title' => 'Imported cPanel Video',
+                'storage_disk' => 'private',
+                'import_source_path' => 'video-imports/lesson-01.mp4',
+            ]
+        );
+
+        $response->assertRedirect(route('admin.education.courses.modules.lessons.videos.index', compact('course', 'module', 'lesson')));
+        $video = LessonVideo::query()->where('lesson_id', $lesson->id)->firstOrFail();
+
+        $this->assertStringStartsWith('education/videos/'.$video->uuid.'/source/source.mp4', $video->source_path);
+        Storage::disk('private')->assertExists($video->source_path);
+        Storage::disk('private')->assertExists('video-imports/lesson-01.mp4');
+        Queue::assertPushed(ProcessVideo::class, fn (ProcessVideo $job): bool => $job->videoId === $video->id);
+    }
+
+    public function test_cpanel_import_rejects_paths_outside_private_video_imports_inbox(): void
+    {
+        Storage::fake('private');
+        $admin = $this->createAdminWithPermissions(['education.create']);
+        [$course, $module, $lesson] = $this->createHierarchy();
+
+        $response = $this->actingAs($admin, 'admin')->from(
+            route('admin.education.courses.modules.lessons.videos.create', compact('course', 'module', 'lesson'))
+        )->post(route('admin.education.courses.modules.lessons.videos.store', compact('course', 'module', 'lesson')), [
+            'title' => 'Invalid import',
+            'storage_disk' => 'private',
+            'import_source_path' => 'education/videos/secret.mp4',
+        ]);
+
+        $response->assertSessionHasErrors('import_source_path');
+        $this->assertDatabaseCount('lesson_videos', 0);
+    }
+
     public function test_real_upload_cannot_forge_worker_managed_hls_fields(): void
     {
         Storage::fake('private');

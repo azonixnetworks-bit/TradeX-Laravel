@@ -25,6 +25,7 @@ class StoreVideoRequest extends FormRequest
             'short_description',
             'storage_disk',
             'source_path',
+            'import_source_path',
             'hls_master_path',
             'streaming_asset_key',
             'thumbnail_path',
@@ -42,6 +43,7 @@ class StoreVideoRequest extends FormRequest
 
         foreach ([
             'source_path',
+            'import_source_path',
             'hls_master_path',
             'thumbnail_path',
         ] as $pathField) {
@@ -62,7 +64,7 @@ class StoreVideoRequest extends FormRequest
     public function rules(): array
     {
         $pipelineManaged = Rule::prohibitedIf(
-            fn (): bool => $this->hasFile('video_file')
+            fn (): bool => $this->hasFile('video_file') || filled($this->input('import_source_path'))
         );
 
         return [
@@ -98,7 +100,7 @@ class StoreVideoRequest extends FormRequest
             */
             'video_file' => [
                 'nullable',
-                'required_without:source_path',
+                'required_without_all:source_path,import_source_path',
                 'file',
                 'mimetypes:video/mp4,video/quicktime,video/x-m4v,video/webm,video/x-matroska',
                 'max:'.max(
@@ -112,10 +114,28 @@ class StoreVideoRequest extends FormRequest
 
             'source_path' => [
                 'nullable',
-                'required_without:video_file',
+                'required_without_all:video_file,import_source_path',
                 'string',
                 'max:500',
                 $this->protectedLogicalPathRule(),
+            ],
+
+            'import_source_path' => [
+                'nullable',
+                'required_without_all:video_file,source_path',
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($value !== null && $value !== '' && ($this->hasFile('video_file') || filled($this->input('source_path')))) {
+                        $fail('Choose either a browser upload, a legacy source path, or one cPanel import path.');
+                    }
+                },
+                'string',
+                'max:500',
+                $this->protectedLogicalPathRule(),
+                static function (string $attribute, mixed $value, Closure $fail): void {
+                    if ($value !== null && $value !== '' && (! is_string($value) || ! str_starts_with($value, 'video-imports/'))) {
+                        $fail('The cPanel import path must start with video-imports/.');
+                    }
+                },
             ],
 
             /*
@@ -194,7 +214,8 @@ class StoreVideoRequest extends FormRequest
             'video_file.required_without' => 'Choose a video file to upload.',
             'video_file.mimetypes' => 'The uploaded file must be MP4, MOV, M4V, WebM or MKV video.',
             'video_file.max' => 'The uploaded video exceeds the configured TradeX video upload limit.',
-            'source_path.required_without' => 'A protected source path is required when no video file is uploaded.',
+            'source_path.required_without_all' => 'A protected source path is required when no upload or cPanel import is supplied.',
+            'import_source_path.required_without_all' => 'Choose a video file or provide a cPanel import path.',
             'storage_disk.in' => 'Video storage must use an approved private disk: private or s3-private.',
             'course_id.prohibited' => 'The parent course is resolved from the protected route.',
             'course_module_id.prohibited' => 'The parent module is resolved from the protected route.',

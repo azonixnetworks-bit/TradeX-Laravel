@@ -89,6 +89,7 @@ class VideoController extends Controller
 
         $validated = $request->validated();
         $uploadedFile = $request->file('video_file');
+        $importSourcePath = $validated['import_source_path'] ?? null;
 
         if (
             $uploadedFile !== null
@@ -101,16 +102,23 @@ class VideoController extends Controller
 
         $storedUpload = null;
         $videoUuid = null;
+        $isPipelineManaged = $uploadedFile instanceof UploadedFile || $importSourcePath !== null;
 
         try {
-            if ($uploadedFile instanceof UploadedFile) {
+            if ($isPipelineManaged) {
                 $videoUuid = Str::uuid()->toString();
 
-                $storedUpload = $this->storeUploadedSource(
-                    $uploadedFile,
-                    (string) ($validated['storage_disk'] ?? 'private'),
-                    $videoUuid
-                );
+                $storedUpload = $uploadedFile instanceof UploadedFile
+                    ? $this->storeUploadedSource(
+                        $uploadedFile,
+                        (string) ($validated['storage_disk'] ?? 'private'),
+                        $videoUuid
+                    )
+                    : $this->storeImportedSource(
+                        (string) $importSourcePath,
+                        (string) ($validated['storage_disk'] ?? 'private'),
+                        $videoUuid
+                    );
             }
 
             $video = DB::transaction(function () use (
@@ -122,7 +130,8 @@ class VideoController extends Controller
                 $admin,
                 $uploadedFile,
                 $storedUpload,
-                $videoUuid
+                $videoUuid,
+                $isPipelineManaged
             ): LessonVideo {
                 $lockedLesson = Lesson::query()
                     ->where('course_module_id', $module->id)
@@ -136,7 +145,7 @@ class VideoController extends Controller
                     ->lockForUpdate()
                     ->findOrFail($lesson->id);
 
-                $isUploaded = $uploadedFile instanceof UploadedFile;
+                $isUploaded = $isPipelineManaged;
 
                 $video = LessonVideo::query()->create([
                     'uuid' => $videoUuid,
@@ -200,7 +209,7 @@ class VideoController extends Controller
                 return $video;
             });
 
-            if ($uploadedFile instanceof UploadedFile) {
+            if ($isPipelineManaged) {
                 try {
                     ProcessVideo::dispatch(
                         $video->id
@@ -217,7 +226,7 @@ class VideoController extends Controller
                     ])->save();
 
                     Log::error(
-                        'TradeX video upload was stored but HLS queue dispatch failed.',
+                        'TradeX video source was stored but HLS queue dispatch failed.',
                         [
                             'video_id' => $video->id,
                             'video_uuid' => $video->uuid,
@@ -820,6 +829,71 @@ class VideoController extends Controller
                 120,
                 ''
             ),
+        ];
+    }
+
+    private function storeImportedSource(
+        string $importPath,
+        string $diskName,
+        string $videoUuid
+    ): array {
+        if ($diskName !== 'private') {
+            throw ValidationException::withMessages([
+                'storage_disk' => 'cPanel imports are available only for Private Local Storage.',
+            ]);
+        }
+
+        if (! str_starts_with($importPath, 'video-imports/')) {
+            throw ValidationException::withMessages([
+                'import_source_path' => 'The cPanel import path must be inside video-imports/.',
+            ]);
+        }
+
+        $disk = Storage::disk('private');
+
+        if (! $disk->exists($importPath) || ! $disk->fileExists($importPath)) {
+            throw ValidationException::withMessages([
+                'import_source_path' => 'No private cPanel video was found at that import path.',
+            ]);
+        }
+
+        $extension = strtolower((string) pathinfo($importPath, PATHINFO_EXTENSION));
+
+        if (! in_array($extension, ['mp4', 'mov', 'm4v', 'webm', 'mkv'], true)) {
+            throw ValidationException::withMessages([
+                'import_source_path' => 'The cPanel import must be MP4, MOV, M4V, WebM or MKV.',
+            ]);
+        }
+
+        $destination = 'education/videos/'.$videoUuid.'/source/source.'.$extension;
+        $stream = $disk->readStream($importPath);
+
+        if (! is_resource($stream)) {
+            throw ValidationException::withMessages([
+                'import_source_path' => 'The selected private cPanel video could not be opened.',
+            ]);
+        }
+
+        try {
+            $stored = $disk->put($destination, $stream, ['visibility' => 'private']);
+        } finally {
+            fclose($stream);
+        }
+
+        if (! $stored) {
+            throw ValidationException::withMessages([
+                'import_source_path' => 'The private cPanel video could not be copied into the HLS queue.',
+            ]);
+        }
+
+        // Keep the inbox source until an administrator deletes it. This preserves recovery
+        // ability if database or queue processing fails after the protected copy succeeds.
+
+        return [
+            'disk' => 'private',
+            'path' => $destination,
+            'size' => max(0, (int) $disk->size($destination)),
+            'mime_type' => Str::limit((string) ($disk->mimeType($destination) ?: 'application/octet-stream'), 120, ''),
         ];
     }
 

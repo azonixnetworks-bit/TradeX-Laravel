@@ -103,8 +103,14 @@
                             type="file"
                             name="video_file"
                             accept=".mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/webm"
-                            required
                         >
+                        <div class="notice" style="margin-top:16px">
+                            <strong>Large-file cPanel import</strong><br>
+                            Upload the file in cPanel File Manager to <code>tradex-live/storage/app/private/video-imports/</code>, then enter its relative path below, for example <code>video-imports/lesson-01.mp4</code>. TradeX copies it into protected lesson storage and queues HLS without sending the file through LiteSpeed.
+                        </div>
+                        <label for="video-import-source" style="margin-top:16px">Private cPanel import path</label>
+                        <input id="video-import-source" type="text" name="import_source_path" maxlength="500" value="{{ old('import_source_path') }}" placeholder="video-imports/lesson-01.mp4" autocomplete="off">
+                        <span class="help">Use either browser upload or one cPanel import path. Only files inside the private <code>video-imports/</code> inbox are accepted.</span>
                         <div id="video-upload-progress" class="upload-progress" role="status" aria-live="polite">
                             <div class="upload-progress-head">
                                 <strong id="upload-progress-label">Preparing secure upload</strong>
@@ -166,6 +172,7 @@
 (() => {
     const form = document.getElementById('video-upload-form');
     const fileInput = document.getElementById('video-file-input');
+    const importSource = document.getElementById('video-import-source');
     const progress = document.getElementById('video-upload-progress');
     const fill = document.getElementById('upload-progress-fill');
     const percent = document.getElementById('upload-progress-percent');
@@ -179,6 +186,13 @@
     let activeRequest = null;
 
     if (!form || !fileInput || !window.XMLHttpRequest) return;
+
+    fileInput.addEventListener('change', () => {
+        if (fileInput.files?.[0] && importSource) importSource.value = '';
+    });
+    importSource?.addEventListener('input', () => {
+        if (importSource.value.trim() !== '') fileInput.value = '';
+    });
 
     const formatBytes = (bytes) => {
         if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
