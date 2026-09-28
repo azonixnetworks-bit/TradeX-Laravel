@@ -10,6 +10,8 @@ Route::prefix('admin/staff')->name('admin.staff.')->middleware('admin.auth')->gr
     Route::post('/', [StaffMemberController::class, 'store'])->middleware('throttle:10,1')->name('store');
     Route::get('/{staffMember}', [StaffMemberController::class, 'show'])->whereNumber('staffMember')->name('show');
     Route::post('/{staffMember}/salary', [StaffMemberController::class, 'recordSalary'])->whereNumber('staffMember')->middleware('throttle:10,1')->name('salary.store');
+    Route::post('/{staffMember}/otp/{channel}', [StaffMemberController::class, 'sendOtp'])->whereNumber('staffMember')->whereIn('channel',['EMAIL','WHATSAPP'])->middleware('throttle:5,1')->name('otp.send');
+    Route::post('/{staffMember}/otp/{channel}/verify', [StaffMemberController::class, 'verifyOtp'])->whereNumber('staffMember')->whereIn('channel',['EMAIL','WHATSAPP'])->middleware('throttle:10,1')->name('otp.verify');
     Route::post('/{staffMember}/termination', [StaffMemberController::class, 'startTermination'])->whereNumber('staffMember')->middleware('throttle:10,1')->name('termination.start');
     Route::patch('/{staffMember}/kyc', [StaffMemberController::class, 'reviewKyc'])->whereNumber('staffMember')->middleware('throttle:10,1')->name('kyc.review');
     Route::patch('/leave/{leaveRequest}', [StaffMemberController::class, 'reviewLeave'])->whereNumber('leaveRequest')->middleware('throttle:10,1')->name('leave.review');

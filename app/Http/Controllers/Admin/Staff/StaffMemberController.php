@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Services\Staff\StaffOtpService;
 use Illuminate\View\View;
 
 class StaffMemberController extends Controller
@@ -37,6 +38,21 @@ class StaffMemberController extends Controller
         $this->authorizeStaffManagement();
         $staffMember->load(['kycDocuments','leaveRequests.reviewer','salaryPayments','agreements','payoutChangeRequests']);
         return view('admin.staff.show', compact('staffMember'));
+    }
+
+    public function sendOtp(StaffMember $staffMember, string $channel, StaffOtpService $otp): RedirectResponse
+    {
+        $this->authorizeStaffManagement();
+        $otp->send($staffMember, $channel);
+        return back()->with('success', $channel.' verification code sent.');
+    }
+
+    public function verifyOtp(Request $request, StaffMember $staffMember, string $channel, StaffOtpService $otp): RedirectResponse
+    {
+        $this->authorizeStaffManagement();
+        $data = $request->validate(['code' => ['required', 'digits:6']]);
+        $otp->verify($staffMember, $channel, $data['code']);
+        return back()->with('success', $channel.' contact verified.');
     }
 
     public function startTermination(Request $request, StaffMember $staffMember): RedirectResponse
