@@ -39,6 +39,29 @@ class StaffMemberController extends Controller
         return view('admin.staff.show', compact('staffMember'));
     }
 
+    public function recordSalary(Request $request, StaffMember $staffMember): RedirectResponse
+    {
+        $admin = $this->superAdmin();
+        $data = $request->validate([
+            'period' => ['required', 'regex:/^\d{4}-\d{2}$/'],
+            'gross_amount' => ['required', 'numeric', 'min:0'],
+            'deduction_amount' => ['nullable', 'numeric', 'min:0'],
+            'currency' => ['required', 'string', 'size:3'],
+            'paid_at' => ['nullable', 'date'],
+            'reference' => ['nullable', 'string', 'max:100'],
+        ]);
+        $deduction = (float) ($data['deduction_amount'] ?? 0);
+        abort_unless((float) $data['gross_amount'] >= $deduction, 422, 'Deductions cannot exceed gross salary.');
+        $staffMember->salaryPayments()->create([
+            ...$data,
+            'deduction_amount' => $deduction,
+            'net_amount' => (float) $data['gross_amount'] - $deduction,
+            'status' => filled($data['paid_at'] ?? null) ? 'PAID' : 'RECORDED',
+            'recorded_by_admin_id' => $admin->id,
+        ]);
+        return back()->with('success', 'Salary record created.');
+    }
+
     public function reviewKyc(Request $request, StaffMember $staffMember): RedirectResponse
     {
         $admin = $this->superAdmin();
