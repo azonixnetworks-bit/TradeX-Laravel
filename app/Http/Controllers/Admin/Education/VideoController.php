@@ -103,7 +103,7 @@ class VideoController extends Controller
         $videoUuid = null;
 
         try {
-            if ($uploadedFile instanceof UploadedFile || filled($validated['source_path'] ?? null)) {
+            if ($uploadedFile instanceof UploadedFile) {
                 $videoUuid = Str::uuid()->toString();
 
                 $storedUpload = $this->storeUploadedSource(
@@ -200,7 +200,7 @@ class VideoController extends Controller
                 return $video;
             });
 
-            if ($uploadedFile instanceof UploadedFile || filled($validated['source_path'] ?? null)) {
+            if ($uploadedFile instanceof UploadedFile) {
                 try {
                     ProcessVideo::dispatch(
                         $video->id

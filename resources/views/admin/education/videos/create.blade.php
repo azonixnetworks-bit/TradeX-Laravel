@@ -105,8 +105,7 @@
                             accept=".mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/webm"
                             required
                         >
-                        <span class="upload-sub">Or import a private cPanel upload: place it under <code>video-imports/</code> on the Private Local Storage disk, then enter its relative path below.</span>
-                        <input type="text" name="source_path" value="{{ old('source_path') }}" maxlength="500" placeholder="video-imports/my-lesson.mp4">                        <div id="video-upload-progress" class="upload-progress" role="status" aria-live="polite">
+                        <div id="video-upload-progress" class="upload-progress" role="status" aria-live="polite">
                             <div class="upload-progress-head">
                                 <strong id="upload-progress-label">Preparing secure upload</strong>
                                 <span id="upload-progress-percent" class="upload-percent">0%</span>
