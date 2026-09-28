@@ -1,0 +1,3 @@
+<?php
+use Illuminate\Database\Migrations\Migration; use Illuminate\Database\Schema\Blueprint; use Illuminate\Support\Facades\Schema;
+return new class extends Migration { public function up(): void { Schema::create('staff_agreements', function(Blueprint $table): void { $table->id(); $table->foreignId('staff_member_id')->constrained()->cascadeOnDelete(); $table->string('agreement_type',30); $table->string('version',40); $table->longText('content'); $table->timestamp('accepted_at')->nullable(); $table->string('accepted_ip',45)->nullable(); $table->text('accepted_user_agent')->nullable(); $table->timestamps(); $table->unique(['staff_member_id','agreement_type','version']); }); } public function down(): void { Schema::dropIfExists('staff_agreements'); }};
