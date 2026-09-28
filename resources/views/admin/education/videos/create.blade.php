@@ -205,6 +205,43 @@
         eta.textContent = bytesPerSecond > 0 ? formatDuration((total - loaded) / bytesPerSecond) : 'Calculating ETA…';
     };
 
+    const responseErrorMessage = (request) => {
+        const statusCode = Number(request.status || 0);
+
+        if (statusCode === 413) {
+            return 'The server rejected this file before PHP received it (HTTP 413). The web-server request-size limit must be increased.';
+        }
+
+        if (statusCode === 419) {
+            return 'Your admin session expired (HTTP 419). Refresh the page, sign in again if required, then retry.';
+        }
+
+        let payload = null;
+        try {
+            payload = JSON.parse(request.responseText || '');
+        } catch (_) {
+            // Non-JSON server responses deliberately remain private.
+        }
+
+        const firstValidationMessage = payload?.errors
+            ? Object.values(payload.errors).flat().find((message) => typeof message === 'string' && message.trim() !== '')
+            : null;
+
+        if (firstValidationMessage) {
+            return firstValidationMessage;
+        }
+
+        if (typeof payload?.message === 'string' && payload.message.trim() !== '') {
+            return payload.message.trim();
+        }
+
+        if (statusCode > 0) {
+            return `The server rejected the upload (HTTP ${statusCode}). No video record was created.`;
+        }
+
+        return 'Upload could not be completed. No video record was created.';
+    };
+
     form.addEventListener('submit', (event) => {
         if (activeRequest || !fileInput.files?.[0]) return;
         event.preventDefault();
@@ -238,7 +275,7 @@
                 window.location.assign(request.responseURL || form.action);
                 return;
             }
-            status.textContent = 'Upload could not be completed. Please review the form and try again.';
+            status.textContent = responseErrorMessage(request);
             label.textContent = 'Upload failed';
             cancel.classList.remove('is-visible');
             submit.disabled = false;
