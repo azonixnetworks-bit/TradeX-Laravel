@@ -13,6 +13,7 @@
     .pipeline{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;grid-column:1/-1}.pipeline-step{padding:11px 9px;border:1px solid rgba(255,255,255,.07);border-radius:10px;text-align:center;font-size:9px;font-weight:800;letter-spacing:.04em;opacity:.75}.pipeline-arrow{display:none}
     .check{display:flex;gap:9px;align-items:flex-start;padding:12px;border:1px solid rgba(255,255,255,.07);border-radius:10px}.check input{width:auto;margin-top:2px}
     .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px;padding-top:19px;border-top:1px solid rgba(255,255,255,.06)}.errors{margin-bottom:17px;padding:13px 15px;border:1px solid rgba(255,91,91,.22);border-radius:10px;background:rgba(255,91,91,.05)}.errors ul{margin:7px 0 0;padding-left:18px;font-size:11px}
+    .upload-progress{display:none;margin-top:17px;padding:16px;border:1px solid rgba(218,178,88,.25);border-radius:12px;background:rgba(218,178,88,.045)}.upload-progress.is-visible{display:block}.upload-progress-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px}.upload-progress-head strong{font-size:12px}.upload-percent{color:#e4bd61;font-size:22px;font-weight:900;letter-spacing:-.04em}.upload-progress-track{height:9px;margin:11px 0 10px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.08)}.upload-progress-fill{width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#bd851f,#f2ce72);transition:width .2s ease}.upload-progress-meta{display:flex;flex-wrap:wrap;gap:5px 15px;color:rgba(235,240,249,.62);font-size:10px}.upload-progress-status{margin-top:10px;color:rgba(235,240,249,.76);font-size:11px;line-height:1.45}.upload-cancel{display:none;margin-top:12px;padding:7px 10px;border:1px solid rgba(255,119,119,.34);border-radius:8px;background:rgba(255,86,86,.06);color:#ffc0c0;font:inherit;font-size:10px;font-weight:800;cursor:pointer}.upload-cancel.is-visible{display:inline-flex}
     @media(max-width:760px){.grid{grid-template-columns:1fr}.field.full,.notice,.pipeline{grid-column:auto}.pipeline{grid-template-columns:1fr}.actions{flex-direction:column-reverse}.actions a,.actions button{width:100%;box-sizing:border-box;text-align:center}}
 </style>
 @endpush
@@ -54,7 +55,7 @@
         );
     @endphp
 
-    <form
+    <form id="video-upload-form"
         method="POST"
         enctype="multipart/form-data"
         action="{{ route('admin.education.courses.modules.lessons.videos.store', ['course'=>$course,'module'=>$module,'lesson'=>$lesson]) }}"
@@ -98,11 +99,26 @@
                             PHP upload_max_filesize/post_max_size must also allow the selected file size.
                         </span>
                         <input
+                            id="video-file-input"
                             type="file"
                             name="video_file"
                             accept=".mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/webm"
                             required
                         >
+                        <div id="video-upload-progress" class="upload-progress" role="status" aria-live="polite">
+                            <div class="upload-progress-head">
+                                <strong id="upload-progress-label">Preparing secure upload</strong>
+                                <span id="upload-progress-percent" class="upload-percent">0%</span>
+                            </div>
+                            <div class="upload-progress-track"><div id="upload-progress-fill" class="upload-progress-fill"></div></div>
+                            <div class="upload-progress-meta">
+                                <span id="upload-progress-size">0 B / 0 B</span>
+                                <span id="upload-progress-speed">Measuring speed…</span>
+                                <span id="upload-progress-eta">Calculating ETA…</span>
+                            </div>
+                            <div id="upload-progress-status" class="upload-progress-status">The page can stay open while the file transfers.</div>
+                            <button id="cancel-video-upload" class="upload-cancel" type="button">Cancel upload</button>
+                        </div>
                     </div>
                 </div>
 
@@ -146,4 +162,111 @@
         </section>
     </form>
 </div>
+<script>
+(() => {
+    const form = document.getElementById('video-upload-form');
+    const fileInput = document.getElementById('video-file-input');
+    const progress = document.getElementById('video-upload-progress');
+    const fill = document.getElementById('upload-progress-fill');
+    const percent = document.getElementById('upload-progress-percent');
+    const label = document.getElementById('upload-progress-label');
+    const size = document.getElementById('upload-progress-size');
+    const speed = document.getElementById('upload-progress-speed');
+    const eta = document.getElementById('upload-progress-eta');
+    const status = document.getElementById('upload-progress-status');
+    const cancel = document.getElementById('cancel-video-upload');
+    const submit = form?.querySelector('button[type="submit"]');
+    let activeRequest = null;
+
+    if (!form || !fileInput || !window.XMLHttpRequest) return;
+
+    const formatBytes = (bytes) => {
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+        return `${(bytes / (1024 ** index)).toFixed(index < 2 ? 0 : 2)} ${units[index]}`;
+    };
+    const formatDuration = (seconds) => {
+        if (!Number.isFinite(seconds) || seconds < 1) return 'Less than 1 min remaining';
+        const minutes = Math.floor(seconds / 60);
+        return minutes >= 60
+            ? `${Math.floor(minutes / 60)}h ${minutes % 60}m remaining`
+            : `${minutes}m ${Math.max(1, Math.round(seconds % 60))}s remaining`;
+    };
+    const update = (loaded, total, startedAt) => {
+        const ratio = total > 0 ? Math.min(1, loaded / total) : 0;
+        const value = Math.round(ratio * 100);
+        const elapsed = Math.max(.001, (performance.now() - startedAt) / 1000);
+        const bytesPerSecond = loaded / elapsed;
+        fill.style.width = `${value}%`;
+        percent.textContent = `${value}%`;
+        size.textContent = `${formatBytes(loaded)} / ${formatBytes(total)}`;
+        speed.textContent = `${formatBytes(bytesPerSecond)}/s`;
+        eta.textContent = bytesPerSecond > 0 ? formatDuration((total - loaded) / bytesPerSecond) : 'Calculating ETA…';
+    };
+
+    form.addEventListener('submit', (event) => {
+        if (activeRequest || !fileInput.files?.[0]) return;
+        event.preventDefault();
+        const file = fileInput.files[0];
+        const startedAt = performance.now();
+        const request = new XMLHttpRequest();
+        activeRequest = request;
+        progress.classList.add('is-visible');
+        cancel.classList.add('is-visible');
+        label.textContent = 'Uploading protected video';
+        status.textContent = 'Keep this page open. Your upload can be cancelled safely before it completes.';
+        submit.disabled = true;
+        submit.textContent = 'Uploading…';
+        fileInput.disabled = true;
+        update(0, file.size, startedAt);
+
+        request.open('POST', form.action, true);
+        request.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        request.upload.addEventListener('progress', (uploadEvent) => {
+            if (uploadEvent.lengthComputable) update(uploadEvent.loaded, uploadEvent.total, startedAt);
+        });
+        request.upload.addEventListener('load', () => {
+            fill.style.width = '100%';
+            percent.textContent = '100%';
+            label.textContent = 'Upload transfer complete';
+            status.textContent = 'Securely saving the source file and placing HLS processing in the background queue…';
+            cancel.classList.remove('is-visible');
+        });
+        request.addEventListener('load', () => {
+            if (request.status >= 200 && request.status < 400) {
+                window.location.assign(request.responseURL || form.action);
+                return;
+            }
+            status.textContent = 'Upload could not be completed. Please review the form and try again.';
+            label.textContent = 'Upload failed';
+            cancel.classList.remove('is-visible');
+            submit.disabled = false;
+            submit.textContent = 'Upload & Queue HLS';
+            fileInput.disabled = false;
+            activeRequest = null;
+        });
+        request.addEventListener('error', () => {
+            status.textContent = 'Connection interrupted. No video record was created; select the file and retry.';
+            label.textContent = 'Upload interrupted';
+            cancel.classList.remove('is-visible');
+            submit.disabled = false;
+            submit.textContent = 'Upload & Queue HLS';
+            fileInput.disabled = false;
+            activeRequest = null;
+        });
+        request.addEventListener('abort', () => {
+            status.textContent = 'Upload cancelled. No video record was created.';
+            label.textContent = 'Upload cancelled';
+            cancel.classList.remove('is-visible');
+            submit.disabled = false;
+            submit.textContent = 'Upload & Queue HLS';
+            fileInput.disabled = false;
+            activeRequest = null;
+        });
+        request.send(new FormData(form));
+    });
+    cancel.addEventListener('click', () => activeRequest?.abort());
+})();
+</script>
 @endsection
