@@ -20,6 +20,10 @@ Route::prefix('staff')->name('staff.')->group(function (): void {
     Route::post('/login', [StaffPortalController::class, 'login'])->middleware('throttle:10,1')->name('login.submit');
     Route::middleware('staff.auth')->group(function (): void {
         Route::get('/', [StaffPortalController::class, 'dashboard'])->name('dashboard');
+        Route::get('/agreement', [StaffPortalController::class, 'agreement'])->name('agreement.show');
+        Route::post('/agreement', [StaffPortalController::class, 'acceptAgreement'])->middleware('throttle:10,1')->name('agreement.accept');
+        Route::post('/kyc', [StaffPortalController::class, 'storeKyc'])->middleware('throttle:10,1')->name('kyc.store');
+        Route::post('/payout-details', [StaffPortalController::class, 'savePayoutDetails'])->middleware('throttle:10,1')->name('payout.store');
         Route::post('/leave', [StaffPortalController::class, 'storeLeave'])->middleware('throttle:10,1')->name('leave.store');
         Route::post('/logout', [StaffPortalController::class, 'logout'])->name('logout');
     });
