@@ -127,7 +127,7 @@ return [
 
         'ffmpeg_preset' => env(
             'TRADEX_VIDEO_FFMPEG_PRESET',
-            'superfast'
+            'ultrafast'
         ),
 
         'ffmpeg_crf' => (int) env(

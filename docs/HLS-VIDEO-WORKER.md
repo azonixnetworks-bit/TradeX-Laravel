@@ -61,7 +61,7 @@ The normal worker must not consume `video-processing`.
 TradeX now supports these environment values:
 
 ```env
-TRADEX_VIDEO_FFMPEG_PRESET=superfast
+TRADEX_VIDEO_FFMPEG_PRESET=ultrafast
 TRADEX_VIDEO_FFMPEG_THREADS=1
 TRADEX_VIDEO_PROGRESS_UPDATE_SECONDS=2
 TRADEX_VIDEO_HLS_VARIANTS=360p,720p,1080p

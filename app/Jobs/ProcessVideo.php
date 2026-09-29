@@ -760,7 +760,7 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 '-preset',
                 (string) config(
                     'tradex.media.ffmpeg_preset',
-                    'superfast'
+                    'ultrafast'
                 ),
                 '-profile:v',
                 'main',
