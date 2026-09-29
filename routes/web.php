@@ -44,6 +44,7 @@ Route::view(
 
 require __DIR__ . '/customer_onboarding.php';
 require __DIR__ . '/admin.php';
+require __DIR__ . '/staff_management.php';
 require __DIR__ . '/admin_video_playback.php';
 require __DIR__ . '/admin_our_channel.php';
 

@@ -28,7 +28,9 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
     public int $uniqueFor = 7500;
 
     public function __construct(
-        public int $videoId
+        public int $videoId,
+        public ?string $rendition = null,
+        public bool $finalize = false
     ) {
         $this->timeout = max(
             300,
@@ -50,7 +52,7 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
 
     public function uniqueId(): string
     {
-        return 'lesson-video:'.$this->videoId;
+        return 'lesson-video:'.$this->videoId.':'.($this->rendition ?? 'bootstrap');
     }
 
     public function backoff(): array
@@ -119,9 +121,11 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
         );
 
         try {
-            File::deleteDirectory(
-                $workingDirectory
-            );
+            if ($this->rendition === null) {
+                File::deleteDirectory(
+                    $workingDirectory
+                );
+            }
 
             File::ensureDirectoryExists(
                 $workingDirectory,
@@ -129,11 +133,10 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 true
             );
 
-            $sourceFile = $this->stageSourceFile(
-                $diskName,
-                $sourcePath,
-                $workingDirectory
-            );
+            $existingSource = collect(File::files($workingDirectory))->first(fn ($file): bool => str_starts_with($file->getFilename(), 'source.'));
+            $sourceFile = $existingSource !== null
+                ? $existingSource->getPathname()
+                : $this->stageSourceFile($diskName, $sourcePath, $workingDirectory);
 
             $this->updateProgress($video, 18, 'Protected source staged. Inspecting video metadata.');
 
@@ -145,6 +148,27 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 $probe['width'],
                 $probe['height']
             );
+
+            if ($this->rendition === null) {
+                $video->forceFill([
+                    'processing_detail_json' => [
+                        'current_step' => 'QUEUED_RENDITIONS',
+                        'source_file' => basename($sourcePath),
+                        'duration_seconds' => $probe['duration_seconds'],
+                        'rendition_total' => count($variants),
+                        'last_update_at' => now()->toIso8601String(),
+                    ],
+                ])->save();
+
+                $first = $variants[0];
+                self::dispatch($video->id, $first['name'], count($variants) === 1);
+                return;
+            }
+
+            $variantIndex = array_search($this->rendition, array_column($variants, 'name'), true);
+            if ($variantIndex === false) {
+                throw new RuntimeException('The requested HLS rendition is not enabled for this source video.');
+            }
 
             $this->updateProgress($video, 25, 'Video inspected. Preparing HLS renditions.');
 
@@ -158,7 +182,7 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 true
             );
 
-            foreach ($variants as $index => $variant) {
+            foreach ([$variantIndex => $variants[$variantIndex]] as $index => $variant) {
                 $this->updateProgress(
                     $video,
                     30 + (int) floor(($index / max(1, count($variants))) * 45),
@@ -190,6 +214,17 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                     $probe['duration_seconds'],
                     basename($sourcePath)
                 );
+            }
+
+            if (! $this->finalize) {
+                $nextVariant = $variants[$variantIndex + 1] ?? null;
+                if (! is_array($nextVariant)) {
+                    $this->finalize = true;
+                } else {
+                    $this->updateProgress($video, min(75, 30 + (int) floor((($variantIndex + 1) / max(1, count($variants))) * 45)), 'HLS rendition '.$this->rendition.' completed. Queueing '.$nextVariant['name'].'.');
+                self::dispatch($video->id, $nextVariant['name'], $variantIndex + 1 === array_key_last($variants));
+                return;
+                }
             }
 
             $this->updateProgress($video, 76, 'HLS renditions encoded. Building master playlist.');
@@ -292,9 +327,11 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
 
             throw $exception;
         } finally {
-            File::deleteDirectory(
-                $workingDirectory
-            );
+            if ($this->finalize && $video->fresh()?->processing_status === LessonVideo::PROCESSING_READY) {
+                File::deleteDirectory(
+                    $workingDirectory
+                );
+            }
         }
     }
 
@@ -1467,6 +1504,7 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                 'current_step' => 'FAILED',
                 'last_update_at' => now()->toIso8601String(),
                 'retry_limit_reached' => $retryLimitReached,
+                'failed_rendition' => $this->rendition,
             ],
             'processing_heartbeat_at' => now(),
             'processing_error' => $displayError,

@@ -59,7 +59,8 @@
         || $admin->hasPermission('settings.view')
         || $admin->hasPermission('integrations.view')
         || $admin->hasPermission('legal.view')
-        || $admin->hasPermission('languages.view');
+        || $admin->hasPermission('languages.view')
+        || $admin->hasPermission('staff.manage');
 @endphp
 
 <aside class="sidebar" id="adminSidebar">
@@ -579,6 +580,15 @@
                 </a>
             @endif
 
+            @if($admin->isSuperAdmin() || $admin->hasPermission('staff.manage'))
+                <a
+                    href="{{ route('admin.staff.index') }}"
+                    class="nav-link {{ request()->routeIs('admin.staff.*') ? 'active' : '' }}"
+                >
+                    <span class="nav-icon">♟</span>
+                    <span>Staff Management</span>
+                </a>
+            @endif
             @if($admin->hasPermission('roles.view'))
                 <a
                     href="{{ route('admin.administration.roles.index') }}"
