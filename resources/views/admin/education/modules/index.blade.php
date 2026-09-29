@@ -1,4 +1,4 @@
-{{-- TradeX Admin ΓÇö ADMIN-03 Module Management --}}
+{{-- TradeX Admin - ADMIN-03 Module Management --}}
 
 @extends('admin.layouts.app')
 
@@ -335,7 +335,7 @@
             ) }}"
             class="secondary-btn"
         >
-            ΓåÉ Back to Course
+            &larr; Back to Course
         </a>
 
     </div>
@@ -558,7 +558,7 @@
 
                         <code>
                             {{ $module->code }}
-                            ┬╖
+                            &middot;
                             {{ $module->slug }}
                         </code>
 
@@ -629,7 +629,7 @@
                             <strong>
                                 {{ $module->published_at
                                     ? $module->published_at->format('d M Y')
-                                    : 'ΓÇö'
+                                    : '-'
                                 }}
                             </strong>
 
@@ -836,7 +836,7 @@
             <div class="module-empty">
 
                 <div class="empty-icon">
-                    Γûú
+                    +
                 </div>
 
                 <strong>
