@@ -42,6 +42,13 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
 
         $this->uniqueFor = $this->timeout + 300;
 
+        $this->onConnection(
+            (string) config(
+                'tradex.media.queue_connection',
+                'video-processing'
+            )
+        );
+
         $this->onQueue(
             (string) config(
                 'tradex.media.queue',

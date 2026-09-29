@@ -44,6 +44,16 @@ return [
             'after_commit' => false,
         ],
 
+        // Video transcoding can run much longer than normal app jobs.
+        'video-processing' => [
+            'driver' => 'database',
+            'connection' => env('TRADEX_VIDEO_DB_QUEUE_CONNECTION', env('DB_QUEUE_CONNECTION')),
+            'table' => env('TRADEX_VIDEO_DB_QUEUE_TABLE', env('DB_QUEUE_TABLE', 'jobs')),
+            'queue' => env('TRADEX_VIDEO_QUEUE', 'video-processing'),
+            'retry_after' => (int) env('TRADEX_VIDEO_QUEUE_RETRY_AFTER', 7500),
+            'after_commit' => false,
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),

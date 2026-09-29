@@ -354,7 +354,8 @@ class VideoManagementCrudTest extends TestCase
             'action' => 'VIDEO_PROCESSING_RETRIED',
             'target_id' => $video->id,
         ]);
-        Queue::assertPushed(ProcessVideo::class, fn (ProcessVideo $job): bool => $job->videoId === $video->id);
+        Queue::assertPushed(ProcessVideo::class, fn (ProcessVideo $job): bool => $job->videoId === $video->id
+            && $job->connection === config('tradex.media.queue_connection'));
     }
 
     public function test_ready_video_with_missing_playback_reference_can_repair_using_existing_source(): void
@@ -396,6 +397,7 @@ class VideoManagementCrudTest extends TestCase
         Queue::assertPushed(
             ProcessVideo::class,
             fn (ProcessVideo $job): bool => $job->videoId === $video->id
+                && $job->connection === config('tradex.media.queue_connection')
         );
     }
 
