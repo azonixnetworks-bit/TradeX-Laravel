@@ -412,7 +412,11 @@ class VideoController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($video, $lesson, $admin, $request): void {
+        $failedRendition = $video->processing_status === LessonVideo::PROCESSING_FAILED
+            ? data_get($video->processing_detail_json, 'failed_rendition')
+            : null;
+
+        DB::transaction(function () use ($video, $lesson, $admin, $request, $failedRendition): void {
             $lockedVideo = LessonVideo::query()
                 ->where('lesson_id', $lesson->id)
                 ->lockForUpdate()
@@ -467,7 +471,7 @@ class VideoController extends Controller
         });
 
         try {
-            ProcessVideo::dispatch($video->id);
+            ProcessVideo::dispatch($video->id, is_string($failedRendition) && $failedRendition !== '' ? $failedRendition : null);
         } catch (Throwable $exception) {
             $video->refresh()->forceFill([
                 'processing_status' => LessonVideo::PROCESSING_FAILED,
