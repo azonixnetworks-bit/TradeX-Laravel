@@ -754,7 +754,7 @@ class ProcessVideo implements ShouldBeUnique, ShouldQueue
                     1,
                     (int) config(
                         'tradex.media.ffmpeg_threads',
-                        2
+                        1
                     )
                 ),
                 '-preset',
