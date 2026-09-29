@@ -139,7 +139,7 @@ return [
             1,
             (int) env(
                 'TRADEX_VIDEO_FFMPEG_THREADS',
-                2
+                1
             )
         ),
 
