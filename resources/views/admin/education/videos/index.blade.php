@@ -122,7 +122,7 @@
                     @endif
 
                     @if($canPublish)
-                        <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.publication', ['course'=>$course,'module'=>$module,'lesson'=>$lesson,'video'=>$video]) }}" onsubmit="return confirm('Publish this video now?');">
+                        <form method="POST" action="{{ route('admin.education.courses.modules.lessons.videos.publication', ['course'=>$course,'module'=>$module,'lesson'=>$lesson,'video'=>$video]) }}">
                             @csrf @method('PATCH')
                             <input type="hidden" name="action" value="PUBLISH">
                             <textarea name="reason" maxlength="1000" placeholder="Optional audit reason"></textarea>

@@ -872,7 +872,7 @@
                                         'lesson' => $lesson,
                                     ]
                                 ) }}"
-                                onsubmit="return confirm('Publish this lesson now?');"
+                               
                             >
                                 @csrf
                                 @method('PATCH')
