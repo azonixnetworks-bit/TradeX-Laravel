@@ -690,7 +690,7 @@
                                         'module' => $module,
                                     ]
                                 ) }}"
-                                onsubmit="return confirm('Publish this module now?');"
+
                             >
                                 @csrf
                                 @method('PATCH')
@@ -730,7 +730,7 @@
                                         'module' => $module,
                                     ]
                                 ) }}"
-                                onsubmit="return confirm('Unpublish this module and return it to Draft?');"
+
                             >
                                 @csrf
                                 @method('PATCH')
