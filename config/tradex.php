@@ -84,6 +84,11 @@ return [
             'video-processing'
         ),
 
+        'queue_connection' => env(
+            'TRADEX_VIDEO_QUEUE_CONNECTION',
+            'video-processing'
+        ),
+
         /*
         | Laravel's file max rule is measured in KiB.
         | 4,194,304 KiB = 4 GiB.
