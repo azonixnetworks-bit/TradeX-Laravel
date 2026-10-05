@@ -387,32 +387,31 @@ return [
             ),
         ],
         'deriv' => [
-            'enabled' => env(
-                'TRADEX_DERIV_MARKET_DATA_ENABLED',
-                true
-            ),
-            'websocket_url' => env(
-                'TRADEX_DERIV_MARKET_DATA_WEBSOCKET_URL',
-                'wss://api.derivws.com/trading/v1/options/ws/public'
-            ),
-            'allowed_hosts' => [
-                'api.derivws.com',
-            ],
-            'timeout_seconds' => env(
-                'TRADEX_DERIV_MARKET_DATA_TIMEOUT_SECONDS',
-                10
-            ),
-            'connect_timeout_seconds' => env(
-                'TRADEX_DERIV_MARKET_DATA_CONNECT_TIMEOUT_SECONDS',
-                5
-            ),
-            'output_size' => env(
-                'TRADEX_DERIV_MARKET_DATA_OUTPUT_SIZE',
-                260
-            ),
-            'max_handshake_bytes' => 16384,
-            'max_response_bytes' => 4194304,
-        ],
+    'enabled' => env(
+        'TRADEX_CTRADER_DERIV_ENABLED',
+        false
+    ),
+
+    'base_url' => env(
+        'TRADEX_CTRADER_DERIV_BASE_URL',
+        'http://127.0.0.1:8001'
+    ),
+
+    'timeout_seconds' => env(
+        'TRADEX_CTRADER_DERIV_TIMEOUT_SECONDS',
+        20
+    ),
+
+    'connect_timeout_seconds' => env(
+        'TRADEX_CTRADER_DERIV_CONNECT_TIMEOUT_SECONDS',
+        5
+    ),
+
+    'output_size' => env(
+        'TRADEX_CTRADER_DERIV_OUTPUT_SIZE',
+        260
+    ),
+],
     ],
 
     'cache' => [
