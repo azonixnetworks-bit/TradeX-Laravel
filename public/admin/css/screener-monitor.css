@@ -219,19 +219,26 @@ tr.screener-analysis-loading [data-analysis-trend] {
 }
 
 .screener-tradingview-chart {
-    height: 100%;
+    align-self: stretch;
+    height: 100% !important;
     min-height: 0;
     overflow: hidden;
     position: relative;
 }
 
 .screener-tradingview-chart,
-.screener-tradingview-chart > div,
+.screener-tradingview-chart .tradingview-widget-container,
+.screener-tradingview-chart .tradingview-widget-container__widget,
 .screener-tradingview-chart iframe {
     display: block !important;
     height: 100% !important;
-    min-height: 100% !important;
+    min-height: 0 !important;
     width: 100% !important;
+}
+
+.screener-tradingview-chart .tradingview-widget-container,
+.screener-tradingview-chart .tradingview-widget-container__widget {
+    min-height: 100% !important;
 }
 
 body.screener-chart-open {
@@ -244,24 +251,27 @@ body.screener-chart-open {
     border: 1px solid rgba(242, 184, 75, 0.3);
     border-radius: 50%;
     color: var(--accent, #f2b84b);
-    display: inline-flex;
-    flex: 0 0 34px;
+    display: inline-flex !important;
+    flex: 0 0 34px !important;
     font-size: 0.65rem;
     font-weight: 800;
-    height: 34px;
+    height: 34px !important;
     justify-content: center;
     overflow: hidden;
     position: relative;
-    width: 34px;
+    width: 34px !important;
 }
 
 .screener-symbol-logo img {
     background: #fff;
-    height: 100%;
-    inset: 0;
-    object-fit: cover;
-    position: absolute;
-    width: 100%;
+    display: block !important;
+    height: 100% !important;
+    inset: 0 !important;
+    max-height: 100% !important;
+    max-width: 100% !important;
+    object-fit: cover !important;
+    position: absolute !important;
+    width: 100% !important;
 }
 
 .screener-pagination {

@@ -4,7 +4,7 @@
 @section('page-title', 'Screener Monitor')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/screener-monitor.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/screener-monitor.css').'?v='.filemtime(public_path('admin/css/screener-monitor.css')) }}">
 @endpush
 
 @section('content')

@@ -4,11 +4,11 @@
 @section('page-title', 'Screener Market Results')
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin/css/screener-monitor.css') }}">
+<link rel="stylesheet" href="{{ asset('admin/css/screener-monitor.css').'?v='.filemtime(public_path('admin/css/screener-monitor.css')) }}">
 @endpush
 
 @push('scripts')
-<script src="{{ asset('admin/js/screener-crypto-live.js') }}" defer></script>
+<script src="{{ asset('admin/js/screener-crypto-live.js').'?v='.filemtime(public_path('admin/js/screener-crypto-live.js')) }}" defer></script>
 @endpush
 
 @section('content')
