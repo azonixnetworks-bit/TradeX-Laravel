@@ -202,6 +202,40 @@ class ScreenerMonitorController extends Controller
         }
     }
 
+    public function chart(
+        Request $request,
+        ScreenerEngine $engine,
+        BinanceSpotCatalogService $binanceCatalog
+    ): Response {
+        $this->viewer();
+
+        $symbol = strtoupper(trim((string) $request->query('symbol', '')));
+        $timeframe = strtoupper(trim((string) $request->query('timeframe', 'H1')));
+
+        abort_unless(preg_match('/^[A-Z0-9]{3,30}$/', $symbol), 404);
+        abort_unless(array_key_exists($timeframe, $engine->timeframes()), 404);
+
+        $symbolConfig = collect($binanceCatalog->catalog()['symbols'] ?? [])
+            ->first(static fn (array $item): bool => strtoupper((string) ($item['symbol'] ?? '')) === $symbol);
+
+        abort_unless(is_array($symbolConfig), 404);
+
+        $tradingViewInterval = [
+            'M5' => '5',
+            'M15' => '15',
+            'H1' => '60',
+            'H4' => '240',
+            'D1' => 'D',
+        ][$timeframe];
+
+        return response()->view(
+            'admin.screener.chart',
+            compact('symbol', 'symbolConfig', 'timeframe', 'tradingViewInterval'),
+            200,
+            $this->noStoreHeaders()
+        );
+    }
+
     private function viewer(): AdminUser
     {
         $admin = auth('admin')->user();

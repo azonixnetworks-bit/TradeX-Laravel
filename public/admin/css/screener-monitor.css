@@ -125,6 +125,7 @@
     font-weight: 800;
     padding: 0;
     text-align: left;
+    text-decoration: none;
 }
 
 .screener-symbol-chart-link:hover,
@@ -239,6 +240,38 @@ tr.screener-analysis-loading [data-analysis-trend] {
 .screener-tradingview-chart .tradingview-widget-container,
 .screener-tradingview-chart .tradingview-widget-container__widget {
     min-height: 100% !important;
+}
+
+.screener-chart-page-panel {
+    display: grid;
+    gap: 18px;
+}
+
+.screener-chart-page-header {
+    align-items: flex-start;
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+}
+
+.screener-chart-page-header h1,
+.screener-chart-page-header p {
+    margin: 0;
+}
+
+.screener-chart-page-header h1 span,
+.screener-chart-page-header p {
+    color: var(--text-muted, #8491a4);
+}
+
+.screener-chart-page-header p {
+    font-size: 0.82rem;
+    margin-top: 5px;
+}
+
+.screener-tradingview-chart-page {
+    height: clamp(420px, calc(100dvh - 290px), 820px) !important;
+    min-height: 420px !important;
 }
 
 body.screener-chart-open {
@@ -507,5 +540,15 @@ body.screener-chart-open {
 
     .screener-chart-dialog p {
         font-size: 0.7rem;
+    }
+
+    .screener-chart-page-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .screener-tradingview-chart-page {
+        height: min(580px, calc(100dvh - 280px)) !important;
+        min-height: 360px !important;
     }
 }

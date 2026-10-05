@@ -22,6 +22,9 @@ class ScreenerMonitorContractTest extends TestCase
         $marketView = file_get_contents(resource_path(
             'views/admin/screener/markets.blade.php'
         ));
+        $chartView = file_get_contents(resource_path(
+            'views/admin/screener/chart.blade.php'
+        ));
         $css = file_get_contents(public_path(
             'admin/css/screener-monitor.css'
         ));
@@ -36,7 +39,7 @@ class ScreenerMonitorContractTest extends TestCase
         ));
 
         foreach (
-            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $css, $nav, $monitor, $cryptoLive]
+            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $chartView, $css, $nav, $monitor, $cryptoLive]
             as $file
         ) {
             $this->assertIsString($file);
@@ -87,6 +90,10 @@ class ScreenerMonitorContractTest extends TestCase
             $routes
         );
         $this->assertStringContainsString(
+            "name('markets.chart')",
+            $routes
+        );
+        $this->assertStringContainsString(
             'Market Results',
             $marketView
         );
@@ -103,7 +110,7 @@ class ScreenerMonitorContractTest extends TestCase
             $marketView
         );
         $this->assertStringContainsString(
-            'data-chart-symbol',
+            "route('admin.screener.markets.chart'",
             $marketView
         );
         $this->assertStringContainsString(
@@ -115,16 +122,16 @@ class ScreenerMonitorContractTest extends TestCase
             $cryptoLive
         );
         $this->assertStringContainsString(
-            'studies: []',
-            $cryptoLive
+            '"studies": []',
+            $chartView
         );
         $this->assertStringContainsString(
             'IntersectionObserver',
             $cryptoLive
         );
         $this->assertStringContainsString(
-            'requestAnimationFrame',
-            $cryptoLive
+            'screener-tradingview-chart-page',
+            $chartView
         );
         $this->assertStringContainsString(
             'ScreenerEngine $engine',

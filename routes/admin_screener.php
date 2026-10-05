@@ -26,6 +26,11 @@ Route::prefix('admin')
                 )->name('markets');
 
                 Route::get(
+                    '/markets/chart',
+                    [ScreenerMonitorController::class, 'chart']
+                )->name('markets.chart');
+
+                Route::get(
                     '/markets/analysis',
                     [ScreenerMonitorController::class, 'marketAnalysis']
                 )->name('markets.analysis');

@@ -156,13 +156,11 @@
                                         </span>
                                         <span>
                                             @if($market === 'CRYPTO')
-                                                <button
-                                                    type="button"
+                                                <a
                                                     class="screener-symbol-chart-link"
-                                                    data-chart-symbol="{{ $row['symbol'] }}"
-                                                    data-chart-name="{{ $row['name'] }}"
+                                                    href="{{ route('admin.screener.markets.chart', ['symbol' => $row['symbol'], 'timeframe' => $timeframe]) }}"
                                                     aria-label="Open {{ $row['symbol'] }} TradingView chart"
-                                                >{{ $row['symbol'] }}</button>
+                                                >{{ $row['symbol'] }}</a>
                                             @else
                                                 <strong>{{ $row['symbol'] }}</strong>
                                             @endif
@@ -199,21 +197,5 @@
         </section>
     @endif
 
-    @if($market === 'CRYPTO')
-        <div class="screener-chart-modal" data-screener-chart-modal hidden>
-            <div class="screener-chart-backdrop" data-chart-close></div>
-            <section class="screener-chart-dialog" role="dialog" aria-modal="true" aria-labelledby="screener-chart-title">
-                <header>
-                    <div>
-                        <div class="panel-eyebrow">BINANCE · TRADINGVIEW</div>
-                        <h2 id="screener-chart-title" data-chart-title>Crypto Chart</h2>
-                        <p>Clean candlestick chart · no default indicators</p>
-                    </div>
-                    <button type="button" class="screener-chart-close" data-chart-close aria-label="Close chart">×</button>
-                </header>
-                <div class="screener-tradingview-chart" data-tradingview-chart></div>
-            </section>
-        </div>
-    @endif
 </div>
 @endsection
