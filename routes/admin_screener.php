@@ -24,5 +24,10 @@ Route::prefix('admin')
                     '/markets',
                     [ScreenerMonitorController::class, 'markets']
                 )->name('markets');
+
+                Route::get(
+                    '/markets/analysis',
+                    [ScreenerMonitorController::class, 'marketAnalysis']
+                )->name('markets.analysis');
             });
     });

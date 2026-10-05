@@ -119,7 +119,11 @@
             <div class="screener-table-scroll">
                 <table
                     class="screener-provider-table screener-results-table"
-                    @if($market === 'CRYPTO') data-binance-live-table @endif
+                    @if($market === 'CRYPTO')
+                        data-binance-live-table
+                        data-analysis-url="{{ route('admin.screener.markets.analysis') }}"
+                        data-analysis-timeframe="{{ $timeframe }}"
+                    @endif
                 >
                     <thead>
                         <tr>
@@ -168,11 +172,17 @@
                                 </td>
                                 <td data-live-price>{{ $row['price'] ?? '—' }}</td>
                                 <td data-live-change>{{ isset($row['change_percent']) ? number_format((float) $row['change_percent'], 2).'%' : '—' }}</td>
-                                <td><span class="screener-status trend-{{ strtolower($row['trend'] ?? 'sideways') }}">{{ $row['trend'] ?? '—' }}</span></td>
-                                <td>{{ $row['rsi_14'] ?? '—' }}</td>
-                                <td>{{ $row['ema_alignment'] ?? '—' }}</td>
-                                <td>{{ isset($row['atr_percent']) ? number_format((float) $row['atr_percent'], 2).'%' : '—' }}</td>
-                                <td>{{ $row['candle_time_utc'] ?? '—' }}</td>
+                                <td data-analysis-trend>
+                                    @if(isset($row['trend']))
+                                        <span class="screener-status trend-{{ strtolower($row['trend']) }}">{{ $row['trend'] }}</span>
+                                    @else
+                                        <span class="screener-lazy-value">Waiting…</span>
+                                    @endif
+                                </td>
+                                <td data-analysis-rsi>{{ $row['rsi_14'] ?? '—' }}</td>
+                                <td data-analysis-ema>{{ $row['ema_alignment'] ?? '—' }}</td>
+                                <td data-analysis-atr>{{ isset($row['atr_percent']) ? number_format((float) $row['atr_percent'], 2).'%' : '—' }}</td>
+                                <td data-analysis-time>{{ $row['candle_time_utc'] ?? '—' }}</td>
                             </tr>
                         @empty
                             <tr><td colspan="8">No screener results are available for this selection.</td></tr>

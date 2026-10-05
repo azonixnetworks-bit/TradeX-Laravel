@@ -103,33 +103,6 @@ class OperationalNavigationPermissionTest extends TestCase
             'source' => 'BINANCE_LIVE',
             'fetched_at_utc' => '2026-10-05T08:00:00+00:00',
         ]);
-        $engine->shouldReceive('screenWithSymbols')->once()->with([
-            'market' => 'CRYPTO',
-            'timeframe' => 'H1',
-            'sort' => 'symbol',
-            'order' => 'asc',
-        ], $symbols)->andReturn([
-            'market' => 'CRYPTO',
-            'timeframe' => 'H1',
-            'provider' => 'BINANCE',
-            'generated_at_utc' => '2026-10-05T08:00:00+00:00',
-            'count' => 1,
-            'cache' => ['hit' => false, 'stale' => false],
-            'results' => [[
-                'symbol' => 'BTCUSDT',
-                'name' => 'Bitcoin / Tether',
-                'base_currency' => 'BTC',
-                'logo_url' => 'https://cdn.jsdelivr.net/btc.png',
-                'price' => 65000,
-                'change_percent' => 1.25,
-                'trend' => 'BULLISH',
-                'rsi_14' => 61.5,
-                'ema_alignment' => 'BULLISH',
-                'atr_percent' => 2.1,
-                'candle_time_utc' => '2026-10-05T07:00:00+00:00',
-            ]],
-        ]);
-
         $this->get(route('admin.screener.markets', [
             'market' => 'CRYPTO',
             'timeframe' => 'H1',
@@ -169,27 +142,6 @@ class OperationalNavigationPermissionTest extends TestCase
             'source' => 'BINANCE_CACHE',
             'fetched_at_utc' => '2026-10-05T08:00:00+00:00',
         ]);
-        $engine->shouldReceive('screenWithSymbols')
-            ->once()
-            ->withArgs(static fn (array $filters, array $pageSymbols): bool =>
-                $filters['market'] === 'CRYPTO'
-                && count($pageSymbols) === 1
-                && $pageSymbols[0]['symbol'] === 'COIN21USDT'
-            )
-            ->andReturn([
-                'market' => 'CRYPTO',
-                'timeframe' => 'H1',
-                'provider' => 'BINANCE',
-                'generated_at_utc' => '2026-10-05T08:00:00+00:00',
-                'count' => 1,
-                'cache' => ['hit' => true, 'stale' => false],
-                'results' => [[
-                    ...$symbols[20],
-                    'price' => 1.0,
-                    'trend' => 'SIDEWAYS',
-                ]],
-            ]);
-
         $this->get(route('admin.screener.markets', [
             'market' => 'CRYPTO',
             'timeframe' => 'H1',
@@ -200,6 +152,53 @@ class OperationalNavigationPermissionTest extends TestCase
             ->assertSee('21 Binance USDT Spot symbols')
             ->assertSee('Page')
             ->assertSee('of');
+    }
+
+    public function test_binance_analysis_is_loaded_lazily_for_one_allowed_symbol(): void
+    {
+        $admin = $this->adminWithPermissions(['screener.monitor.view']);
+        $this->actingAs($admin, 'admin');
+
+        $symbol = [
+            'symbol' => 'BTCUSDT',
+            'provider_symbol' => 'BTCUSDT',
+            'name' => 'Bitcoin / Tether',
+            'base_currency' => 'BTC',
+            'quote_currency' => 'USDT',
+            'enabled' => true,
+        ];
+
+        $engine = $this->mock(ScreenerEngine::class);
+        $catalog = $this->mock(BinanceSpotCatalogService::class);
+        $engine->shouldReceive('timeframes')->once()->andReturn([
+            'H1' => ['label' => '1 Hour'],
+        ]);
+        $catalog->shouldReceive('catalog')->once()->andReturn([
+            'symbols' => [$symbol],
+        ]);
+        $engine->shouldReceive('screenWithSymbols')->once()->with([
+            'market' => 'CRYPTO',
+            'timeframe' => 'H1',
+            'sort' => 'symbol',
+            'order' => 'asc',
+        ], [$symbol])->andReturn([
+            'generated_at_utc' => '2026-10-05T08:00:00+00:00',
+            'results' => [[
+                ...$symbol,
+                'price' => 65000,
+                'trend' => 'BULLISH',
+                'rsi_14' => 61.5,
+            ]],
+        ]);
+
+        $this->getJson(route('admin.screener.markets.analysis', [
+            'symbol' => 'BTCUSDT',
+            'timeframe' => 'H1',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.symbol', 'BTCUSDT')
+            ->assertJsonPath('data.trend', 'BULLISH');
     }
 
     private function adminWithPermissions(array $permissionCodes): AdminUser

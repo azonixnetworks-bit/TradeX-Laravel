@@ -145,6 +145,15 @@
     color: #ff6b6b;
 }
 
+.screener-lazy-value {
+    color: var(--text-muted, #8491a4);
+    font-size: 0.72rem;
+}
+
+tr.screener-analysis-loading [data-analysis-trend] {
+    opacity: 0.72;
+}
+
 .screener-chart-modal[hidden] {
     display: none;
 }
@@ -152,7 +161,7 @@
 .screener-chart-modal {
     inset: 0;
     position: fixed;
-    z-index: 1200;
+    z-index: 100000;
 }
 
 .screener-chart-backdrop {
@@ -168,12 +177,14 @@
     box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
     display: grid;
     gap: 14px;
-    height: min(760px, calc(100vh - 48px));
-    inset: 24px;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: min(820px, calc(100dvh - 32px));
+    inset: 16px;
     margin: auto;
     max-width: 1320px;
     padding: 18px;
     position: absolute;
+    width: min(1320px, calc(100vw - 32px));
 }
 
 .screener-chart-dialog > header {
@@ -208,14 +219,18 @@
 }
 
 .screener-tradingview-chart {
+    height: 100%;
     min-height: 0;
     overflow: hidden;
+    position: relative;
 }
 
 .screener-tradingview-chart,
 .screener-tradingview-chart > div,
 .screener-tradingview-chart iframe {
+    display: block !important;
     height: 100% !important;
+    min-height: 100% !important;
     width: 100% !important;
 }
 
@@ -465,8 +480,22 @@ body.screener-chart-open {
 
     .screener-chart-dialog {
         border-radius: 12px;
-        height: calc(100vh - 20px);
-        inset: 10px;
+        height: calc(100dvh - 16px);
+        inset: 8px;
         padding: 12px;
+        width: calc(100vw - 16px);
+    }
+
+    .screener-chart-dialog > header {
+        gap: 10px;
+    }
+
+    .screener-chart-dialog h2 {
+        font-size: 1rem;
+        overflow-wrap: anywhere;
+    }
+
+    .screener-chart-dialog p {
+        font-size: 0.7rem;
     }
 }

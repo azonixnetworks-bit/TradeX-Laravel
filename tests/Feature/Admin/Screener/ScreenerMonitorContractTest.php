@@ -83,6 +83,10 @@ class ScreenerMonitorContractTest extends TestCase
             $routes
         );
         $this->assertStringContainsString(
+            "name('markets.analysis')",
+            $routes
+        );
+        $this->assertStringContainsString(
             'Market Results',
             $marketView
         );
@@ -112,6 +116,14 @@ class ScreenerMonitorContractTest extends TestCase
         );
         $this->assertStringContainsString(
             'studies: []',
+            $cryptoLive
+        );
+        $this->assertStringContainsString(
+            'IntersectionObserver',
+            $cryptoLive
+        );
+        $this->assertStringContainsString(
+            'requestAnimationFrame',
             $cryptoLive
         );
         $this->assertStringContainsString(

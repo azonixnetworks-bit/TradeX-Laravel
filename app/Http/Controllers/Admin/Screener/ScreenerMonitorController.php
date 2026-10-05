@@ -108,17 +108,15 @@ class ScreenerMonitorController extends Controller
                     ]
                 );
 
-                $results = $pageSymbols === []
-                    ? [
-                        'market' => 'CRYPTO',
-                        'timeframe' => $timeframe,
-                        'provider' => 'BINANCE',
-                        'generated_at_utc' => $catalog['fetched_at_utc'] ?? now('UTC')->toIso8601String(),
-                        'count' => 0,
-                        'cache' => ['hit' => true, 'stale' => ($catalog['source'] ?? '') === 'BINANCE_STALE_CACHE'],
-                        'results' => [],
-                    ]
-                    : $engine->screenWithSymbols($filters, $pageSymbols);
+                $results = [
+                    'market' => 'CRYPTO',
+                    'timeframe' => $timeframe,
+                    'provider' => 'BINANCE',
+                    'generated_at_utc' => $catalog['fetched_at_utc'] ?? now('UTC')->toIso8601String(),
+                    'count' => count($pageSymbols),
+                    'cache' => ['hit' => true, 'stale' => ($catalog['source'] ?? '') === 'BINANCE_STALE_CACHE'],
+                    'results' => $pageSymbols,
+                ];
             } else {
                 $results = $engine->screen($filters);
             }
@@ -149,6 +147,59 @@ class ScreenerMonitorController extends Controller
             200,
             $this->noStoreHeaders()
         );
+    }
+
+    public function marketAnalysis(
+        Request $request,
+        ScreenerEngine $engine,
+        BinanceSpotCatalogService $binanceCatalog
+    ): JsonResponse {
+        $this->viewer();
+
+        $symbol = strtoupper(trim((string) $request->query('symbol', '')));
+        $timeframe = strtoupper(trim((string) $request->query('timeframe', 'H1')));
+
+        if (! preg_match('/^[A-Z0-9]{3,30}$/', $symbol)) {
+            return response()->json(['success' => false, 'message' => 'Invalid Binance symbol.'], 422, $this->noStoreHeaders());
+        }
+
+        if (! array_key_exists($timeframe, $engine->timeframes())) {
+            return response()->json(['success' => false, 'message' => 'Unsupported timeframe.'], 422, $this->noStoreHeaders());
+        }
+
+        $symbolConfig = collect($binanceCatalog->catalog()['symbols'] ?? [])
+            ->first(static fn (array $item): bool => strtoupper((string) ($item['symbol'] ?? '')) === $symbol);
+
+        if (! is_array($symbolConfig)) {
+            return response()->json(['success' => false, 'message' => 'Binance symbol is unavailable.'], 404, $this->noStoreHeaders());
+        }
+
+        try {
+            $result = $engine->screenWithSymbols([
+                'market' => 'CRYPTO',
+                'timeframe' => $timeframe,
+                'sort' => 'symbol',
+                'order' => 'asc',
+            ], [$symbolConfig]);
+
+            return response()->json([
+                'success' => true,
+                'data' => $result['results'][0] ?? null,
+                'generated_at_utc' => $result['generated_at_utc'] ?? null,
+            ], 200, $this->noStoreHeaders());
+        } catch (ScreenerProviderException $exception) {
+            return response()->json([
+                'success' => false,
+                'code' => $exception->providerCode,
+                'message' => $exception->getMessage(),
+            ], 503, $this->noStoreHeaders());
+        } catch (InvalidArgumentException $exception) {
+            return response()->json([
+                'success' => false,
+                'code' => 'SCREENER_UNAVAILABLE',
+                'message' => $exception->getMessage(),
+            ], 422, $this->noStoreHeaders());
+        }
     }
 
     private function viewer(): AdminUser
