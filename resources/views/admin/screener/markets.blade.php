@@ -44,6 +44,9 @@
 
         <form method="GET" action="{{ route('admin.screener.markets') }}" class="screener-timeframe-form">
             <input type="hidden" name="market" value="{{ $market }}">
+            @if($market === 'CRYPTO' && $search !== '')
+                <input type="hidden" name="q" value="{{ $search }}">
+            @endif
             <label for="screener-timeframe">Timeframe</label>
             <select id="screener-timeframe" name="timeframe" onchange="this.form.submit()">
                 @foreach($timeframes as $timeframeKey => $timeframeConfig)
@@ -55,6 +58,36 @@
             <noscript><button type="submit" class="secondary-btn">View</button></noscript>
         </form>
     </section>
+
+    @if($market === 'CRYPTO')
+        <section class="panel screener-symbol-search-panel">
+            <form method="GET" action="{{ route('admin.screener.markets') }}" class="screener-symbol-search-form" role="search">
+                <input type="hidden" name="market" value="CRYPTO">
+                <input type="hidden" name="timeframe" value="{{ $timeframe }}">
+                <label for="screener-symbol-search">Search Binance symbols</label>
+                <div>
+                    <input
+                        id="screener-symbol-search"
+                        type="search"
+                        name="q"
+                        value="{{ $search }}"
+                        placeholder="Search BTC, ETH, SOL…"
+                        autocomplete="off"
+                    >
+                    <button type="submit" class="secondary-btn">Search</button>
+                    @if($search !== '')
+                        <a class="secondary-btn" href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'timeframe' => $timeframe]) }}">Clear</a>
+                    @endif
+                </div>
+            </form>
+            @if($symbolPaginator instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <p>
+                    {{ number_format($symbolPaginator->total()) }} Binance USDT Spot symbols
+                    @if($search !== '') matching “{{ $search }}” @endif
+                </p>
+            @endif
+        </section>
+    @endif
 
     @if(is_array($error))
         <section class="panel screener-result-message status-degraded">
@@ -70,7 +103,12 @@
                     <h2>{{ $results['provider'] }} Screener Output</h2>
                 </div>
                 <span class="screener-generated-at">
-                    {{ $results['count'] }} results · {{ $results['generated_at_utc'] }}
+                    @if($symbolPaginator instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                        Showing {{ $symbolPaginator->firstItem() ?? 0 }}–{{ $symbolPaginator->lastItem() ?? 0 }} of {{ number_format($symbolPaginator->total()) }}
+                    @else
+                        {{ $results['count'] }} results
+                    @endif
+                    · {{ $results['generated_at_utc'] }}
                 </span>
             </div>
 
@@ -91,7 +129,23 @@
                     <tbody>
                         @forelse($results['results'] as $row)
                             <tr>
-                                <td><strong>{{ $row['symbol'] }}</strong><small>{{ $row['name'] }}</small></td>
+                                <td>
+                                    <div class="screener-symbol-cell">
+                                        <span class="screener-symbol-logo" aria-hidden="true">
+                                            {{ strtoupper(substr((string) ($row['base_currency'] ?? $row['symbol']), 0, 2)) }}
+                                            @if(filled($row['logo_url'] ?? null))
+                                                <img
+                                                    src="{{ $row['logo_url'] }}"
+                                                    alt=""
+                                                    loading="lazy"
+                                                    referrerpolicy="no-referrer"
+                                                    onerror="this.hidden=true"
+                                                >
+                                            @endif
+                                        </span>
+                                        <span><strong>{{ $row['symbol'] }}</strong><small>{{ $row['name'] }}</small></span>
+                                    </div>
+                                </td>
                                 <td>{{ $row['price'] ?? '—' }}</td>
                                 <td>{{ isset($row['change_percent']) ? number_format((float) $row['change_percent'], 2).'%' : '—' }}</td>
                                 <td><span class="screener-status trend-{{ strtolower($row['trend'] ?? 'sideways') }}">{{ $row['trend'] ?? '—' }}</span></td>
@@ -106,6 +160,12 @@
                     </tbody>
                 </table>
             </div>
+
+            @if($symbolPaginator instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                <div class="screener-pagination">
+                    @include('admin.components.pagination', ['paginator' => $symbolPaginator])
+                </div>
+            @endif
         </section>
     @endif
 </div>

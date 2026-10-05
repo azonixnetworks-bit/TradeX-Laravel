@@ -82,6 +82,18 @@ class ScreenerEngine
      */
     public function screen(array $filters): array
     {
+        return $this->screenWithSymbols($filters, null);
+    }
+
+    /**
+     * Screen a bounded, trusted symbol catalog (used by the paginated admin Binance view).
+     *
+     * @param  array<string, mixed>  $filters
+     * @param  array<int, array<string, mixed>>|null  $symbolConfigs
+     * @return array<string, mixed>
+     */
+    public function screenWithSymbols(array $filters, ?array $symbolConfigs): array
+    {
         $market = strtoupper(
             trim(
                 (string) ($filters['market'] ?? 'FOREX')
@@ -121,7 +133,8 @@ class ScreenerEngine
             $market,
             $timeframe,
             $timeframeConfig,
-            $provider
+            $provider,
+            $symbolConfigs
         );
 
         $rows = $this->applyFilters(
@@ -195,18 +208,29 @@ class ScreenerEngine
         string $market,
         string $timeframe,
         array $timeframeConfig,
-        MarketDataProvider $provider
+        MarketDataProvider $provider,
+        ?array $requestedSymbolConfigs = null
     ): array {
+        $symbolConfigs = $requestedSymbolConfigs ?? $this->symbols($market);
+        $symbolCacheSuffix = $requestedSymbolConfigs === null
+            ? ''
+            : ':'.substr(hash('sha256', implode(',', array_map(
+                static fn (array $symbol): string => (string) ($symbol['provider_symbol'] ?? ''),
+                $symbolConfigs
+            ))), 0, 16);
+
         $freshKey = sprintf(
-            'tradex:screener:fresh:v1:%s:%s',
+            'tradex:screener:fresh:v1:%s:%s%s',
             $market,
-            $timeframe
+            $timeframe,
+            $symbolCacheSuffix
         );
 
         $staleKey = sprintf(
-            'tradex:screener:stale:v1:%s:%s',
+            'tradex:screener:stale:v1:%s:%s%s',
             $market,
-            $timeframe
+            $timeframe,
+            $symbolCacheSuffix
         );
 
         $fresh = Cache::get($freshKey);
@@ -220,8 +244,6 @@ class ScreenerEngine
         }
 
         try {
-            $symbolConfigs = $this->symbols($market);
-
             $providerSymbols = array_values(array_map(
                 static fn (array $symbol): string =>
                     (string) $symbol['provider_symbol'],
@@ -265,6 +287,8 @@ class ScreenerEngine
                         (string) ($symbolConfig['base_currency'] ?? ''),
                     'quote_currency' =>
                         (string) ($symbolConfig['quote_currency'] ?? ''),
+                    'logo_url' =>
+                        (string) ($symbolConfig['logo_url'] ?? ''),
                     ...$analysis,
                     'volatility' => $this->volatilityLabel(
                         $analysis['atr_percent'] ?? null

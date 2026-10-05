@@ -145,7 +145,7 @@ return [
             ."form-action 'self'; "
             ."frame-ancestors 'none'; "
             ."object-src 'none'; "
-            ."img-src 'self' data: https://i.ytimg.com; "
+            ."img-src 'self' data: https://i.ytimg.com https://cdn.jsdelivr.net; "
             ."font-src 'self' data:; "
             ."style-src 'self' 'unsafe-inline'; "
             ."script-src 'self' 'unsafe-inline'; "

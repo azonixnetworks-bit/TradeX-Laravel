@@ -6,6 +6,7 @@ use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Services\Screener\ScreenerEngine;
+use App\Services\Screener\BinanceSpotCatalogService;
 use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\AdminRolePermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
@@ -77,6 +78,7 @@ class OperationalNavigationPermissionTest extends TestCase
         $this->actingAs($admin, 'admin');
 
         $engine = $this->mock(ScreenerEngine::class);
+        $catalog = $this->mock(BinanceSpotCatalogService::class);
         $engine->shouldReceive('markets')->once()->andReturn([
             'CRYPTO' => [
                 'label' => 'Crypto',
@@ -87,12 +89,26 @@ class OperationalNavigationPermissionTest extends TestCase
         $engine->shouldReceive('timeframes')->once()->andReturn([
             'H1' => ['label' => '1 Hour'],
         ]);
-        $engine->shouldReceive('screen')->once()->with([
+        $symbols = [[
+            'symbol' => 'BTCUSDT',
+            'provider_symbol' => 'BTCUSDT',
+            'name' => 'Bitcoin / Tether',
+            'base_currency' => 'BTC',
+            'quote_currency' => 'USDT',
+            'enabled' => true,
+            'logo_url' => 'https://cdn.jsdelivr.net/btc.png',
+        ]];
+        $catalog->shouldReceive('catalog')->once()->andReturn([
+            'symbols' => $symbols,
+            'source' => 'BINANCE_LIVE',
+            'fetched_at_utc' => '2026-10-05T08:00:00+00:00',
+        ]);
+        $engine->shouldReceive('screenWithSymbols')->once()->with([
             'market' => 'CRYPTO',
             'timeframe' => 'H1',
             'sort' => 'symbol',
             'order' => 'asc',
-        ])->andReturn([
+        ], $symbols)->andReturn([
             'market' => 'CRYPTO',
             'timeframe' => 'H1',
             'provider' => 'BINANCE',
@@ -102,6 +118,8 @@ class OperationalNavigationPermissionTest extends TestCase
             'results' => [[
                 'symbol' => 'BTCUSDT',
                 'name' => 'Bitcoin / Tether',
+                'base_currency' => 'BTC',
+                'logo_url' => 'https://cdn.jsdelivr.net/btc.png',
                 'price' => 65000,
                 'change_percent' => 1.25,
                 'trend' => 'BULLISH',
@@ -118,8 +136,70 @@ class OperationalNavigationPermissionTest extends TestCase
         ]))
             ->assertOk()
             ->assertSee('Market Results')
+            ->assertSee('Search Binance symbols')
             ->assertSee('BTCUSDT')
             ->assertSee('BINANCE Screener Output');
+    }
+
+    public function test_binance_market_results_are_searchable_and_paginated(): void
+    {
+        $admin = $this->adminWithPermissions(['screener.monitor.view']);
+        $this->actingAs($admin, 'admin');
+
+        $symbols = collect(range(1, 21))->map(static fn (int $index): array => [
+            'symbol' => sprintf('COIN%02dUSDT', $index),
+            'provider_symbol' => sprintf('COIN%02dUSDT', $index),
+            'name' => sprintf('COIN%02d / USDT', $index),
+            'base_currency' => sprintf('COIN%02d', $index),
+            'quote_currency' => 'USDT',
+            'enabled' => true,
+            'logo_url' => sprintf('https://cdn.jsdelivr.net/coin%02d.png', $index),
+        ])->all();
+
+        $engine = $this->mock(ScreenerEngine::class);
+        $catalog = $this->mock(BinanceSpotCatalogService::class);
+        $engine->shouldReceive('markets')->once()->andReturn([
+            'CRYPTO' => ['label' => 'Crypto', 'enabled' => true],
+        ]);
+        $engine->shouldReceive('timeframes')->once()->andReturn([
+            'H1' => ['label' => '1 Hour'],
+        ]);
+        $catalog->shouldReceive('catalog')->once()->andReturn([
+            'symbols' => $symbols,
+            'source' => 'BINANCE_CACHE',
+            'fetched_at_utc' => '2026-10-05T08:00:00+00:00',
+        ]);
+        $engine->shouldReceive('screenWithSymbols')
+            ->once()
+            ->withArgs(static fn (array $filters, array $pageSymbols): bool =>
+                $filters['market'] === 'CRYPTO'
+                && count($pageSymbols) === 1
+                && $pageSymbols[0]['symbol'] === 'COIN21USDT'
+            )
+            ->andReturn([
+                'market' => 'CRYPTO',
+                'timeframe' => 'H1',
+                'provider' => 'BINANCE',
+                'generated_at_utc' => '2026-10-05T08:00:00+00:00',
+                'count' => 1,
+                'cache' => ['hit' => true, 'stale' => false],
+                'results' => [[
+                    ...$symbols[20],
+                    'price' => 1.0,
+                    'trend' => 'SIDEWAYS',
+                ]],
+            ]);
+
+        $this->get(route('admin.screener.markets', [
+            'market' => 'CRYPTO',
+            'timeframe' => 'H1',
+            'page' => 2,
+        ]))
+            ->assertOk()
+            ->assertSee('COIN21USDT')
+            ->assertSee('21 Binance USDT Spot symbols')
+            ->assertSee('Page')
+            ->assertSee('of');
     }
 
     private function adminWithPermissions(array $permissionCodes): AdminUser

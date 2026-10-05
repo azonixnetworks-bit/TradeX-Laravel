@@ -7,9 +7,11 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
+use App\Services\Screener\BinanceSpotCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use InvalidArgumentException;
 
 class ScreenerMonitorController extends Controller
@@ -46,7 +48,8 @@ class ScreenerMonitorController extends Controller
 
     public function markets(
         Request $request,
-        ScreenerEngine $engine
+        ScreenerEngine $engine,
+        BinanceSpotCatalogService $binanceCatalog
     ): Response {
         $this->viewer();
 
@@ -65,14 +68,60 @@ class ScreenerMonitorController extends Controller
 
         $results = null;
         $error = null;
+        $symbolPaginator = null;
+        $search = trim((string) $request->query('q', ''));
 
         try {
-            $results = $engine->screen([
+            $filters = [
                 'market' => $market,
                 'timeframe' => $timeframe,
                 'sort' => 'symbol',
                 'order' => 'asc',
-            ]);
+            ];
+
+            if ($market === 'CRYPTO') {
+                $catalog = $binanceCatalog->catalog();
+                $symbols = (array) ($catalog['symbols'] ?? []);
+
+                if ($search !== '') {
+                    $needle = strtoupper($search);
+                    $symbols = array_values(array_filter(
+                        $symbols,
+                        static fn (array $symbol): bool =>
+                            str_contains(strtoupper((string) ($symbol['symbol'] ?? '')), $needle)
+                            || str_contains(strtoupper((string) ($symbol['name'] ?? '')), $needle)
+                            || str_contains(strtoupper((string) ($symbol['base_currency'] ?? '')), $needle)
+                    ));
+                }
+
+                $perPage = 20;
+                $page = max(1, (int) $request->query('page', 1));
+                $pageSymbols = array_slice($symbols, ($page - 1) * $perPage, $perPage);
+                $symbolPaginator = new LengthAwarePaginator(
+                    $pageSymbols,
+                    count($symbols),
+                    $perPage,
+                    $page,
+                    [
+                        'path' => route('admin.screener.markets'),
+                        'query' => $request->except('page'),
+                    ]
+                );
+
+                $results = $pageSymbols === []
+                    ? [
+                        'market' => 'CRYPTO',
+                        'timeframe' => $timeframe,
+                        'provider' => 'BINANCE',
+                        'generated_at_utc' => $catalog['fetched_at_utc'] ?? now('UTC')->toIso8601String(),
+                        'count' => 0,
+                        'cache' => ['hit' => true, 'stale' => ($catalog['source'] ?? '') === 'BINANCE_STALE_CACHE'],
+                        'results' => [],
+                    ]
+                    : $engine->screenWithSymbols($filters, $pageSymbols);
+            } else {
+                $results = $engine->screen($filters);
+            }
         } catch (ScreenerProviderException $exception) {
             $error = [
                 'code' => $exception->providerCode,
@@ -93,7 +142,9 @@ class ScreenerMonitorController extends Controller
                 'market',
                 'timeframe',
                 'results',
-                'error'
+                'error',
+                'symbolPaginator',
+                'search'
             ),
             200,
             $this->noStoreHeaders()

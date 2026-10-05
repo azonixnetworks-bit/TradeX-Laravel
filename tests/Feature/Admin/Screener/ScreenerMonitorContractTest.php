@@ -88,6 +88,14 @@ class ScreenerMonitorContractTest extends TestCase
             $marketView
         );
         $this->assertStringContainsString(
+            'Search Binance symbols',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'admin.components.pagination',
+            $marketView
+        );
+        $this->assertStringContainsString(
             'ScreenerEngine $engine',
             $controller
         );
