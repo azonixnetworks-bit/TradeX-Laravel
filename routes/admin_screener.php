@@ -19,5 +19,10 @@ Route::prefix('admin')
                     '/health',
                     [ScreenerMonitorController::class, 'health']
                 )->name('health');
+
+                Route::get(
+                    '/markets',
+                    [ScreenerMonitorController::class, 'markets']
+                )->name('markets');
             });
     });

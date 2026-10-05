@@ -163,6 +163,7 @@
     data-dashboard-url="{{ route('admin.dashboard') }}"
     data-market-clock-url="{{ route('admin.market_clock.index') }}"
     data-screener-url="{{ route('admin.screener.index') }}"
+    data-screener-markets-url="{{ route('admin.screener.markets') }}"
 ></script>
 @endif
 

@@ -13,6 +13,8 @@
     id="screenerMonitorApp"
     data-health-endpoint="{{ route('admin.screener.health') }}"
 >
+    @include('admin.screener.partials.subnav')
+
     <div class="page-header screener-monitor-header">
         <div>
             <div class="page-eyebrow">MARKET DATA OPERATIONS</div>

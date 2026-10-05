@@ -8,6 +8,7 @@
     }
 
     const screenerUrl = script.dataset.screenerUrl;
+    const screenerMarketsUrl = script.dataset.screenerMarketsUrl;
     const dashboardUrl = script.dataset.dashboardUrl;
     const marketClockUrl = script.dataset.marketClockUrl;
     const nav = document.querySelector('.sidebar-nav');
@@ -18,7 +19,10 @@
 
     const links = Array.from(nav.querySelectorAll('.nav-link'));
 
-    if (links.some((link) => link.getAttribute('href') === screenerUrl)) {
+    if (
+        links.some((link) => link.getAttribute('href') === screenerUrl)
+        && links.some((link) => link.getAttribute('href') === screenerMarketsUrl)
+    ) {
         return;
     }
 
@@ -66,4 +70,31 @@
 
     const anchor = marketClockLink || dashboardLink || overviewTitle;
     anchor.insertAdjacentElement('afterend', link);
+
+    if (!screenerMarketsUrl) {
+        return;
+    }
+
+    const marketLink = document.createElement('a');
+    marketLink.href = screenerMarketsUrl;
+    marketLink.className = 'nav-link screener-market-nav-link';
+    marketLink.setAttribute('aria-label', 'Open Screener Market Results');
+
+    const marketPath = new URL(screenerMarketsUrl, window.location.origin)
+        .pathname
+        .replace(/\/$/, '');
+
+    if (currentPath === marketPath) {
+        marketLink.classList.add('active');
+    }
+
+    const marketIcon = document.createElement('span');
+    marketIcon.className = 'nav-icon';
+    marketIcon.textContent = '↳';
+
+    const marketLabel = document.createElement('span');
+    marketLabel.textContent = 'Market Results';
+
+    marketLink.append(marketIcon, marketLabel);
+    link.insertAdjacentElement('afterend', marketLink);
 })();

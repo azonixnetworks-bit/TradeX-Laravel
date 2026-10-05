@@ -5,6 +5,7 @@ namespace Tests\Feature\Admin\Administration;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
+use App\Services\Screener\ScreenerEngine;
 use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\AdminRolePermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
@@ -68,6 +69,57 @@ class OperationalNavigationPermissionTest extends TestCase
         $this->assertStringContainsString('nav.prepend(overviewTitle)', $market);
         $this->assertStringContainsString("title.textContent.trim() === 'OVERVIEW'", $screener);
         $this->assertStringContainsString('marketClockLink || dashboardLink || overviewTitle', $screener);
+    }
+
+    public function test_screener_operator_can_view_market_results_without_customer_api_authentication(): void
+    {
+        $admin = $this->adminWithPermissions(['screener.monitor.view']);
+        $this->actingAs($admin, 'admin');
+
+        $engine = $this->mock(ScreenerEngine::class);
+        $engine->shouldReceive('markets')->once()->andReturn([
+            'CRYPTO' => [
+                'label' => 'Crypto',
+                'enabled' => true,
+                'status' => 'ACTIVE',
+            ],
+        ]);
+        $engine->shouldReceive('timeframes')->once()->andReturn([
+            'H1' => ['label' => '1 Hour'],
+        ]);
+        $engine->shouldReceive('screen')->once()->with([
+            'market' => 'CRYPTO',
+            'timeframe' => 'H1',
+            'sort' => 'symbol',
+            'order' => 'asc',
+        ])->andReturn([
+            'market' => 'CRYPTO',
+            'timeframe' => 'H1',
+            'provider' => 'BINANCE',
+            'generated_at_utc' => '2026-10-05T08:00:00+00:00',
+            'count' => 1,
+            'cache' => ['hit' => false, 'stale' => false],
+            'results' => [[
+                'symbol' => 'BTCUSDT',
+                'name' => 'Bitcoin / Tether',
+                'price' => 65000,
+                'change_percent' => 1.25,
+                'trend' => 'BULLISH',
+                'rsi_14' => 61.5,
+                'ema_alignment' => 'BULLISH',
+                'atr_percent' => 2.1,
+                'candle_time_utc' => '2026-10-05T07:00:00+00:00',
+            ]],
+        ]);
+
+        $this->get(route('admin.screener.markets', [
+            'market' => 'CRYPTO',
+            'timeframe' => 'H1',
+        ]))
+            ->assertOk()
+            ->assertSee('Market Results')
+            ->assertSee('BTCUSDT')
+            ->assertSee('BINANCE Screener Output');
     }
 
     private function adminWithPermissions(array $permissionCodes): AdminUser

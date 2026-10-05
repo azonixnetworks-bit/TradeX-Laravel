@@ -19,6 +19,9 @@ class ScreenerMonitorContractTest extends TestCase
         $view = file_get_contents(resource_path(
             'views/admin/screener/index.blade.php'
         ));
+        $marketView = file_get_contents(resource_path(
+            'views/admin/screener/markets.blade.php'
+        ));
         $css = file_get_contents(public_path(
             'admin/css/screener-monitor.css'
         ));
@@ -30,7 +33,7 @@ class ScreenerMonitorContractTest extends TestCase
         ));
 
         foreach (
-            [$webRoutes, $routes, $controller, $layout, $view, $css, $nav, $monitor]
+            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $css, $nav, $monitor]
             as $file
         ) {
             $this->assertIsString($file);
@@ -71,6 +74,30 @@ class ScreenerMonitorContractTest extends TestCase
         $this->assertStringContainsString(
             'Secret-safe diagnostics',
             $view
+        );
+        $this->assertStringContainsString(
+            "name('markets')",
+            $routes
+        );
+        $this->assertStringContainsString(
+            'Market Results',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-market-buttons',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'ScreenerEngine $engine',
+            $controller
+        );
+        $this->assertStringContainsString(
+            'data-screener-markets-url',
+            $layout
+        );
+        $this->assertStringContainsString(
+            'Open Screener Market Results',
+            $nav
         );
         $this->assertStringContainsString(
             '.screener-provider-table',
