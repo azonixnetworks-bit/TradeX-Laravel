@@ -7,6 +7,10 @@
 <link rel="stylesheet" href="{{ asset('admin/css/screener-monitor.css') }}">
 @endpush
 
+@push('scripts')
+<script src="{{ asset('admin/js/screener-crypto-live.js') }}" defer></script>
+@endpush
+
 @section('content')
 <div class="screener-monitor-page screener-market-results-page">
     @include('admin.screener.partials.subnav')
@@ -113,7 +117,10 @@
             </div>
 
             <div class="screener-table-scroll">
-                <table class="screener-provider-table screener-results-table">
+                <table
+                    class="screener-provider-table screener-results-table"
+                    @if($market === 'CRYPTO') data-binance-live-table @endif
+                >
                     <thead>
                         <tr>
                             <th>Symbol</th>
@@ -128,7 +135,7 @@
                     </thead>
                     <tbody>
                         @forelse($results['results'] as $row)
-                            <tr>
+                            <tr @if($market === 'CRYPTO') data-binance-symbol="{{ $row['symbol'] }}" @endif>
                                 <td>
                                     <div class="screener-symbol-cell">
                                         <span class="screener-symbol-logo" aria-hidden="true">
@@ -143,11 +150,24 @@
                                                 >
                                             @endif
                                         </span>
-                                        <span><strong>{{ $row['symbol'] }}</strong><small>{{ $row['name'] }}</small></span>
+                                        <span>
+                                            @if($market === 'CRYPTO')
+                                                <button
+                                                    type="button"
+                                                    class="screener-symbol-chart-link"
+                                                    data-chart-symbol="{{ $row['symbol'] }}"
+                                                    data-chart-name="{{ $row['name'] }}"
+                                                    aria-label="Open {{ $row['symbol'] }} TradingView chart"
+                                                >{{ $row['symbol'] }}</button>
+                                            @else
+                                                <strong>{{ $row['symbol'] }}</strong>
+                                            @endif
+                                            <small>{{ $row['name'] }}</small>
+                                        </span>
                                     </div>
                                 </td>
-                                <td>{{ $row['price'] ?? '—' }}</td>
-                                <td>{{ isset($row['change_percent']) ? number_format((float) $row['change_percent'], 2).'%' : '—' }}</td>
+                                <td data-live-price>{{ $row['price'] ?? '—' }}</td>
+                                <td data-live-change>{{ isset($row['change_percent']) ? number_format((float) $row['change_percent'], 2).'%' : '—' }}</td>
                                 <td><span class="screener-status trend-{{ strtolower($row['trend'] ?? 'sideways') }}">{{ $row['trend'] ?? '—' }}</span></td>
                                 <td>{{ $row['rsi_14'] ?? '—' }}</td>
                                 <td>{{ $row['ema_alignment'] ?? '—' }}</td>
@@ -167,6 +187,23 @@
                 </div>
             @endif
         </section>
+    @endif
+
+    @if($market === 'CRYPTO')
+        <div class="screener-chart-modal" data-screener-chart-modal hidden>
+            <div class="screener-chart-backdrop" data-chart-close></div>
+            <section class="screener-chart-dialog" role="dialog" aria-modal="true" aria-labelledby="screener-chart-title">
+                <header>
+                    <div>
+                        <div class="panel-eyebrow">BINANCE · TRADINGVIEW</div>
+                        <h2 id="screener-chart-title" data-chart-title>Crypto Chart</h2>
+                        <p>Clean candlestick chart · no default indicators</p>
+                    </div>
+                    <button type="button" class="screener-chart-close" data-chart-close aria-label="Close chart">×</button>
+                </header>
+                <div class="screener-tradingview-chart" data-tradingview-chart></div>
+            </section>
+        </div>
     @endif
 </div>
 @endsection

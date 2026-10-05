@@ -115,6 +115,114 @@
     gap: 10px;
 }
 
+.screener-symbol-chart-link {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: var(--accent, #f2b84b);
+    cursor: pointer;
+    font: inherit;
+    font-weight: 800;
+    padding: 0;
+    text-align: left;
+}
+
+.screener-symbol-chart-link:hover,
+.screener-symbol-chart-link:focus-visible {
+    text-decoration: underline;
+}
+
+[data-live-price],
+[data-live-change] {
+    transition: color 160ms ease, background-color 160ms ease;
+}
+
+.screener-live-up {
+    color: #24c68f;
+}
+
+.screener-live-down {
+    color: #ff6b6b;
+}
+
+.screener-chart-modal[hidden] {
+    display: none;
+}
+
+.screener-chart-modal {
+    inset: 0;
+    position: fixed;
+    z-index: 1200;
+}
+
+.screener-chart-backdrop {
+    background: rgba(2, 6, 14, 0.82);
+    inset: 0;
+    position: absolute;
+}
+
+.screener-chart-dialog {
+    background: #0b111c;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
+    display: grid;
+    gap: 14px;
+    height: min(760px, calc(100vh - 48px));
+    inset: 24px;
+    margin: auto;
+    max-width: 1320px;
+    padding: 18px;
+    position: absolute;
+}
+
+.screener-chart-dialog > header {
+    align-items: flex-start;
+    display: flex;
+    justify-content: space-between;
+}
+
+.screener-chart-dialog h2,
+.screener-chart-dialog p {
+    margin: 0;
+}
+
+.screener-chart-dialog p {
+    color: var(--text-muted, #8491a4);
+    font-size: 0.78rem;
+    margin-top: 4px;
+}
+
+.screener-chart-close {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1.5rem;
+    height: 38px;
+    justify-content: center;
+    width: 38px;
+}
+
+.screener-tradingview-chart {
+    min-height: 0;
+    overflow: hidden;
+}
+
+.screener-tradingview-chart,
+.screener-tradingview-chart > div,
+.screener-tradingview-chart iframe {
+    height: 100% !important;
+    width: 100% !important;
+}
+
+body.screener-chart-open {
+    overflow: hidden;
+}
+
 .screener-symbol-logo {
     align-items: center;
     background: rgba(242, 184, 75, 0.16);
@@ -353,5 +461,12 @@
     .screener-symbol-search-form input[type="search"] {
         min-width: 0;
         width: 100%;
+    }
+
+    .screener-chart-dialog {
+        border-radius: 12px;
+        height: calc(100vh - 20px);
+        inset: 10px;
+        padding: 12px;
     }
 }

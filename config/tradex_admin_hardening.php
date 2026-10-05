@@ -144,11 +144,12 @@ return [
             ."base-uri 'self'; "
             ."form-action 'self'; "
             ."frame-ancestors 'none'; "
+            ."frame-src https://s.tradingview.com https://www.tradingview.com; "
             ."object-src 'none'; "
             ."img-src 'self' data: https://i.ytimg.com https://cdn.jsdelivr.net; "
             ."font-src 'self' data:; "
             ."style-src 'self' 'unsafe-inline'; "
-            ."script-src 'self' 'unsafe-inline'; "
-            ."connect-src 'self';",
+            ."script-src 'self' 'unsafe-inline' https://s3.tradingview.com; "
+            ."connect-src 'self' wss://stream.binance.com:9443;",
     ],
 ];

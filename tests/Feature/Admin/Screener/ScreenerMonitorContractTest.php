@@ -31,9 +31,12 @@ class ScreenerMonitorContractTest extends TestCase
         $monitor = file_get_contents(public_path(
             'admin/js/screener-monitor.js'
         ));
+        $cryptoLive = file_get_contents(public_path(
+            'admin/js/screener-crypto-live.js'
+        ));
 
         foreach (
-            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $css, $nav, $monitor]
+            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $css, $nav, $monitor, $cryptoLive]
             as $file
         ) {
             $this->assertIsString($file);
@@ -94,6 +97,22 @@ class ScreenerMonitorContractTest extends TestCase
         $this->assertStringContainsString(
             'admin.components.pagination',
             $marketView
+        );
+        $this->assertStringContainsString(
+            'data-chart-symbol',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-crypto-live.js',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'wss://stream.binance.com:9443',
+            $cryptoLive
+        );
+        $this->assertStringContainsString(
+            'studies: []',
+            $cryptoLive
         );
         $this->assertStringContainsString(
             'ScreenerEngine $engine',
