@@ -115,6 +115,74 @@
     gap: 10px;
 }
 
+.screener-watchlist {
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 0 0 14px;
+}
+
+.screener-watchlist.is-visible {
+    display: flex;
+}
+
+.screener-watchlist > strong,
+.screener-watchlist > span {
+    color: var(--text-muted, #8491a4);
+    font-size: 0.75rem;
+}
+
+.screener-watchlist > strong {
+    color: inherit;
+}
+
+.screener-watchlist-item {
+    align-items: center;
+    background: rgba(242, 184, 75, 0.1);
+    border: 1px solid rgba(242, 184, 75, 0.28);
+    border-radius: 999px;
+    color: var(--accent, #f2b84b);
+    display: inline-flex;
+    font-size: 0.74rem;
+    font-weight: 800;
+    gap: 5px;
+    padding: 6px 10px;
+    text-decoration: none;
+}
+
+.screener-watchlist-toggle {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    color: var(--text-muted, #8491a4);
+    cursor: pointer;
+    display: inline-flex;
+    font-size: 1.35rem;
+    height: 30px;
+    justify-content: center;
+    line-height: 1;
+    margin-left: auto;
+    padding: 0;
+    width: 30px;
+}
+
+.screener-watchlist-toggle[aria-pressed="true"] {
+    color: var(--accent, #f2b84b);
+}
+
+.screener-watchlist-toggle:focus-visible,
+.screener-watchlist-toggle:hover {
+    color: var(--accent, #f2b84b);
+}
+
+.screener-watchlist-notice {
+    color: var(--text-muted, #8491a4);
+    font-size: 0.75rem;
+    margin: 0 0 8px;
+}
+
 .screener-symbol-chart-link {
     appearance: none;
     background: transparent;
@@ -342,6 +410,28 @@ body.screener-chart-open {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+}
+
+.screener-crypto-segments {
+    display: inline-flex;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.screener-crypto-segments a {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    color: var(--text-muted, #8491a4);
+    font-size: 0.76rem;
+    font-weight: 800;
+    padding: 7px 13px;
+    text-decoration: none;
+}
+
+.screener-crypto-segments a.active {
+    background: rgba(242, 184, 75, 0.16);
+    border-color: rgba(242, 184, 75, 0.65);
+    color: var(--accent, #f2b84b);
 }
 
 .screener-overall-badge,
