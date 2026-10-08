@@ -159,6 +159,10 @@
                     data-bubble-canvas
                     aria-label="Interactive crypto market bubble map"
                 ></canvas>
+                <div class="market-bubble-loading" data-bubble-loading>
+                    <span class="market-bubble-loading-spinner" aria-hidden="true"></span>
+                    <span data-bubble-loading-text>Loading market map…</span>
+                </div>
                 <div class="market-bubble-empty" data-bubble-empty hidden>
                     No assets match this filter.
                 </div>
