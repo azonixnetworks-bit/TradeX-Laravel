@@ -186,36 +186,60 @@
         return minRadius + ((maxRadius - minRadius) * normalised);
     }
 
-    function nodeSpawnPoint(index, total) {
-        var angle = (index * 2.399963229728653) + (Math.random() * 0.35);
-        var spread = Math.min(state.width, state.height) * 0.30;
-        var distance = Math.sqrt(index / Math.max(1, total)) * spread;
+    function hashSymbol(symbol) {
+        var hash = 2166136261;
+
+        for (var index = 0; index < symbol.length; index += 1) {
+            hash ^= symbol.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+
+        return hash >>> 0;
+    }
+
+    function seededUnit(seed) {
+        var value = Math.sin(seed * 12.9898) * 43758.5453;
+        return value - Math.floor(value);
+    }
+
+    function nodeSpawnPoint(asset, targetRadius) {
+        var symbol = String(asset.symbol || '');
+        var seed = hashSymbol(symbol);
+        var edge = targetRadius + 18;
+        var usableWidth = Math.max(1, state.width - (edge * 2));
+        var usableHeight = Math.max(1, state.height - (edge * 2));
 
         return {
-            x: (state.width / 2) + (Math.cos(angle) * distance),
-            y: (state.height / 2) + (Math.sin(angle) * distance)
+            x: edge + (seededUnit(seed + 11) * usableWidth),
+            y: edge + (seededUnit(seed + 97) * usableHeight)
         };
     }
 
     function createNode(asset, index, total) {
-        var point = nodeSpawnPoint(index, total);
         var targetRadius = radiusFor(asset, state.currentRange);
+        var point = nodeSpawnPoint(asset, targetRadius);
+        var symbol = String(asset.symbol || '');
+        var seed = hashSymbol(symbol);
+        var direction = seededUnit(seed + 211) * Math.PI * 2;
+        var cruiseSpeed = 0.18 + (seededUnit(seed + 307) * 0.16);
 
         return {
             id: index + 1,
-            symbol: String(asset.symbol || ''),
+            symbol: symbol,
             asset: asset,
             x: point.x,
             y: point.y,
-            vx: (Math.random() - 0.5) * 0.22,
-            vy: (Math.random() - 0.5) * 0.22,
+            vx: Math.cos(direction) * cruiseSpeed,
+            vy: Math.sin(direction) * cruiseSpeed,
             radius: Math.max(4, targetRadius * 0.18),
             targetRadius: targetRadius,
             displayChange: Number(asset.change_percent) || 0,
             targetChange: Number(asset.change_percent) || 0,
-            phase: Math.random() * Math.PI * 2,
-            driftX: 0.55 + (Math.random() * 0.55),
-            driftY: 0.55 + (Math.random() * 0.55)
+            phase: seededUnit(seed + 401) * Math.PI * 2,
+            wanderDirection: direction,
+            wanderRate: 0.18 + (seededUnit(seed + 503) * 0.22),
+            wanderAmount: 0.55 + (seededUnit(seed + 601) * 0.50),
+            cruiseSpeed: cruiseSpeed
         };
     }
 
@@ -373,8 +397,8 @@
 
         var resolvedOverlaps = 0;
         var maxRadius = 70;
-        var separationPadding = 5;
-        var softPadding = 10;
+        var separationPadding = 8;
+        var softPadding = 20;
         var cellSize = (maxRadius * 2) + separationPadding + softPadding;
         var grid = buildSpatialGrid(cellSize);
         var visited = new Set();
@@ -447,8 +471,8 @@
                         if (applySoftForce && distance < softZone) {
                             var softDepth = softZone - distance;
                             var spring = Math.min(
-                                0.20,
-                                softDepth * 0.0045 * dt
+                                0.16,
+                                softDepth * 0.0038 * dt
                             );
 
                             node.vx -= nx * spring;
@@ -535,11 +559,38 @@
         });
     }
 
+    function applyWallSteering(node, dt) {
+        var margin = node.radius + 14;
+        var wallZone = Math.min(
+            120,
+            Math.max(70, Math.min(state.width, state.height) * 0.14)
+        );
+        var strength = 0.030 * dt;
+
+        if (node.x < margin + wallZone) {
+            node.vx += (
+                1 - ((node.x - margin) / wallZone)
+            ) * strength;
+        } else if (node.x > state.width - margin - wallZone) {
+            node.vx -= (
+                1 - ((state.width - margin - node.x) / wallZone)
+            ) * strength;
+        }
+
+        if (node.y < margin + wallZone) {
+            node.vy += (
+                1 - ((node.y - margin) / wallZone)
+            ) * strength;
+        } else if (node.y > state.height - margin - wallZone) {
+            node.vy -= (
+                1 - ((state.height - margin - node.y) / wallZone)
+            ) * strength;
+        }
+    }
+
     function stepPhysics(timestamp, dt) {
-        var centreX = state.width / 2;
-        var centreY = state.height / 2;
         var time = timestamp * 0.001;
-        var damping = Math.pow(0.982, dt);
+        var damping = Math.pow(0.995, dt);
 
         state.nodes.forEach(function (node) {
             node.radius = lerp(
@@ -554,22 +605,46 @@
                 clamp(0.10 * dt, 0, 0.34)
             );
 
-            var centreForceX = (centreX - node.x) * 0.00042;
-            var centreForceY = (centreY - node.y) * 0.00042;
+            /*
+             * Every bubble has its own cruise direction and slow wander.
+             * There is intentionally no global centre attraction, so free
+             * canvas space stays usable instead of forming one packed ball.
+             */
+            var wanderAngle = (
+                node.wanderDirection
+                + (
+                    Math.sin(
+                        (time * node.wanderRate) + node.phase
+                    )
+                    * node.wanderAmount
+                )
+            );
+            var desiredVx = Math.cos(wanderAngle) * node.cruiseSpeed;
+            var desiredVy = Math.sin(wanderAngle) * node.cruiseSpeed;
+            var steering = 0.018 * dt;
 
-            var driftForceX = Math.sin((time * node.driftX) + node.phase) * 0.014;
-            var driftForceY = Math.cos((time * node.driftY) + node.phase) * 0.014;
+            node.vx += (desiredVx - node.vx) * steering;
+            node.vy += (desiredVy - node.vy) * steering;
 
-            node.vx += (centreForceX + driftForceX) * dt;
-            node.vy += (centreForceY + driftForceY) * dt;
+            applyWallSteering(node, dt);
 
             if (state.hoverSymbol && node.symbol === state.hoverSymbol) {
-                node.vx += Math.sin(time * 2.2) * 0.006 * dt;
-                node.vy += Math.cos(time * 2.2) * 0.006 * dt;
+                node.vx += Math.sin(time * 2.2) * 0.004 * dt;
+                node.vy += Math.cos(time * 2.2) * 0.004 * dt;
             }
 
             node.vx *= damping;
             node.vy *= damping;
+
+            var speed = Math.sqrt(
+                (node.vx * node.vx) + (node.vy * node.vy)
+            );
+            var maxSpeed = 0.55;
+
+            if (speed > maxSpeed) {
+                node.vx = (node.vx / speed) * maxSpeed;
+                node.vy = (node.vy / speed) * maxSpeed;
+            }
 
             node.x += node.vx * dt;
             node.y += node.vy * dt;
@@ -578,10 +653,9 @@
         clampNodesToBounds();
 
         /*
-         * Dense layouts need iterative constraint solving. Keep resolving
-         * chain collisions until a full pass reports zero overlaps, with an
-         * eight-pass safety cap for predictable frame cost. Only the first
-         * pass applies the soft glide force.
+         * Maintain visible breathing room between bubbles. The first pass
+         * starts repelling before contact; hard overlap correction remains
+         * enabled as a safety constraint.
          */
         for (var collisionPass = 0; collisionPass < 8; collisionPass += 1) {
             var overlapCount = resolveCollisions(
