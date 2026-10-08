@@ -366,13 +366,16 @@
         return grid;
     }
 
-    function resolveCollisions(dt) {
+    function resolveCollisions(dt, applySoftForce) {
         if (state.nodes.length < 2) {
-            return;
+            return 0;
         }
 
+        var resolvedOverlaps = 0;
         var maxRadius = 70;
-        var cellSize = (maxRadius * 2) + 12;
+        var separationPadding = 5;
+        var softPadding = 10;
+        var cellSize = (maxRadius * 2) + separationPadding + softPadding;
         var grid = buildSpatialGrid(cellSize);
         var visited = new Set();
 
@@ -382,7 +385,9 @@
 
             for (var offsetX = -1; offsetX <= 1; offsetX += 1) {
                 for (var offsetY = -1; offsetY <= 1; offsetY += 1) {
-                    var bucket = grid.get((cellX + offsetX) + ':' + (cellY + offsetY));
+                    var bucket = grid.get(
+                        (cellX + offsetX) + ':' + (cellY + offsetY)
+                    );
 
                     if (!bucket) {
                         continue;
@@ -407,15 +412,24 @@
                         var dy = other.y - node.y;
                         var distanceSquared = (dx * dx) + (dy * dy);
 
-                        if (distanceSquared === 0) {
-                            dx = 0.01;
-                            dy = 0.01;
-                            distanceSquared = 0.0002;
+                        if (distanceSquared < 0.0001) {
+                            var angle = (
+                                (node.id * 12.9898)
+                                + (other.id * 78.233)
+                            ) % (Math.PI * 2);
+
+                            dx = Math.cos(angle) * 0.01;
+                            dy = Math.sin(angle) * 0.01;
+                            distanceSquared = (dx * dx) + (dy * dy);
                         }
 
                         var distance = Math.sqrt(distanceSquared);
-                        var minimum = node.radius + other.radius + 4;
-                        var softZone = minimum + 8;
+                        var minimum = (
+                            node.radius
+                            + other.radius
+                            + separationPadding
+                        );
+                        var softZone = minimum + softPadding;
 
                         if (distance >= softZone) {
                             return;
@@ -423,56 +437,100 @@
 
                         var nx = dx / distance;
                         var ny = dy / distance;
-                        var penetration = softZone - distance;
                         var overlap = Math.max(0, minimum - distance);
 
                         /*
-                         * Soft spring collision:
-                         * start repelling just before the circles overlap, then
-                         * let velocity move them apart over several frames.
-                         * Only a very small positional correction is applied
-                         * when they actually overlap so separation feels slow
-                         * and natural instead of snapping.
+                         * Soft force starts before contact. It runs only on the
+                         * first collision pass so bubbles glide away instead
+                         * of accelerating excessively in dense clusters.
                          */
-                        var spring = Math.min(
-                            0.42,
-                            penetration * 0.012 * dt
-                        );
-
-                        node.vx -= nx * spring;
-                        node.vy -= ny * spring;
-                        other.vx += nx * spring;
-                        other.vy += ny * spring;
-
-                        var relativeVx = other.vx - node.vx;
-                        var relativeVy = other.vy - node.vy;
-                        var closingSpeed = (relativeVx * nx) + (relativeVy * ny);
-
-                        if (closingSpeed < 0) {
-                            var brake = Math.min(
-                                0.18,
-                                Math.abs(closingSpeed) * 0.10
+                        if (applySoftForce && distance < softZone) {
+                            var softDepth = softZone - distance;
+                            var spring = Math.min(
+                                0.20,
+                                softDepth * 0.0045 * dt
                             );
 
-                            node.vx -= nx * brake;
-                            node.vy -= ny * brake;
-                            other.vx += nx * brake;
-                            other.vy += ny * brake;
+                            node.vx -= nx * spring;
+                            node.vy -= ny * spring;
+                            other.vx += nx * spring;
+                            other.vy += ny * spring;
                         }
 
-                        if (overlap > 0) {
-                            var correction = Math.min(
-                                0.75,
-                                overlap * 0.08 * dt
+                        if (overlap <= 0) {
+                            return;
+                        }
+
+                        resolvedOverlaps += 1;
+
+                        /*
+                         * Hard no-overlap correction.
+                         *
+                         * The pair is moved to at least the exact required
+                         * distance in this pass. Movement is weighted so a
+                         * smaller bubble yields more around a larger bubble.
+                         * Multiple passes below resolve chain collisions.
+                         */
+                        var radiusSum = Math.max(
+                            1,
+                            node.radius + other.radius
+                        );
+                        var nodeShare = other.radius / radiusSum;
+                        var otherShare = node.radius / radiusSum;
+                        var correction = overlap + 0.35;
+
+                        node.x -= nx * correction * nodeShare;
+                        node.y -= ny * correction * nodeShare;
+                        other.x += nx * correction * otherShare;
+                        other.y += ny * correction * otherShare;
+
+                        /*
+                         * Remove inward relative velocity so the same pair
+                         * cannot immediately drive back through each other.
+                         */
+                        var relativeVx = other.vx - node.vx;
+                        var relativeVy = other.vy - node.vy;
+                        var closingSpeed = (
+                            (relativeVx * nx)
+                            + (relativeVy * ny)
+                        );
+
+                        if (closingSpeed < 0) {
+                            var stopImpulse = (
+                                -closingSpeed * 0.52
                             );
 
-                            node.x -= nx * correction;
-                            node.y -= ny * correction;
-                            other.x += nx * correction;
-                            other.y += ny * correction;
+                            node.vx -= nx * stopImpulse * nodeShare;
+                            node.vy -= ny * stopImpulse * nodeShare;
+                            other.vx += nx * stopImpulse * otherShare;
+                            other.vy += ny * stopImpulse * otherShare;
                         }
                     });
                 }
+            }
+        });
+
+        return resolvedOverlaps;
+    }
+
+    function clampNodesToBounds() {
+        state.nodes.forEach(function (node) {
+            var padding = node.radius + 5;
+
+            if (node.x < padding) {
+                node.x = padding;
+                node.vx = Math.max(0, node.vx) * 0.55;
+            } else if (node.x > state.width - padding) {
+                node.x = state.width - padding;
+                node.vx = Math.min(0, node.vx) * 0.55;
+            }
+
+            if (node.y < padding) {
+                node.y = padding;
+                node.vy = Math.max(0, node.vy) * 0.55;
+            } else if (node.y > state.height - padding) {
+                node.y = state.height - padding;
+                node.vy = Math.min(0, node.vy) * 0.55;
             }
         });
     }
@@ -517,27 +575,26 @@
             node.y += node.vy * dt;
         });
 
-        resolveCollisions(dt);
+        clampNodesToBounds();
 
-        state.nodes.forEach(function (node) {
-            var padding = node.radius + 4;
+        /*
+         * Dense layouts need iterative constraint solving. Keep resolving
+         * chain collisions until a full pass reports zero overlaps, with an
+         * eight-pass safety cap for predictable frame cost. Only the first
+         * pass applies the soft glide force.
+         */
+        for (var collisionPass = 0; collisionPass < 8; collisionPass += 1) {
+            var overlapCount = resolveCollisions(
+                dt,
+                collisionPass === 0
+            );
 
-            if (node.x < padding) {
-                node.x = padding;
-                node.vx = Math.abs(node.vx) * 0.72;
-            } else if (node.x > state.width - padding) {
-                node.x = state.width - padding;
-                node.vx = -Math.abs(node.vx) * 0.72;
+            clampNodesToBounds();
+
+            if (overlapCount === 0) {
+                break;
             }
-
-            if (node.y < padding) {
-                node.y = padding;
-                node.vy = Math.abs(node.vy) * 0.72;
-            } else if (node.y > state.height - padding) {
-                node.y = state.height - padding;
-                node.vy = -Math.abs(node.vy) * 0.72;
-            }
-        });
+        }
     }
 
     function drawNode(node) {
