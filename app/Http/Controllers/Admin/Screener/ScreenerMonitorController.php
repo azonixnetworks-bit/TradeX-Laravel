@@ -204,35 +204,20 @@ class ScreenerMonitorController extends Controller
                         ]
                     );
 
-                $results = [
-                    'market' => 'CRYPTO',
-                    'crypto_segment' => $cryptoSegment,
-                    'timeframe' => $timeframe,
-                    'provider' => 'BINANCE',
-
-                    'generated_at_utc' =>
-                        $catalog['fetched_at_utc']
-                        ?? now('UTC')
-                            ->toIso8601String(),
-
-                    'count' =>
-                        count($pageSymbols),
-
-                    'cache' => [
-                        'hit' => true,
-
-                        'stale' =>
-                            (
-                                $catalog['source']
-                                ?? ''
-                            )
-                            ===
-                            'BINANCE_STALE_CACHE',
+                /*
+                 * Render the five visible pairs with data already present.
+                 * Shared-host PHP serialises authenticated AJAX requests, so
+                 * asking the browser for five analyses simultaneously left
+                 * four rows stuck at "Waiting…".  Pagination still bounds
+                 * this work to the visible page only.
+                 */
+                $results = $engine->screenWithSymbols(
+                    [
+                        ...$filters,
+                        'crypto_segment' => $cryptoSegment,
                     ],
-
-                    'results' =>
-                        $pageSymbols,
-                ];
+                    $pageSymbols
+                );
             }
 
             /*

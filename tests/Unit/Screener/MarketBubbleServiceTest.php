@@ -12,7 +12,7 @@ class MarketBubbleServiceTest extends TestCase
     {
         $catalog = new class extends BinanceSpotCatalogService
         {
-            public function catalog(): array
+            public function catalog(bool $allowRemote = true): array
             {
                 return [
                     'symbols' => [
