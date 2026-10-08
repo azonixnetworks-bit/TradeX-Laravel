@@ -115,8 +115,8 @@
             <div class="market-bubble-control">
                 <label for="bubbleSize">Bubble Size By</label>
                 <select id="bubbleSize" data-bubble-size>
+                    <option value="change" selected>Price Change %</option>
                     <option value="volume">Trading Volume</option>
-                    <option value="change">Price Change</option>
                     <option value="equal">Equal Size</option>
                 </select>
             </div>
@@ -173,7 +173,7 @@
             </div>
 
             <p class="market-bubble-note">
-                Bubble size uses Binance quote-volume by default. Market-cap sizing is intentionally not shown because the current Binance spot feed does not provide circulating market capitalisation.
+                Bubble size defaults to absolute 24H price change %. Larger moves create larger 3D spheres; positive and negative moves use the same size scale, while colour shows direction. Extreme moves are capped at 20% for layout stability.
             </p>
         </section>
 
