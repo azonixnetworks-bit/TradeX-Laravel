@@ -985,7 +985,8 @@ body.screener-chart-open {
 }
 
 .market-bubble-detail-chart .tradingview-widget-container {
-    height: 270px;
+    height: 270px !important;
+    min-height: 270px;
     width: 100%;
 }
 
