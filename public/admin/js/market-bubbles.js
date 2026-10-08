@@ -19,8 +19,9 @@
     var chartBase = String(root.dataset.chartUrl || '');
 
     var allAssets = [];
+    var assetsPayload = root.querySelector('[data-bubble-assets]');
     try {
-        allAssets = JSON.parse(root.dataset.assets || '[]');
+        allAssets = JSON.parse(assetsPayload ? assetsPayload.textContent : '[]');
     } catch (error) {
         allAssets = [];
     }
@@ -427,7 +428,11 @@
     }
 
     function connect() {
-        disconnect(false);
+        if (socket) {
+            return;
+        }
+
+        clearTimeout(reconnectTimer);
 
         var symbols = allAssets.map(function (asset) {
             return String(asset.symbol || '').toLowerCase();
