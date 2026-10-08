@@ -21,6 +21,25 @@ class BinanceCryptoProvider implements MarketDataProvider
         return 'BINANCE';
     }
 
+    /**
+     * Configuration is deliberately overridable so the USD-M perpetual
+     * provider can share candle normalisation without sharing an endpoint.
+     */
+    protected function settingsKey(): string
+    {
+        return 'tradex_screener.providers.binance';
+    }
+
+    protected function klinesPath(): string
+    {
+        return '/api/v3/klines';
+    }
+
+    protected function healthCacheKey(): string
+    {
+        return self::HEALTH_CACHE_KEY;
+    }
+
     public function market(): string
     {
         return 'CRYPTO';
@@ -32,10 +51,10 @@ class BinanceCryptoProvider implements MarketDataProvider
             'tradex_screener.enabled',
             true
         ) && (bool) config(
-            'tradex_screener.providers.binance.enabled',
+            $this->settingsKey().'.enabled',
             true
         ) && trim((string) config(
-            'tradex_screener.providers.binance.base_url',
+            $this->settingsKey().'.base_url',
             ''
         )) !== '';
     }
@@ -135,7 +154,7 @@ class BinanceCryptoProvider implements MarketDataProvider
     public function health(): array
     {
         $cached = Cache::get(
-            self::HEALTH_CACHE_KEY,
+            $this->healthCacheKey(),
             []
         );
 
@@ -145,7 +164,7 @@ class BinanceCryptoProvider implements MarketDataProvider
             'provider' => $this->name(),
             'market' => $this->market(),
             'enabled' => (bool) config(
-                'tradex_screener.providers.binance.enabled',
+                $this->settingsKey().'.enabled',
                 true
             ),
             'configured' => $configured,
@@ -162,7 +181,7 @@ class BinanceCryptoProvider implements MarketDataProvider
                 $cached['last_latency_ms'] ?? null,
             'base_host' => parse_url(
                 (string) config(
-                    'tradex_screener.providers.binance.base_url',
+                    $this->settingsKey().'.base_url',
                     'https://data-api.binance.vision'
                 ),
                 PHP_URL_HOST
@@ -170,14 +189,14 @@ class BinanceCryptoProvider implements MarketDataProvider
         ];
     }
 
-    private function request(
+    protected function request(
         string $symbol,
         string $interval,
         int $outputSize
     ): Response {
         $baseUrl = rtrim(
             (string) config(
-                'tradex_screener.providers.binance.base_url',
+                $this->settingsKey().'.base_url',
                 'https://data-api.binance.vision'
             ),
             '/'
@@ -188,7 +207,7 @@ class BinanceCryptoProvider implements MarketDataProvider
             min(
                 30,
                 (int) config(
-                    'tradex_screener.providers.binance.timeout_seconds',
+                $this->settingsKey().'.timeout_seconds',
                     10
                 )
             )
@@ -199,7 +218,7 @@ class BinanceCryptoProvider implements MarketDataProvider
             min(
                 $timeout,
                 (int) config(
-                    'tradex_screener.providers.binance.connect_timeout_seconds',
+                    $this->settingsKey().'.connect_timeout_seconds',
                     5
                 )
             )
@@ -210,7 +229,7 @@ class BinanceCryptoProvider implements MarketDataProvider
                 ->connectTimeout($connectTimeout)
                 ->timeout($timeout)
                 ->get(
-                    $baseUrl.'/api/v3/klines',
+                    $baseUrl.$this->klinesPath(),
                     [
                         'symbol' => $symbol,
                         'interval' => $interval,
@@ -309,12 +328,12 @@ class BinanceCryptoProvider implements MarketDataProvider
     private function markSuccess(int $latencyMs): void
     {
         $previous = Cache::get(
-            self::HEALTH_CACHE_KEY,
+            $this->healthCacheKey(),
             []
         );
 
         Cache::put(
-            self::HEALTH_CACHE_KEY,
+            $this->healthCacheKey(),
             array_merge(
                 is_array($previous) ? $previous : [],
                 [
@@ -332,12 +351,12 @@ class BinanceCryptoProvider implements MarketDataProvider
     private function markFailure(string $errorCode): void
     {
         $previous = Cache::get(
-            self::HEALTH_CACHE_KEY,
+            $this->healthCacheKey(),
             []
         );
 
         Cache::put(
-            self::HEALTH_CACHE_KEY,
+            $this->healthCacheKey(),
             array_merge(
                 is_array($previous) ? $previous : [],
                 [

@@ -14,12 +14,16 @@ class BinanceSpotCatalogService
     private const STALE_CACHE_KEY = 'tradex:screener:binance-spot-catalog:stale:v1';
 
     /** @return array{symbols: array<int, array<string, mixed>>, source: string, fetched_at_utc: ?string} */
-    public function catalog(): array
+    public function catalog(bool $allowRemote = true): array
     {
         $cached = Cache::get(self::CACHE_KEY);
 
         if (is_array($cached) && isset($cached['symbols'])) {
             return [...$cached, 'source' => 'BINANCE_CACHE'];
+        }
+
+        if (! $allowRemote) {
+            return $this->fallbackCatalog();
         }
 
         try {
@@ -114,6 +118,12 @@ class BinanceSpotCatalogService
             return [...$stale, 'source' => 'BINANCE_STALE_CACHE'];
         }
 
+        return $this->fallbackCatalog();
+    }
+
+    /** @return array{symbols: array<int, array<string, mixed>>, source: string, fetched_at_utc: null} */
+    private function fallbackCatalog(): array
+    {
         $fallback = array_values(array_filter(
             (array) config('tradex_screener.crypto.symbols', []),
             static fn (mixed $symbol): bool => is_array($symbol) && (bool) ($symbol['enabled'] ?? false)

@@ -18,7 +18,7 @@
                 <h1>{{ $symbol }} <span>· {{ $symbolConfig['name'] ?? 'Binance' }}</span></h1>
                 <p>Clean candlestick chart · no default indicators</p>
             </div>
-            <a class="secondary-btn" href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'timeframe' => $timeframe]) }}">← Back to results</a>
+            <a class="secondary-btn" href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $cryptoSegment, 'timeframe' => $timeframe]) }}">← Back to results</a>
         </header>
 
         <div class="screener-tradingview-chart screener-tradingview-chart-page">
@@ -31,7 +31,7 @@
                 >
                     {
                         "autosize": true,
-                        "symbol": "BINANCE:{{ $symbol }}",
+                        "symbol": "BINANCE:{{ $symbol }}{{ $cryptoSegment === 'FUTURES' ? '.P' : '' }}",
                         "interval": "{{ $tradingViewInterval }}",
                         "timezone": "Etc/UTC",
                         "theme": "dark",

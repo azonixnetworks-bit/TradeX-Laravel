@@ -112,7 +112,8 @@ class ScreenerEngine
         }
 
         $provider = $this->providerForMarket(
-            $market
+            $market,
+            strtoupper((string) ($filters['crypto_segment'] ?? 'SPOT'))
         );
 
         $timeframe = strtoupper(
@@ -182,9 +183,13 @@ class ScreenerEngine
     }
 
     private function providerForMarket(
-        string $market
+        string $market,
+        string $cryptoSegment = 'SPOT'
     ): MarketDataProvider {
-        $provider = $this->providers[$market] ?? null;
+        $providerKey = $market === 'CRYPTO' && $cryptoSegment === 'FUTURES'
+            ? 'CRYPTO_FUTURES'
+            : $market;
+        $provider = $this->providers[$providerKey] ?? null;
 
         if (! $provider instanceof MarketDataProvider) {
             throw new InvalidArgumentException(
@@ -220,15 +225,17 @@ class ScreenerEngine
             ))), 0, 16);
 
         $freshKey = sprintf(
-            'tradex:screener:fresh:v1:%s:%s%s',
+            'tradex:screener:fresh:v1:%s:%s:%s%s',
             $market,
+            $provider->name(),
             $timeframe,
             $symbolCacheSuffix
         );
 
         $staleKey = sprintf(
-            'tradex:screener:stale:v1:%s:%s%s',
+            'tradex:screener:stale:v1:%s:%s:%s%s',
             $market,
+            $provider->name(),
             $timeframe,
             $symbolCacheSuffix
         );
@@ -361,7 +368,7 @@ class ScreenerEngine
         array $timeframeConfig
     ): string {
         $interval = match ($provider->name()) {
-            'BINANCE' =>
+            'BINANCE', 'BINANCE_FUTURES' =>
                 $timeframeConfig['binance_interval'] ?? null,
             'DERIV' =>
                 $timeframeConfig['deriv_granularity'] ?? null,
@@ -383,7 +390,7 @@ class ScreenerEngine
     private function providerOutputSize(
         MarketDataProvider $provider
     ): int {
-        if ($provider->name() === 'BINANCE') {
+        if (in_array($provider->name(), ['BINANCE', 'BINANCE_FUTURES'], true)) {
             return max(
                 2,
                 min(

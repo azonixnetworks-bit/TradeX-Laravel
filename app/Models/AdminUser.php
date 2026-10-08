@@ -83,6 +83,11 @@ class AdminUser extends Authenticatable
         return $this->hasMany(AdminDeviceSession::class);
     }
 
+    public function screenerWatchlist(): HasMany
+    {
+        return $this->hasMany(AdminScreenerWatchlist::class);
+    }
+
     public function latestEmailDelivery(): HasOne
     {
         return $this->hasOne(AdminEmailDelivery::class)->latestOfMany();
