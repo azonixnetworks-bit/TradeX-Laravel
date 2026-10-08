@@ -368,9 +368,10 @@
 
     function resolveCollisions(dt, applySoftForce) {
         if (state.nodes.length < 2) {
-            return;
+            return 0;
         }
 
+        var resolvedOverlaps = 0;
         var maxRadius = 70;
         var separationPadding = 5;
         var softPadding = 10;
@@ -460,6 +461,8 @@
                             return;
                         }
 
+                        resolvedOverlaps += 1;
+
                         /*
                          * Hard no-overlap correction.
                          *
@@ -506,6 +509,8 @@
                 }
             }
         });
+
+        return resolvedOverlaps;
     }
 
     function clampNodesToBounds() {
@@ -573,13 +578,22 @@
         clampNodesToBounds();
 
         /*
-         * Dense layouts need iterative constraint solving. Four passes give
-         * every neighbouring pair a chance to separate after another pair
-         * moves it, while the first pass alone applies the soft glide force.
+         * Dense layouts need iterative constraint solving. Keep resolving
+         * chain collisions until a full pass reports zero overlaps, with an
+         * eight-pass safety cap for predictable frame cost. Only the first
+         * pass applies the soft glide force.
          */
-        for (var collisionPass = 0; collisionPass < 4; collisionPass += 1) {
-            resolveCollisions(dt, collisionPass === 0);
+        for (var collisionPass = 0; collisionPass < 8; collisionPass += 1) {
+            var overlapCount = resolveCollisions(
+                dt,
+                collisionPass === 0
+            );
+
             clampNodesToBounds();
+
+            if (overlapCount === 0) {
+                break;
+            }
         }
     }
 
