@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Services\Screener\BinanceSpotCatalogService;
 use App\Services\Screener\CTraderDerivCatalogService;
+use App\Services\Screener\MarketBubbleService;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
@@ -365,6 +366,44 @@ class ScreenerMonitorController extends Controller
                 'error',
                 'symbolPaginator',
                 'search'
+            ),
+            200,
+            $this->noStoreHeaders()
+        );
+    }
+
+    public function bubbles(
+        Request $request,
+        MarketBubbleService $bubbleService
+    ): Response {
+        $this->viewer();
+
+        $limit = max(
+            20,
+            min(
+                300,
+                (int) $request->query('limit', 100)
+            )
+        );
+
+        $error = null;
+        $dataset = null;
+
+        try {
+            $dataset = $bubbleService->crypto24h($limit);
+        } catch (ScreenerProviderException $exception) {
+            $error = [
+                'code' => $exception->providerCode,
+                'message' => $exception->getMessage(),
+            ];
+        }
+
+        return response()->view(
+            'admin.screener.bubbles',
+            compact(
+                'dataset',
+                'error',
+                'limit'
             ),
             200,
             $this->noStoreHeaders()
