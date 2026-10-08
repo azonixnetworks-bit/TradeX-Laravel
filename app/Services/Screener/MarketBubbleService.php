@@ -30,7 +30,7 @@ class MarketBubbleService
      *   assets:array<int,array<string,mixed>>
      * }
      */
-    public function crypto24h(int $limit = 100): array
+    public function crypto24h(int $limit = 50): array
     {
         $limit = max(20, min(300, $limit));
 
@@ -96,7 +96,7 @@ class MarketBubbleService
      * @param array<int,mixed> $tickers
      * @return array<string,mixed>
      */
-    public function normalise(array $tickers, int $limit = 100): array
+    public function normalise(array $tickers, int $limit = 50): array
     {
         $catalog = $this->catalog->catalog();
 

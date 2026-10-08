@@ -381,7 +381,7 @@ class ScreenerMonitorController extends Controller
             20,
             min(
                 300,
-                (int) $request->query('limit', 100)
+                (int) $request->query('limit', 50)
             )
         );
 

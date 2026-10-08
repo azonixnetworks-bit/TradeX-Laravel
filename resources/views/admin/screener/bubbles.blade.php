@@ -125,8 +125,8 @@
                 <label for="bubbleCount">Assets</label>
                 <select id="bubbleCount" data-bubble-count>
                     <option value="20">Top 20</option>
-                    <option value="50">Top 50</option>
-                    <option value="100" selected>Top 100</option>
+                    <option value="50" selected>Top 50</option>
+                    <option value="100">Top 100</option>
                 </select>
             </div>
 
@@ -215,8 +215,18 @@
                     <div><dt>Trades</dt><dd data-detail-trades>—</dd></div>
                 </dl>
 
+                <section class="market-bubble-detail-chart" aria-label="H1 price chart">
+                    <div class="market-bubble-detail-chart-head">
+                        <span>H1 Price Chart</span>
+                        <small>TradingView</small>
+                    </div>
+                    <div class="tradingview-widget-container" data-detail-chart-widget>
+                        <div class="tradingview-widget-container__widget"></div>
+                    </div>
+                </section>
+
                 <a class="primary-btn" data-detail-chart href="#">
-                    Open H1 Chart
+                    Open Full H1 Chart
                 </a>
             </section>
         </aside>

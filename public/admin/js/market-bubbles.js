@@ -33,7 +33,7 @@
         search: '',
         sort: 'volume',
         size: 'change',
-        count: 100,
+        count: 50,
         targetAssets: [],
         nodes: [],
         nodeBySymbol: new Map(),
@@ -997,6 +997,41 @@
             }).toString();
         }
 
+        var chartWidget = detail.querySelector('[data-detail-chart-widget]');
+
+        if (chartWidget) {
+            chartWidget.replaceChildren();
+
+            var chartTarget = document.createElement('div');
+            chartTarget.className = 'tradingview-widget-container__widget';
+            chartWidget.appendChild(chartTarget);
+
+            var chartScript = document.createElement('script');
+            chartScript.type = 'text/javascript';
+            chartScript.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+            chartScript.async = true;
+            chartScript.text = JSON.stringify({
+                autosize: true,
+                symbol: 'BINANCE:' + String(asset.symbol || ''),
+                interval: '60',
+                timezone: 'Etc/UTC',
+                theme: 'dark',
+                style: '1',
+                locale: 'en',
+                allow_symbol_change: false,
+                hide_side_toolbar: true,
+                hide_top_toolbar: true,
+                hide_legend: true,
+                hide_volume: true,
+                studies: [],
+                withdateranges: false,
+                save_image: false,
+                calendar: false,
+                support_host: 'https://www.tradingview.com'
+            });
+            chartWidget.appendChild(chartScript);
+        }
+
         detail.hidden = false;
         document.body.classList.add('screener-chart-open');
     }
@@ -1054,8 +1089,8 @@
         state.sort = sortSelect ? sortSelect.value : 'volume';
         state.size = sizeSelect ? sizeSelect.value : 'change';
         state.count = countSelect
-            ? Number(countSelect.value) || 100
-            : 100;
+            ? Number(countSelect.value) || 50
+            : 50;
 
         progressiveLoad();
     }
