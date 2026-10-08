@@ -962,6 +962,7 @@ body.screener-chart-open {
 .market-bubble-detail-chart {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
+    min-height: 312px;
     overflow: hidden;
 }
 
