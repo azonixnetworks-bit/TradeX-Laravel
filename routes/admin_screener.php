@@ -34,5 +34,26 @@ Route::prefix('admin')
                     '/markets/analysis',
                     [ScreenerMonitorController::class, 'marketAnalysis']
                 )->name('markets.analysis');
+
+                Route::get(
+                    '/markets/watchlist',
+                    [ScreenerMonitorController::class, 'watchlist']
+                )->name('markets.watchlist');
+
+                Route::get(
+                    '/markets/catalog/warm',
+                    [ScreenerMonitorController::class, 'warmCryptoCatalog']
+                )->name('markets.catalog.warm');
+
+                Route::post(
+                    '/markets/watchlist',
+                    [ScreenerMonitorController::class, 'storeWatchlist']
+                )->name('markets.watchlist.store');
+
+                Route::delete(
+                    '/markets/watchlist/{symbol}',
+                    [ScreenerMonitorController::class, 'destroyWatchlist']
+                )->where('symbol', '[A-Za-z0-9]{3,30}')
+                    ->name('markets.watchlist.destroy');
             });
     });
