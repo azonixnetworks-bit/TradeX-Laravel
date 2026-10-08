@@ -8,6 +8,10 @@
     rel="stylesheet"
     href="{{ asset('admin/css/screener-monitor.css').'?v='.filemtime(public_path('admin/css/screener-monitor.css')) }}"
 >
+<link
+    rel="stylesheet"
+    href="{{ asset('admin/css/market-bubbles-dynamic.css').'?v='.filemtime(public_path('admin/css/market-bubbles-dynamic.css')) }}"
+>
 @endpush
 
 @push('scripts')
@@ -159,6 +163,10 @@
                     data-bubble-canvas
                     aria-label="Interactive crypto market bubble map"
                 ></canvas>
+                <div class="market-bubble-loading" data-bubble-loading>
+                    <span class="market-bubble-loading-spinner" aria-hidden="true"></span>
+                    <span data-bubble-loading-text>Loading market map…</span>
+                </div>
                 <div class="market-bubble-empty" data-bubble-empty hidden>
                     No assets match this filter.
                 </div>
