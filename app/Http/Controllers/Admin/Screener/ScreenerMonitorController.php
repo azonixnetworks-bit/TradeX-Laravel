@@ -4,14 +4,18 @@ namespace App\Http\Controllers\Admin\Screener;
 
 use App\Exceptions\ScreenerProviderException;
 use App\Http\Controllers\Controller;
+use App\Models\AdminScreenerWatchlist;
 use App\Models\AdminUser;
 use App\Services\Screener\BinanceSpotCatalogService;
+use App\Services\Screener\BinanceFuturesCatalogService;
 use App\Services\Screener\CTraderDerivCatalogService;
+use App\Services\Screener\MarketBubbleService;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use InvalidArgumentException;
 
@@ -51,6 +55,7 @@ class ScreenerMonitorController extends Controller
         Request $request,
         ScreenerEngine $engine,
         BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog,
         CTraderDerivCatalogService $derivCatalog
     ): Response {
         $this->viewer();
@@ -93,6 +98,7 @@ class ScreenerMonitorController extends Controller
                 ''
             )
         );
+        $cryptoSegment = $this->cryptoSegment($request);
 
         try {
             $filters = [
@@ -108,7 +114,22 @@ class ScreenerMonitorController extends Controller
             |--------------------------------------------------------------------------
             */
             if ($market === 'CRYPTO') {
-                $catalog = $binanceCatalog->catalog();
+                $page = max(
+                    1,
+                    (int) $request->query('page', 1)
+                );
+
+                /*
+                 * A cold Binance catalogue can take several seconds. The first
+                 * Crypto page intentionally uses our curated five-pair seed;
+                 * the browser warms the full catalogue in the background.
+                 */
+                $catalog = $this->cryptoCatalog(
+                    $cryptoSegment,
+                    $binanceCatalog,
+                    $binanceFuturesCatalog,
+                    $cryptoSegment === 'FUTURES' || $page > 1 || $search !== ''
+                );
 
                 $symbols = (array) (
                     $catalog['symbols'] ?? []
@@ -156,15 +177,7 @@ class ScreenerMonitorController extends Controller
                     );
                 }
 
-                $perPage = 20;
-
-                $page = max(
-                    1,
-                    (int) $request->query(
-                        'page',
-                        1
-                    )
-                );
+                $perPage = 5;
 
                 $pageSymbols = array_slice(
                     $symbols,
@@ -191,34 +204,20 @@ class ScreenerMonitorController extends Controller
                         ]
                     );
 
-                $results = [
-                    'market' => 'CRYPTO',
-                    'timeframe' => $timeframe,
-                    'provider' => 'BINANCE',
-
-                    'generated_at_utc' =>
-                        $catalog['fetched_at_utc']
-                        ?? now('UTC')
-                            ->toIso8601String(),
-
-                    'count' =>
-                        count($pageSymbols),
-
-                    'cache' => [
-                        'hit' => true,
-
-                        'stale' =>
-                            (
-                                $catalog['source']
-                                ?? ''
-                            )
-                            ===
-                            'BINANCE_STALE_CACHE',
+                /*
+                 * Render the five visible pairs with data already present.
+                 * Shared-host PHP serialises authenticated AJAX requests, so
+                 * asking the browser for five analyses simultaneously left
+                 * four rows stuck at "Waiting…".  Pagination still bounds
+                 * this work to the visible page only.
+                 */
+                $results = $engine->screenWithSymbols(
+                    [
+                        ...$filters,
+                        'crypto_segment' => $cryptoSegment,
                     ],
-
-                    'results' =>
-                        $pageSymbols,
-                ];
+                    $pageSymbols
+                );
             }
 
             /*
@@ -364,7 +363,46 @@ class ScreenerMonitorController extends Controller
                 'results',
                 'error',
                 'symbolPaginator',
-                'search'
+                'search',
+                'cryptoSegment'
+            ),
+            200,
+            $this->noStoreHeaders()
+        );
+    }
+
+    public function bubbles(
+        Request $request,
+        MarketBubbleService $bubbleService
+    ): Response {
+        $this->viewer();
+
+        $limit = max(
+            20,
+            min(
+                300,
+                (int) $request->query('limit', 100)
+            )
+        );
+
+        $error = null;
+        $dataset = null;
+
+        try {
+            $dataset = $bubbleService->crypto24h($limit);
+        } catch (ScreenerProviderException $exception) {
+            $error = [
+                'code' => $exception->providerCode,
+                'message' => $exception->getMessage(),
+            ];
+        }
+
+        return response()->view(
+            'admin.screener.bubbles',
+            compact(
+                'dataset',
+                'error',
+                'limit'
             ),
             200,
             $this->noStoreHeaders()
@@ -374,7 +412,8 @@ class ScreenerMonitorController extends Controller
     public function marketAnalysis(
         Request $request,
         ScreenerEngine $engine,
-        BinanceSpotCatalogService $binanceCatalog
+        BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog
     ): JsonResponse {
         $this->viewer();
 
@@ -395,6 +434,7 @@ class ScreenerMonitorController extends Controller
                 )
             )
         );
+        $cryptoSegment = $this->cryptoSegment($request);
 
         if (! preg_match('/^[A-Z0-9]{3,30}$/', $symbol)) {
             return response()->json(
@@ -425,11 +465,11 @@ class ScreenerMonitorController extends Controller
             );
         }
 
-        $symbolConfig = collect(
-            $binanceCatalog
-                ->catalog()['symbols']
-            ?? []
-        )->first(
+        $symbolConfig = collect($this->cryptoCatalog(
+            $cryptoSegment,
+            $binanceCatalog,
+            $binanceFuturesCatalog
+        )['symbols'] ?? [])->first(
             static fn (
                 array $item
             ): bool =>
@@ -460,6 +500,7 @@ class ScreenerMonitorController extends Controller
                 $engine->screenWithSymbols(
                     [
                         'market' => 'CRYPTO',
+                        'crypto_segment' => $cryptoSegment,
                         'timeframe' => $timeframe,
                         'sort' => 'symbol',
                         'order' => 'asc',
@@ -522,7 +563,8 @@ class ScreenerMonitorController extends Controller
     public function chart(
         Request $request,
         ScreenerEngine $engine,
-        BinanceSpotCatalogService $binanceCatalog
+        BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog
     ): Response {
         $this->viewer();
 
@@ -543,6 +585,7 @@ class ScreenerMonitorController extends Controller
                 )
             )
         );
+        $cryptoSegment = $this->cryptoSegment($request);
 
         abort_unless(
             preg_match(
@@ -560,11 +603,11 @@ class ScreenerMonitorController extends Controller
             404
         );
 
-        $symbolConfig = collect(
-            $binanceCatalog
-                ->catalog()['symbols']
-            ?? []
-        )->first(
+        $symbolConfig = collect($this->cryptoCatalog(
+            $cryptoSegment,
+            $binanceCatalog,
+            $binanceFuturesCatalog
+        )['symbols'] ?? [])->first(
             static fn (
                 array $item
             ): bool =>
@@ -597,11 +640,157 @@ class ScreenerMonitorController extends Controller
                 'symbol',
                 'symbolConfig',
                 'timeframe',
-                'tradingViewInterval'
+                'tradingViewInterval',
+                'cryptoSegment'
             ),
             200,
             $this->noStoreHeaders()
         );
+    }
+
+    public function watchlist(Request $request): JsonResponse
+    {
+        $admin = $this->viewer();
+
+        return response()->json([
+            'success' => true,
+            'data' => $admin->screenerWatchlist()
+                ->where('market', $this->cryptoWatchlistMarket($this->cryptoSegment($request)))
+                ->latest()
+                ->get([
+                    'symbol',
+                    'name',
+                    'base_currency',
+                    'logo_url',
+                ]),
+            'limit' => AdminScreenerWatchlist::MAX_SYMBOLS,
+        ], 200, $this->noStoreHeaders());
+    }
+
+    public function warmCryptoCatalog(
+        Request $request,
+        BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog
+    ): JsonResponse {
+        $this->viewer();
+
+        $catalog = $this->cryptoCatalog(
+            $this->cryptoSegment($request),
+            $binanceCatalog,
+            $binanceFuturesCatalog
+        );
+
+        return response()->json([
+            'success' => true,
+            'count' => count($catalog['symbols'] ?? []),
+        ], 200, $this->noStoreHeaders());
+    }
+
+    public function storeWatchlist(
+        Request $request,
+        BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog
+    ): JsonResponse {
+        $admin = $this->viewer();
+
+        $validated = $request->validate([
+            'symbol' => ['required', 'string', 'regex:/^[A-Za-z0-9]{3,30}$/'],
+        ]);
+
+        $symbol = strtoupper($validated['symbol']);
+        $cryptoSegment = $this->cryptoSegment($request);
+        $watchlistMarket = $this->cryptoWatchlistMarket($cryptoSegment);
+
+        $existing = $admin->screenerWatchlist()
+            ->where('market', $watchlistMarket)
+            ->where('symbol', $symbol)
+            ->first();
+
+        if ($existing instanceof AdminScreenerWatchlist) {
+            return response()->json([
+                'success' => true,
+                'data' => $existing,
+                'limit' => AdminScreenerWatchlist::MAX_SYMBOLS,
+            ], 200, $this->noStoreHeaders());
+        }
+
+        if (
+            $admin->screenerWatchlist()
+                ->where('market', $watchlistMarket)
+                ->count() >= AdminScreenerWatchlist::MAX_SYMBOLS
+        ) {
+            throw ValidationException::withMessages([
+                'symbol' => 'Your Crypto watchlist can contain a maximum of 30 pairs.',
+            ]);
+        }
+
+        $catalogSymbol = collect($this->cryptoCatalog(
+            $cryptoSegment,
+            $binanceCatalog,
+            $binanceFuturesCatalog
+        )['symbols'] ?? [])
+            ->first(static fn (array $item): bool =>
+                strtoupper((string) ($item['symbol'] ?? '')) === $symbol
+            );
+
+        if (! is_array($catalogSymbol)) {
+            throw ValidationException::withMessages([
+                'symbol' => 'This Binance pair is unavailable.',
+            ]);
+        }
+
+        $watchlist = $admin->screenerWatchlist()->create([
+            'market' => $watchlistMarket,
+            'symbol' => $symbol,
+            'name' => (string) ($catalogSymbol['name'] ?? $symbol),
+            'base_currency' => $catalogSymbol['base_currency'] ?? null,
+            'logo_url' => $catalogSymbol['logo_url'] ?? null,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $watchlist,
+            'limit' => AdminScreenerWatchlist::MAX_SYMBOLS,
+        ], 201, $this->noStoreHeaders());
+    }
+
+    public function destroyWatchlist(Request $request, string $symbol): JsonResponse
+    {
+        $admin = $this->viewer();
+
+        $admin->screenerWatchlist()
+            ->where('market', $this->cryptoWatchlistMarket($this->cryptoSegment($request)))
+            ->where('symbol', strtoupper($symbol))
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'limit' => AdminScreenerWatchlist::MAX_SYMBOLS,
+        ], 200, $this->noStoreHeaders());
+    }
+
+    private function cryptoSegment(Request $request): string
+    {
+        return strtoupper((string) $request->input('segment', 'SPOT')) === 'FUTURES'
+            ? 'FUTURES'
+            : 'SPOT';
+    }
+
+    private function cryptoWatchlistMarket(string $segment): string
+    {
+        return $segment === 'FUTURES' ? 'CRYPTO_FUTURES' : 'CRYPTO';
+    }
+
+    /** @return array{symbols: array<int, array<string, mixed>>, source: string, fetched_at_utc: ?string} */
+    private function cryptoCatalog(
+        string $segment,
+        BinanceSpotCatalogService $binanceCatalog,
+        BinanceFuturesCatalogService $binanceFuturesCatalog,
+        bool $allowRemote = true
+    ): array {
+        return $segment === 'FUTURES'
+            ? $binanceFuturesCatalog->catalog($allowRemote)
+            : $binanceCatalog->catalog($allowRemote);
     }
 
     private function viewer(): AdminUser
@@ -615,12 +804,7 @@ class ScreenerMonitorController extends Controller
             401
         );
 
-        abort_unless(
-            $admin->hasPermission(
-                'screener.monitor.view'
-            ),
-            403
-        );
+        abort_unless($admin->hasPermission('screener.monitor.view'), 403);
 
         return $admin;
     }

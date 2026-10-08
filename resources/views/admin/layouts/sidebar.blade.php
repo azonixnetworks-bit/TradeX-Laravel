@@ -299,6 +299,35 @@
             @endif
         @endif
 
+        @if($admin->hasPermission('screener.monitor.view'))
+            <div class="nav-section-title">SCREENER MONITOR</div>
+
+            <details class="nav-submenu-group" {{ request()->routeIs('admin.screener.*') ? 'open' : '' }}>
+                <summary class="nav-submenu-summary">
+                    <span class="nav-icon">◉</span>
+                    <span>Screener Monitor</span>
+                    <span class="nav-submenu-chevron" aria-hidden="true">⌄</span>
+                </summary>
+
+                <div class="nav-submenu-panel" aria-label="Screener Monitor submenu">
+                    <a
+                        href="{{ route('admin.screener.index') }}"
+                        class="nav-submenu-link {{ request()->routeIs('admin.screener.index') ? 'active' : '' }}"
+                    >Health Monitor</a>
+
+                    <a
+                        href="{{ route('admin.screener.markets') }}"
+                        class="nav-submenu-link {{ request()->routeIs('admin.screener.markets') || request()->routeIs('admin.screener.markets.*') ? 'active' : '' }}"
+                    >Market Results</a>
+
+                    <a
+                        href="{{ route('admin.screener.bubbles') }}"
+                        class="nav-submenu-link {{ request()->routeIs('admin.screener.bubbles') ? 'active' : '' }}"
+                    >Market Bubbles</a>
+                </div>
+            </details>
+        @endif
+
         @if($hasCopyTradingNavigation)
             <div class="nav-section-title">COPY TRADING</div>
 

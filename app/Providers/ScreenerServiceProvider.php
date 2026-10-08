@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\Screener\DerivWebSocketTransport;
 use App\Services\Screener\IndicatorEngine;
 use App\Services\Screener\Providers\BinanceCryptoProvider;
+use App\Services\Screener\Providers\BinanceFuturesCryptoProvider;
 use App\Services\Screener\Providers\DerivMarketDataProvider;
 use App\Services\Screener\Providers\TwelveDataForexProvider;
 use App\Services\Screener\Providers\TwelveDataStocksProvider;
@@ -30,6 +31,7 @@ class ScreenerServiceProvider extends ServiceProvider
             [
                 TwelveDataForexProvider::class,
                 BinanceCryptoProvider::class,
+                BinanceFuturesCryptoProvider::class,
                 DerivMarketDataProvider::class,
                 TwelveDataStocksProvider::class,
             ],

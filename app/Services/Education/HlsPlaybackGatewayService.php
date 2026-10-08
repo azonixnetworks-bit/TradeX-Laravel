@@ -6,6 +6,7 @@ use App\Exceptions\AuthApiException;
 use App\Models\EducationPlaybackSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -101,10 +102,11 @@ class HlsPlaybackGatewayService
                 '.m3u8'
             )
         ) {
-            $contents =
-                $disk->get(
-                    $objectPath
-                );
+            $contents = $this->manifestContents(
+                $disk,
+                $diskName,
+                $objectPath
+            );
 
             $rewritten =
                 $this->rewriteManifest(
@@ -214,12 +216,50 @@ class HlsPlaybackGatewayService
                     ),
 
                 'Cache-Control' =>
-                    'private, no-store, max-age=0',
+                    $this->segmentCacheControl(),
 
                 'X-Content-Type-Options' =>
                     'nosniff',
             ]
         );
+    }
+
+    private function manifestContents(
+        mixed $disk,
+        string $diskName,
+        string $objectPath
+    ): string {
+        $seconds = (int) config(
+            'tradex_education.playback.manifest_cache_seconds',
+            60
+        );
+
+        if ($seconds <= 0) {
+            return $disk->get($objectPath);
+        }
+
+        $key = 'education:hls:manifest:' . hash(
+            'sha256',
+            $diskName . '|' . $objectPath . '|' . $disk->lastModified($objectPath)
+        );
+
+        return Cache::store('file')->remember(
+            $key,
+            now()->addSeconds($seconds),
+            fn (): string => $disk->get($objectPath)
+        );
+    }
+
+    private function segmentCacheControl(): string
+    {
+        $seconds = (int) config(
+            'tradex_education.playback.segment_browser_cache_seconds',
+            60
+        );
+
+        return $seconds > 0
+            ? 'private, max-age=' . $seconds
+            : 'private, no-store, max-age=0';
     }
 
     private function rewriteManifest(

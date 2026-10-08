@@ -82,6 +82,16 @@
             @endforeach
         </div>
 
+        @if($market === 'CRYPTO')
+            <nav class="screener-crypto-segments" aria-label="Select Binance market type">
+                @foreach(['SPOT' => 'Spot', 'FUTURES' => 'Futures'] as $segmentKey => $segmentLabel)
+                    <a href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $segmentKey, 'timeframe' => $timeframe]) }}" class="{{ $cryptoSegment === $segmentKey ? 'active' : '' }}">
+                        {{ $segmentLabel }}
+                    </a>
+                @endforeach
+            </nav>
+        @endif
+
         <form
             method="GET"
             action="{{ route('admin.screener.markets') }}"
@@ -92,6 +102,10 @@
                 name="market"
                 value="{{ $market }}"
             >
+
+            @if($market === 'CRYPTO')
+                <input type="hidden" name="segment" value="{{ $cryptoSegment }}">
+            @endif
 
             @if(
                 in_array(
@@ -167,6 +181,10 @@
                     value="{{ $market }}"
                 >
 
+                @if($market === 'CRYPTO')
+                    <input type="hidden" name="segment" value="{{ $cryptoSegment }}">
+                @endif
+
                 <input
                     type="hidden"
                     name="timeframe"
@@ -205,7 +223,8 @@
                                 'admin.screener.markets',
                                 [
                                     'market' => $market,
-                                    'timeframe' => $timeframe
+                                    'timeframe' => $timeframe,
+                                    'segment' => $market === 'CRYPTO' ? $cryptoSegment : null,
                                 ]
                             ) }}"
                         >
@@ -230,7 +249,7 @@
                         {{ number_format(
                             $symbolPaginator->total()
                         ) }}
-                        Binance USDT Spot symbols
+                        Binance USDT {{ $cryptoSegment === 'FUTURES' ? 'Futures perpetual' : 'Spot' }} symbols
                     @endif
 
                     @if($search !== '')
@@ -316,6 +335,20 @@
 
             <div class="screener-table-scroll">
 
+                @if($market === 'CRYPTO')
+                    <div
+                        class="screener-watchlist"
+                        data-binance-watchlist
+                        aria-live="polite"
+                    ></div>
+
+                    <p
+                        class="screener-watchlist-notice"
+                        data-watchlist-notice
+                        aria-live="polite"
+                    ></p>
+                @endif
+
                 <table
                     class="
                         screener-provider-table
@@ -333,6 +366,36 @@
 
                         data-analysis-timeframe="{{
                             $timeframe
+                        }}"
+
+                        data-crypto-segment="{{ $cryptoSegment }}"
+
+                        data-live-stream-url="{{ $cryptoSegment === 'FUTURES' ? 'wss://fstream.binance.com/ws' : 'wss://stream.binance.com:9443/ws' }}"
+
+                        data-watchlist-url="{{
+                            route('admin.screener.markets.watchlist', ['segment' => $cryptoSegment])
+                        }}"
+
+                        data-watchlist-destroy-url="{{
+                            route(
+                                'admin.screener.markets.watchlist.destroy',
+                                ['symbol' => '__SYMBOL__', 'segment' => $cryptoSegment]
+                            )
+                        }}"
+
+                        data-catalog-warm-url="{{
+                            route('admin.screener.markets.catalog.warm', ['segment' => $cryptoSegment])
+                        }}"
+
+                        data-chart-url-template="{{
+                            route(
+                                'admin.screener.markets.chart',
+                                [
+                                    'symbol' => '__SYMBOL__',
+                                    'timeframe' => $timeframe,
+                                    'segment' => $cryptoSegment,
+                                ]
+                            )
                         }}"
                     @endif
                 >
@@ -410,14 +473,16 @@
                                                 <a
                                                     class="screener-symbol-chart-link"
                                                     href="{{
-                                                        route(
-                                                            'admin.screener.markets.chart',
+                                                        route('admin.screener.markets.chart',
                                                             [
                                                                 'symbol'
                                                                     => $row['symbol'],
 
                                                                 'timeframe'
-                                                                    => $timeframe
+                                                                    => $timeframe,
+
+                                                                'segment'
+                                                                    => $cryptoSegment
                                                             ]
                                                         )
                                                     }}"
@@ -435,6 +500,19 @@
                                                 {{ $row['name'] }}
                                             </small>
                                         </span>
+
+                                        @if($market === 'CRYPTO')
+                                            <button
+                                                type="button"
+                                                class="screener-watchlist-toggle"
+                                                data-watchlist-toggle
+                                                aria-label="Add {{ $row['symbol'] }} to your watchlist"
+                                                aria-pressed="false"
+                                                title="Add to watchlist"
+                                            >
+                                                ☆
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
 

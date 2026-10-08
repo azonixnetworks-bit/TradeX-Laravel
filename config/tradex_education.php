@@ -46,6 +46,12 @@ return [
                 'TRADEX_EDU_ALLOW_LOCAL_STREAMING',
                 true
             ),
+
+        'manifest_cache_seconds' =>
+            max(0, (int) env('TRADEX_EDU_HLS_MANIFEST_CACHE_SECONDS', 60)),
+
+        'segment_browser_cache_seconds' =>
+            max(0, (int) env('TRADEX_EDU_HLS_SEGMENT_BROWSER_CACHE_SECONDS', 60)),
     ],
 
     'assignments' => [

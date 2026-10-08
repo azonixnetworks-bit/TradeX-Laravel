@@ -386,6 +386,13 @@ return [
                 260
             ),
         ],
+        'binance_futures' => [
+            'enabled' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_ENABLED', true),
+            'base_url' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_BASE_URL', 'https://fapi.binance.com'),
+            'timeout_seconds' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_TIMEOUT_SECONDS', 10),
+            'connect_timeout_seconds' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_CONNECT_TIMEOUT_SECONDS', 5),
+            'output_size' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_OUTPUT_SIZE', 260),
+        ],
         'deriv' => [
     'enabled' => env(
         'TRADEX_CTRADER_DERIV_ENABLED',

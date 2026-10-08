@@ -7,4 +7,8 @@
         href="{{ route('admin.screener.markets') }}"
         class="{{ request()->routeIs('admin.screener.markets') ? 'active' : '' }}"
     >Market Results</a>
+    <a
+        href="{{ route('admin.screener.bubbles') }}"
+        class="{{ request()->routeIs('admin.screener.bubbles') ? 'active' : '' }}"
+    >Market Bubbles</a>
 </nav>

@@ -1,0 +1,1277 @@
+(function () {
+    'use strict';
+
+    var root = document.querySelector('[data-market-bubbles]');
+
+    if (!root) {
+        return;
+    }
+
+    var canvas = root.querySelector('[data-bubble-canvas]');
+    var emptyState = root.querySelector('[data-bubble-empty]');
+    var loadingState = root.querySelector('[data-bubble-loading]');
+    var loadingText = root.querySelector('[data-bubble-loading-text]');
+    var searchInput = document.querySelector('[data-bubble-search]');
+    var sortSelect = document.querySelector('[data-bubble-sort]');
+    var sizeSelect = document.querySelector('[data-bubble-size]');
+    var countSelect = document.querySelector('[data-bubble-count]');
+    var connectionBadge = document.querySelector('[data-bubble-connection-badge]');
+    var updatedAt = document.querySelector('[data-bubble-updated-at]');
+    var detail = document.querySelector('[data-bubble-detail]');
+    var chartBase = String(root.dataset.chartUrl || '');
+
+    var allAssets = [];
+    var assetsPayload = root.querySelector('[data-bubble-assets]');
+
+    try {
+        allAssets = JSON.parse(assetsPayload ? assetsPayload.textContent : '[]');
+    } catch (error) {
+        allAssets = [];
+    }
+
+    var state = {
+        search: '',
+        sort: 'volume',
+        size: 'change',
+        count: 100,
+        targetAssets: [],
+        nodes: [],
+        nodeBySymbol: new Map(),
+        currentRange: { min: 0, max: 1 },
+        width: 0,
+        height: 0,
+        hoverSymbol: '',
+        selectedSymbol: '',
+        loadGeneration: 0,
+        loadedCount: 0,
+        animationFrameId: null,
+        lastFrameAt: 0,
+        lastSummaryAt: 0,
+        active: true
+    };
+
+    var ctx = canvas.getContext('2d');
+    var resizeTimer = null;
+    var socket = null;
+    var reconnectTimer = null;
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function lerp(current, target, amount) {
+        return current + ((target - current) * amount);
+    }
+
+    function formatPrice(value) {
+        var n = Number(value);
+
+        if (!Number.isFinite(n)) {
+            return '—';
+        }
+
+        var digits = n >= 1000 ? 2 : n >= 1 ? 4 : n >= 0.01 ? 6 : 8;
+
+        return n.toLocaleString(undefined, {
+            maximumFractionDigits: digits
+        });
+    }
+
+    function formatCompact(value) {
+        var n = Number(value);
+
+        if (!Number.isFinite(n)) {
+            return '—';
+        }
+
+        return Intl.NumberFormat(undefined, {
+            notation: 'compact',
+            maximumFractionDigits: 2
+        }).format(n);
+    }
+
+    function formatPercent(value) {
+        var n = Number(value);
+
+        if (!Number.isFinite(n)) {
+            return '—';
+        }
+
+        return (n >= 0 ? '+' : '') + n.toFixed(2) + '%';
+    }
+
+    function bubbleFill(change, alpha) {
+        if (change > 0) {
+            return 'rgba(41, 218, 137,' + alpha + ')';
+        }
+
+        if (change < 0) {
+            return 'rgba(244, 82, 82,' + alpha + ')';
+        }
+
+        return 'rgba(148, 163, 184,' + alpha + ')';
+    }
+
+    function bubblePalette(change) {
+        var magnitude = clamp(
+            Math.abs(Number(change) || 0) / 20,
+            0,
+            1
+        );
+
+        if (change > 0) {
+            return {
+                highlight: 'rgba(192, 255, 224, 0.98)',
+                light: 'rgba(63, 236, 154, 0.96)',
+                mid: 'rgba(16, 150, 91, 0.98)',
+                dark: 'rgba(3, 44, 31, 1)',
+                rim: 'rgba(79, 255, 169, ' + (0.72 + (magnitude * 0.22)) + ')',
+                glow: 'rgba(32, 220, 132, ' + (0.24 + (magnitude * 0.22)) + ')',
+                text: '#effff6',
+                changeText: '#a8f6cc'
+            };
+        }
+
+        if (change < 0) {
+            return {
+                highlight: 'rgba(255, 214, 214, 0.98)',
+                light: 'rgba(255, 103, 103, 0.96)',
+                mid: 'rgba(176, 43, 50, 0.98)',
+                dark: 'rgba(55, 10, 16, 1)',
+                rim: 'rgba(255, 105, 105, ' + (0.72 + (magnitude * 0.22)) + ')',
+                glow: 'rgba(244, 72, 72, ' + (0.24 + (magnitude * 0.22)) + ')',
+                text: '#fff6f6',
+                changeText: '#ffc0c0'
+            };
+        }
+
+        return {
+            highlight: 'rgba(242, 246, 252, 0.96)',
+            light: 'rgba(175, 185, 201, 0.94)',
+            mid: 'rgba(92, 105, 124, 0.98)',
+            dark: 'rgba(27, 34, 45, 1)',
+            rim: 'rgba(194, 204, 221, 0.78)',
+            glow: 'rgba(148, 163, 184, 0.22)',
+            text: '#f8fafc',
+            changeText: '#d7dde8'
+        };
+    }
+
+    function sortedFilteredAssets() {
+        var needle = state.search.trim().toUpperCase();
+        var items = allAssets.filter(function (asset) {
+            if (!needle) {
+                return true;
+            }
+
+            return String(asset.symbol || '').toUpperCase().includes(needle)
+                || String(asset.name || '').toUpperCase().includes(needle)
+                || String(asset.base_currency || '').toUpperCase().includes(needle);
+        });
+
+        items = items.slice();
+
+        items.sort(function (left, right) {
+            if (state.sort === 'gainers') {
+                return Number(right.change_percent) - Number(left.change_percent);
+            }
+
+            if (state.sort === 'losers') {
+                return Number(left.change_percent) - Number(right.change_percent);
+            }
+
+            if (state.sort === 'symbol') {
+                return String(left.symbol).localeCompare(String(right.symbol));
+            }
+
+            return Number(right.quote_volume) - Number(left.quote_volume);
+        });
+
+        return items.slice(0, state.count);
+    }
+
+    function radiusRange(items) {
+        var values = items.map(function (asset) {
+            if (state.size === 'change') {
+                return Math.abs(Number(asset.change_percent) || 0);
+            }
+
+            if (state.size === 'equal') {
+                return 1;
+            }
+
+            return Math.max(0, Number(asset.quote_volume) || 0);
+        });
+
+        return {
+            min: Math.min.apply(null, values.length ? values : [0]),
+            max: Math.max.apply(null, values.length ? values : [1])
+        };
+    }
+
+    function radiusFor(asset, range) {
+        var mobile = state.width < 700;
+        var minRadius = mobile ? 17 : 20;
+        var maxRadius = mobile ? 58 : 72;
+
+        /*
+         * Change % is the default visual hierarchy.
+         * Positive and negative moves use the same absolute-size scale,
+         * while colour continues to communicate direction.
+         */
+        if (state.size === 'change') {
+            var absoluteChange = Math.abs(
+                Number(asset.change_percent) || 0
+            );
+            var cappedChange = Math.min(20, absoluteChange);
+            var changeScale = Math.sqrt(cappedChange / 20);
+
+            return minRadius + (
+                (maxRadius - minRadius) * changeScale
+            );
+        }
+
+        if (state.size === 'equal') {
+            return mobile ? 30 : 34;
+        }
+
+        var volume = Math.max(
+            0,
+            Number(asset.quote_volume) || 0
+        );
+        var normalised = (volume - range.min)
+            / Math.max(0.000001, range.max - range.min);
+
+        normalised = Math.sqrt(clamp(normalised, 0, 1));
+
+        return minRadius + ((maxRadius - minRadius) * normalised);
+    }
+
+    function hashSymbol(symbol) {
+        var hash = 2166136261;
+
+        for (var index = 0; index < symbol.length; index += 1) {
+            hash ^= symbol.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+
+        return hash >>> 0;
+    }
+
+    function seededUnit(seed) {
+        var value = Math.sin(seed * 12.9898) * 43758.5453;
+        return value - Math.floor(value);
+    }
+
+    function nodeSpawnPoint(asset, targetRadius) {
+        var symbol = String(asset.symbol || '');
+        var seed = hashSymbol(symbol);
+        var edge = targetRadius + 18;
+        var usableWidth = Math.max(1, state.width - (edge * 2));
+        var usableHeight = Math.max(1, state.height - (edge * 2));
+
+        return {
+            x: edge + (seededUnit(seed + 11) * usableWidth),
+            y: edge + (seededUnit(seed + 97) * usableHeight)
+        };
+    }
+
+    function createNode(asset, index, total) {
+        var targetRadius = radiusFor(asset, state.currentRange);
+        var point = nodeSpawnPoint(asset, targetRadius);
+        var symbol = String(asset.symbol || '');
+        var seed = hashSymbol(symbol);
+        var direction = seededUnit(seed + 211) * Math.PI * 2;
+        var cruiseSpeed = 0.18 + (seededUnit(seed + 307) * 0.16);
+
+        return {
+            id: index + 1,
+            symbol: symbol,
+            asset: asset,
+            x: point.x,
+            y: point.y,
+            vx: Math.cos(direction) * cruiseSpeed,
+            vy: Math.sin(direction) * cruiseSpeed,
+            radius: Math.max(4, targetRadius * 0.18),
+            targetRadius: targetRadius,
+            displayChange: Number(asset.change_percent) || 0,
+            targetChange: Number(asset.change_percent) || 0,
+            phase: seededUnit(seed + 401) * Math.PI * 2,
+            wanderDirection: direction,
+            wanderRate: 0.18 + (seededUnit(seed + 503) * 0.22),
+            wanderAmount: 0.55 + (seededUnit(seed + 601) * 0.50),
+            cruiseSpeed: cruiseSpeed
+        };
+    }
+
+    function updateLoadingProgress(loaded, total) {
+        state.loadedCount = loaded;
+
+        if (!loadingState) {
+            return;
+        }
+
+        if (total <= 0 || loaded >= total) {
+            loadingState.hidden = true;
+            return;
+        }
+
+        loadingState.hidden = false;
+
+        if (loadingText) {
+            loadingText.textContent = 'Loading market map ' + loaded + ' / ' + total;
+        }
+    }
+
+    function syncNodes(assets) {
+        var wanted = new Set();
+        var nextNodes = [];
+
+        assets.forEach(function (asset, index) {
+            var symbol = String(asset.symbol || '');
+            wanted.add(symbol);
+
+            var node = state.nodeBySymbol.get(symbol);
+
+            if (!node) {
+                node = createNode(asset, index, assets.length);
+                state.nodeBySymbol.set(symbol, node);
+            }
+
+            node.asset = asset;
+            node.targetChange = Number(asset.change_percent) || 0;
+            node.targetRadius = radiusFor(asset, state.currentRange);
+            nextNodes.push(node);
+        });
+
+        state.nodeBySymbol.forEach(function (node, symbol) {
+            if (!wanted.has(symbol)) {
+                state.nodeBySymbol.delete(symbol);
+            }
+        });
+
+        state.nodes = nextNodes;
+        emptyState.hidden = state.targetAssets.length > 0;
+    }
+
+    function scheduleIdle(callback, timeout) {
+        if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(callback, { timeout: timeout });
+            return;
+        }
+
+        window.setTimeout(callback, Math.min(timeout, 180));
+    }
+
+    function progressiveLoad() {
+        state.loadGeneration += 1;
+        var generation = state.loadGeneration;
+
+        state.targetAssets = sortedFilteredAssets();
+        state.currentRange = radiusRange(state.targetAssets);
+
+        if (!state.targetAssets.length) {
+            syncNodes([]);
+            updateLoadingProgress(0, 0);
+            return;
+        }
+
+        var total = state.targetAssets.length;
+        var first = Math.min(20, total);
+        var second = Math.min(50, total);
+
+        syncNodes(state.targetAssets.slice(0, first));
+        updateLoadingProgress(first, total);
+
+        if (first >= total) {
+            return;
+        }
+
+        scheduleIdle(function () {
+            if (generation !== state.loadGeneration) {
+                return;
+            }
+
+            syncNodes(state.targetAssets.slice(0, second));
+            updateLoadingProgress(second, total);
+
+            if (second >= total) {
+                return;
+            }
+
+            scheduleIdle(function () {
+                if (generation !== state.loadGeneration) {
+                    return;
+                }
+
+                syncNodes(state.targetAssets);
+                updateLoadingProgress(total, total);
+            }, 420);
+        }, 240);
+    }
+
+    function resizeCanvas() {
+        var wrap = canvas.parentElement;
+        var rect = wrap.getBoundingClientRect();
+        var dpr = Math.min(2, window.devicePixelRatio || 1);
+
+        state.width = Math.max(280, Math.floor(rect.width));
+        state.height = Math.max(460, Math.floor(rect.height));
+
+        canvas.width = Math.floor(state.width * dpr);
+        canvas.height = Math.floor(state.height * dpr);
+        canvas.style.width = state.width + 'px';
+        canvas.style.height = state.height + 'px';
+
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        state.nodes.forEach(function (node) {
+            node.x = clamp(node.x, node.radius + 4, state.width - node.radius - 4);
+            node.y = clamp(node.y, node.radius + 4, state.height - node.radius - 4);
+        });
+
+        progressiveLoad();
+    }
+
+    function buildSpatialGrid(cellSize) {
+        var grid = new Map();
+
+        state.nodes.forEach(function (node) {
+            var cellX = Math.floor(node.x / cellSize);
+            var cellY = Math.floor(node.y / cellSize);
+            var key = cellX + ':' + cellY;
+
+            if (!grid.has(key)) {
+                grid.set(key, []);
+            }
+
+            grid.get(key).push(node);
+        });
+
+        return grid;
+    }
+
+    function resolveCollisions(dt, applySoftForce) {
+        if (state.nodes.length < 2) {
+            return 0;
+        }
+
+        var resolvedOverlaps = 0;
+        var maxRadius = 76;
+        var separationPadding = 8;
+        var softPadding = 20;
+        var cellSize = (maxRadius * 2) + separationPadding + softPadding;
+        var grid = buildSpatialGrid(cellSize);
+        var visited = new Set();
+
+        state.nodes.forEach(function (node) {
+            var cellX = Math.floor(node.x / cellSize);
+            var cellY = Math.floor(node.y / cellSize);
+
+            for (var offsetX = -1; offsetX <= 1; offsetX += 1) {
+                for (var offsetY = -1; offsetY <= 1; offsetY += 1) {
+                    var bucket = grid.get(
+                        (cellX + offsetX) + ':' + (cellY + offsetY)
+                    );
+
+                    if (!bucket) {
+                        continue;
+                    }
+
+                    bucket.forEach(function (other) {
+                        if (node === other) {
+                            return;
+                        }
+
+                        var pairKey = node.symbol < other.symbol
+                            ? node.symbol + '|' + other.symbol
+                            : other.symbol + '|' + node.symbol;
+
+                        if (visited.has(pairKey)) {
+                            return;
+                        }
+
+                        visited.add(pairKey);
+
+                        var dx = other.x - node.x;
+                        var dy = other.y - node.y;
+                        var distanceSquared = (dx * dx) + (dy * dy);
+
+                        if (distanceSquared < 0.0001) {
+                            var angle = (
+                                (node.id * 12.9898)
+                                + (other.id * 78.233)
+                            ) % (Math.PI * 2);
+
+                            dx = Math.cos(angle) * 0.01;
+                            dy = Math.sin(angle) * 0.01;
+                            distanceSquared = (dx * dx) + (dy * dy);
+                        }
+
+                        var distance = Math.sqrt(distanceSquared);
+                        var minimum = (
+                            node.radius
+                            + other.radius
+                            + separationPadding
+                        );
+                        var softZone = minimum + softPadding;
+
+                        if (distance >= softZone) {
+                            return;
+                        }
+
+                        var nx = dx / distance;
+                        var ny = dy / distance;
+                        var overlap = Math.max(0, minimum - distance);
+
+                        /*
+                         * Soft force starts before contact. It runs only on the
+                         * first collision pass so bubbles glide away instead
+                         * of accelerating excessively in dense clusters.
+                         */
+                        if (applySoftForce && distance < softZone) {
+                            var softDepth = softZone - distance;
+                            var spring = Math.min(
+                                0.16,
+                                softDepth * 0.0038 * dt
+                            );
+
+                            node.vx -= nx * spring;
+                            node.vy -= ny * spring;
+                            other.vx += nx * spring;
+                            other.vy += ny * spring;
+                        }
+
+                        if (overlap <= 0) {
+                            return;
+                        }
+
+                        resolvedOverlaps += 1;
+
+                        /*
+                         * Hard no-overlap correction.
+                         *
+                         * The pair is moved to at least the exact required
+                         * distance in this pass. Movement is weighted so a
+                         * smaller bubble yields more around a larger bubble.
+                         * Multiple passes below resolve chain collisions.
+                         */
+                        var radiusSum = Math.max(
+                            1,
+                            node.radius + other.radius
+                        );
+                        var nodeShare = other.radius / radiusSum;
+                        var otherShare = node.radius / radiusSum;
+                        var correction = overlap + 0.35;
+
+                        node.x -= nx * correction * nodeShare;
+                        node.y -= ny * correction * nodeShare;
+                        other.x += nx * correction * otherShare;
+                        other.y += ny * correction * otherShare;
+
+                        /*
+                         * Remove inward relative velocity so the same pair
+                         * cannot immediately drive back through each other.
+                         */
+                        var relativeVx = other.vx - node.vx;
+                        var relativeVy = other.vy - node.vy;
+                        var closingSpeed = (
+                            (relativeVx * nx)
+                            + (relativeVy * ny)
+                        );
+
+                        if (closingSpeed < 0) {
+                            var stopImpulse = (
+                                -closingSpeed * 0.52
+                            );
+
+                            node.vx -= nx * stopImpulse * nodeShare;
+                            node.vy -= ny * stopImpulse * nodeShare;
+                            other.vx += nx * stopImpulse * otherShare;
+                            other.vy += ny * stopImpulse * otherShare;
+                        }
+                    });
+                }
+            }
+        });
+
+        return resolvedOverlaps;
+    }
+
+    function clampNodesToBounds() {
+        state.nodes.forEach(function (node) {
+            var padding = node.radius + 5;
+
+            if (node.x < padding) {
+                node.x = padding;
+                node.vx = Math.max(0, node.vx) * 0.55;
+            } else if (node.x > state.width - padding) {
+                node.x = state.width - padding;
+                node.vx = Math.min(0, node.vx) * 0.55;
+            }
+
+            if (node.y < padding) {
+                node.y = padding;
+                node.vy = Math.max(0, node.vy) * 0.55;
+            } else if (node.y > state.height - padding) {
+                node.y = state.height - padding;
+                node.vy = Math.min(0, node.vy) * 0.55;
+            }
+        });
+    }
+
+    function applyWallSteering(node, dt) {
+        var margin = node.radius + 14;
+        var wallZone = Math.min(
+            120,
+            Math.max(70, Math.min(state.width, state.height) * 0.14)
+        );
+        var strength = 0.030 * dt;
+
+        if (node.x < margin + wallZone) {
+            node.vx += (
+                1 - ((node.x - margin) / wallZone)
+            ) * strength;
+        } else if (node.x > state.width - margin - wallZone) {
+            node.vx -= (
+                1 - ((state.width - margin - node.x) / wallZone)
+            ) * strength;
+        }
+
+        if (node.y < margin + wallZone) {
+            node.vy += (
+                1 - ((node.y - margin) / wallZone)
+            ) * strength;
+        } else if (node.y > state.height - margin - wallZone) {
+            node.vy -= (
+                1 - ((state.height - margin - node.y) / wallZone)
+            ) * strength;
+        }
+    }
+
+    function stepPhysics(timestamp, dt) {
+        var time = timestamp * 0.001;
+        var damping = Math.pow(0.995, dt);
+
+        state.nodes.forEach(function (node) {
+            node.radius = lerp(
+                node.radius,
+                node.targetRadius,
+                clamp(0.075 * dt, 0, 0.28)
+            );
+
+            node.displayChange = lerp(
+                node.displayChange,
+                node.targetChange,
+                clamp(0.10 * dt, 0, 0.34)
+            );
+
+            /*
+             * Every bubble has its own cruise direction and slow wander.
+             * There is intentionally no global centre attraction, so free
+             * canvas space stays usable instead of forming one packed ball.
+             */
+            var wanderAngle = (
+                node.wanderDirection
+                + (
+                    Math.sin(
+                        (time * node.wanderRate) + node.phase
+                    )
+                    * node.wanderAmount
+                )
+            );
+            var desiredVx = Math.cos(wanderAngle) * node.cruiseSpeed;
+            var desiredVy = Math.sin(wanderAngle) * node.cruiseSpeed;
+            var steering = 0.018 * dt;
+
+            node.vx += (desiredVx - node.vx) * steering;
+            node.vy += (desiredVy - node.vy) * steering;
+
+            applyWallSteering(node, dt);
+
+            if (state.hoverSymbol && node.symbol === state.hoverSymbol) {
+                node.vx += Math.sin(time * 2.2) * 0.004 * dt;
+                node.vy += Math.cos(time * 2.2) * 0.004 * dt;
+            }
+
+            node.vx *= damping;
+            node.vy *= damping;
+
+            var speed = Math.sqrt(
+                (node.vx * node.vx) + (node.vy * node.vy)
+            );
+            var maxSpeed = 0.55;
+
+            if (speed > maxSpeed) {
+                node.vx = (node.vx / speed) * maxSpeed;
+                node.vy = (node.vy / speed) * maxSpeed;
+            }
+
+            node.x += node.vx * dt;
+            node.y += node.vy * dt;
+        });
+
+        clampNodesToBounds();
+
+        /*
+         * Maintain visible breathing room between bubbles. The first pass
+         * starts repelling before contact; hard overlap correction remains
+         * enabled as a safety constraint.
+         */
+        for (var collisionPass = 0; collisionPass < 8; collisionPass += 1) {
+            var overlapCount = resolveCollisions(
+                dt,
+                collisionPass === 0
+            );
+
+            clampNodesToBounds();
+
+            if (overlapCount === 0) {
+                break;
+            }
+        }
+    }
+
+    function drawNode(node) {
+        var change = node.displayChange;
+        var hovered = node.symbol === state.hoverSymbol;
+        var selected = node.symbol === state.selectedSymbol;
+        var radius = node.radius;
+        var palette = bubblePalette(change);
+
+        ctx.save();
+
+        /*
+         * Outer halo gives depth without adding DOM layers.
+         */
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+        ctx.shadowBlur = hovered || selected
+            ? Math.min(34, radius * 0.58)
+            : Math.min(24, radius * 0.42);
+        ctx.shadowColor = palette.glow;
+
+        /*
+         * Off-centre radial gradient creates the 3D sphere lighting:
+         * bright top-left, saturated mid-body, dark lower edge.
+         */
+        var bodyGradient = ctx.createRadialGradient(
+            node.x - (radius * 0.34),
+            node.y - (radius * 0.38),
+            Math.max(1, radius * 0.05),
+            node.x,
+            node.y,
+            radius * 1.08
+        );
+
+        bodyGradient.addColorStop(0, palette.highlight);
+        bodyGradient.addColorStop(0.18, palette.light);
+        bodyGradient.addColorStop(0.52, palette.mid);
+        bodyGradient.addColorStop(1, palette.dark);
+
+        ctx.fillStyle = bodyGradient;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+
+        /*
+         * Bright outside rim + darker inner rim makes the sphere feel
+         * physically rounded while preserving the TradeX dark theme.
+         */
+        ctx.lineWidth = hovered || selected ? 2.8 : 1.7;
+        ctx.strokeStyle = palette.rim;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(
+            node.x,
+            node.y,
+            Math.max(1, radius - 2.4),
+            0,
+            Math.PI * 2
+        );
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.34)';
+        ctx.stroke();
+
+        /*
+         * Small specular reflection for a glossy 3D finish.
+         */
+        var shineGradient = ctx.createRadialGradient(
+            node.x - (radius * 0.34),
+            node.y - (radius * 0.40),
+            0,
+            node.x - (radius * 0.30),
+            node.y - (radius * 0.36),
+            Math.max(2, radius * 0.42)
+        );
+
+        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.38)');
+        shineGradient.addColorStop(0.34, 'rgba(255, 255, 255, 0.11)');
+        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius - 2, 0, Math.PI * 2);
+        ctx.fillStyle = shineGradient;
+        ctx.fill();
+
+        /*
+         * Lower shade reinforces sphere depth.
+         */
+        var shadeGradient = ctx.createLinearGradient(
+            node.x,
+            node.y - radius,
+            node.x,
+            node.y + radius
+        );
+
+        shadeGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        shadeGradient.addColorStop(0.60, 'rgba(0, 0, 0, 0.03)');
+        shadeGradient.addColorStop(1, 'rgba(0, 0, 0, 0.30)');
+
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius - 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = shadeGradient;
+        ctx.fill();
+
+        var symbolSize = clamp(radius * 0.30, 10, 20);
+        var changeSize = clamp(radius * 0.23, 9, 16);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.62)';
+        ctx.fillStyle = palette.text;
+        ctx.font = '800 ' + symbolSize + 'px system-ui, sans-serif';
+        ctx.fillText(
+            String(
+                node.asset.base_currency
+                || node.asset.symbol
+                || ''
+            ).slice(0, 8),
+            node.x,
+            node.y - Math.max(5, radius * 0.11)
+        );
+
+        ctx.font = '800 ' + changeSize + 'px system-ui, sans-serif';
+        ctx.fillStyle = palette.changeText;
+        ctx.fillText(
+            formatPercent(change),
+            node.x,
+            node.y + Math.max(10, radius * 0.18)
+        );
+
+        ctx.restore();
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, state.width, state.height);
+        state.nodes.forEach(drawNode);
+    }
+
+    function animationLoop(timestamp) {
+        if (!state.active || document.hidden) {
+            state.animationFrameId = null;
+            return;
+        }
+
+        if (!state.lastFrameAt) {
+            state.lastFrameAt = timestamp;
+        }
+
+        var delta = Math.min(34, timestamp - state.lastFrameAt);
+        var dt = Math.max(0.35, delta / 16.6667);
+
+        state.lastFrameAt = timestamp;
+
+        stepPhysics(timestamp, dt);
+        render();
+
+        state.animationFrameId = window.requestAnimationFrame(animationLoop);
+    }
+
+    function startAnimation() {
+        if (state.animationFrameId || document.hidden) {
+            return;
+        }
+
+        state.active = true;
+        state.lastFrameAt = 0;
+        state.animationFrameId = window.requestAnimationFrame(animationLoop);
+    }
+
+    function stopAnimation() {
+        state.active = false;
+
+        if (state.animationFrameId) {
+            window.cancelAnimationFrame(state.animationFrameId);
+            state.animationFrameId = null;
+        }
+    }
+
+    function hitTest(x, y) {
+        for (var index = state.nodes.length - 1; index >= 0; index -= 1) {
+            var node = state.nodes[index];
+            var dx = x - node.x;
+            var dy = y - node.y;
+
+            if ((dx * dx) + (dy * dy) <= node.radius * node.radius) {
+                return node;
+            }
+        }
+
+        return null;
+    }
+
+    function showDetail(asset) {
+        if (!detail) {
+            return;
+        }
+
+        state.selectedSymbol = String(asset.symbol || '');
+
+        var setText = function (selector, value) {
+            var element = detail.querySelector(selector);
+
+            if (element) {
+                element.textContent = value;
+            }
+        };
+
+        setText('[data-detail-symbol]', asset.symbol || '—');
+        setText('[data-detail-name]', asset.name || '—');
+        setText(
+            '[data-detail-initials]',
+            String(asset.base_currency || asset.symbol || '--').slice(0, 2)
+        );
+        setText('[data-detail-price]', formatPrice(asset.price));
+        setText('[data-detail-change]', formatPercent(asset.change_percent));
+        setText('[data-detail-open]', formatPrice(asset.open));
+        setText('[data-detail-high]', formatPrice(asset.high));
+        setText('[data-detail-low]', formatPrice(asset.low));
+        setText('[data-detail-volume]', formatCompact(asset.quote_volume) + ' USDT');
+        setText(
+            '[data-detail-base-volume]',
+            formatCompact(asset.volume) + ' ' + String(asset.base_currency || '')
+        );
+        setText(
+            '[data-detail-trades]',
+            Number(asset.trade_count || 0).toLocaleString()
+        );
+
+        var changeElement = detail.querySelector('[data-detail-change]');
+
+        if (changeElement) {
+            changeElement.classList.toggle(
+                'positive',
+                Number(asset.change_percent) >= 0
+            );
+            changeElement.classList.toggle(
+                'negative',
+                Number(asset.change_percent) < 0
+            );
+        }
+
+        var logo = detail.querySelector('[data-detail-logo]');
+
+        if (logo) {
+            logo.hidden = true;
+
+            if (asset.logo_url) {
+                logo.src = asset.logo_url;
+                logo.onload = function () {
+                    logo.hidden = false;
+                };
+                logo.onerror = function () {
+                    logo.hidden = true;
+                };
+            }
+        }
+
+        var chart = detail.querySelector('[data-detail-chart]');
+
+        if (chart) {
+            chart.href = chartBase + '?' + new URLSearchParams({
+                symbol: String(asset.symbol || ''),
+                timeframe: 'H1'
+            }).toString();
+        }
+
+        detail.hidden = false;
+        document.body.classList.add('screener-chart-open');
+    }
+
+    function closeDetail() {
+        if (!detail) {
+            return;
+        }
+
+        detail.hidden = true;
+        state.selectedSymbol = '';
+        document.body.classList.remove('screener-chart-open');
+    }
+
+    canvas.addEventListener('pointermove', function (event) {
+        var rect = canvas.getBoundingClientRect();
+        var node = hitTest(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+
+        state.hoverSymbol = node ? node.symbol : '';
+        canvas.style.cursor = node ? 'pointer' : 'default';
+    });
+
+    canvas.addEventListener('pointerleave', function () {
+        state.hoverSymbol = '';
+        canvas.style.cursor = 'default';
+    });
+
+    canvas.addEventListener('click', function (event) {
+        var rect = canvas.getBoundingClientRect();
+        var node = hitTest(
+            event.clientX - rect.left,
+            event.clientY - rect.top
+        );
+
+        if (node) {
+            showDetail(node.asset);
+        }
+    });
+
+    document.querySelectorAll('[data-bubble-close]').forEach(function (button) {
+        button.addEventListener('click', closeDetail);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeDetail();
+        }
+    });
+
+    function onControlsChanged() {
+        state.search = searchInput ? searchInput.value : '';
+        state.sort = sortSelect ? sortSelect.value : 'volume';
+        state.size = sizeSelect ? sizeSelect.value : 'change';
+        state.count = countSelect
+            ? Number(countSelect.value) || 100
+            : 100;
+
+        progressiveLoad();
+    }
+
+    [searchInput, sortSelect, sizeSelect, countSelect].forEach(function (control) {
+        if (!control) {
+            return;
+        }
+
+        control.addEventListener(
+            control === searchInput ? 'input' : 'change',
+            onControlsChanged
+        );
+    });
+
+    function setConnection(label, healthy) {
+        if (!connectionBadge) {
+            return;
+        }
+
+        connectionBadge.textContent = label;
+        connectionBadge.classList.toggle('status-healthy', healthy);
+        connectionBadge.classList.toggle('status-degraded', !healthy);
+    }
+
+    function refreshVisibleNodeTargets() {
+        state.currentRange = radiusRange(state.targetAssets);
+
+        state.nodes.forEach(function (node) {
+            node.targetRadius = radiusFor(node.asset, state.currentRange);
+            node.targetChange = Number(node.asset.change_percent) || 0;
+        });
+    }
+
+    function updateSummary() {
+        var now = Date.now();
+
+        if (now - state.lastSummaryAt < 750) {
+            return;
+        }
+
+        state.lastSummaryAt = now;
+
+        var loadedAssets = state.targetAssets;
+
+        if (!loadedAssets.length) {
+            return;
+        }
+
+        var gainers = 0;
+        var losers = 0;
+        var totalChange = 0;
+
+        loadedAssets.forEach(function (asset) {
+            var change = Number(asset.change_percent) || 0;
+
+            totalChange += change;
+
+            if (change > 0) {
+                gainers += 1;
+            } else if (change < 0) {
+                losers += 1;
+            }
+        });
+
+        var totalElement = document.querySelector('[data-summary-total]');
+        var gainersElement = document.querySelector('[data-summary-gainers]');
+        var losersElement = document.querySelector('[data-summary-losers]');
+        var averageElement = document.querySelector('[data-summary-average]');
+
+        if (totalElement) totalElement.textContent = String(loadedAssets.length);
+        if (gainersElement) gainersElement.textContent = String(gainers);
+        if (losersElement) losersElement.textContent = String(losers);
+
+        if (averageElement) {
+            averageElement.textContent = (
+                totalChange / Math.max(1, loadedAssets.length)
+            ).toFixed(2) + '%';
+        }
+    }
+
+    function updateAssetFromTicker(payload) {
+        var symbol = String(payload.s || '').toUpperCase();
+        var asset = allAssets.find(function (item) {
+            return String(item.symbol || '').toUpperCase() === symbol;
+        });
+
+        if (!asset) {
+            return;
+        }
+
+        var price = Number(payload.c);
+        var change = Number(payload.P);
+        var volume = Number(payload.v);
+        var quoteVolume = Number(payload.q);
+        var high = Number(payload.h);
+        var low = Number(payload.l);
+        var open = Number(payload.o);
+
+        if (Number.isFinite(price)) asset.price = price;
+        if (Number.isFinite(change)) asset.change_percent = change;
+        if (Number.isFinite(volume)) asset.volume = volume;
+        if (Number.isFinite(quoteVolume)) asset.quote_volume = quoteVolume;
+        if (Number.isFinite(high)) asset.high = high;
+        if (Number.isFinite(low)) asset.low = low;
+        if (Number.isFinite(open)) asset.open = open;
+
+        var visibleNode = state.nodeBySymbol.get(symbol);
+
+        if (visibleNode) {
+            visibleNode.asset = asset;
+            visibleNode.targetChange = Number(asset.change_percent) || 0;
+            visibleNode.targetRadius = radiusFor(asset, state.currentRange);
+        }
+
+        if (updatedAt) {
+            updatedAt.textContent = new Date().toISOString();
+        }
+
+        updateSummary();
+    }
+
+    function connect() {
+        if (socket) {
+            return;
+        }
+
+        clearTimeout(reconnectTimer);
+
+        var symbols = allAssets.map(function (asset) {
+            return String(asset.symbol || '').toLowerCase();
+        }).filter(Boolean);
+
+        if (!symbols.length || document.hidden) {
+            return;
+        }
+
+        var streams = symbols.map(function (symbol) {
+            return symbol + '@ticker';
+        }).join('/');
+
+        try {
+            socket = new WebSocket(
+                'wss://stream.binance.com:9443/stream?streams=' + streams
+            );
+        } catch (error) {
+            setConnection('CONNECTION LOST', false);
+            return;
+        }
+
+        socket.addEventListener('open', function () {
+            setConnection('LIVE STREAM', true);
+        });
+
+        socket.addEventListener('message', function (event) {
+            try {
+                var message = JSON.parse(event.data);
+                updateAssetFromTicker(message.data || message);
+            } catch (error) {
+                // Ignore malformed provider frames.
+            }
+        });
+
+        socket.addEventListener('close', function () {
+            socket = null;
+            setConnection('RECONNECTING', false);
+
+            if (!document.hidden) {
+                clearTimeout(reconnectTimer);
+                reconnectTimer = window.setTimeout(connect, 3000);
+            }
+        });
+
+        socket.addEventListener('error', function () {
+            setConnection('CONNECTION LOST', false);
+        });
+    }
+
+    function disconnect() {
+        clearTimeout(reconnectTimer);
+
+        if (socket) {
+            var currentSocket = socket;
+            socket = null;
+
+            try {
+                currentSocket.close();
+            } catch (error) {
+                // Socket is already closing.
+            }
+        }
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            stopAnimation();
+            disconnect();
+        } else {
+            state.active = true;
+            refreshVisibleNodeTargets();
+            startAnimation();
+            connect();
+        }
+    });
+
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = window.setTimeout(resizeCanvas, 120);
+    });
+
+    window.addEventListener('beforeunload', function () {
+        stopAnimation();
+        disconnect();
+    });
+
+    resizeCanvas();
+    startAnimation();
+    connect();
+}());
