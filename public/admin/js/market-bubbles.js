@@ -415,25 +415,62 @@
 
                         var distance = Math.sqrt(distanceSquared);
                         var minimum = node.radius + other.radius + 4;
+                        var softZone = minimum + 8;
 
-                        if (distance >= minimum) {
+                        if (distance >= softZone) {
                             return;
                         }
 
-                        var overlap = minimum - distance;
                         var nx = dx / distance;
                         var ny = dy / distance;
-                        var push = overlap * 0.48;
+                        var penetration = softZone - distance;
+                        var overlap = Math.max(0, minimum - distance);
 
-                        node.x -= nx * push;
-                        node.y -= ny * push;
-                        other.x += nx * push;
-                        other.y += ny * push;
+                        /*
+                         * Soft spring collision:
+                         * start repelling just before the circles overlap, then
+                         * let velocity move them apart over several frames.
+                         * Only a very small positional correction is applied
+                         * when they actually overlap so separation feels slow
+                         * and natural instead of snapping.
+                         */
+                        var spring = Math.min(
+                            0.42,
+                            penetration * 0.012 * dt
+                        );
 
-                        node.vx -= nx * overlap * 0.0035 * dt;
-                        node.vy -= ny * overlap * 0.0035 * dt;
-                        other.vx += nx * overlap * 0.0035 * dt;
-                        other.vy += ny * overlap * 0.0035 * dt;
+                        node.vx -= nx * spring;
+                        node.vy -= ny * spring;
+                        other.vx += nx * spring;
+                        other.vy += ny * spring;
+
+                        var relativeVx = other.vx - node.vx;
+                        var relativeVy = other.vy - node.vy;
+                        var closingSpeed = (relativeVx * nx) + (relativeVy * ny);
+
+                        if (closingSpeed < 0) {
+                            var brake = Math.min(
+                                0.18,
+                                Math.abs(closingSpeed) * 0.10
+                            );
+
+                            node.vx -= nx * brake;
+                            node.vy -= ny * brake;
+                            other.vx += nx * brake;
+                            other.vy += ny * brake;
+                        }
+
+                        if (overlap > 0) {
+                            var correction = Math.min(
+                                0.75,
+                                overlap * 0.08 * dt
+                            );
+
+                            node.x -= nx * correction;
+                            node.y -= ny * correction;
+                            other.x += nx * correction;
+                            other.y += ny * correction;
+                        }
                     });
                 }
             }
