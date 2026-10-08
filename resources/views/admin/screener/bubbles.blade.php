@@ -139,9 +139,9 @@
         <section
             class="panel market-bubble-stage"
             data-market-bubbles
-            data-assets='@json($dataset["assets"] ?? [])'
             data-chart-url="{{ route('admin.screener.markets.chart') }}"
         >
+            <script type="application/json" data-bubble-assets>@json($dataset["assets"] ?? [])</script>
             <div class="market-bubble-stage-head">
                 <div>
                     <div class="panel-eyebrow">CRYPTO · BINANCE · 24H</div>
