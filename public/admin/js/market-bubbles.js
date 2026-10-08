@@ -32,7 +32,7 @@
     var state = {
         search: '',
         sort: 'volume',
-        size: 'volume',
+        size: 'change',
         count: 100,
         targetAssets: [],
         nodes: [],
@@ -101,16 +101,60 @@
     }
 
     function bubbleFill(change, alpha) {
-        if (change >= 10) return 'rgba(20, 220, 145,' + alpha + ')';
-        if (change >= 5) return 'rgba(34, 197, 94,' + alpha + ')';
-        if (change >= 1) return 'rgba(74, 222, 128,' + alpha + ')';
-        if (change > 0) return 'rgba(134, 239, 172,' + alpha + ')';
-        if (change <= -10) return 'rgba(239, 68, 68,' + alpha + ')';
-        if (change <= -5) return 'rgba(248, 81, 73,' + alpha + ')';
-        if (change <= -1) return 'rgba(248, 113, 113,' + alpha + ')';
-        if (change < 0) return 'rgba(252, 165, 165,' + alpha + ')';
+        if (change > 0) {
+            return 'rgba(41, 218, 137,' + alpha + ')';
+        }
+
+        if (change < 0) {
+            return 'rgba(244, 82, 82,' + alpha + ')';
+        }
 
         return 'rgba(148, 163, 184,' + alpha + ')';
+    }
+
+    function bubblePalette(change) {
+        var magnitude = clamp(
+            Math.abs(Number(change) || 0) / 20,
+            0,
+            1
+        );
+
+        if (change > 0) {
+            return {
+                highlight: 'rgba(192, 255, 224, 0.98)',
+                light: 'rgba(63, 236, 154, 0.96)',
+                mid: 'rgba(16, 150, 91, 0.98)',
+                dark: 'rgba(3, 44, 31, 1)',
+                rim: 'rgba(79, 255, 169, ' + (0.72 + (magnitude * 0.22)) + ')',
+                glow: 'rgba(32, 220, 132, ' + (0.24 + (magnitude * 0.22)) + ')',
+                text: '#effff6',
+                changeText: '#a8f6cc'
+            };
+        }
+
+        if (change < 0) {
+            return {
+                highlight: 'rgba(255, 214, 214, 0.98)',
+                light: 'rgba(255, 103, 103, 0.96)',
+                mid: 'rgba(176, 43, 50, 0.98)',
+                dark: 'rgba(55, 10, 16, 1)',
+                rim: 'rgba(255, 105, 105, ' + (0.72 + (magnitude * 0.22)) + ')',
+                glow: 'rgba(244, 72, 72, ' + (0.24 + (magnitude * 0.22)) + ')',
+                text: '#fff6f6',
+                changeText: '#ffc0c0'
+            };
+        }
+
+        return {
+            highlight: 'rgba(242, 246, 252, 0.96)',
+            light: 'rgba(175, 185, 201, 0.94)',
+            mid: 'rgba(92, 105, 124, 0.98)',
+            dark: 'rgba(27, 34, 45, 1)',
+            rim: 'rgba(194, 204, 221, 0.78)',
+            glow: 'rgba(148, 163, 184, 0.22)',
+            text: '#f8fafc',
+            changeText: '#d7dde8'
+        };
     }
 
     function sortedFilteredAssets() {
@@ -167,18 +211,35 @@
 
     function radiusFor(asset, range) {
         var mobile = state.width < 700;
-        var minRadius = mobile ? 21 : 27;
-        var maxRadius = mobile ? 50 : 68;
+        var minRadius = mobile ? 17 : 20;
+        var maxRadius = mobile ? 58 : 72;
 
-        if (state.size === 'equal' || range.max === range.min) {
-            return (minRadius + maxRadius) / 2;
+        /*
+         * Change % is the default visual hierarchy.
+         * Positive and negative moves use the same absolute-size scale,
+         * while colour continues to communicate direction.
+         */
+        if (state.size === 'change') {
+            var absoluteChange = Math.abs(
+                Number(asset.change_percent) || 0
+            );
+            var cappedChange = Math.min(20, absoluteChange);
+            var changeScale = Math.sqrt(cappedChange / 20);
+
+            return minRadius + (
+                (maxRadius - minRadius) * changeScale
+            );
         }
 
-        var value = state.size === 'change'
-            ? Math.abs(Number(asset.change_percent) || 0)
-            : Math.max(0, Number(asset.quote_volume) || 0);
+        if (state.size === 'equal') {
+            return mobile ? 30 : 34;
+        }
 
-        var normalised = (value - range.min)
+        var volume = Math.max(
+            0,
+            Number(asset.quote_volume) || 0
+        );
+        var normalised = (volume - range.min)
             / Math.max(0.000001, range.max - range.min);
 
         normalised = Math.sqrt(clamp(normalised, 0, 1));
@@ -396,7 +457,7 @@
         }
 
         var resolvedOverlaps = 0;
-        var maxRadius = 70;
+        var maxRadius = 76;
         var separationPadding = 8;
         var softPadding = 20;
         var cellSize = (maxRadius * 2) + separationPadding + softPadding;
@@ -675,37 +736,130 @@
         var change = node.displayChange;
         var hovered = node.symbol === state.hoverSymbol;
         var selected = node.symbol === state.selectedSymbol;
+        var radius = node.radius;
+        var palette = bubblePalette(change);
 
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
 
-        ctx.fillStyle = bubbleFill(change, hovered || selected ? 0.38 : 0.23);
+        /*
+         * Outer halo gives depth without adding DOM layers.
+         */
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius, 0, Math.PI * 2);
+        ctx.shadowBlur = hovered || selected
+            ? Math.min(34, radius * 0.58)
+            : Math.min(24, radius * 0.42);
+        ctx.shadowColor = palette.glow;
+
+        /*
+         * Off-centre radial gradient creates the 3D sphere lighting:
+         * bright top-left, saturated mid-body, dark lower edge.
+         */
+        var bodyGradient = ctx.createRadialGradient(
+            node.x - (radius * 0.34),
+            node.y - (radius * 0.38),
+            Math.max(1, radius * 0.05),
+            node.x,
+            node.y,
+            radius * 1.08
+        );
+
+        bodyGradient.addColorStop(0, palette.highlight);
+        bodyGradient.addColorStop(0.18, palette.light);
+        bodyGradient.addColorStop(0.52, palette.mid);
+        bodyGradient.addColorStop(1, palette.dark);
+
+        ctx.fillStyle = bodyGradient;
         ctx.fill();
 
-        ctx.lineWidth = hovered || selected ? 2.6 : 1.35;
-        ctx.strokeStyle = bubbleFill(change, hovered || selected ? 1 : 0.7);
-        ctx.shadowBlur = hovered || selected ? 24 : 9;
-        ctx.shadowColor = bubbleFill(change, 0.46);
-        ctx.stroke();
         ctx.shadowBlur = 0;
 
-        var symbolSize = clamp(node.radius * 0.30, 10, 18);
-        var changeSize = clamp(node.radius * 0.24, 9, 15);
+        /*
+         * Bright outside rim + darker inner rim makes the sphere feel
+         * physically rounded while preserving the TradeX dark theme.
+         */
+        ctx.lineWidth = hovered || selected ? 2.8 : 1.7;
+        ctx.strokeStyle = palette.rim;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(
+            node.x,
+            node.y,
+            Math.max(1, radius - 2.4),
+            0,
+            Math.PI * 2
+        );
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.34)';
+        ctx.stroke();
+
+        /*
+         * Small specular reflection for a glossy 3D finish.
+         */
+        var shineGradient = ctx.createRadialGradient(
+            node.x - (radius * 0.34),
+            node.y - (radius * 0.40),
+            0,
+            node.x - (radius * 0.30),
+            node.y - (radius * 0.36),
+            Math.max(2, radius * 0.42)
+        );
+
+        shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.38)');
+        shineGradient.addColorStop(0.34, 'rgba(255, 255, 255, 0.11)');
+        shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius - 2, 0, Math.PI * 2);
+        ctx.fillStyle = shineGradient;
+        ctx.fill();
+
+        /*
+         * Lower shade reinforces sphere depth.
+         */
+        var shadeGradient = ctx.createLinearGradient(
+            node.x,
+            node.y - radius,
+            node.x,
+            node.y + radius
+        );
+
+        shadeGradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+        shadeGradient.addColorStop(0.60, 'rgba(0, 0, 0, 0.03)');
+        shadeGradient.addColorStop(1, 'rgba(0, 0, 0, 0.30)');
+
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, radius - 1.5, 0, Math.PI * 2);
+        ctx.fillStyle = shadeGradient;
+        ctx.fill();
+
+        var symbolSize = clamp(radius * 0.30, 10, 20);
+        var changeSize = clamp(radius * 0.23, 9, 16);
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#f8fafc';
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.62)';
+        ctx.fillStyle = palette.text;
         ctx.font = '800 ' + symbolSize + 'px system-ui, sans-serif';
         ctx.fillText(
-            String(node.asset.base_currency || node.asset.symbol || '').slice(0, 8),
+            String(
+                node.asset.base_currency
+                || node.asset.symbol
+                || ''
+            ).slice(0, 8),
             node.x,
-            node.y - 6
+            node.y - Math.max(5, radius * 0.11)
         );
 
-        ctx.font = '700 ' + changeSize + 'px system-ui, sans-serif';
-        ctx.fillStyle = change >= 0 ? '#9ef0c5' : '#ffb4b4';
-        ctx.fillText(formatPercent(change), node.x, node.y + 12);
+        ctx.font = '800 ' + changeSize + 'px system-ui, sans-serif';
+        ctx.fillStyle = palette.changeText;
+        ctx.fillText(
+            formatPercent(change),
+            node.x,
+            node.y + Math.max(10, radius * 0.18)
+        );
 
         ctx.restore();
     }
@@ -898,7 +1052,7 @@
     function onControlsChanged() {
         state.search = searchInput ? searchInput.value : '';
         state.sort = sortSelect ? sortSelect.value : 'volume';
-        state.size = sizeSelect ? sizeSelect.value : 'volume';
+        state.size = sizeSelect ? sizeSelect.value : 'change';
         state.count = countSelect
             ? Number(countSelect.value) || 100
             : 100;
