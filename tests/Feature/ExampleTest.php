@@ -6,13 +6,13 @@ use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
-    public function test_root_redirects_to_admin_login(): void
+    public function test_public_homepage_is_available(): void
     {
-        $response =
-            $this->get('/');
+        $response = $this->get('/');
 
-        $response->assertRedirect(
-            route('admin.login')
-        );
+        $response
+            ->assertOk()
+            ->assertSee('TradeX OS')
+            ->assertSee('Market intelligence');
     }
 }
