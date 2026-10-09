@@ -5,7 +5,7 @@
   <meta name="description" content="TradeX OS is a focused workspace for market education, intelligence and risk-aware planning.">
   <title>TradeX OS | Learn. Plan. Trade with clarity.</title>
   <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}">
-  <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}">
+  <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}?v={{ filemtime(public_path('site/css/tradex-public.css')) }}">
 </head>
 <body>
 <header id="top"><div class="shell nav"><a class="brand" href="#top"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt="TradeX"><span>TRADE<b>X</b><small>OPERATING SYSTEM</small></span></a><nav><a href="#platform">Platform</a><a href="#method">Our method</a><a href="#why">Why TradeX</a><a href="#insights">Insights</a></nav><a class="login" href="{{ route('admin.login') }}">Access platform <b>→</b></a></div></header>
