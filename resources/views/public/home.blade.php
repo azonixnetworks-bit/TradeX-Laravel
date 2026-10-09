@@ -1,126 +1,25 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TradeX OS brings education, market intelligence and risk-aware trading tools into one focused workspace.">
-    <meta name="theme-color" content="#07111f">
-    <title>TradeX OS | Learn. Plan. Trade with clarity.</title>
-    <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}">
-    <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="TradeX OS is a focused workspace for market education, intelligence and risk-aware planning.">
+  <title>TradeX OS | Learn. Plan. Trade with clarity.</title>
+  <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}">
+  <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}">
 </head>
 <body>
-    <div class="site-glow site-glow--one" aria-hidden="true"></div>
-    <div class="site-glow site-glow--two" aria-hidden="true"></div>
-
-    <header class="site-header">
-        <a class="brand" href="#top" aria-label="TradeX OS home">
-            <img src="{{ asset('admin/brand/tradex-logo.png') }}" alt="TradeX OS logo">
-            <span>TradeX <em>OS</em></span>
-        </a>
-        <nav class="site-nav" aria-label="Main navigation">
-            <a href="#about">About</a>
-            <a href="#platform">Platform</a>
-            <a href="#principles">Principles</a>
-        </nav>
-        <a class="header-link" href="{{ route('admin.login') }}">Team sign in <span aria-hidden="true">↗</span></a>
-    </header>
-
-    <main id="top">
-        <section class="hero section-shell">
-            <div class="hero-copy">
-                <p class="eyebrow"><span></span> A focused trading operating system</p>
-                <h1>Build a calmer,<br><i>more deliberate</i><br>trading process.</h1>
-                <p class="hero-lede">TradeX OS connects structured education, market intelligence and practical planning tools in one considered workspace.</p>
-                <div class="hero-actions">
-                    <a class="button button--primary" href="#platform">Explore the platform <span aria-hidden="true">→</span></a>
-                    <a class="button button--quiet" href="#about">How we think</a>
-                </div>
-                <p class="risk-note">Built for learning, planning and informed decision-making. Trading involves risk.</p>
-            </div>
-            <div class="hero-visual" aria-label="TradeX OS platform preview">
-                <div class="orbit orbit--large"></div>
-                <div class="orbit orbit--small"></div>
-                <div class="visual-card visual-card--main">
-                    <div class="card-top"><span class="status-dot"></span><span>MARKET PULSE</span><small>LIVE VIEW</small></div>
-                    <div class="chart-bars" aria-hidden="true">
-                        <i style="--h:34%"></i><i style="--h:48%"></i><i style="--h:39%"></i><i style="--h:64%"></i><i style="--h:56%"></i><i style="--h:78%"></i><i style="--h:60%"></i><i style="--h:89%"></i><i style="--h:73%"></i><i style="--h:96%"></i><i style="--h:84%"></i>
-                    </div>
-                    <div class="card-footer"><span>Observe</span><span>Plan</span><span>Review</span></div>
-                </div>
-                <div class="visual-card visual-card--floating">
-                    <span class="mini-label">TODAY'S FOCUS</span>
-                    <strong>Risk first.<br>Process always.</strong>
-                    <div class="mini-line"><b></b><b></b><b></b></div>
-                </div>
-                <div class="visual-badge"><span>01</span><small>ONE<br>WORKSPACE</small></div>
-            </div>
-        </section>
-
-        <section id="about" class="intro section-shell">
-            <p class="eyebrow"><span></span> What TradeX OS is built for</p>
-            <div class="intro-grid">
-                <h2>Clear systems beat<br>constant noise.</h2>
-                <div>
-                    <p>TradeX OS is a digital workspace for people who want to approach markets with greater structure. It is designed to make the learning, preparation and review cycle easier to follow.</p>
-                    <p>We believe useful tools should help you slow down, see the relevant information and keep your process consistent.</p>
-                </div>
-            </div>
-        </section>
-
-        <section id="platform" class="platform section-shell">
-            <div class="section-heading">
-                <p class="eyebrow"><span></span> Inside the platform</p>
-                <h2>One connected<br>operating system.</h2>
-            </div>
-            <div class="feature-grid">
-                <article class="feature-card feature-card--wide">
-                    <span class="feature-number">01</span>
-                    <div class="feature-icon feature-icon--learn">↗</div>
-                    <h3>Structured learning</h3>
-                    <p>Organised education content gives every lesson a place in a clear learning path.</p>
-                    <div class="feature-lines" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
-                </article>
-                <article class="feature-card">
-                    <span class="feature-number">02</span>
-                    <div class="feature-icon">⌁</div>
-                    <h3>Market intelligence</h3>
-                    <p>Screeners and market views help you explore relevant instruments with less clutter.</p>
-                </article>
-                <article class="feature-card">
-                    <span class="feature-number">03</span>
-                    <div class="feature-icon">◇</div>
-                    <h3>Risk-aware tools</h3>
-                    <p>Use practical planning tools to think through position risk before taking action.</p>
-                </article>
-            </div>
-        </section>
-
-        <section id="principles" class="principles section-shell">
-            <div class="principles-panel">
-                <div>
-                    <p class="eyebrow"><span></span> Our approach</p>
-                    <h2>Better decisions begin with a better process.</h2>
-                </div>
-                <div class="principle-list">
-                    <article><b>01</b><div><h3>Clarity over complexity</h3><p>Information should be organised, not overwhelming.</p></div></article>
-                    <article><b>02</b><div><h3>Process over prediction</h3><p>Good habits matter more than short-term market noise.</p></div></article>
-                    <article><b>03</b><div><h3>Risk before reward</h3><p>Every plan should begin with understanding what can go wrong.</p></div></article>
-                </div>
-            </div>
-        </section>
-
-        <section class="closing section-shell">
-            <p class="eyebrow"><span></span> TradeX OS</p>
-            <h2>Learn with intent.<br><i>Plan with clarity.</i></h2>
-            <a class="button button--primary" href="{{ route('admin.login') }}">Access the platform <span aria-hidden="true">→</span></a>
-        </section>
-    </main>
-
-    <footer class="site-footer section-shell">
-        <a class="brand" href="#top"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt=""><span>TradeX <em>OS</em></span></a>
-        <p>Education, market intelligence and planning tools for a more structured trading process.</p>
-        <p class="copyright">© {{ now()->year }} TradeX OS. All rights reserved.</p>
-    </footer>
-</body>
-</html>
+<header id="top"><div class="shell nav"><a class="brand" href="#top"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt="TradeX"><span>TRADE<b>X</b><small>OPERATING SYSTEM</small></span></a><nav><a href="#platform">Platform</a><a href="#method">Our method</a><a href="#why">Why TradeX</a><a href="#insights">Insights</a></nav><a class="login" href="{{ route('admin.login') }}">Access platform <b>→</b></a></div></header>
+<main>
+ <section class="hero"><div class="hero-grid"></div><div class="shell hero-wrap"><div class="hero-copy"><p class="eyebrow">THE FOCUSED TRADING OPERATING SYSTEM</p><h1>Trade with<br><em>clarity. Purpose.</em><br>Control.</h1><p>TradeX OS gives you one place to learn, scan markets, plan risk and review your process without the usual noise.</p><div class="actions"><a class="button primary" href="#platform">Explore the platform <b>→</b></a><a class="video" href="#method"><i>▶</i> See how it works</a></div><div class="ticks"><span>● Education-led</span><span>● Risk-aware</span><span>● Built for process</span></div></div>
+ <div class="terminal"><div class="terminal-bar"><strong>TradeX <b>Market Desk</b></strong><span>● LIVE</span><i>•••</i></div><div class="tabs">OVERVIEW　 WATCHLIST　 JOURNAL　 RISK PLANNER</div><div class="desk"><div class="quote"><span><small>SELECTED MARKET</small><b>BTC / USDT</b></span><span><b>67,284.15</b><em>+1.82%</em></span></div><div class="chart"><svg viewBox="0 0 520 180" preserveAspectRatio="none"><polyline points="0,136 25,121 42,145 62,112 82,127 101,84 120,106 143,79 163,101 183,65 205,105 225,88 247,121 268,83 289,99 311,54 332,81 354,49 376,70 398,37 419,60 441,26 463,46 486,15 520,35"/></svg></div><div class="desk-cards"><span>24H RANGE<b>Balanced</b></span><span>SETUP STATUS<b>Observe</b></span><span>RISK CHECK<b>Required</b></span></div></div></div></div><div class="hero-strip"><span>LEARN WITH INTENT</span><span>PLAN WITH CLARITY</span><span>REVIEW WITH HONESTY</span><span>BUILD CONSISTENCY</span></div></section>
+ <section id="platform" class="section white"><div class="shell"><div class="heading"><p class="eyebrow dark">ONE CONNECTED WORKSPACE</p><h2>Everything your process<br>needs to stay <em>on track.</em></h2><p>Purpose-built views that help turn information into a repeatable routine.</p></div><div class="cards three"><article><i>↗</i><b>01</b><h3>Learn the framework</h3><p>Follow structured education paths and build a working knowledge base at your own pace.</p><a href="#method">Explore learning →</a></article><article><i>⌁</i><b>02</b><h3>Read the market</h3><p>Use screeners and organised market views to focus attention on what matters.</p><a href="#method">Explore intelligence →</a></article><article><i>◇</i><b>03</b><h3>Plan the risk</h3><p>Use practical planning tools before taking action, not after a decision is made.</p><a href="#method">Explore tools →</a></article></div></div></section>
+ <section id="method" class="section dark"><div class="shell split"><div><p class="eyebrow">HOW TRADEX OS WORKS</p><h2>Build the habit.<br><em>Not the hype.</em></h2><p class="copy">Markets move quickly. Your process does not have to. TradeX OS is designed around the deliberate loop that helps serious learners prepare before, think during and review after every decision.</p><a class="button outline" href="{{ route('admin.login') }}">Open your workspace →</a></div><div class="cycle"><div class="ring"></div><article><b>01</b><strong>Learn</strong><small>Build your playbook</small></article><article><b>02</b><strong>Observe</strong><small>Filter the noise</small></article><article><b>03</b><strong>Plan</strong><small>Define the risk</small></article><article><b>04</b><strong>Review</strong><small>Refine the process</small></article><div class="core"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt=""><b>TRADEX<br>OS</b></div></div></div></section>
+ <section id="why" class="section dark showcase"><div class="shell"><div class="heading inverse"><p class="eyebrow">BUILT FOR MORE DELIBERATE DECISIONS</p><h2>The tools are connected.<br>The thinking is <em>yours.</em></h2></div><div class="cards feature-cards"><article><span>MARKET INTELLIGENCE</span><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><h3>See the signal</h3><p>Focused market views without a default indicator overload.</p></article><article><span>PROCESS REVIEW</span><div class="lines"><i></i><i></i><i></i><i></i><i></i></div><h3>Keep the context</h3><p>Capture the decisions and reasoning that matter to your development.</p></article><article><span>RISK PLANNING</span><div class="dial">RISK<br>FIRST</div><h3>Protect the process</h3><p>Make risk a deliberate first step, not an afterthought.</p></article></div></div></section>
+ <section class="section mint"><div class="shell split globe-section"><div class="globe"><i></i><i></i><i></i><i></i></div><div><p class="eyebrow dark">DESIGNED FOR A GLOBAL LEARNING COMMUNITY</p><h2>One workspace.<br>Many market journeys.</h2><p class="copy">TradeX OS brings education, planning and market intelligence into a practical system for people who value thoughtful progress over quick promises.</p><div class="stats"><b>01<small>Focused workspace</small></b><b>24/7<small>Access to your tools</small></b><b>∞<small>Room to improve</small></b></div></div></div></section>
+ <section id="insights" class="section white"><div class="shell"><div class="heading"><p class="eyebrow dark">THE TRADEX DIFFERENCE</p><h2>A platform with a<br><em>clear point of view.</em></h2></div><div class="cards four reasons"><article><i>◌</i><h3>Clarity over complexity</h3><p>Tools should make the next useful action obvious, not bury it in features.</p></article><article><i>⌁</i><h3>Process over prediction</h3><p>A consistent routine is more useful than chasing certainty in uncertain markets.</p></article><article><i>⌾</i><h3>Risk before reward</h3><p>Every plan should begin by understanding what can go wrong and what you control.</p></article><article><i>△</i><h3>Progress with context</h3><p>Review decisions behind an outcome, so the next one is better informed.</p></article></div></div></section>
+ <section class="section dark compare"><div class="shell"><div class="heading inverse"><p class="eyebrow">A BETTER WAY TO ORGANISE YOUR WORK</p><h2>Choose structure.<br>Choose <em>TradeX OS.</em></h2></div><div class="table"><div><span>WHAT MATTERS</span><b>TRADEX OS</b><span>SCATTERED TOOLS</span></div><div><span>Structured learning paths</span><b>✓</b><em>—</em></div><div><span>Market views in one workspace</span><b>✓</b><em>△</em></div><div><span>Risk-first planning approach</span><b>✓</b><em>△</em></div><div><span>Decision review context</span><b>✓</b><em>—</em></div><div><span>Responsible platform messaging</span><b>✓</b><em>—</em></div></div></div></section>
+ <section class="section cta"><div class="shell split"><div><p class="eyebrow">TRADE WITH A STRONGER PROCESS</p><h2>Give your trading<br>routine a <em>home.</em></h2><p class="copy">TradeX OS brings learning, market research and planning workflow together.</p><a class="button primary" href="{{ route('admin.login') }}">Access the platform →</a></div><div class="workspace"><small>MY TRADEX WORKSPACE</small><div><i></i><i></i><i></i></div><p>Learn　 /　 Plan　 /　 Review</p></div></div></section>
+ <section class="newsletter"><div class="shell split"><div><p class="eyebrow dark">STAY CONNECTED</p><h2>Smarter updates.<br><em>Better routines.</em></h2><p>Receive platform news and useful learning updates. No trading promises, no noise.</p></div><form onsubmit="return false"><label>Email address</label><div><input type="email" placeholder="you@example.com"><button>Stay informed →</button></div><small>Newsletter delivery will be enabled when the public contact channel is configured.</small></form></div></section>
+</main>
+<footer><div class="shell footer"><div><a class="brand" href="#top"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt=""><span>TRADE<b>X</b><small>OPERATING SYSTEM</small></span></a><p>Education, market intelligence and planning tools for a more structured trading process.</p><p class="company-id">Billionaire Trading Institute<br>Registration: PV00296953</p></div><div><b>PLATFORM</b><a href="#platform">Learning</a><a href="#platform">Market intelligence</a><a href="#platform">Planning tools</a></div><div><b>COMPANY</b><a href="{{ route('public.about') }}">About TradeX</a><a href="{{ route('public.contact') }}">Contact</a><a href="{{ route('admin.login') }}">Team sign in</a></div><div><b>IMPORTANT</b><p>TradeX OS provides education and tools. It does not provide investment advice or guarantee outcomes.</p><a class="footer-phone" href="tel:+94722542311">+94 72 254 2311</a></div></div><div class="shell bottom">© {{ now()->year }} Billionaire Trading Institute. All rights reserved.<span>Learn. Plan. Trade with clarity.</span></div></footer>
+</body></html>
