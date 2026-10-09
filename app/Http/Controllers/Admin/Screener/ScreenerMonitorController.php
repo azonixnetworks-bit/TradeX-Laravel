@@ -99,6 +99,23 @@ class ScreenerMonitorController extends Controller
             )
         );
         $cryptoSegment = $this->cryptoSegment($request);
+        $stockRegions = [];
+        $stockRegion = null;
+
+        if ($market === 'STOCKS') {
+            $stockRegions = (array) config(
+                'tradex_screener_stocks.regions',
+                []
+            );
+            $stockRegion = strtoupper(trim((string) $request->query(
+                'region',
+                'SRI_LANKA'
+            )));
+
+            if (! array_key_exists($stockRegion, $stockRegions)) {
+                $stockRegion = 'SRI_LANKA';
+            }
+        }
 
         try {
             $filters = [
@@ -107,6 +124,10 @@ class ScreenerMonitorController extends Controller
                 'sort' => 'symbol',
                 'order' => 'asc',
             ];
+
+            if ($market === 'STOCKS' && $stockRegion !== null) {
+                $filters['region'] = $stockRegion;
+            }
 
             /*
             |--------------------------------------------------------------------------
@@ -364,7 +385,9 @@ class ScreenerMonitorController extends Controller
                 'error',
                 'symbolPaginator',
                 'search',
-                'cryptoSegment'
+                'cryptoSegment',
+                'stockRegions',
+                'stockRegion'
             ),
             200,
             $this->noStoreHeaders()
