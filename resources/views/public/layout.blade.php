@@ -4,7 +4,9 @@
     <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="description" content="@yield('description', 'TradeX OS is a focused workspace for market education, intelligence and risk-aware planning.')">
     <meta name="theme-color" content="#06191a"><title>@yield('title') | TradeX OS</title>
-    <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}"><link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}"><link rel="stylesheet" href="{{ asset('site/css/tradex-public-pages.css') }}">
+    <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}">
+    <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}?v={{ filemtime(public_path('site/css/tradex-public.css')) }}">
+    <link rel="stylesheet" href="{{ asset('site/css/tradex-public-pages.css') }}?v={{ filemtime(public_path('site/css/tradex-public-pages.css')) }}">
 </head>
 <body class="public-page">
 <header><div class="shell nav"><a class="brand" href="{{ route('public.home') }}"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt="TradeX"><span>TRADE<b>X</b><small>OPERATING SYSTEM</small></span></a><nav><a href="{{ route('public.platform') }}">Platform</a><a href="{{ route('public.about') }}">Our method</a><a href="{{ route('public.faq') }}">FAQ</a><a href="{{ route('public.contact') }}">Contact</a></nav><a class="login" href="{{ route('admin.login') }}">Access platform <b>→</b></a></div></header>
