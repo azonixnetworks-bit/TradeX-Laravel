@@ -2,9 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+Route::view('/', 'public.home')->name('public.home');
 
 Route::view(
     '/payments/paypal/return',
