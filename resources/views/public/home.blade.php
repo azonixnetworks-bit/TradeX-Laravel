@@ -6,12 +6,43 @@
   <title>TradeX OS | Learn. Plan. Trade with clarity.</title>
   <link rel="icon" type="image/png" href="{{ asset('admin/brand/tradex-favicon.png') }}">
   <link rel="stylesheet" href="{{ asset('site/css/tradex-public.css') }}?v={{ filemtime(public_path('site/css/tradex-public.css')) }}">
+  <link rel="stylesheet" href="{{ asset('site/css/tradex-public-tv.css') }}?v={{ filemtime(public_path('site/css/tradex-public-tv.css')) }}">
 </head>
 <body>
 <header id="top"><div class="shell nav"><a class="brand" href="#top"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt="TradeX"><span>TRADE<b>X</b><small>OPERATING SYSTEM</small></span></a><nav><a href="#platform">Platform</a><a href="#method">Our method</a><a href="#why">Why TradeX</a><a href="#insights">Insights</a></nav><a class="login" href="{{ route('admin.login') }}">Access platform <b>→</b></a></div></header>
 <main>
  <section class="hero"><div class="hero-grid"></div><div class="shell hero-wrap"><div class="hero-copy"><p class="eyebrow">THE FOCUSED TRADING OPERATING SYSTEM</p><h1>Trade with<br><em>clarity. Purpose.</em><br>Control.</h1><p>TradeX OS gives you one place to learn, scan markets, plan risk and review your process without the usual noise.</p><div class="actions"><a class="button primary" href="#platform">Explore the platform <b>→</b></a><a class="video" href="#method"><i>▶</i> See how it works</a></div><div class="ticks"><span>● Education-led</span><span>● Risk-aware</span><span>● Built for process</span></div></div>
- <div class="terminal"><div class="terminal-bar"><strong>TradeX <b>Market Desk</b></strong><span>● LIVE</span><i>•••</i></div><div class="tabs">OVERVIEW　 WATCHLIST　 JOURNAL　 RISK PLANNER</div><div class="desk"><div class="quote"><span><small>SELECTED MARKET</small><b>BTC / USDT</b></span><span><b>67,284.15</b><em>+1.82%</em></span></div><div class="chart"><svg viewBox="0 0 520 180" preserveAspectRatio="none"><polyline points="0,136 25,121 42,145 62,112 82,127 101,84 120,106 143,79 163,101 183,65 205,105 225,88 247,121 268,83 289,99 311,54 332,81 354,49 376,70 398,37 419,60 441,26 463,46 486,15 520,35"/></svg></div><div class="desk-cards"><span>24H RANGE<b>Balanced</b></span><span>SETUP STATUS<b>Observe</b></span><span>RISK CHECK<b>Required</b></span></div></div></div></div><div class="hero-strip"><span>LEARN WITH INTENT</span><span>PLAN WITH CLARITY</span><span>REVIEW WITH HONESTY</span><span>BUILD CONSISTENCY</span></div></section>
+ <div class="terminal trading-terminal">
+  <div class="terminal-bar"><strong>TradeX <b>Live Market Chart</b></strong><span>● LIVE</span><i>TradingView</i></div>
+  <div class="tradingview-widget-container">
+   <div class="tradingview-widget-container__widget"></div>
+   <div class="tradingview-widget-copyright"><a href="https://www.tradingview.com/symbols/BTCUSDT/?exchange=BINANCE" rel="noopener nofollow" target="_blank"><span>BTCUSDT chart</span></a> by TradingView</div>
+   <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+   {
+     "autosize": true,
+     "symbol": "BINANCE:BTCUSDT",
+     "interval": "60",
+     "timezone": "Asia/Colombo",
+     "theme": "dark",
+     "style": "1",
+     "locale": "en",
+     "backgroundColor": "#071b1d",
+     "gridColor": "rgba(100, 216, 163, 0.08)",
+     "hide_side_toolbar": true,
+     "hide_top_toolbar": false,
+     "hide_legend": false,
+     "hide_volume": false,
+     "allow_symbol_change": true,
+     "save_image": false,
+     "calendar": false,
+     "details": false,
+     "hotlist": false,
+     "withdateranges": true,
+     "studies": []
+   }
+   </script>
+  </div>
+ </div></div><div class="hero-strip"><span>LEARN WITH INTENT</span><span>PLAN WITH CLARITY</span><span>REVIEW WITH HONESTY</span><span>BUILD CONSISTENCY</span></div></section>
  <section id="platform" class="section white"><div class="shell"><div class="heading"><p class="eyebrow dark">ONE CONNECTED WORKSPACE</p><h2>Everything your process<br>needs to stay <em>on track.</em></h2><p>Purpose-built views that help turn information into a repeatable routine.</p></div><div class="cards three"><article><i>↗</i><b>01</b><h3>Learn the framework</h3><p>Follow structured education paths and build a working knowledge base at your own pace.</p><a href="#method">Explore learning →</a></article><article><i>⌁</i><b>02</b><h3>Read the market</h3><p>Use screeners and organised market views to focus attention on what matters.</p><a href="#method">Explore intelligence →</a></article><article><i>◇</i><b>03</b><h3>Plan the risk</h3><p>Use practical planning tools before taking action, not after a decision is made.</p><a href="#method">Explore tools →</a></article></div></div></section>
  <section id="method" class="section dark"><div class="shell split"><div><p class="eyebrow">HOW TRADEX OS WORKS</p><h2>Build the habit.<br><em>Not the hype.</em></h2><p class="copy">Markets move quickly. Your process does not have to. TradeX OS is designed around the deliberate loop that helps serious learners prepare before, think during and review after every decision.</p><a class="button outline" href="{{ route('admin.login') }}">Open your workspace →</a></div><div class="cycle"><div class="ring"></div><article><b>01</b><strong>Learn</strong><small>Build your playbook</small></article><article><b>02</b><strong>Observe</strong><small>Filter the noise</small></article><article><b>03</b><strong>Plan</strong><small>Define the risk</small></article><article><b>04</b><strong>Review</strong><small>Refine the process</small></article><div class="core"><img src="{{ asset('admin/brand/tradex-logo.png') }}" alt=""><b>TRADEX<br>OS</b></div></div></div></section>
  <section id="why" class="section dark showcase"><div class="shell"><div class="heading inverse"><p class="eyebrow">BUILT FOR MORE DELIBERATE DECISIONS</p><h2>The tools are connected.<br>The thinking is <em>yours.</em></h2></div><div class="cards feature-cards"><article><span>MARKET INTELLIGENCE</span><div class="bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><h3>See the signal</h3><p>Focused market views without a default indicator overload.</p></article><article><span>PROCESS REVIEW</span><div class="lines"><i></i><i></i><i></i><i></i><i></i></div><h3>Keep the context</h3><p>Capture the decisions and reasoning that matter to your development.</p></article><article><span>RISK PLANNING</span><div class="dial">RISK<br>FIRST</div><h3>Protect the process</h3><p>Make risk a deliberate first step, not an afterthought.</p></article></div></div></section>

@@ -6,6 +6,15 @@ use Tests\TestCase;
 
 class PublicWebsiteTest extends TestCase
 {
+    public function test_homepage_embeds_the_live_tradingview_chart(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('embed-widget-advanced-chart.js', false)
+            ->assertSee('BINANCE:BTCUSDT', false)
+            ->assertSee('"studies": []', false);
+    }
+
     public function test_public_information_pages_are_available(): void
     {
         foreach ([
