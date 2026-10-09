@@ -4,6 +4,102 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'public.home')->name('public.home');
 
+$publicPages = [
+    'about' => [
+        'title' => 'A more deliberate way to work with markets.',
+        'eyebrow' => 'About TradeX OS',
+        'lead' => 'TradeX OS is built around a simple belief: useful trading tools should reduce noise, support learning and make risk a visible part of the process.',
+        'blocks' => [
+            ['title' => 'Our purpose', 'text' => 'Billionaire Trading Institute brings education, market intelligence and practical planning tools into a connected workspace so people can build a process they understand.'],
+            ['title' => 'Our approach', 'text' => 'We value clarity over complexity, process over prediction and risk awareness before any reward-focused thinking.'],
+            ['title' => 'What we are not', 'text' => 'TradeX OS does not provide personal investment advice, execute trades for you or promise financial outcomes.'],
+        ],
+    ],
+    'platform' => [
+        'title' => 'A connected platform for a stronger routine.',
+        'eyebrow' => 'The TradeX platform',
+        'lead' => 'Every TradeX OS feature is designed to support a single practical loop: learn, observe, plan and review.',
+        'blocks' => [
+            ['title' => 'Education workspace', 'text' => 'Structured course content helps you progress through concepts in a clear sequence and return to the lessons that matter.'],
+            ['title' => 'Market intelligence', 'text' => 'Focused screeners and market views help you explore instruments without a default indicator overload.'],
+            ['title' => 'Planning tools', 'text' => 'Use risk and routine tools to think through a setup before taking action and retain context for future review.'],
+        ],
+    ],
+    'education' => [
+        'title' => 'Learn with intention, not information overload.',
+        'eyebrow' => 'TradeX education',
+        'lead' => 'Education in TradeX OS is organised into practical learning paths that make it easier to connect knowledge with a repeatable routine.',
+        'blocks' => [
+            ['title' => 'Structured paths', 'text' => 'Move through clearly arranged material instead of trying to piece together a process from disconnected sources.'],
+            ['title' => 'Practical context', 'text' => 'Learning is paired with the market, planning and reflection views that help put concepts into context.'],
+            ['title' => 'Your pace', 'text' => 'Return to material when you need it and build understanding over time.'],
+        ],
+    ],
+    'market-intelligence' => [
+        'title' => 'See the market without the noise.',
+        'eyebrow' => 'Market intelligence',
+        'lead' => 'TradeX OS market views are designed to help you focus your research and organise your attention.',
+        'blocks' => [
+            ['title' => 'Focused screeners', 'text' => 'Explore supported markets through clear, responsive screeners and organised instrument views.'],
+            ['title' => 'Context first', 'text' => 'Keep research, watchlists and the questions you are asking close to the decision process.'],
+            ['title' => 'No performance promises', 'text' => 'Market information is educational and analytical in nature. It is not a recommendation, signal or guarantee.'],
+        ],
+    ],
+    'tools' => [
+        'title' => 'Tools that make risk visible before action.',
+        'eyebrow' => 'Planning tools',
+        'lead' => 'The best time to think about a decision is before you make it. TradeX OS tools are built to support that discipline.',
+        'blocks' => [
+            ['title' => 'Risk planning', 'text' => 'Use practical calculators and workflows to define the constraints of a setup before you act.'],
+            ['title' => 'Routine building', 'text' => 'Turn learning and research into a sequence that is easier to repeat day after day.'],
+            ['title' => 'Review context', 'text' => 'Look beyond a single result and reflect on the reasoning and process behind it.'],
+        ],
+    ],
+    'terms' => [
+        'title' => 'Terms of use',
+        'eyebrow' => 'Public policy centre',
+        'lead' => 'These public terms explain the baseline rules for using the TradeX OS website and platform.',
+        'blocks' => [
+            ['title' => 'Educational purpose', 'text' => 'TradeX OS, operated by Billionaire Trading Institute (PV00296953), provides educational content, market information and workflow tools. Nothing on this website is personal investment, legal or tax advice.'],
+            ['title' => 'Responsible use', 'text' => 'You must use the platform lawfully, keep account access secure and not attempt to disrupt, misuse or reverse engineer the service.'],
+            ['title' => 'No outcome guarantee', 'text' => 'Markets involve risk. Past activity, educational examples or tools do not guarantee a result or future performance.'],
+        ],
+    ],
+    'privacy' => [
+        'title' => 'Privacy notice',
+        'eyebrow' => 'Public policy centre',
+        'lead' => 'We aim to use only the information needed to operate, secure and improve TradeX OS.',
+        'blocks' => [
+            ['title' => 'Information we process', 'text' => 'This can include account, authentication, platform activity and support information necessary to provide and protect the service.'],
+            ['title' => 'Why we use it', 'text' => 'Information is used for account access, product operations, fraud prevention, support and legal obligations where applicable.'],
+            ['title' => 'Your choices', 'text' => 'Account holders can use the authenticated platform and support channels to manage relevant account information.'],
+        ],
+    ],
+    'risk-disclosure' => [
+        'title' => 'Risk disclosure',
+        'eyebrow' => 'Public policy centre',
+        'lead' => 'Before using market information or planning tools, it is important to understand the limits of what a platform can provide.',
+        'blocks' => [
+            ['title' => 'Market risk', 'text' => 'Financial markets can move rapidly. A loss may occur and may be substantial depending on the instrument, strategy and risk controls used.'],
+            ['title' => 'Independent decisions', 'text' => 'You remain responsible for your own decisions. TradeX OS does not place trades or make decisions on your behalf.'],
+            ['title' => 'Seek appropriate advice', 'text' => 'Consider independent professional advice where appropriate for your circumstances before risking capital.'],
+        ],
+    ],
+];
+
+foreach ($publicPages as $slug => $page) {
+    Route::get('/'.$slug, fn () => view('public.page', $page))->name('public.'.$slug);
+}
+
+Route::view('/faq', 'public.faq')->name('public.faq');
+Route::view('/contact', 'public.contact')->name('public.contact');
+
+Route::get('/sitemap.xml', function () {
+    $paths = ['', 'about', 'platform', 'education', 'market-intelligence', 'tools', 'faq', 'contact', 'terms', 'privacy', 'risk-disclosure'];
+
+    return response()->view('public.sitemap', compact('paths'), 200, ['Content-Type' => 'application/xml']);
+})->name('public.sitemap');
+
 Route::view(
     '/payments/paypal/return',
     'payments.paypal-result',
