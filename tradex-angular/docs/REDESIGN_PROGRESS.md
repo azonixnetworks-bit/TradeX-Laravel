@@ -24,7 +24,7 @@
 - [x] 12 Stocks — reconstructed against `09_Stocks_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 13 Terms of Use — reconstructed against `13_Terms_of_Use_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 14 Privacy Notice — reconstructed against `14_Privacy_Notice_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 15 Risk Disclosure
+- [x] 15 Risk Disclosure — reconstructed against `15_Risk_Disclosure_Full_Page.png`; visual verification completed at the local desktop preview.
 
 ## Home acceptance criteria
 
@@ -164,5 +164,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, all three privacy sections and absence of a platform-sales callout.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 15 validation — Risk Disclosure
+
+- [x] Preserved the existing Risk Disclosure route and legal risk wording verbatim.
+- [x] Reconstructed the public-policy layout solely through presentational styling; no legal meaning was altered.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, all three risk sections and absence of a platform-sales callout.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
