@@ -17,7 +17,7 @@
 - [x] 05 Trade Ideas — reconstructed against `05_Trade_Ideas_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 06 Copy Trading — reconstructed against `06_Copy_Trading_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 07 Affiliate — reconstructed against `07_Affiliate_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 08 About TradeX
+- [x] 08 About TradeX — reconstructed against `08_About_TradeX_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 09 Forex
 - [ ] 10 Crypto
 - [ ] 11 Deriv
@@ -94,5 +94,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, disclosure-standard stage, three policy panels and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 08 validation — About TradeX
+
+- [x] Preserved the existing About route, company facts, risk-aware positioning, CTA destination and page behaviour.
+- [x] Reconstructed the editorial institutional composition using supplied global-market artwork without adding business, performance or outcome claims.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero artwork, three company principle panels and platform CTA.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
