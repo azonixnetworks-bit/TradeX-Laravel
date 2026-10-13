@@ -26,6 +26,12 @@
 - [x] 14 Privacy Notice — reconstructed against `14_Privacy_Notice_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 15 Risk Disclosure — reconstructed against `15_Risk_Disclosure_Full_Page.png`; visual verification completed at the local desktop preview.
 
+## Additional existing public routes
+
+- [x] Planning Tools — visual verification completed at the local desktop preview.
+- [ ] Contact Us
+- [ ] Help & FAQ
+
 ## Home acceptance criteria
 
 - Preserve the TradingView chart, market-clock component, all router links and platform URL.
@@ -176,3 +182,11 @@
 - [x] Desktop browser review confirmed hero composition, all three risk sections and absence of a platform-sales callout.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Additional route validation — Planning Tools
+
+- [x] Preserved the existing Planning Tools route, text, CTA destination and page behaviour.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed the risk-before-action workflow stage, three tool panels and platform CTA.
+- [x] Console error review: no application errors.
