@@ -19,7 +19,7 @@
 - [x] 07 Affiliate — reconstructed against `07_Affiliate_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 08 About TradeX — reconstructed against `08_About_TradeX_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 09 Forex — reconstructed against `12_Forex_Market_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 10 Crypto
+- [x] 10 Crypto — reconstructed against `11_Crypto_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 11 Deriv
 - [ ] 12 Stocks
 - [ ] 13 Terms of Use
@@ -111,6 +111,16 @@
 
 - [x] Preserved the existing Forex route, EURUSD TradingView chart, chart controls, CTA destination and page behaviour.
 - [x] Reconstructed the market context layout with supplied artwork without modifying any quote source or creating market data.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, three research panels and the real TradingView chart host.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 10 validation — Crypto Market
+
+- [x] Preserved the existing Crypto route, BTCUSD TradingView chart, chart controls, CTA destination and page behaviour.
+- [x] Reconstructed the market layout with decorative BTC context only; no prices, performance values or market data were fabricated.
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, three research panels and the real TradingView chart host.
