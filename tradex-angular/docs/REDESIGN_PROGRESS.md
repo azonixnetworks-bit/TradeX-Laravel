@@ -14,8 +14,8 @@
 - [x] 02 Platform — reconstructed against `02_Platform_Full_Page.png`; real TradeX mobile-dashboard preview retained.
 - [x] 03 Education — reconstructed against `03_Education_Full_Page.png`; real all-market artwork and live Binance bubble canvas retained.
 - [x] 04 Market Intelligence — reconstructed against `04_Market_Intelligence_Full_Page.png`; real TradingView workspace retained as the centrepiece.
-- [ ] 05 Trade Ideas
-- [ ] 06 Copy Trading
+- [x] 05 Trade Ideas — reconstructed against `05_Trade_Ideas_Full_Page.png`; visual verification completed at the local desktop preview.
+- [x] 06 Copy Trading — reconstructed against `06_Copy_Trading_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 07 Affiliate
 - [ ] 08 About TradeX
 - [ ] 09 Forex
@@ -74,5 +74,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, three workflow panels and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 06 validation — Copy Trading
+
+- [x] Preserved the existing Copy Trading route, risk disclosure copy, CTA destination and page behaviour.
+- [x] Reconstructed the reference's research-led visual composition as a non-performance risk-review workspace; no fabricated returns, strategy statistics or outcomes were introduced.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, risk-review stage, three disclosure workflow panels and platform CTA.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
