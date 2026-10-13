@@ -22,7 +22,7 @@
 - [x] 10 Crypto — reconstructed against `11_Crypto_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 11 Deriv — reconstructed against `10_Deriv_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 12 Stocks — reconstructed against `09_Stocks_Market_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 13 Terms of Use
+- [x] 13 Terms of Use — reconstructed against `13_Terms_of_Use_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 14 Privacy Notice
 - [ ] 15 Risk Disclosure
 
@@ -144,5 +144,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, three research panels, regional controls and the real chart host.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 13 validation — Terms of Use
+
+- [x] Preserved the existing Terms route and legal wording verbatim, including the company registration reference and no-outcome statement.
+- [x] Reconstructed the public-policy layout solely through presentational styling; no policy meaning was altered.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, all three legal sections and absence of a platform-sales callout.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
