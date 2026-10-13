@@ -16,7 +16,7 @@
 - [x] 04 Market Intelligence — reconstructed against `04_Market_Intelligence_Full_Page.png`; real TradingView workspace retained as the centrepiece.
 - [x] 05 Trade Ideas — reconstructed against `05_Trade_Ideas_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 06 Copy Trading — reconstructed against `06_Copy_Trading_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 07 Affiliate
+- [x] 07 Affiliate — reconstructed against `07_Affiliate_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 08 About TradeX
 - [ ] 09 Forex
 - [ ] 10 Crypto
@@ -84,5 +84,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, risk-review stage, three disclosure workflow panels and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 07 validation — Affiliate
+
+- [x] Preserved the Affiliate route, responsible-promotion policy copy, CTA destination and page behaviour.
+- [x] Reconstructed the reference's partnership presentation as a standards workspace with no fabricated referrals, commissions or earnings.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, disclosure-standard stage, three policy panels and platform CTA.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.

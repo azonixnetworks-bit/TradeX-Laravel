@@ -12,7 +12,7 @@ import {PLATFORM_URL} from './config';
   standalone: true,
   imports: [RouterLink, ChartComponent, LiveCryptoBubblesComponent],
   template: `
-    <section class="page-hero" [class.platform-page-hero]="slug()==='platform'" [class.education-page-hero]="slug()==='education'" [class.market-intelligence-page-hero]="slug()==='market-intelligence'" [class.trade-ideas-page-hero]="slug()==='trade-ideas'" [class.copy-trading-page-hero]="slug()==='copy-trading'">
+    <section class="page-hero" [class.platform-page-hero]="slug()==='platform'" [class.education-page-hero]="slug()==='education'" [class.market-intelligence-page-hero]="slug()==='market-intelligence'" [class.trade-ideas-page-hero]="slug()==='trade-ideas'" [class.copy-trading-page-hero]="slug()==='copy-trading'" [class.affiliate-page-hero]="slug()==='affiliate'">
       <div class="container">
         <a class="breadcrumb" routerLink="/">Home</a><span class="breadcrumb-separator">/</span><span class="breadcrumb">{{page().eyebrow}}</span>
         <div class="page-title-row" [class.platform-title-row]="slug()==='platform'">
@@ -43,6 +43,12 @@ import {PLATFORM_URL} from './config';
               <span>Strategy research</span><span>Exposure limits</span><span>Independent decisions</span>
               <i aria-hidden="true"></i>
             </div>
+          } @else if(slug()==='affiliate'){
+            <div class="affiliate-hero-stage" aria-label="Affiliate communication standards">
+              <p>Affiliate standards</p><strong>Partnership,<br>with clarity.</strong>
+              <span>✓ Fair platform information</span><span>✓ Clear relationship disclosure</span><span>✓ Responsible promotion</span>
+              <i aria-hidden="true">X</i>
+            </div>
           } @else {
             <div class="page-index" aria-hidden="true">{{slug()==='faq'?'?':slug()==='contact'?'✳':'X'}}</div>
           }
@@ -50,7 +56,7 @@ import {PLATFORM_URL} from './config';
       </div>
     </section>
 
-    <section class="section page-content" [class.education-page-content]="slug()==='education'" [class.market-intelligence-page-content]="slug()==='market-intelligence'" [class.trade-ideas-page-content]="slug()==='trade-ideas'" [class.copy-trading-page-content]="slug()==='copy-trading'"><div class="container">
+    <section class="section page-content" [class.education-page-content]="slug()==='education'" [class.market-intelligence-page-content]="slug()==='market-intelligence'" [class.trade-ideas-page-content]="slug()==='trade-ideas'" [class.copy-trading-page-content]="slug()==='copy-trading'" [class.affiliate-page-content]="slug()==='affiliate'"><div class="container">
       @if(slug()==='faq'){
         <div class="faq-layout"><div><p class="eyebrow">A LITTLE MORE CLARITY</p><h2>Good questions.<br><span class="gradient-text">Clear answers.</span></h2><p class="lead">Need help with something else?</p><a class="button outline" routerLink="/contact">Contact TradeX</a></div><div class="faq-list">@for(f of faqs;track f.q;let i=$index){<details [open]="i===0"><summary>{{f.q}}<span>+</span></summary><p>{{f.a}}</p></details>}</div></div>
       } @else if(slug()==='contact'){
