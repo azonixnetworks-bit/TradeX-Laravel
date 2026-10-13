@@ -20,7 +20,7 @@
 - [x] 08 About TradeX — reconstructed against `08_About_TradeX_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 09 Forex — reconstructed against `12_Forex_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 10 Crypto — reconstructed against `11_Crypto_Market_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 11 Deriv
+- [x] 11 Deriv — reconstructed against `10_Deriv_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 12 Stocks
 - [ ] 13 Terms of Use
 - [ ] 14 Privacy Notice
@@ -124,5 +124,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, three research panels and the real TradingView chart host.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 11 validation — Deriv Market
+
+- [x] Preserved the existing Deriv route, authenticated screener guidance, proprietary-feed availability note, CTA destination and page behaviour.
+- [x] Reconstructed the market layout without substituting, simulating or fabricating Deriv public chart data.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, three risk-aware panels, the availability state and platform CTA.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
