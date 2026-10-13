@@ -29,7 +29,7 @@
 ## Additional existing public routes
 
 - [x] Planning Tools — visual verification completed at the local desktop preview.
-- [ ] Contact Us
+- [x] Contact Us — visual verification completed at the local desktop preview.
 - [ ] Help & FAQ
 
 ## Home acceptance criteria
@@ -189,4 +189,12 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed the risk-before-action workflow stage, three tool panels and platform CTA.
+- [x] Console error review: no application errors.
+
+## Additional route validation — Contact Us
+
+- [x] Preserved the existing Contact route, Institute details, telephone link, authenticated sign-in destination and page behaviour.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed the public-enquiry stage and the two existing contact cards.
 - [x] Console error review: no application errors.

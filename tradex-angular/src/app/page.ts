@@ -12,7 +12,7 @@ import {PLATFORM_URL} from './config';
   standalone: true,
   imports: [RouterLink, ChartComponent, LiveCryptoBubblesComponent],
   template: `
-    <section class="page-hero" [class.platform-page-hero]="slug()==='platform'" [class.education-page-hero]="slug()==='education'" [class.market-intelligence-page-hero]="slug()==='market-intelligence'" [class.trade-ideas-page-hero]="slug()==='trade-ideas'" [class.copy-trading-page-hero]="slug()==='copy-trading'" [class.affiliate-page-hero]="slug()==='affiliate'" [class.about-page-hero]="slug()==='about'" [class.forex-page-hero]="slug()==='forex'" [class.crypto-page-hero]="slug()==='crypto'" [class.deriv-page-hero]="slug()==='deriv'" [class.stocks-page-hero]="slug()==='stocks'" [class.terms-page-hero]="slug()==='terms'" [class.privacy-page-hero]="slug()==='privacy'" [class.risk-page-hero]="slug()==='risk-disclosure'" [class.tools-page-hero]="slug()==='tools'">
+    <section class="page-hero" [class.platform-page-hero]="slug()==='platform'" [class.education-page-hero]="slug()==='education'" [class.market-intelligence-page-hero]="slug()==='market-intelligence'" [class.trade-ideas-page-hero]="slug()==='trade-ideas'" [class.copy-trading-page-hero]="slug()==='copy-trading'" [class.affiliate-page-hero]="slug()==='affiliate'" [class.about-page-hero]="slug()==='about'" [class.forex-page-hero]="slug()==='forex'" [class.crypto-page-hero]="slug()==='crypto'" [class.deriv-page-hero]="slug()==='deriv'" [class.stocks-page-hero]="slug()==='stocks'" [class.terms-page-hero]="slug()==='terms'" [class.privacy-page-hero]="slug()==='privacy'" [class.risk-page-hero]="slug()==='risk-disclosure'" [class.tools-page-hero]="slug()==='tools'" [class.contact-page-hero]="slug()==='contact'">
       <div class="container">
         <a class="breadcrumb" routerLink="/">Home</a><span class="breadcrumb-separator">/</span><span class="breadcrumb">{{page().eyebrow}}</span>
         <div class="page-title-row" [class.platform-title-row]="slug()==='platform'">
@@ -53,6 +53,8 @@ import {PLATFORM_URL} from './config';
             <div class="crypto-hero-coin" aria-label="Crypto market research"><span>₿</span><small>BTCUSD<br>TradingView chart</small></div>
           } @else if(slug()==='tools'){
             <div class="tools-hero-stage" aria-label="Planning workflow"><p>Planning workflow</p><strong>Risk<br>before action.</strong><span>Prepare</span><span>Define limits</span><span>Review</span></div>
+          } @else if(slug()==='contact'){
+            <div class="contact-hero-stage" aria-label="Public contact details"><p>Public enquiries</p><strong>Let's start a<br>conversation.</strong><span>Billionaire Trading Institute</span><a href="tel:+94722542311">+94 72 254 2311</a></div>
           } @else {
             <div class="page-index" aria-hidden="true">{{slug()==='faq'?'?':slug()==='contact'?'✳':'X'}}</div>
           }
@@ -60,7 +62,7 @@ import {PLATFORM_URL} from './config';
       </div>
     </section>
 
-    <section class="section page-content" [class.education-page-content]="slug()==='education'" [class.market-intelligence-page-content]="slug()==='market-intelligence'" [class.trade-ideas-page-content]="slug()==='trade-ideas'" [class.copy-trading-page-content]="slug()==='copy-trading'" [class.affiliate-page-content]="slug()==='affiliate'" [class.about-page-content]="slug()==='about'" [class.forex-page-content]="slug()==='forex'" [class.crypto-page-content]="slug()==='crypto'" [class.deriv-page-content]="slug()==='deriv'" [class.stocks-page-content]="slug()==='stocks'" [class.terms-page-content]="slug()==='terms'" [class.privacy-page-content]="slug()==='privacy'" [class.risk-page-content]="slug()==='risk-disclosure'" [class.tools-page-content]="slug()==='tools'"><div class="container">
+    <section class="section page-content" [class.education-page-content]="slug()==='education'" [class.market-intelligence-page-content]="slug()==='market-intelligence'" [class.trade-ideas-page-content]="slug()==='trade-ideas'" [class.copy-trading-page-content]="slug()==='copy-trading'" [class.affiliate-page-content]="slug()==='affiliate'" [class.about-page-content]="slug()==='about'" [class.forex-page-content]="slug()==='forex'" [class.crypto-page-content]="slug()==='crypto'" [class.deriv-page-content]="slug()==='deriv'" [class.stocks-page-content]="slug()==='stocks'" [class.terms-page-content]="slug()==='terms'" [class.privacy-page-content]="slug()==='privacy'" [class.risk-page-content]="slug()==='risk-disclosure'" [class.tools-page-content]="slug()==='tools'" [class.contact-page-content]="slug()==='contact'"><div class="container">
       @if(slug()==='faq'){
         <div class="faq-layout"><div><p class="eyebrow">A LITTLE MORE CLARITY</p><h2>Good questions.<br><span class="gradient-text">Clear answers.</span></h2><p class="lead">Need help with something else?</p><a class="button outline" routerLink="/contact">Contact TradeX</a></div><div class="faq-list">@for(f of faqs;track f.q;let i=$index){<details [open]="i===0"><summary>{{f.q}}<span>+</span></summary><p>{{f.a}}</p></details>}</div></div>
       } @else if(slug()==='contact'){
