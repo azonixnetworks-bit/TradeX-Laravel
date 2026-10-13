@@ -66,3 +66,13 @@
 - [x] Forex, Crypto and Stocks selector behaviour retained; Stocks exposes the CSE, India and International region controls.
 - [x] Rapid selector switching now queues stale TradingView embeds safely; a fresh browser validation completed with no console errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 05 validation — Trade Ideas
+
+- [x] Preserved the existing Trade Ideas route, text, CTA destination and page behaviour.
+- [x] Reconstructed the page as an editorial idea-to-review workflow with Royal Obsidian surfaces and the supplied trading artwork.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, three workflow panels and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
