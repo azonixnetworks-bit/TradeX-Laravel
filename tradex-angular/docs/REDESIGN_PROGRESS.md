@@ -18,7 +18,7 @@
 - [x] 06 Copy Trading — reconstructed against `06_Copy_Trading_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 07 Affiliate — reconstructed against `07_Affiliate_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 08 About TradeX — reconstructed against `08_About_TradeX_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 09 Forex
+- [x] 09 Forex — reconstructed against `12_Forex_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 10 Crypto
 - [ ] 11 Deriv
 - [ ] 12 Stocks
@@ -104,5 +104,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero artwork, three company principle panels and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 09 validation — Forex Market
+
+- [x] Preserved the existing Forex route, EURUSD TradingView chart, chart controls, CTA destination and page behaviour.
+- [x] Reconstructed the market context layout with supplied artwork without modifying any quote source or creating market data.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, three research panels and the real TradingView chart host.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
