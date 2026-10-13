@@ -12,7 +12,7 @@
 
 - [x] 01 Home — reconstructed against `01_Home_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 02 Platform — reconstructed against `02_Platform_Full_Page.png`; real TradeX mobile-dashboard preview retained.
-- [ ] 03 Education
+- [x] 03 Education — reconstructed against `03_Education_Full_Page.png`; real all-market artwork and live Binance bubble canvas retained.
 - [ ] 04 Market Intelligence
 - [ ] 05 Trade Ideas
 - [ ] 06 Copy Trading
@@ -46,5 +46,14 @@
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed the platform hero, mobile preview stage, 7 capability cards and gold workflow surfaces.
 - [x] Platform CTA retains the configured `https://cloudvideo.online/admin/client` destination.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 03 validation
+
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed editorial Education hero and correctly framed all-market research artwork.
+- [x] Live crypto bubble component remains present as an HTML canvas, retaining its Binance REST/WebSocket data integration.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
