@@ -21,7 +21,7 @@
 - [x] 09 Forex — reconstructed against `12_Forex_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 10 Crypto — reconstructed against `11_Crypto_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 11 Deriv — reconstructed against `10_Deriv_Market_Full_Page.png`; visual verification completed at the local desktop preview.
-- [ ] 12 Stocks
+- [x] 12 Stocks — reconstructed against `09_Stocks_Market_Full_Page.png`; visual verification completed at the local desktop preview.
 - [ ] 13 Terms of Use
 - [ ] 14 Privacy Notice
 - [ ] 15 Risk Disclosure
@@ -134,5 +134,15 @@
 - [x] `npm run check` passed.
 - [x] `npm run build` passed.
 - [x] Desktop browser review confirmed hero composition, three risk-aware panels, the availability state and platform CTA.
+- [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 12 validation — Stocks Market
+
+- [x] Preserved the existing Stocks route, real TradingView chart, CSE–LK / India / International selector buttons, CTA destination and page behaviour.
+- [x] Reconstructed the equity-research layout without adding prices, equity performance claims or altered market-data behaviour.
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed hero composition, three research panels, regional controls and the real chart host.
 - [x] Console error review: no application errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
