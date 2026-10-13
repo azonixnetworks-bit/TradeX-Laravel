@@ -2,7 +2,28 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'public.home')->name('public.home');
+/*
+|--------------------------------------------------------------------------
+| Public Angular frontend
+|--------------------------------------------------------------------------
+|
+| Keep Laravel as the application entry point so its admin, API, payment and
+| authenticated routes are not affected. The compiled public site lives next
+| to Laravel's existing public assets; these explicit public routes simply
+| return its entry document.
+|
+*/
+$publicFrontend = static function () {
+    $index = public_path('tradex-index.html');
+
+    abort_unless(is_file($index), 503, 'The public website is temporarily unavailable.');
+
+    return response()->file($index, [
+        'Cache-Control' => 'no-cache, no-store, must-revalidate',
+    ]);
+};
+
+Route::get('/', $publicFrontend)->name('public.home');
 
 $publicPages = [
     'about' => [
@@ -88,11 +109,15 @@ $publicPages = [
 ];
 
 foreach ($publicPages as $slug => $page) {
-    Route::get('/'.$slug, fn () => view('public.page', $page))->name('public.'.$slug);
+    Route::get('/'.$slug, $publicFrontend)->name('public.'.$slug);
 }
 
-Route::view('/faq', 'public.faq')->name('public.faq');
-Route::view('/contact', 'public.contact')->name('public.contact');
+foreach (['forex', 'crypto', 'deriv', 'stocks', 'trade-ideas', 'copy-trading', 'affiliate'] as $slug) {
+    Route::get('/'.$slug, $publicFrontend)->name('public.'.$slug);
+}
+
+Route::get('/faq', $publicFrontend)->name('public.faq');
+Route::get('/contact', $publicFrontend)->name('public.contact');
 
 Route::get('/sitemap.xml', function () {
     $paths = ['', 'about', 'platform', 'education', 'market-intelligence', 'tools', 'faq', 'contact', 'terms', 'privacy', 'risk-disclosure'];
