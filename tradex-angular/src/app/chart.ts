@@ -20,7 +20,7 @@ export class ChartComponent implements AfterViewInit, OnChanges, OnDestroy {
   readonly stockMarkets=[{name:'Stocks' as const,region:'CSE - LK',label:'CSE All Share · Sri Lanka',ticker:'CSELK:ASI'},{name:'Stocks' as const,region:'India',label:'India 50 · City Index',ticker:'CITYINDEX:INDIA50CFD'},{name:'Stocks' as const,region:'International',label:'US TEC 100 · IC Markets',ticker:'ICMARKETS:USTEC'}];
   readonly intervals=[{label:'15m',value:'15'},{label:'1h',value:'60'},{label:'4h',value:'240'},{label:'1d',value:'D'}];
   selected=signal(this.markets[0]);interval=signal('60');status=signal<'loading'|'ready'|'error'>('loading');
-  private observer?:MutationObserver;private timeout?:ReturnType<typeof setTimeout>;private revision=0;private stopListening?:()=>void;
+  private observer?:MutationObserver;private timeout?:ReturnType<typeof setTimeout>;private revision=0;private stopListening?:()=>void;private scriptLoading=false;private rerenderQueued=false;
   chartUrl(){return 'https://www.tradingview.com/chart/?symbol='+encodeURIComponent(this.selected().ticker);}
   ngAfterViewInit(){this.applyInitialMarket();this.loadChart();}
   ngOnChanges(changes:SimpleChanges){if(changes['initialMarket']&&!changes['initialMarket'].firstChange&&this.widget){this.applyInitialMarket();this.loadChart();}}
@@ -30,14 +30,21 @@ export class ChartComponent implements AfterViewInit, OnChanges, OnDestroy {
   changeInterval(value:string){if(value===this.interval())return;this.interval.set(value);this.loadChart();}
   private cleanup(){this.observer?.disconnect();this.stopListening?.();this.stopListening=undefined;if(this.timeout)clearTimeout(this.timeout);}
   loadChart(){
-    this.cleanup();const revision=++this.revision;this.status.set('loading');
+    const revision=++this.revision;this.status.set('loading');
+    // TradingView's embed script reads its parent synchronously. Keeping the
+    // active host intact while that script is loading prevents a rapid market
+    // switch from leaving the third-party script with a detached parent.
+    if(this.scriptLoading){this.rerenderQueued=true;return;}
+    this.cleanup();
     const container=this.widget.nativeElement;container.replaceChildren();
     const host=document.createElement('div');host.className='tradingview-widget-container__widget';host.style.height='100%';host.style.width='100%';container.appendChild(host);
     const watchFrame=()=>{const frame=container.querySelector('iframe');if(!frame)return;frame.title=this.selected().label+' TradingView interactive chart';const ready=()=>{if(revision!==this.revision)return;this.status.set('ready');if(this.timeout)clearTimeout(this.timeout);};frame.addEventListener('load',ready,{once:true});this.stopListening=()=>frame.removeEventListener('load',ready);this.observer?.disconnect();};
     this.observer=new MutationObserver(watchFrame);this.observer.observe(container,{childList:true,subtree:true});
     const script=document.createElement('script');script.type='text/javascript';script.src='https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';script.async=true;
     script.textContent=JSON.stringify({autosize:true,symbol:this.selected().ticker,interval:this.interval(),timezone:'Asia/Colombo',theme:'dark',style:'1',locale:'en',backgroundColor:'#0b0d10',gridColor:'rgba(212,175,55,0.07)',allow_symbol_change:false,hide_top_toolbar:true,hide_side_toolbar:true,hide_legend:false,hide_volume:true,withdateranges:true,save_image:false,calendar:false,details:false,hotlist:false,studies:[],support_host:'https://www.tradingview.com'});
-    script.onerror=()=>{if(revision===this.revision)this.status.set('error');};container.appendChild(script);watchFrame();
+    this.scriptLoading=true;
+    script.onload=()=>{this.scriptLoading=false;if(this.rerenderQueued){this.rerenderQueued=false;this.loadChart();}};
+    script.onerror=()=>{this.scriptLoading=false;if(this.rerenderQueued){this.rerenderQueued=false;this.loadChart();}else if(revision===this.revision)this.status.set('error');};container.appendChild(script);watchFrame();
     this.timeout=setTimeout(()=>{if(revision===this.revision&&this.status()==='loading')this.status.set('error');},20000);
   }
   ngOnDestroy(){this.revision++;this.cleanup();this.widget?.nativeElement.replaceChildren();}

@@ -13,7 +13,7 @@
 - [x] 01 Home — reconstructed against `01_Home_Full_Page.png`; visual verification completed at the local desktop preview.
 - [x] 02 Platform — reconstructed against `02_Platform_Full_Page.png`; real TradeX mobile-dashboard preview retained.
 - [x] 03 Education — reconstructed against `03_Education_Full_Page.png`; real all-market artwork and live Binance bubble canvas retained.
-- [ ] 04 Market Intelligence
+- [x] 04 Market Intelligence — reconstructed against `04_Market_Intelligence_Full_Page.png`; real TradingView workspace retained as the centrepiece.
 - [ ] 05 Trade Ideas
 - [ ] 06 Copy Trading
 - [ ] 07 Affiliate
@@ -56,4 +56,13 @@
 - [x] Desktop browser review confirmed editorial Education hero and correctly framed all-market research artwork.
 - [x] Live crypto bubble component remains present as an HTML canvas, retaining its Binance REST/WebSocket data integration.
 - [x] Console error review: no application errors.
+- [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
+
+## Page 04 validation
+
+- [x] `npm run check` passed.
+- [x] `npm run build` passed.
+- [x] Desktop browser review confirmed market hero, three information panels, TradingView stage and connected-workspace links.
+- [x] Forex, Crypto and Stocks selector behaviour retained; Stocks exposes the CSE, India and International region controls.
+- [x] Rapid selector switching now queues stale TradingView embeds safely; a fresh browser validation completed with no console errors.
 - [ ] Explicit mobile viewport emulation remains unavailable locally; responsive CSS breakpoints require device-browser verification before production.
