@@ -25,6 +25,18 @@ $publicFrontend = static function () {
 
 Route::get('/', $publicFrontend)->name('public.home');
 
+/*
+|--------------------------------------------------------------------------
+| TradeX client portal
+|--------------------------------------------------------------------------
+|
+| The public website stays a compiled Angular application.  The client portal
+| is deliberately served by Laravel so it can share the same trusted origin as
+| the authenticated API without changing the admin surface or API contracts.
+|
+*/
+Route::view('/app', 'client.portal')->name('client.portal');
+
 $publicPages = [
     'about' => [
         'title' => 'A more deliberate way to work with markets.',
