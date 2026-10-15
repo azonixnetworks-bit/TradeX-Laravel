@@ -71,7 +71,9 @@ return [
 
     'whatsapp_driver' => env(
         'TRADEX_REG_WHATSAPP_DRIVER',
-        'log'
+        // Until Meta WhatsApp is connected, send the mobile-verification
+        // challenge to the already verified registration email address.
+        'email'
     ),
 
     'meta' => [

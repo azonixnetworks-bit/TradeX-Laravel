@@ -293,7 +293,8 @@ class RegistrationOtpService
             } else {
                 $this->delivery->sendWhatsApp(
                     $session->whatsapp_number,
-                    $code
+                    $code,
+                    $session->email
                 );
             }
         } catch (AuthApiException $exception) {
