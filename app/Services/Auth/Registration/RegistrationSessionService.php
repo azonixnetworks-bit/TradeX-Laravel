@@ -15,10 +15,8 @@ use Illuminate\Support\Str;
 class RegistrationSessionService
 {
     public function __construct(
-        private readonly RegistrationOtpService
-            $otpService
-    ) {
-    }
+        private readonly RegistrationOtpService $otpService
+    ) {}
 
     public function start(
         array $data,
@@ -54,9 +52,28 @@ class RegistrationSessionService
              * pre-payment, revoked, or otherwise non-premium accounts from using
              * a manually reconstructed affiliate URL.
              */
+            $systemReferralCodes = array_map(
+                static fn (mixed $code): string => strtoupper(
+                    trim((string) $code)
+                ),
+                config(
+                    'tradex_registration.system_referral_codes',
+                    []
+                )
+            );
+
+            $isSystemReferralCode = in_array(
+                $data['referral_code'],
+                $systemReferralCodes,
+                true
+            );
+
             if (
                 ! $referrer
-                || ! $referrer->canAccessPremium()
+                || (
+                    ! $isSystemReferralCode
+                    && ! $referrer->canAccessPremium()
+                )
             ) {
                 throw new AuthApiException(
                     422,
@@ -99,71 +116,54 @@ class RegistrationSessionService
                         }
                     )
                     ->update([
-                        'status' =>
-                            UserRegistrationSession::STATUS_SUPERSEDED,
+                        'status' => UserRegistrationSession::STATUS_SUPERSEDED,
                     ]);
 
                 $session =
                     UserRegistrationSession::query()
                         ->create([
-                            'uuid' =>
-                                (string) Str::uuid(),
+                            'uuid' => (string) Str::uuid(),
 
-                            'registration_token_hash' =>
-                                hash(
-                                    'sha256',
-                                    $plainToken
-                                ),
+                            'registration_token_hash' => hash(
+                                'sha256',
+                                $plainToken
+                            ),
 
-                            'name' =>
-                                $data['name'],
+                            'name' => $data['name'],
 
-                            'email' =>
-                                $data['email'],
+                            'email' => $data['email'],
 
-                            'whatsapp_number' =>
-                                $data['whatsapp_number'],
+                            'whatsapp_number' => $data['whatsapp_number'],
 
-                            'password_hash' =>
-                                Hash::make(
-                                    $data['password']
-                                ),
+                            'password_hash' => Hash::make(
+                                $data['password']
+                            ),
 
-                            'referral_code_input' =>
-                                $data['referral_code']
+                            'referral_code_input' => $data['referral_code']
                                 ?? null,
 
-                            'referred_by_user_id' =>
-                                $referrer?->getKey(),
+                            'referred_by_user_id' => $referrer?->getKey(),
 
-                            'country_code' =>
-                                $data['country_code'],
+                            'country_code' => $data['country_code'],
 
-                            'language_code' =>
-                                $data['language_code'],
+                            'language_code' => $data['language_code'],
 
-                            'source' =>
-                                UserRegistrationSession::SOURCE_SELF_REGISTER,
+                            'source' => UserRegistrationSession::SOURCE_SELF_REGISTER,
 
-                            'password_set_at' =>
-                                now(),
+                            'password_set_at' => now(),
 
-                            'status' =>
-                                UserRegistrationSession::STATUS_PENDING,
+                            'status' => UserRegistrationSession::STATUS_PENDING,
 
-                            'expires_at' =>
-                                now()->addMinutes(
-                                    (int) config(
-                                        'tradex_registration.session_minutes',
-                                        60
-                                    )
-                                ),
+                            'expires_at' => now()->addMinutes(
+                                (int) config(
+                                    'tradex_registration.session_minutes',
+                                    60
+                                )
+                            ),
 
-                            'start_ip' =>
-                                $request->ip(),
+                            'start_ip' => $request->ip(),
 
-                            'start_user_agent' =>
-                                $request->userAgent(),
+                            'start_user_agent' => $request->userAgent(),
                         ]);
 
                 AuditLog::record(
@@ -175,17 +175,13 @@ class RegistrationSessionService
                     $session->getKey(),
                     null,
                     [
-                        'country_code' =>
-                            $session->country_code,
+                        'country_code' => $session->country_code,
 
-                        'language_code' =>
-                            $session->language_code,
+                        'language_code' => $session->language_code,
 
-                        'source' =>
-                            UserRegistrationSession::SOURCE_SELF_REGISTER,
+                        'source' => UserRegistrationSession::SOURCE_SELF_REGISTER,
 
-                        'has_referrer' =>
-                            $session->referred_by_user_id
+                        'has_referrer' => $session->referred_by_user_id
                             !== null,
                     ],
                     $request->ip(),
@@ -204,26 +200,21 @@ class RegistrationSessionService
                 );
         } catch (AuthApiException $exception) {
             $session->forceFill([
-                'status' =>
-                    UserRegistrationSession::STATUS_SUPERSEDED,
+                'status' => UserRegistrationSession::STATUS_SUPERSEDED,
             ])->save();
 
             throw $exception;
         }
 
         return [
-            'registration_id' =>
-                $session->uuid,
+            'registration_id' => $session->uuid,
 
-            'registration_token' =>
-                $plainToken,
+            'registration_token' => $plainToken,
 
-            'expires_at' =>
-                $session->expires_at
-                    ->toIso8601String(),
+            'expires_at' => $session->expires_at
+                ->toIso8601String(),
 
-            'next_action' =>
-                'VERIFY_EMAIL_OTP',
+            'next_action' => 'VERIFY_EMAIL_OTP',
         ];
     }
 
@@ -287,8 +278,7 @@ class RegistrationSessionService
                 === UserRegistrationSession::STATUS_PENDING
             ) {
                 $session->forceFill([
-                    'status' =>
-                        UserRegistrationSession::STATUS_EXPIRED,
+                    'status' => UserRegistrationSession::STATUS_EXPIRED,
                 ])->save();
             }
 
@@ -314,8 +304,7 @@ class RegistrationSessionService
             ) {
                 if ($session->isPending()) {
                     $session->forceFill([
-                        'status' =>
-                            UserRegistrationSession::STATUS_SUPERSEDED,
+                        'status' => UserRegistrationSession::STATUS_SUPERSEDED,
                     ])->save();
                 }
 
@@ -334,48 +323,37 @@ class RegistrationSessionService
         UserRegistrationSession $session
     ): array {
         return [
-            'registration_id' =>
-                $session->uuid,
+            'registration_id' => $session->uuid,
 
-            'source' =>
-                $session->source
+            'source' => $session->source
                 ?? UserRegistrationSession::SOURCE_SELF_REGISTER,
 
-            'status' =>
-                $session->status,
+            'status' => $session->status,
 
-            'email_verified' =>
-                $session->email_verified_at
+            'email_verified' => $session->email_verified_at
                 !== null,
 
-            'whatsapp_verified' =>
-                $session->whatsapp_verified_at
+            'whatsapp_verified' => $session->whatsapp_verified_at
                 !== null,
 
-            'password_set' =>
-                $session->password_set_at
+            'password_set' => $session->password_set_at
                 !== null,
 
-            'totp_setup' =>
-                filled(
-                    $session->totp_secret
-                ),
+            'totp_setup' => filled(
+                $session->totp_secret
+            ),
 
-            'totp_confirmed' =>
-                $session->totp_confirmed_at
+            'totp_confirmed' => $session->totp_confirmed_at
                 !== null,
 
-            'completed' =>
-                $session->isCompleted(),
+            'completed' => $session->isCompleted(),
 
-            'expires_at' =>
-                $session->expires_at
-                    ->toIso8601String(),
+            'expires_at' => $session->expires_at
+                ->toIso8601String(),
 
-            'next_action' =>
-                $this->nextAction(
-                    $session
-                ),
+            'next_action' => $this->nextAction(
+                $session
+            ),
         ];
     }
 

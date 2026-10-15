@@ -21,17 +21,13 @@ class AffiliatePremiumReferralUnlockTest extends TestCase
         parent::setUp();
 
         config([
-            'tradex_trade_ideas.share.affiliate_base_url' =>
-                'https://tradex.example/register',
+            'tradex_trade_ideas.share.affiliate_base_url' => 'https://tradex.example/register',
 
-            'tradex_registration.delivery.email_driver' =>
-                'log',
+            'tradex_registration.delivery.email_driver' => 'log',
 
-            'tradex_registration.delivery.whatsapp_driver' =>
-                'log',
+            'tradex_registration.delivery.whatsapp_driver' => 'log',
 
-            'tradex_registration.testing.fixed_otp' =>
-                '123456',
+            'tradex_registration.testing.fixed_otp' => '123456',
         ]);
     }
 
@@ -100,6 +96,43 @@ class AffiliatePremiumReferralUnlockTest extends TestCase
         $this->assertDatabaseCount(
             'user_registration_sessions',
             0
+        );
+    }
+
+    public function test_system_referral_code_is_accepted_for_an_active_non_premium_user(): void
+    {
+        $referrer = $this->createApiUser([
+            'account_type' => 'FREE',
+            'referral_code' => 'TRXADMIN',
+        ]);
+
+        config([
+            'tradex_registration.system_referral_codes' => [
+                'TRXADMIN',
+            ],
+        ]);
+
+        $response = $this
+            ->postJson(
+                '/api/v1/auth/register/start',
+                $this->registrationPayload(
+                    $referrer->referral_code
+                )
+            )
+            ->assertCreated();
+
+        $session = UserRegistrationSession::query()
+            ->where(
+                'uuid',
+                $response->json(
+                    'data.registration_id'
+                )
+            )
+            ->firstOrFail();
+
+        $this->assertSame(
+            $referrer->getKey(),
+            $session->referred_by_user_id
         );
     }
 
@@ -172,12 +205,9 @@ class AffiliatePremiumReferralUnlockTest extends TestCase
                 Product::CODE_EDUCATION_PREMIUM
             )
             ->update([
-                'status' =>
-                    UserEntitlement::STATUS_REVOKED,
-                'revoked_at' =>
-                    now(),
-                'revoke_reason' =>
-                    'Test payment reversal',
+                'status' => UserEntitlement::STATUS_REVOKED,
+                'revoked_at' => now(),
+                'revoke_reason' => 'Test payment reversal',
             ]);
 
         $this
@@ -213,22 +243,15 @@ class AffiliatePremiumReferralUnlockTest extends TestCase
         UserEntitlement::query()
             ->updateOrCreate(
                 [
-                    'user_id' =>
-                        $user->getKey(),
-                    'product_code' =>
-                        Product::CODE_EDUCATION_PREMIUM,
+                    'user_id' => $user->getKey(),
+                    'product_code' => Product::CODE_EDUCATION_PREMIUM,
                 ],
                 [
-                    'status' =>
-                        UserEntitlement::STATUS_ACTIVE,
-                    'activated_at' =>
-                        now(),
-                    'payment_id' =>
-                        null,
-                    'revoked_at' =>
-                        null,
-                    'revoke_reason' =>
-                        null,
+                    'status' => UserEntitlement::STATUS_ACTIVE,
+                    'activated_at' => now(),
+                    'payment_id' => null,
+                    'revoked_at' => null,
+                    'revoke_reason' => null,
                 ]
             );
     }
@@ -241,33 +264,25 @@ class AffiliatePremiumReferralUnlockTest extends TestCase
         );
 
         return [
-            'name' =>
-                'Affiliate Unlock Buyer',
+            'name' => 'Affiliate Unlock Buyer',
 
-            'email' =>
-                "affiliate-unlock-{$suffix}@example.test",
+            'email' => "affiliate-unlock-{$suffix}@example.test",
 
-            'whatsapp_number' =>
-                '+9476'
+            'whatsapp_number' => '+9476'
                 .random_int(
                     1000000,
                     9999999
                 ),
 
-            'password' =>
-                'TradeX-Affiliate-Unlock-123!',
+            'password' => 'TradeX-Affiliate-Unlock-123!',
 
-            'password_confirmation' =>
-                'TradeX-Affiliate-Unlock-123!',
+            'password_confirmation' => 'TradeX-Affiliate-Unlock-123!',
 
-            'referral_code' =>
-                $referralCode,
+            'referral_code' => $referralCode,
 
-            'country_code' =>
-                'LK',
+            'country_code' => 'LK',
 
-            'language_code' =>
-                'en',
+            'language_code' => 'en',
         ];
     }
 }

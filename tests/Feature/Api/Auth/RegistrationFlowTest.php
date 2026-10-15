@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserEntitlement;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class RegistrationFlowTest extends TestCase
@@ -18,14 +19,11 @@ class RegistrationFlowTest extends TestCase
         parent::setUp();
 
         config([
-            'tradex_registration.delivery.email_driver' =>
-                'log',
+            'tradex_registration.delivery.email_driver' => 'log',
 
-            'tradex_registration.delivery.whatsapp_driver' =>
-                'log',
+            'tradex_registration.delivery.whatsapp_driver' => 'log',
 
-            'tradex_registration.testing.fixed_otp' =>
-                '123456',
+            'tradex_registration.testing.fixed_otp' => '123456',
         ]);
     }
 
@@ -33,87 +31,62 @@ class RegistrationFlowTest extends TestCase
     {
         $referrer = User::query()
             ->create([
-                'uuid' =>
-                    (string) \Illuminate\Support\Str::uuid(),
+                'uuid' => (string) Str::uuid(),
 
-                'name' =>
-                    'Referrer',
+                'name' => 'Referrer',
 
-                'email' =>
-                    'referrer@example.test',
+                'email' => 'referrer@example.test',
 
-                'email_verified_at' =>
-                    now(),
+                'email_verified_at' => now(),
 
-                'whatsapp_number' =>
-                    '+94770000001',
+                'whatsapp_number' => '+94770000001',
 
-                'whatsapp_verified_at' =>
-                    now(),
+                'whatsapp_verified_at' => now(),
 
-                'password' =>
-                    'Strong-Password-123!',
+                'password' => 'Strong-Password-123!',
 
-                'referral_code' =>
-                    'REFACTIVE1',
+                'referral_code' => 'REFACTIVE1',
 
-                'country_code' =>
-                    'LK',
+                'country_code' => 'LK',
 
-                'language_code' =>
-                    'en',
+                'language_code' => 'en',
 
-                'account_type' =>
-                    'PREMIUM',
+                'account_type' => 'PREMIUM',
 
-                'status' =>
-                    'ACTIVE',
+                'status' => 'ACTIVE',
 
-                'premium_activated_at' =>
-                    now(),
+                'premium_activated_at' => now(),
             ]);
 
         UserEntitlement::query()->create([
-            'user_id' =>
-                $referrer->getKey(),
+            'user_id' => $referrer->getKey(),
 
-            'product_code' =>
-                Product::CODE_EDUCATION_PREMIUM,
+            'product_code' => Product::CODE_EDUCATION_PREMIUM,
 
-            'status' =>
-                UserEntitlement::STATUS_ACTIVE,
+            'status' => UserEntitlement::STATUS_ACTIVE,
 
-            'activated_at' =>
-                now(),
+            'activated_at' => now(),
         ]);
 
         $start = $this
             ->postJson(
                 '/api/v1/auth/register/start',
                 [
-                    'name' =>
-                        'New Trader',
+                    'name' => 'New Trader',
 
-                    'email' =>
-                        'newtrader@example.test',
+                    'email' => 'newtrader@example.test',
 
-                    'whatsapp_number' =>
-                        '+94770000002',
+                    'whatsapp_number' => '+94770000002',
 
-                    'password' =>
-                        'TradeX-Strong-Password-123!',
+                    'password' => 'Tx!Abc12',
 
-                    'password_confirmation' =>
-                        'TradeX-Strong-Password-123!',
+                    'password_confirmation' => 'Tx!Abc12',
 
-                    'referral_code' =>
-                        $referrer->referral_code,
+                    'referral_code' => $referrer->referral_code,
 
-                    'country_code' =>
-                        'LK',
+                    'country_code' => 'LK',
 
-                    'language_code' =>
-                        'en',
+                    'language_code' => 'en',
                 ]
             )
             ->assertCreated()
@@ -140,14 +113,11 @@ class RegistrationFlowTest extends TestCase
             ->postJson(
                 '/api/v1/auth/register/email/verify',
                 [
-                    'registration_id' =>
-                        $registrationId,
+                    'registration_id' => $registrationId,
 
-                    'registration_token' =>
-                        $registrationToken,
+                    'registration_token' => $registrationToken,
 
-                    'otp_code' =>
-                        '123456',
+                    'otp_code' => '123456',
                 ]
             )
             ->assertOk()
@@ -160,14 +130,11 @@ class RegistrationFlowTest extends TestCase
             ->postJson(
                 '/api/v1/auth/register/whatsapp/verify',
                 [
-                    'registration_id' =>
-                        $registrationId,
+                    'registration_id' => $registrationId,
 
-                    'registration_token' =>
-                        $registrationToken,
+                    'registration_token' => $registrationToken,
 
-                    'otp_code' =>
-                        '123456',
+                    'otp_code' => '123456',
                 ]
             )
             ->assertOk()
@@ -180,11 +147,9 @@ class RegistrationFlowTest extends TestCase
             ->postJson(
                 '/api/v1/auth/register/totp/setup',
                 [
-                    'registration_id' =>
-                        $registrationId,
+                    'registration_id' => $registrationId,
 
-                    'registration_token' =>
-                        $registrationToken,
+                    'registration_token' => $registrationToken,
                 ]
             )
             ->assertOk()
@@ -257,14 +222,11 @@ class RegistrationFlowTest extends TestCase
             ->postJson(
                 '/api/v1/auth/register/totp/confirm',
                 [
-                    'registration_id' =>
-                        $registrationId,
+                    'registration_id' => $registrationId,
 
-                    'registration_token' =>
-                        $registrationToken,
+                    'registration_token' => $registrationToken,
 
-                    'totp_code' =>
-                        $code,
+                    'totp_code' => $code,
                 ]
             )
             ->assertOk()
