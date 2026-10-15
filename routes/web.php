@@ -35,7 +35,7 @@ Route::get('/', $publicFrontend)->name('public.home');
 | the authenticated API without changing the admin surface or API contracts.
 |
 */
-Route::view('/app', 'client.portal')->name('client.portal');
+Route::view('/portal', 'client.portal')->name('client.portal');
 
 $publicPages = [
     'about' => [
