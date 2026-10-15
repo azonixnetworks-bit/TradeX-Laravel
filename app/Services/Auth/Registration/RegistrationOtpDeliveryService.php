@@ -69,7 +69,18 @@ class RegistrationOtpDeliveryService
                         );
                 }
             );
-        } catch (Throwable) {
+        } catch (Throwable $exception) {
+            /*
+             * Do not expose transport details to the mobile client, but keep
+             * enough server-side context to diagnose a missing/invalid SMTP
+             * configuration in production.
+             */
+            Log::warning('TradeX registration email OTP delivery failed.', [
+                'email' => $this->maskEmail($email),
+                'mail_mailer' => (string) config('mail.default'),
+                'error' => $exception->getMessage(),
+            ]);
+
             throw new AuthApiException(
                 503,
                 'EMAIL_OTP_DELIVERY_FAILED',
