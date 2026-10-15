@@ -56,18 +56,12 @@ class RegistrationOtpDeliveryService
         try {
             $displayCode = BrandedEmailOtp::format($code);
 
-            Mail::raw(
-                "Your TradeX OS verification code is {$displayCode}. "
-                ."This code expires soon. Do not share it with anyone.",
-                function ($message) use (
-                    $email
-                ): void {
-                    $message
-                        ->to($email)
-                        ->subject(
-                            'TradeX OS verification code'
-                        );
-                }
+            $this->sendBrandedEmail(
+                email: $email,
+                code: $displayCode,
+                title: 'Verify your TradeX email',
+                intro: 'Use this code to verify your email address and continue setting up your TradeX account.',
+                subject: 'TradeX OS | Email verification code'
             );
         } catch (Throwable $exception) {
             /*
@@ -285,15 +279,12 @@ class RegistrationOtpDeliveryService
         string $code
     ): void {
         try {
-            Mail::raw(
-                "Your TradeX OS mobile verification code is {$code}. "
-                .'WhatsApp delivery is being activated soon. '
-                .'This code expires soon. Do not share it with anyone.',
-                function ($message) use ($email): void {
-                    $message
-                        ->to($email)
-                        ->subject('TradeX OS mobile verification code');
-                }
+            $this->sendBrandedEmail(
+                email: $email,
+                code: $code,
+                title: 'Verify your mobile number',
+                intro: 'Use this code to complete mobile verification. WhatsApp delivery will be activated soon.',
+                subject: 'TradeX OS | Mobile verification code'
             );
         } catch (Throwable $exception) {
             Log::warning('TradeX mobile verification email delivery failed.', [
@@ -308,6 +299,38 @@ class RegistrationOtpDeliveryService
                 'Mobile verification code could not be delivered.'
             );
         }
+    }
+
+    private function sendBrandedEmail(
+        string $email,
+        string $code,
+        string $title,
+        string $intro,
+        string $subject
+    ): void {
+        $html = view('emails.registration-verification', [
+            'title' => $title,
+            'intro' => $intro,
+            'code' => $code,
+            'logoUrl' => asset('admin/brand/tradex-logo.png'),
+            'registrationNumber' => (string) config(
+                'tradex_registration.company.registration_number',
+                'PV00296953'
+            ),
+            'contactPhone' => (string) config(
+                'tradex_registration.company.contact_phone',
+                '+94 72 254 2311'
+            ),
+        ])->render();
+
+        Mail::html(
+            $html,
+            function ($message) use ($email, $subject): void {
+                $message
+                    ->to($email)
+                    ->subject($subject);
+            }
+        );
     }
 
     private function assertLogDriverAllowed(): void
