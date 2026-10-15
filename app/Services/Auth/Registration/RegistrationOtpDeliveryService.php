@@ -91,7 +91,8 @@ class RegistrationOtpDeliveryService
 
     public function sendWhatsApp(
         string $whatsappNumber,
-        string $code
+        string $code,
+        ?string $fallbackEmail = null
     ): void {
         $driver = strtolower(
             trim(
@@ -115,6 +116,20 @@ class RegistrationOtpDeliveryService
                     'otp' => $code,
                 ]
             );
+
+            return;
+        }
+
+        if ($driver === 'email') {
+            if (blank($fallbackEmail)) {
+                throw new AuthApiException(
+                    503,
+                    'WHATSAPP_EMAIL_FALLBACK_INVALID',
+                    'Mobile verification email delivery is not configured.'
+                );
+            }
+
+            $this->sendWhatsAppFallbackEmail($fallbackEmail, $code);
 
             return;
         }
@@ -261,6 +276,36 @@ class RegistrationOtpDeliveryService
                 503,
                 'WHATSAPP_OTP_DELIVERY_FAILED',
                 'WhatsApp verification code could not be delivered.'
+            );
+        }
+    }
+
+    private function sendWhatsAppFallbackEmail(
+        string $email,
+        string $code
+    ): void {
+        try {
+            Mail::raw(
+                "Your TradeX OS mobile verification code is {$code}. "
+                .'WhatsApp delivery is being activated soon. '
+                .'This code expires soon. Do not share it with anyone.',
+                function ($message) use ($email): void {
+                    $message
+                        ->to($email)
+                        ->subject('TradeX OS mobile verification code');
+                }
+            );
+        } catch (Throwable $exception) {
+            Log::warning('TradeX mobile verification email delivery failed.', [
+                'email' => $this->maskEmail($email),
+                'mail_mailer' => (string) config('mail.default'),
+                'error' => $exception->getMessage(),
+            ]);
+
+            throw new AuthApiException(
+                503,
+                'WHATSAPP_EMAIL_FALLBACK_DELIVERY_FAILED',
+                'Mobile verification code could not be delivered.'
             );
         }
     }
