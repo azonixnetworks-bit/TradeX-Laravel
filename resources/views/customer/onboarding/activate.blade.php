@@ -1084,16 +1084,16 @@ input.email-otp-digit:not(:placeholder-shown) {
             <div class="step-kicker">Step 3 · Credentials</div>
             <h2>Create your password</h2>
             <p class="subtitle">Only you create and know this password. TradeX administrators cannot view it.</p>
-            <div class="notice">Use at least 12 characters with uppercase, lowercase, a number, and a symbol.</div>
+            <div class="notice">Use at least 8 characters with uppercase, lowercase, a number, and a symbol.</div>
             <form id="passwordForm">
                 <div class="row">
                     <div>
                         <label for="password">Password</label>
-                        <input id="password" type="password" autocomplete="new-password" minlength="12" required>
+                        <input id="password" type="password" autocomplete="new-password" minlength="8" required>
                     </div>
                     <div>
                         <label for="passwordConfirmation">Confirm password</label>
-                        <input id="passwordConfirmation" type="password" autocomplete="new-password" minlength="12" required>
+                        <input id="passwordConfirmation" type="password" autocomplete="new-password" minlength="8" required>
                     </div>
                 </div>
                 <div class="actions">

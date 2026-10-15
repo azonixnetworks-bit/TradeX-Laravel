@@ -40,7 +40,7 @@ class StartRegistrationRequest extends FormRequest
             'password' => [
                 'required',
                 'confirmed',
-                Password::min(12)
+                Password::min(8)
                     ->mixedCase()
                     ->letters()
                     ->numbers()
@@ -84,49 +84,43 @@ class StartRegistrationRequest extends FormRequest
         );
 
         $this->merge([
-            'name' =>
+            'name' => trim(
+                (string) $this->input('name')
+            ),
+
+            'email' => mb_strtolower(
                 trim(
-                    (string) $this->input('name')
-                ),
-
-            'email' =>
-                mb_strtolower(
-                    trim(
-                        (string) $this->input(
-                            'email'
-                        )
+                    (string) $this->input(
+                        'email'
                     )
-                ),
+                )
+            ),
 
-            'whatsapp_number' =>
-                $whatsapp,
+            'whatsapp_number' => $whatsapp,
 
-            'referral_code' =>
-                strtoupper(
-                    trim(
-                        (string) $this->input(
-                            'referral_code'
-                        )
+            'referral_code' => strtoupper(
+                trim(
+                    (string) $this->input(
+                        'referral_code'
                     )
-                ) ?: null,
+                )
+            ) ?: null,
 
-            'country_code' =>
-                strtoupper(
-                    trim(
-                        (string) $this->input(
-                            'country_code'
-                        )
+            'country_code' => strtoupper(
+                trim(
+                    (string) $this->input(
+                        'country_code'
                     )
-                ),
+                )
+            ),
 
-            'language_code' =>
-                strtolower(
-                    trim(
-                        (string) $this->input(
-                            'language_code'
-                        )
+            'language_code' => strtolower(
+                trim(
+                    (string) $this->input(
+                        'language_code'
                     )
-                ),
+                )
+            ),
         ]);
     }
 }
