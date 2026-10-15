@@ -1,6 +1,18 @@
 <?php
 
 return [
+    'company' => [
+        'registration_number' => env(
+            'TRADEX_COMPANY_REGISTRATION_NUMBER',
+            'PV00296953'
+        ),
+
+        'contact_phone' => env(
+            'TRADEX_CONTACT_PHONE',
+            '+94 72 254 2311'
+        ),
+    ],
+
     'session_minutes' => (int) env(
         'TRADEX_REG_SESSION_MINUTES',
         60
