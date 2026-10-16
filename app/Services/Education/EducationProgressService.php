@@ -9,8 +9,10 @@ use App\Models\Lesson;
 use App\Models\LessonVideo;
 use App\Models\User;
 use App\Models\UserLessonProgress;
+use App\Services\Dashboard\DashboardApiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 class EducationProgressService
 {
@@ -50,7 +52,7 @@ class EducationProgressService
             }
         }
 
-        return DB::transaction(
+        $progress = DB::transaction(
             function () use (
                 $user,
                 $lesson,
@@ -152,6 +154,12 @@ class EducationProgressService
                 return $progress;
             }
         );
+
+        Cache::forget(
+            DashboardApiService::cacheKey($user)
+        );
+
+        return $progress;
     }
 
     public function lessonProgress(

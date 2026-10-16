@@ -175,6 +175,10 @@ class DashboardApiTest extends TestCase
                 1
             )
             ->assertJsonPath(
+                'data.learning.is_premium',
+                true
+            )
+            ->assertJsonPath(
                 'data.learning.in_progress_lessons',
                 1
             )
@@ -193,6 +197,10 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath(
                 'data.learning.continue_learning.last_position_seconds',
                 321
+            )
+            ->assertJsonPath(
+                'data.learning.continue_learning.progress_percent',
+                0
             )
             ->assertJsonPath(
                 'data.trade_ideas.latest.uuid',
@@ -305,6 +313,18 @@ class DashboardApiTest extends TestCase
                 2
             )
             ->assertJsonPath(
+                'data.learning.is_premium',
+                false
+            )
+            ->assertJsonCount(
+                1,
+                'data.learning.free_lessons'
+            )
+            ->assertJsonPath(
+                'data.learning.free_lessons.0.course.is_free',
+                true
+            )
+            ->assertJsonPath(
                 'data.trade_ideas.available',
                 false
             )
@@ -388,6 +408,65 @@ class DashboardApiTest extends TestCase
         $this->assertNoInternalIdKey(
             $response->json('data')
         );
+    }
+
+    public function test_dashboard_prefers_the_most_recently_watched_lesson(): void
+    {
+        $user = $this->createApiUser([
+            'account_type' => 'PREMIUM',
+        ]);
+
+        [, , $olderLesson] = $this->createPublishedLesson(
+            Course::ACCESS_PREMIUM,
+            false
+        );
+        [, , $newerLesson] = $this->createPublishedLesson(
+            Course::ACCESS_PREMIUM,
+            false
+        );
+
+        UserLessonProgress::query()->create([
+            'user_id' => $user->getKey(),
+            'lesson_id' => $olderLesson->getKey(),
+            'status' => UserLessonProgress::STATUS_IN_PROGRESS,
+            'started_at' => now()->subHour(),
+            'last_activity_at' => now()->subMinutes(10),
+        ]);
+        UserLessonProgress::query()->create([
+            'user_id' => $user->getKey(),
+            'lesson_id' => $newerLesson->getKey(),
+            'status' => UserLessonProgress::STATUS_IN_PROGRESS,
+            'started_at' => now()->subHour(),
+            'last_activity_at' => now()->subMinute(),
+        ]);
+
+        $this->withToken($this->issueBoundToken($user))
+            ->getJson('/api/v1/dashboard')
+            ->assertOk()
+            ->assertJsonPath(
+                'data.learning.continue_learning.lesson.uuid',
+                $newerLesson->uuid
+            );
+    }
+
+    public function test_premium_dashboard_supplies_a_starting_lesson_without_history(): void
+    {
+        $user = $this->createApiUser([
+            'account_type' => 'PREMIUM',
+        ]);
+        [, , $lesson] = $this->createPublishedLesson(
+            Course::ACCESS_PREMIUM,
+            false
+        );
+
+        $this->withToken($this->issueBoundToken($user))
+            ->getJson('/api/v1/dashboard')
+            ->assertOk()
+            ->assertJsonPath('data.learning.continue_learning', null)
+            ->assertJsonPath(
+                'data.learning.default_premium_lesson.lesson.uuid',
+                $lesson->uuid
+            );
     }
 
     private function createPublishedLesson(

@@ -45,7 +45,7 @@ class DashboardApiService
         }
 
         return Cache::remember(
-            $this->dashboardCacheKey($user),
+            self::cacheKey($user),
             now()->addSeconds($ttlSeconds),
             fn (): array => $this->buildDashboard($user)
         );
@@ -87,7 +87,7 @@ class DashboardApiService
         ];
     }
 
-    private function dashboardCacheKey(
+    public static function cacheKey(
         User $user
     ): string {
         return implode(':', [
@@ -358,35 +358,31 @@ class DashboardApiService
                 0
             );
 
-            if ($inProgress > 0) {
-                $continueProgress = UserLessonProgress::query()
-                    ->with([
-                        'lesson.module.course',
-                        'lastVideo',
-                    ])
-                    ->where(
-                        'user_id',
-                        $user->getKey()
-                    )
-                    ->whereIn(
-                        'lesson_id',
-                        clone $accessibleLessons
-                    )
-                    ->where(
-                        'status',
-                        UserLessonProgress::STATUS_IN_PROGRESS
-                    )
-                    ->orderByDesc(
-                        'last_activity_at'
-                    )
-                    ->orderByDesc(
-                        'id'
-                    )
-                    ->first();
-            }
+            $continueProgress = UserLessonProgress::query()
+                ->with([
+                    'lesson.module.course',
+                    'lastVideo',
+                ])
+                ->where(
+                    'user_id',
+                    $user->getKey()
+                )
+                ->whereIn(
+                    'lesson_id',
+                    clone $accessibleLessons
+                )
+                ->orderByDesc(
+                    'last_activity_at'
+                )
+                ->orderByDesc(
+                    'id'
+                )
+                ->first();
         }
 
         return [
+            'is_premium' => $user->canAccessPremium(),
+
             'accessible_published_lessons' =>
                 $total,
 
@@ -412,6 +408,109 @@ class DashboardApiService
                             $continueProgress
                         )
                     : null,
+
+            'default_premium_lesson' =>
+                $user->canAccessPremium()
+                    ? $this->firstLessonSummary(
+                        Course::ACCESS_PREMIUM
+                    )
+                    : null,
+
+            'free_lessons' =>
+                $user->canAccessPremium()
+                    ? []
+                    : $this->freeLessonSummaries(),
+        ];
+    }
+
+    private function freeLessonSummaries(): array
+    {
+        return Lesson::query()
+            ->published()
+            ->with('module.course')
+            ->whereHas(
+                'module',
+                fn (Builder $moduleQuery): Builder =>
+                    $moduleQuery
+                        ->published()
+                        ->whereHas(
+                            'course',
+                            fn (Builder $courseQuery): Builder =>
+                                $courseQuery
+                                    ->published()
+                                    ->where(
+                                        'access_level',
+                                        Course::ACCESS_FREE
+                                    )
+                        )
+            )
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->limit(8)
+            ->get()
+            ->map(fn (Lesson $lesson): ?array =>
+                $this->learningLessonSummary($lesson))
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function firstLessonSummary(string $accessLevel): ?array
+    {
+        $lesson = Lesson::query()
+            ->published()
+            ->with('module.course')
+            ->whereHas(
+                'module',
+                fn (Builder $moduleQuery): Builder =>
+                    $moduleQuery
+                        ->published()
+                        ->whereHas(
+                            'course',
+                            fn (Builder $courseQuery): Builder =>
+                                $courseQuery
+                                    ->published()
+                                    ->where('access_level', $accessLevel)
+                        )
+            )
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->first();
+
+        return $lesson instanceof Lesson
+            ? $this->learningLessonSummary($lesson)
+            : null;
+    }
+
+    private function learningLessonSummary(Lesson $lesson): ?array
+    {
+        $module = $lesson->module;
+        $course = $module?->course;
+
+        if ($module === null || ! $course instanceof Course) {
+            return null;
+        }
+
+        return [
+            'course' => [
+                'uuid' => $course->uuid,
+                'title' => $course->title,
+                'thumbnail_path' => $course->thumbnail_path,
+                'is_free' => $course->isFree(),
+            ],
+            'module' => [
+                'uuid' => $module->uuid,
+                'title' => $module->title,
+            ],
+            'lesson' => [
+                'uuid' => $lesson->uuid,
+                'title' => $lesson->title,
+                'short_description' => $lesson->short_description,
+            ],
+            'lesson_url' => route(
+                'api.v1.education.lessons.show',
+                ['lesson' => $lesson->uuid]
+            ),
         ];
     }
 
@@ -606,6 +705,7 @@ class DashboardApiService
                     $course->uuid,
                 'title' =>
                     $course->title,
+                'thumbnail_path' => $course->thumbnail_path,
             ],
 
             'module' => [
@@ -635,6 +735,11 @@ class DashboardApiService
                 $progress->last_activity_at
                     ?->toISOString(),
 
+            'progress_percent' =>
+                $progress->isCompleted()
+                    ? 100
+                    : $this->progressPercent($progress),
+
             'lesson_url' =>
                 route(
                     'api.v1.education.lessons.show',
@@ -644,6 +749,19 @@ class DashboardApiService
                     ]
                 ),
         ];
+    }
+
+    private function progressPercent(UserLessonProgress $progress): int
+    {
+        $duration = (int) ($progress->lastVideo?->duration_seconds ?? 0);
+
+        if ($duration <= 0) {
+            return 0;
+        }
+
+        return min(99, max(0, (int) round(
+            ((int) $progress->last_position_seconds / $duration) * 100
+        )));
     }
 
     private function stageSummary(
