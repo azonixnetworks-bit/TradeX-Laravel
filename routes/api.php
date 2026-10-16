@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\ConfirmRegistrationTotpController;
+use App\Http\Controllers\Api\Auth\BootstrapRegistrationRecoveryCodesController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutAllController;
 use App\Http\Controllers\Api\Auth\LogoutController;
@@ -140,6 +141,15 @@ Route::prefix('v1')
                                 'throttle:api-register-totp'
                             )
                             ->name('totp.confirm');
+
+                        Route::post(
+                            '/recovery-codes',
+                            BootstrapRegistrationRecoveryCodesController::class
+                        )
+                            ->middleware(
+                                'throttle:api-register-verify'
+                            )
+                            ->name('recovery-codes.bootstrap');
                     });
             });
 

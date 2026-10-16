@@ -83,6 +83,42 @@ class RegistrationOtpDeliveryService
         }
     }
 
+    public function sendRecoveryCodesReadyNotification(string $email): void
+    {
+        if (strtolower((string) config('tradex_registration.delivery.email_driver', 'mail')) !== 'mail') {
+            return;
+        }
+
+        try {
+            $html = view('emails.recovery-codes-ready', [
+                'logoUrl' => asset('admin/brand/tradex-logo.png'),
+                'registrationNumber' => (string) config(
+                    'tradex_registration.company.registration_number',
+                    'PV00296953'
+                ),
+                'contactPhone' => (string) config(
+                    'tradex_registration.company.contact_phone',
+                    '+94 72 254 2311'
+                ),
+            ])->render();
+
+            Mail::html(
+                $html,
+                function ($message) use ($email): void {
+                    $message
+                        ->to($email)
+                        ->subject('TradeX OS | Recovery codes created');
+                }
+            );
+        } catch (Throwable $exception) {
+            Log::warning('TradeX recovery-code notification delivery failed.', [
+                'email' => $this->maskEmail($email),
+                'mail_mailer' => (string) config('mail.default'),
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
     public function sendWhatsApp(
         string $whatsappNumber,
         string $code,
