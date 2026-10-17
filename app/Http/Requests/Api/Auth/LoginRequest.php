@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Auth;
 
 use App\Models\UserDevice;
+use App\Models\UserDeviceQuickUnlockSetting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -90,6 +91,12 @@ class LoginRequest extends FormRequest
                 'string',
                 'max:10000',
             ],
+
+            'quick_unlock_method' => [
+                'nullable',
+                'string',
+                Rule::in(UserDeviceQuickUnlockSetting::METHODS),
+            ],
         ];
     }
 
@@ -107,6 +114,9 @@ class LoginRequest extends FormRequest
             'recovery_code' => is_string($recoveryCode)
                 ? trim($recoveryCode)
                 : $recoveryCode,
+            'quick_unlock_method' => strtoupper(
+                trim((string) $this->input('quick_unlock_method'))
+            ) ?: null,
         ]);
     }
 }

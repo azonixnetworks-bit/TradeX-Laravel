@@ -5,6 +5,9 @@ namespace App\Services\Auth;
 use App\Exceptions\AuthApiException;
 use App\Models\AuditLog;
 use App\Models\User;
+use App\Models\UserDevice;
+use App\Models\UserDeviceQuickUnlockSetting;
+use App\Services\Security\QuickUnlock\QuickUnlockPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -13,18 +16,13 @@ use Illuminate\Support\Str;
 class LoginService
 {
     public function __construct(
-        private readonly TotpService
-            $totp,
-        private readonly MfaRecoveryCodeService
-            $recoveryCodes,
-        private readonly DeviceBindingService
-            $devices,
-        private readonly AccessTokenService
-            $accessTokens,
-        private readonly RefreshTokenService
-            $refreshTokens
-    ) {
-    }
+        private readonly TotpService $totp,
+        private readonly MfaRecoveryCodeService $recoveryCodes,
+        private readonly DeviceBindingService $devices,
+        private readonly AccessTokenService $accessTokens,
+        private readonly RefreshTokenService $refreshTokens,
+        private readonly QuickUnlockPolicyService $quickUnlockPolicy
+    ) {}
 
     public function login(
         array $payload,
@@ -111,6 +109,14 @@ class LoginService
                             $request
                         );
 
+                $quickUnlockMethod =
+                    $this->enableQuickUnlockAfterStrongLogin(
+                        $user,
+                        $device,
+                        $payload,
+                        $request
+                    );
+
                 $familyUuid =
                     (string) Str::uuid();
 
@@ -132,8 +138,7 @@ class LoginService
 
                 $user->forceFill([
                     'last_login_at' => now(),
-                    'last_login_ip' =>
-                        $request->ip(),
+                    'last_login_ip' => $request->ip(),
                 ])->save();
 
                 AuditLog::record(
@@ -145,52 +150,107 @@ class LoginService
                     $device->getKey(),
                     null,
                     [
-                        'device_slot' =>
-                            $device->device_slot,
-                        'platform' =>
-                            $device->platform,
-                        'session_uuid' =>
-                            $familyUuid,
-                        'mfa_method' =>
-                            $mfaMethod,
+                        'device_slot' => $device->device_slot,
+                        'platform' => $device->platform,
+                        'session_uuid' => $familyUuid,
+                        'mfa_method' => $mfaMethod,
+                        'quick_unlock_method' => $quickUnlockMethod,
                     ],
                     $request->ip(),
                     $request->userAgent()
                 );
 
                 return [
-                    'access_token' =>
-                        $access->plainTextToken,
+                    'access_token' => $access->plainTextToken,
                     'token_type' => 'Bearer',
-                    'expires_in' =>
-                        (int) config(
-                            'tradex_auth.access_token_minutes',
-                            15
-                        ) * 60,
-                    'refresh_token' =>
-                        $refresh[
+                    'expires_in' => (int) config(
+                        'tradex_auth.access_token_minutes',
+                        15
+                    ) * 60,
+                    'refresh_token' => $refresh[
                             'plain_text_token'
                         ],
-                    'refresh_expires_in' =>
-                        (int) config(
-                            'tradex_auth.refresh_token_days',
-                            30
-                        ) * 86400,
-                    'session_uuid' =>
-                        $familyUuid,
-                    'mfa_method' =>
-                        $mfaMethod,
-                    'user' =>
-                        $this->safeUser(
-                            $user
-                        ),
-                    'device' =>
-                        $this->safeDevice(
-                            $device
-                        ),
+                    'refresh_expires_in' => (int) config(
+                        'tradex_auth.refresh_token_days',
+                        30
+                    ) * 86400,
+                    'session_uuid' => $familyUuid,
+                    'mfa_method' => $mfaMethod,
+                    'user' => $this->safeUser(
+                        $user
+                    ),
+                    'device' => $this->safeDevice(
+                        $device
+                    ),
+                    'quick_unlock_method' => $quickUnlockMethod,
                 ];
             }
         );
+    }
+
+    private function enableQuickUnlockAfterStrongLogin(
+        User $user,
+        UserDevice $device,
+        array $payload,
+        Request $request
+    ): ?string {
+        $method = $payload['quick_unlock_method'] ?? null;
+
+        if (! is_string($method) || $method === '') {
+            return null;
+        }
+
+        if (! $device->isMobile() || $device->trusted_at === null) {
+            throw new AuthApiException(
+                422,
+                'QUICK_UNLOCK_MOBILE_ONLY',
+                'Quick unlock is available only on a trusted mobile device.'
+            );
+        }
+
+        if (
+            $method === UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC
+            && ! (bool) config(
+                'tradex_mobile_security.quick_unlock.biometric_allowed',
+                true
+            )
+        ) {
+            throw new AuthApiException(
+                409,
+                'QUICK_UNLOCK_BIOMETRIC_DISABLED',
+                'Fingerprint quick unlock is currently disabled by policy.'
+            );
+        }
+
+        UserDeviceQuickUnlockSetting::query()->updateOrCreate(
+            ['user_device_id' => $device->getKey()],
+            [
+                'enabled' => true,
+                'method' => $method,
+                'trusted_at_snapshot' => $device->trusted_at,
+                'enrolled_at' => now(),
+                'disabled_at' => null,
+            ]
+        );
+
+        AuditLog::record(
+            'USER',
+            $user->getKey(),
+            'QUICK_UNLOCK_ENABLED',
+            'SECURITY',
+            'USER_DEVICE',
+            $device->getKey(),
+            null,
+            [
+                'method' => $method,
+                'enrollment' => 'STRONG_LOGIN',
+                'policy_version' => $this->quickUnlockPolicy->policy()['version'],
+            ],
+            $request->ip(),
+            $request->userAgent()
+        );
+
+        return $method;
     }
 
     private function safeUser(
@@ -200,14 +260,10 @@ class LoginService
             'uuid' => $user->uuid,
             'name' => $user->name,
             'email' => $user->email,
-            'referral_code' =>
-                $user->referral_code,
-            'country_code' =>
-                $user->country_code,
-            'language_code' =>
-                $user->language_code,
-            'account_type' =>
-                $user->account_type,
+            'referral_code' => $user->referral_code,
+            'country_code' => $user->country_code,
+            'language_code' => $user->language_code,
+            'account_type' => $user->account_type,
             'status' => $user->status,
         ];
     }
@@ -217,18 +273,12 @@ class LoginService
     ): array {
         return [
             'uuid' => $device->uuid,
-            'device_slot' =>
-                $device->device_slot,
-            'platform' =>
-                $device->platform,
-            'device_name' =>
-                $device->device_name,
-            'device_model' =>
-                $device->device_model,
-            'app_version' =>
-                $device->app_version,
-            'is_trusted' =>
-                (bool) $device->is_trusted,
+            'device_slot' => $device->device_slot,
+            'platform' => $device->platform,
+            'device_name' => $device->device_name,
+            'device_model' => $device->device_model,
+            'app_version' => $device->app_version,
+            'is_trusted' => (bool) $device->is_trusted,
         ];
     }
 }

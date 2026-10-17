@@ -4,6 +4,7 @@ namespace Tests\Feature\Api\Auth;
 
 use App\Models\User;
 use App\Models\UserDevice;
+use App\Models\UserDeviceQuickUnlockSetting;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -99,6 +100,28 @@ class AuthenticationFlowTest extends TestCase
             );
     }
 
+    public function test_strong_login_can_enroll_biometric_quick_unlock(): void
+    {
+        $user = $this->createTotpUser();
+        $payload = $this->loginPayload($user);
+        $payload['quick_unlock_method'] = 'BIOMETRIC';
+
+        $response = $this->postJson('/api/v1/auth/login', $payload);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('data.quick_unlock_method', 'BIOMETRIC');
+
+        $deviceUuid = $response->json('data.device.uuid');
+        $device = UserDevice::query()->where('uuid', $deviceUuid)->firstOrFail();
+
+        $this->assertDatabaseHas('user_device_quick_unlock_settings', [
+            'user_device_id' => $device->getKey(),
+            'enabled' => true,
+            'method' => UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC,
+        ]);
+    }
+
     public function test_same_totp_step_cannot_be_replayed(): void
     {
         $user = $this->createTotpUser();
@@ -132,17 +155,13 @@ class AuthenticationFlowTest extends TestCase
         $user = $this->createTotpUser();
 
         $user->devices()->create([
-            'uuid' =>
-                (string) Str::uuid(),
-            'device_slot' =>
-                UserDevice::SLOT_MOBILE,
-            'platform' =>
-                UserDevice::PLATFORM_ANDROID,
-            'installation_id_hash' =>
-                hash(
-                    'sha256',
-                    (string) Str::uuid()
-                ),
+            'uuid' => (string) Str::uuid(),
+            'device_slot' => UserDevice::SLOT_MOBILE,
+            'platform' => UserDevice::PLATFORM_ANDROID,
+            'installation_id_hash' => hash(
+                'sha256',
+                (string) Str::uuid()
+            ),
             'is_trusted' => true,
             'is_active' => true,
             'registered_at' => now(),
@@ -166,43 +185,32 @@ class AuthenticationFlowTest extends TestCase
     private function createTotpUser(): User
     {
         $user = User::query()->create([
-            'uuid' =>
-                (string) Str::uuid(),
-            'name' =>
-                'API Auth User',
-            'email' =>
-                'auth-'
+            'uuid' => (string) Str::uuid(),
+            'name' => 'API Auth User',
+            'email' => 'auth-'
                 .Str::lower(
                     Str::random(8)
                 )
                 .'@example.test',
-            'email_verified_at' =>
-                now(),
-            'password' =>
-                Hash::make(
-                    'StrongPassword123!'
-                ),
-            'referral_code' =>
-                'REF'
+            'email_verified_at' => now(),
+            'password' => Hash::make(
+                'StrongPassword123!'
+            ),
+            'referral_code' => 'REF'
                 .Str::upper(
                     Str::random(8)
                 ),
             'country_code' => 'LK',
             'language_code' => 'en',
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
             'status' => 'ACTIVE',
-            'premium_activated_at' =>
-                now(),
+            'premium_activated_at' => now(),
         ]);
 
         $user->forceFill([
-            'totp_secret' =>
-                'JBSWY3DPEHPK3PXP',
-            'totp_confirmed_at' =>
-                now(),
-            'totp_last_used_step' =>
-                null,
+            'totp_secret' => 'JBSWY3DPEHPK3PXP',
+            'totp_confirmed_at' => now(),
+            'totp_last_used_step' => null,
         ])->save();
 
         return $user->refresh();
@@ -213,27 +221,19 @@ class AuthenticationFlowTest extends TestCase
     ): array {
         return [
             'email' => $user->email,
-            'password' =>
-                'StrongPassword123!',
-            'totp_code' =>
-                app(TotpService::class)
-                    ->codeAt(
-                        (string) $user
-                            ->totp_secret,
-                        time()
-                    ),
-            'installation_id' =>
-                (string) Str::uuid(),
-            'platform' =>
-                UserDevice::PLATFORM_ANDROID,
-            'device_name' =>
-                'TradeX Test Phone',
-            'device_model' =>
-                'Test Model',
-            'os_version' =>
-                'Android Test',
-            'app_version' =>
-                '1.0.0-test',
+            'password' => 'StrongPassword123!',
+            'totp_code' => app(TotpService::class)
+                ->codeAt(
+                    (string) $user
+                        ->totp_secret,
+                    time()
+                ),
+            'installation_id' => (string) Str::uuid(),
+            'platform' => UserDevice::PLATFORM_ANDROID,
+            'device_name' => 'TradeX Test Phone',
+            'device_model' => 'Test Model',
+            'os_version' => 'Android Test',
+            'app_version' => '1.0.0-test',
         ];
     }
 }
