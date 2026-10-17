@@ -11,6 +11,7 @@ use App\Services\Security\QuickUnlock\QuickUnlockPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 class LoginService
@@ -28,16 +29,25 @@ class LoginService
         array $payload,
         Request $request
     ): array {
+        $normalizedEmail = mb_strtolower(trim((string) $payload['email']));
+        $lockoutKey = 'api-login-account|'.hash('sha256', $normalizedEmail);
+        $maximumAttempts = max(1, (int) config(
+            'tradex_auth.rate_limits.login_failed_attempts',
+            5
+        ));
+
+        if (RateLimiter::tooManyAttempts($lockoutKey, $maximumAttempts)) {
+            throw new AuthApiException(
+                429,
+                'ACCOUNT_LOGIN_LOCKED',
+                'Too many failed login attempts. Try again later.'
+            );
+        }
+
         $candidate = User::query()
             ->whereRaw(
                 'LOWER(email) = ?',
-                [
-                    mb_strtolower(
-                        (string) $payload[
-                            'email'
-                        ]
-                    ),
-                ]
+                [$normalizedEmail]
             )
             ->first();
 
@@ -48,6 +58,14 @@ class LoginService
                 (string) $candidate->password
             )
         ) {
+            RateLimiter::hit(
+                $lockoutKey,
+                max(1, (int) config(
+                    'tradex_auth.rate_limits.login_lockout_seconds',
+                    900
+                ))
+            );
+
             throw new AuthApiException(
                 401,
                 'INVALID_CREDENTIALS',
@@ -63,7 +81,7 @@ class LoginService
             );
         }
 
-        return DB::transaction(
+        $result = DB::transaction(
             function () use (
                 $candidate,
                 $payload,
@@ -186,6 +204,10 @@ class LoginService
                 ];
             }
         );
+
+        RateLimiter::clear($lockoutKey);
+
+        return $result;
     }
 
     private function enableQuickUnlockAfterStrongLogin(

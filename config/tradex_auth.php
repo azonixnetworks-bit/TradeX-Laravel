@@ -7,6 +7,8 @@ return [
     'rate_limits' => [
         'login_per_minute' => 5,
         'login_per_hour_ip' => 30,
+        'login_failed_attempts' => 5,
+        'login_lockout_seconds' => 900,
         'refresh_per_minute' => 30,
         'share_card_per_minute' => 30,
     ],

@@ -32,10 +32,8 @@ class AuthSecurityHardeningTest extends TestCase
             'audit_logs',
             [
                 'actor_type' => 'USER',
-                'actor_id' =>
-                    $user->getKey(),
-                'action' =>
-                    'API_LOGIN_SUCCESS',
+                'actor_id' => $user->getKey(),
+                'action' => 'API_LOGIN_SUCCESS',
                 'module' => 'AUTH',
             ]
         );
@@ -68,6 +66,28 @@ class AuthSecurityHardeningTest extends TestCase
             ->assertStatus(429);
     }
 
+    public function test_failed_passwords_lock_the_account_key_across_ips(): void
+    {
+        [, $payload] = $this->userAndPayload();
+        $payload['password'] = 'WrongPassword!';
+
+        for ($attempt = 1; $attempt <= 5; $attempt++) {
+            $this
+                ->withServerVariables(['REMOTE_ADDR' => '10.0.0.'.$attempt])
+                ->postJson('/api/v1/auth/login', $payload)
+                ->assertUnauthorized()
+                ->assertJsonPath('error.code', 'INVALID_CREDENTIALS');
+        }
+
+        $payload['password'] = 'StrongPassword123!';
+
+        $this
+            ->withServerVariables(['REMOTE_ADDR' => '10.0.1.1'])
+            ->postJson('/api/v1/auth/login', $payload)
+            ->assertStatus(429)
+            ->assertJsonPath('error.code', 'ACCOUNT_LOGIN_LOCKED');
+    }
+
     public function test_refresh_token_cannot_move_to_another_installation(): void
     {
         [
@@ -87,12 +107,10 @@ class AuthSecurityHardeningTest extends TestCase
             ->postJson(
                 '/api/v1/auth/refresh',
                 [
-                    'refresh_token' =>
-                        $login[
+                    'refresh_token' => $login[
                             'refresh_token'
                         ],
-                    'installation_id' =>
-                        (string) Str::uuid(),
+                    'installation_id' => (string) Str::uuid(),
                 ]
             )
             ->assertUnauthorized()
@@ -155,41 +173,31 @@ class AuthSecurityHardeningTest extends TestCase
     private function userAndPayload(): array
     {
         $user = User::query()->create([
-            'uuid' =>
-                (string) Str::uuid(),
-            'name' =>
-                'Security Test User',
-            'email' =>
-                'security-'
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Security Test User',
+            'email' => 'security-'
                 .Str::lower(
                     Str::random(8)
                 )
                 .'@example.test',
-            'email_verified_at' =>
-                now(),
-            'password' =>
-                Hash::make(
-                    'StrongPassword123!'
-                ),
-            'referral_code' =>
-                'REF'
+            'email_verified_at' => now(),
+            'password' => Hash::make(
+                'StrongPassword123!'
+            ),
+            'referral_code' => 'REF'
                 .Str::upper(
                     Str::random(8)
                 ),
             'country_code' => 'LK',
             'language_code' => 'en',
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
             'status' => 'ACTIVE',
-            'premium_activated_at' =>
-                now(),
+            'premium_activated_at' => now(),
         ]);
 
         $user->forceFill([
-            'totp_secret' =>
-                'JBSWY3DPEHPK3PXP',
-            'totp_confirmed_at' =>
-                now(),
+            'totp_secret' => 'JBSWY3DPEHPK3PXP',
+            'totp_confirmed_at' => now(),
         ])->save();
 
         $installationId =
@@ -198,25 +206,19 @@ class AuthSecurityHardeningTest extends TestCase
         return [
             $user,
             [
-                'email' =>
-                    $user->email,
-                'password' =>
-                    'StrongPassword123!',
-                'totp_code' =>
-                    app(
-                        TotpService::class
-                    )->codeAt(
-                        (string) $user
-                            ->fresh()
-                            ->totp_secret,
-                        time()
-                    ),
-                'installation_id' =>
-                    $installationId,
-                'platform' =>
-                    UserDevice::PLATFORM_ANDROID,
-                'device_name' =>
-                    'Security Test Phone',
+                'email' => $user->email,
+                'password' => 'StrongPassword123!',
+                'totp_code' => app(
+                    TotpService::class
+                )->codeAt(
+                    (string) $user
+                        ->fresh()
+                        ->totp_secret,
+                    time()
+                ),
+                'installation_id' => $installationId,
+                'platform' => UserDevice::PLATFORM_ANDROID,
+                'device_name' => 'Security Test Phone',
             ],
         ];
     }
