@@ -5,7 +5,10 @@ namespace App\Services\OurChannel;
 use App\Exceptions\AuthApiException;
 use App\Models\ChannelVideo;
 use App\Models\User;
+use App\Models\UserChannelVideoReaction;
+use App\Services\Dashboard\DashboardApiService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 
 class OurChannelApiService
 {
@@ -98,7 +101,8 @@ class OurChannelApiService
     }
 
     public function summary(
-        ChannelVideo $video
+        ChannelVideo $video,
+        ?User $viewer = null
     ): array {
         return [
             'uuid' => $video->uuid,
@@ -115,16 +119,16 @@ class OurChannelApiService
                 $this->youtubePayload(
                     $video
                 ),
+            'reactions' => $this->reactionSummary($video, $viewer),
         ];
     }
 
     public function detail(
-        ChannelVideo $video
+        ChannelVideo $video,
+        ?User $viewer = null
     ): array {
         return [
-            ...$this->summary(
-                $video
-            ),
+            ...$this->summary($video, $viewer),
             'description' =>
                 $video->description,
         ];
@@ -144,6 +148,56 @@ class OurChannelApiService
             'thumbnail_url' =>
                 $video->thumbnailUrl(),
             'privacy_enhanced_embed' => true,
+        ];
+    }
+
+    public function react(
+        User $user,
+        ChannelVideo $video,
+        ?string $reaction
+    ): array {
+        if ($reaction === null) {
+            UserChannelVideoReaction::query()
+                ->where('user_id', $user->getKey())
+                ->where('channel_video_id', $video->getKey())
+                ->delete();
+        } else {
+            UserChannelVideoReaction::query()->updateOrCreate(
+                [
+                    'user_id' => $user->getKey(),
+                    'channel_video_id' => $video->getKey(),
+                ],
+                ['reaction' => $reaction]
+            );
+        }
+
+        Cache::forget(DashboardApiService::cacheKey($user));
+
+        return $this->reactionSummary($video, $user);
+    }
+
+    private function reactionSummary(
+        ChannelVideo $video,
+        ?User $viewer
+    ): array {
+        $counts = UserChannelVideoReaction::query()
+            ->select('reaction')
+            ->selectRaw('COUNT(*) as aggregate')
+            ->where('channel_video_id', $video->getKey())
+            ->groupBy('reaction')
+            ->pluck('aggregate', 'reaction');
+
+        $viewerReaction = $viewer instanceof User
+            ? UserChannelVideoReaction::query()
+                ->where('user_id', $viewer->getKey())
+                ->where('channel_video_id', $video->getKey())
+                ->value('reaction')
+            : null;
+
+        return [
+            'likes_count' => (int) $counts->get(UserChannelVideoReaction::LIKE, 0),
+            'dislikes_count' => (int) $counts->get(UserChannelVideoReaction::DISLIKE, 0),
+            'viewer_reaction' => $viewerReaction,
         ];
     }
 

@@ -81,7 +81,7 @@ class ChannelVideoIndexController extends Controller
                     ->getCollection()
                     ->map(
                         fn ($video): array =>
-                            $service->summary($video)
+                            $service->summary($video, $user)
                     )
                     ->values()
                     ->all(),

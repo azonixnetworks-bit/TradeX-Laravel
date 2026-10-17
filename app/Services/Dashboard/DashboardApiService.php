@@ -627,7 +627,8 @@ class DashboardApiService
                     ? [
                         ...$this->ourChannel
                             ->summary(
-                                $video
+                                $video,
+                                $user
                             ),
                         'detail_url' =>
                             route(

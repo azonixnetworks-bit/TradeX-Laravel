@@ -32,7 +32,8 @@ class ChannelVideoShowController extends Controller
             'success' => true,
             'data' => [
                 'video' => $service->detail(
-                    $video
+                    $video,
+                    $user
                 ),
             ],
         ]);

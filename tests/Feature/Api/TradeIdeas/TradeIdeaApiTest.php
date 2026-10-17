@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\TradeIdeas;
 
 use App\Models\TradeIdea;
+use App\Models\UserTradeIdeaReaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesTradeIdeaApiContent;
 use Tests\Concerns\CreatesTradeXMobileSession;
@@ -238,6 +239,36 @@ class TradeIdeaApiTest extends TestCase
             ->assertJsonPath(
                 'error.code',
                 'TRADE_IDEA_NOT_AVAILABLE'
+            );
+    }
+
+    public function test_premium_user_can_toggle_signal_reactions(): void
+    {
+        $idea = $this->createTradeIdeaApiContent();
+        $user = $this->createApiUser(['account_type' => 'PREMIUM']);
+        $token = $this->issueBoundToken($user);
+        $endpoint = '/api/v1/trade-ideas/'
+            .$idea->uuid
+            .'/reaction';
+
+        $this->withToken($token)
+            ->putJson($endpoint, ['reaction' => 'like'])
+            ->assertOk()
+            ->assertJsonPath('data.reaction.likes_count', 1)
+            ->assertJsonPath('data.reaction.dislikes_count', 0)
+            ->assertJsonPath(
+                'data.reaction.viewer_reaction',
+                UserTradeIdeaReaction::LIKE
+            );
+
+        $this->withToken($token)
+            ->putJson($endpoint, ['reaction' => 'dislike'])
+            ->assertOk()
+            ->assertJsonPath('data.reaction.likes_count', 0)
+            ->assertJsonPath('data.reaction.dislikes_count', 1)
+            ->assertJsonPath(
+                'data.reaction.viewer_reaction',
+                UserTradeIdeaReaction::DISLIKE
             );
     }
 }

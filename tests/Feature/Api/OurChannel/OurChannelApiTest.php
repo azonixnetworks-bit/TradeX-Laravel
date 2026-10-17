@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\OurChannel;
 
 use App\Models\ChannelVideo;
+use App\Models\UserChannelVideoReaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesOurChannelApiContent;
 use Tests\Concerns\CreatesTradeXMobileSession;
@@ -234,6 +235,43 @@ class OurChannelApiTest extends TestCase
                 'error.code',
                 'OUR_CHANNEL_VIDEO_NOT_AVAILABLE'
             );
+    }
+
+    public function test_user_can_toggle_like_and_dislike_reactions(): void
+    {
+        $video = $this->createOurChannelVideo();
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $endpoint = '/api/v1/our-channel/videos/'
+            .$video->uuid
+            .'/reaction';
+
+        $this->withToken($token)
+            ->putJson($endpoint, ['reaction' => 'like'])
+            ->assertOk()
+            ->assertJsonPath('data.reaction.likes_count', 1)
+            ->assertJsonPath('data.reaction.dislikes_count', 0)
+            ->assertJsonPath(
+                'data.reaction.viewer_reaction',
+                UserChannelVideoReaction::LIKE
+            );
+
+        $this->withToken($token)
+            ->putJson($endpoint, ['reaction' => 'dislike'])
+            ->assertOk()
+            ->assertJsonPath('data.reaction.likes_count', 0)
+            ->assertJsonPath('data.reaction.dislikes_count', 1)
+            ->assertJsonPath(
+                'data.reaction.viewer_reaction',
+                UserChannelVideoReaction::DISLIKE
+            );
+
+        $this->withToken($token)
+            ->putJson($endpoint, [])
+            ->assertOk()
+            ->assertJsonPath('data.reaction.likes_count', 0)
+            ->assertJsonPath('data.reaction.dislikes_count', 0)
+            ->assertJsonPath('data.reaction.viewer_reaction', null);
     }
 
     public function test_future_published_uuid_is_hidden_until_publish_time(): void

@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\TradeIdea;
 use App\Models\TradeIdeaDistribution;
 use App\Models\User;
+use App\Models\UserTradeIdeaReaction;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -116,7 +117,8 @@ class TradeIdeaApiService
     }
 
     public function summary(
-        TradeIdea $tradeIdea
+        TradeIdea $tradeIdea,
+        ?User $viewer = null
     ): array {
         $tradeIdea->loadMissing(
             'targets'
@@ -217,20 +219,21 @@ class TradeIdeaApiService
 
             'close_outcome' =>
                 $tradeIdea->close_outcome,
+
+            'reactions' => $this->reactionSummary($tradeIdea, $viewer),
         ];
     }
 
     public function detail(
-        TradeIdea $tradeIdea
+        TradeIdea $tradeIdea,
+        ?User $viewer = null
     ): array {
         $tradeIdea->loadMissing([
             'targets',
             'updates.target',
         ]);
 
-        $data = $this->summary(
-            $tradeIdea
-        );
+        $data = $this->summary($tradeIdea, $viewer);
 
         $data['analysis'] =
             $tradeIdea->analysis;
@@ -333,6 +336,54 @@ class TradeIdeaApiService
             'Trade Ideas are educational market analysis and do not guarantee profit. Apply your own risk management.';
 
         return $data;
+    }
+
+    public function react(
+        User $user,
+        TradeIdea $tradeIdea,
+        ?string $reaction
+    ): array {
+        if ($reaction === null) {
+            UserTradeIdeaReaction::query()
+                ->where('user_id', $user->getKey())
+                ->where('trade_idea_id', $tradeIdea->getKey())
+                ->delete();
+        } else {
+            UserTradeIdeaReaction::query()->updateOrCreate(
+                [
+                    'user_id' => $user->getKey(),
+                    'trade_idea_id' => $tradeIdea->getKey(),
+                ],
+                ['reaction' => $reaction]
+            );
+        }
+
+        return $this->reactionSummary($tradeIdea, $user);
+    }
+
+    private function reactionSummary(
+        TradeIdea $tradeIdea,
+        ?User $viewer
+    ): array {
+        $counts = UserTradeIdeaReaction::query()
+            ->select('reaction')
+            ->selectRaw('COUNT(*) as aggregate')
+            ->where('trade_idea_id', $tradeIdea->getKey())
+            ->groupBy('reaction')
+            ->pluck('aggregate', 'reaction');
+
+        $viewerReaction = $viewer instanceof User
+            ? UserTradeIdeaReaction::query()
+                ->where('user_id', $viewer->getKey())
+                ->where('trade_idea_id', $tradeIdea->getKey())
+                ->value('reaction')
+            : null;
+
+        return [
+            'likes_count' => (int) $counts->get(UserTradeIdeaReaction::LIKE, 0),
+            'dislikes_count' => (int) $counts->get(UserTradeIdeaReaction::DISLIKE, 0),
+            'viewer_reaction' => $viewerReaction,
+        ];
     }
 
     public function chartAsset(

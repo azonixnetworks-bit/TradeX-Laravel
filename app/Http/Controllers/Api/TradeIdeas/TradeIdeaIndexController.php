@@ -87,7 +87,8 @@ class TradeIdeaIndexController extends Controller
                         ->map(
                             fn ($tradeIdea): array =>
                                 $service->summary(
-                                    $tradeIdea
+                                    $tradeIdea,
+                                    $user
                                 )
                         )
                         ->values()

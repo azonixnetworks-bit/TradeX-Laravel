@@ -27,6 +27,7 @@ use App\Http\Controllers\Api\Education\ModuleShowController;
 use App\Http\Controllers\Api\Education\PlaybackAssetController;
 use App\Http\Controllers\Api\Education\UpdateLessonProgressController;
 use App\Http\Controllers\Api\OurChannel\ChannelVideoIndexController;
+use App\Http\Controllers\Api\OurChannel\ChannelVideoReactionController;
 use App\Http\Controllers\Api\OurChannel\ChannelVideoShowController;
 use App\Http\Controllers\Api\Profile\ConfirmTelegramChangeController;
 use App\Http\Controllers\Api\Profile\ConfirmWhatsAppChangeController;
@@ -38,6 +39,7 @@ use App\Http\Controllers\Api\Profile\UpdateProfilePreferencesController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaChartController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaIndexController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShareActionController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaReactionController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShowController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
@@ -302,6 +304,16 @@ Route::prefix('v1')
                             'throttle:api-our-channel-read'
                         )
                         ->name('videos.show');
+
+                    Route::put(
+                        '/videos/{channelVideo}/reaction',
+                        ChannelVideoReactionController::class
+                    )
+                        ->whereUuid('channelVideo')
+                        ->middleware(
+                            'throttle:api-our-channel-read'
+                        )
+                        ->name('videos.reaction.update');
                 });
 
             Route::prefix('education')
@@ -438,6 +450,14 @@ Route::prefix('v1')
                             'throttle:api-trade-ideas-media'
                         )
                         ->name('chart');
+
+                    Route::put(
+                        '/{tradeIdea}/reaction',
+                        TradeIdeaReactionController::class
+                    )
+                        ->whereUuid('tradeIdea')
+                        ->middleware('throttle:api-trade-ideas-read')
+                        ->name('reaction.update');
 
                     Route::get(
                         '/{tradeIdea}/share-card.svg',

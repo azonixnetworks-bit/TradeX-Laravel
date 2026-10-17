@@ -33,7 +33,8 @@ class TradeIdeaShowController extends Controller
             'data' => [
                 'trade_idea' =>
                     $service->detail(
-                        $resolved
+                        $resolved,
+                        $user
                     ),
             ],
         ]);
