@@ -62,7 +62,7 @@ class UserDeviceController extends Controller
         */
 
         abort_unless(
-            $device->user_id === $user->id,
+            (int) $device->user_id === (int) $user->getKey(),
             404
         );
 

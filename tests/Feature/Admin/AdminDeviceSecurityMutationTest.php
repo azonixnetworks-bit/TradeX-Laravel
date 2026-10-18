@@ -178,6 +178,41 @@ class AdminDeviceSecurityMutationTest extends TestCase
     }
 
 
+    public function test_device_user_foreign_key_is_normalized_to_an_integer_for_ownership_guards(): void
+    {
+        $user =
+            $this->createUser();
+
+        $deviceId =
+            $this->createDevice(
+                user: $user,
+                slot: 'MOBILE',
+                platform: 'ANDROID',
+                deviceName: 'Ownership Type Test Phone'
+            );
+
+        $device =
+            UserDevice::query()
+                ->findOrFail($deviceId);
+
+        /*
+        |------------------------------------------------------------------
+        | MySQL can hydrate this foreign key as a string. The cast ensures
+        | ownership checks cannot reject the real owner because of type only.
+        |------------------------------------------------------------------
+        */
+        $device->setRawAttributes([
+            ...$device->getAttributes(),
+            'user_id' => (string) $user->id,
+        ]);
+
+        $this->assertSame(
+            $user->id,
+            $device->user_id
+        );
+    }
+
+
     /*
     |--------------------------------------------------------------------------
     | Revoke Releases the Mobile and Desktop Slots
