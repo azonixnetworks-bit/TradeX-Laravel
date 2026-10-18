@@ -226,6 +226,10 @@
     src="{{ asset('admin/js/in-place-admin-navigation.js') }}?v=20260927-2">
 </script>
 
+<script
+    src="{{ asset('admin/js/user-device-security.js') }}?v=20261018-1">
+</script>
+
 @stack('scripts')
 
 </body>

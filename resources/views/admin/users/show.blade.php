@@ -1877,6 +1877,7 @@
                     id="deviceRevokeReason"
                     name="reason"
                     rows="5"
+                    minlength="10"
                     maxlength="500"
                     required
                     placeholder="Example: Customer lost this device and requested access removal."
@@ -2380,119 +2381,6 @@ document.addEventListener(
 
                     closeSecurityModal(
                         statusModal
-                    );
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Revoke Single Device
-        |--------------------------------------------------------------------------
-        */
-
-        const deviceRevokeModal =
-            document.getElementById(
-                'deviceRevokeModal'
-            );
-
-        const deviceRevokeForm =
-            document.getElementById(
-                'deviceRevokeForm'
-            );
-
-        const deviceRevokeName =
-            document.getElementById(
-                'deviceRevokeName'
-            );
-
-        const deviceRevokeReason =
-            document.getElementById(
-                'deviceRevokeReason'
-            );
-
-
-        document
-            .querySelectorAll(
-                '[data-device-revoke]'
-            )
-            .forEach(
-                function (button) {
-
-                    button.addEventListener(
-                        'click',
-                        function () {
-
-                            if (
-                                !deviceRevokeModal
-                                ||
-                                !deviceRevokeForm
-                                ||
-                                !deviceRevokeName
-                            ) {
-                                return;
-                            }
-
-
-                            const actionUrl =
-                                button.dataset.actionUrl;
-
-                            if (!actionUrl) {
-                                return;
-                            }
-
-
-                            /*
-                             * Clear previous modal-local input
-                             * before assigning the next device.
-                             */
-
-                            deviceRevokeForm.reset();
-
-                            deviceRevokeForm.action =
-                                actionUrl;
-
-                            deviceRevokeName.textContent =
-                                button.dataset.deviceName
-                                ?? 'this device';
-
-
-                            openSecurityModal(
-                                deviceRevokeModal,
-                                deviceRevokeReason
-                            );
-                        }
-                    );
-
-                }
-            );
-
-
-        document
-            .getElementById(
-                'deviceRevokeClose'
-            )
-            ?.addEventListener(
-                'click',
-                function () {
-
-                    closeSecurityModal(
-                        deviceRevokeModal
-                    );
-                }
-            );
-
-
-        document
-            .getElementById(
-                'deviceRevokeCancel'
-            )
-            ?.addEventListener(
-                'click',
-                function () {
-
-                    closeSecurityModal(
-                        deviceRevokeModal
                     );
                 }
             );
