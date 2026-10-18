@@ -20,12 +20,9 @@ class DashboardApiService
     private const CURRENCY_USD = 'USD';
 
     public function __construct(
-        private readonly TradeIdeaApiService
-            $tradeIdeas,
-        private readonly OurChannelApiService
-            $ourChannel
-    ) {
-    }
+        private readonly TradeIdeaApiService $tradeIdeas,
+        private readonly OurChannelApiService $ourChannel
+    ) {}
 
     public function dashboard(
         User $user
@@ -55,35 +52,29 @@ class DashboardApiService
         User $user
     ): array {
         return [
-            'account' =>
-                $this->accountSummary(
-                    $user
-                ),
+            'account' => $this->accountSummary(
+                $user
+            ),
 
-            'referral' =>
-                $this->referralSummary(
-                    $user
-                ),
+            'referral' => $this->referralSummary(
+                $user
+            ),
 
-            'affiliate' =>
-                $this->affiliateSummary(
-                    $user
-                ),
+            'affiliate' => $this->affiliateSummary(
+                $user
+            ),
 
-            'learning' =>
-                $this->learningSummary(
-                    $user
-                ),
+            'learning' => $this->learningSummary(
+                $user
+            ),
 
-            'trade_ideas' =>
-                $this->tradeIdeaSummary(
-                    $user
-                ),
+            'trade_ideas' => $this->tradeIdeaSummary(
+                $user
+            ),
 
-            'our_channel' =>
-                $this->ourChannelSummary(
-                    $user
-                ),
+            'our_channel' => $this->ourChannelSummary(
+                $user
+            ),
         ];
     }
 
@@ -108,26 +99,19 @@ class DashboardApiService
         User $user
     ): array {
         return [
-            'uuid' =>
-                $user->uuid,
+            'uuid' => $user->uuid,
 
-            'name' =>
-                $user->name,
+            'name' => $user->name,
 
-            'account_type' =>
-                $user->account_type,
+            'account_type' => $user->account_type,
 
-            'status' =>
-                $user->status,
+            'status' => $user->status,
 
-            'language_code' =>
-                $user->language_code,
+            'language_code' => $user->language_code,
 
-            'country_code' =>
-                $user->country_code,
+            'country_code' => $user->country_code,
 
-            'premium_access' =>
-                $user->canAccessPremium(),
+            'premium_access' => $user->canAccessPremium(),
         ];
     }
 
@@ -135,17 +119,14 @@ class DashboardApiService
         User $user
     ): array {
         return [
-            'code' =>
-                $user->referral_code,
+            'code' => $user->referral_code,
 
-            'url' =>
-                $this->referralUrl(
-                    $user
-                ),
+            'url' => $this->referralUrl(
+                $user
+            ),
 
-            'direct_referrals_count' =>
-                $user->referrals()
-                    ->count(),
+            'direct_referrals_count' => $user->referrals()
+                ->count(),
         ];
     }
 
@@ -215,70 +196,57 @@ class DashboardApiService
                 : 0;
 
         return [
-            'ledger_initialized' =>
-                $profile instanceof AffiliateProfile,
+            'ledger_initialized' => $profile instanceof AffiliateProfile,
 
-            'qualified_sales_count' =>
-                $qualifiedSalesCount,
+            'qualified_sales_count' => $qualifiedSalesCount,
 
-            'lifetime_cleared_sales_count' =>
-                $profile instanceof AffiliateProfile
+            'lifetime_cleared_sales_count' => $profile instanceof AffiliateProfile
                     ? (int) $profile
                         ->lifetime_cleared_sales_count
                     : 0,
 
-            'current_stage' =>
-                $currentStage instanceof AffiliateStage
+            'current_stage' => $currentStage instanceof AffiliateStage
                     ? $this->stageSummary(
                         $currentStage
                     )
                     : null,
 
             'commission' => [
-                'model' =>
-                    'PROGRESSIVE_DIRECT_SALE',
+                'model' => 'PROGRESSIVE_DIRECT_SALE',
 
-                'special_exception_applied' =>
-                    $specialRateApplied,
+                'special_exception_applied' => $specialRateApplied,
 
-                'next_sale_rate_percent' =>
-                    $this->percentFromBps(
-                        $nextSaleRateBps
-                    ),
+                'next_sale_rate_percent' => $this->percentFromBps(
+                    $nextSaleRateBps
+                ),
 
-                'normal_standard_ceiling_percent' =>
-                    '20.00',
+                'normal_standard_ceiling_percent' => '20.00',
 
-                'approved_special_ceiling_percent' =>
-                    '24.00',
+                'approved_special_ceiling_percent' => '24.00',
             ],
 
             'milestones' => [
-                'eligible' =>
-                    ! $specialRateApplied,
+                'eligible' => ! $specialRateApplied,
 
-                'next' =>
-                    $specialRateApplied
-                        ? null
-                        : $this
-                            ->nextMilestone(
-                                $qualifiedSalesCount
-                            ),
+                'next' => $specialRateApplied
+                    ? null
+                    : $this
+                        ->nextMilestone(
+                            $qualifiedSalesCount
+                        ),
             ],
 
             'financials' => [
-                'qualified_net_eligible_revenue' =>
-                    $this->money(
-                        $profile instanceof AffiliateProfile
-                            ? (int) $profile
-                                ->qualified_net_eligible_revenue_cents
-                            : 0
-                    ),
+                'qualified_net_eligible_revenue' => $this->money(
+                    $profile instanceof AffiliateProfile
+                        ? (int) $profile
+                            ->qualified_net_eligible_revenue_cents
+                        : 0
+                ),
 
-                'lifetime_commission_earned' =>
-                    $this->money(
-                        $commissionEarnedCents
-                    ),
+                'lifetime_commission_earned' => $this->money(
+                    $commissionEarnedCents
+                ),
 
                 /*
                 | No voluntary refund concept is exposed by API-08.
@@ -286,31 +254,27 @@ class DashboardApiService
                 | legal / duplicate / unauthorized / confirmed billing exception
                 | adjustments already recorded by the AFF-01 immutable ledger.
                 */
-                'processor_payment_adjustments' =>
-                    $this->money(
-                        $processorAdjustmentCents
-                    ),
+                'processor_payment_adjustments' => $this->money(
+                    $processorAdjustmentCents
+                ),
 
-                'net_commission' =>
-                    $this->money(
-                        $netCommissionCents
-                    ),
+                'net_commission' => $this->money(
+                    $netCommissionCents
+                ),
 
-                'milestone_gifts_earned' =>
-                    $this->money(
-                        $milestoneGiftCents
-                    ),
+                'milestone_gifts_earned' => $this->money(
+                    $milestoneGiftCents
+                ),
 
-                'total_affiliate_rewards' =>
-                    $this->money(
-                        $netCommissionCents
-                        + $milestoneGiftCents
-                    ),
+                'total_affiliate_rewards' => $this->money(
+                    $netCommissionCents
+                    + $milestoneGiftCents
+                ),
             ],
         ];
     }
 
-    private function learningSummary(
+    public function learningSummary(
         User $user
     ): array {
         $accessibleLessons = $this
@@ -383,25 +347,20 @@ class DashboardApiService
         return [
             'is_premium' => $user->canAccessPremium(),
 
-            'accessible_published_lessons' =>
-                $total,
+            'accessible_published_lessons' => $total,
 
-            'completed_lessons' =>
-                $completed,
+            'completed_lessons' => $completed,
 
-            'in_progress_lessons' =>
-                $inProgress,
+            'in_progress_lessons' => $inProgress,
 
-            'completion_percent' =>
-                $total === 0
+            'completion_percent' => $total === 0
                     ? 0
                     : (int) round(
                         ($completed / $total)
                         * 100
                     ),
 
-            'continue_learning' =>
-                $continueProgress
+            'continue_learning' => $continueProgress
                 instanceof UserLessonProgress
                     ? $this
                         ->continueLearningSummary(
@@ -409,17 +368,13 @@ class DashboardApiService
                         )
                     : null,
 
-            'default_premium_lesson' =>
-                $user->canAccessPremium()
+            'default_premium_lesson' => $user->canAccessPremium()
                     ? $this->firstLessonSummary(
                         Course::ACCESS_PREMIUM
                     )
                     : null,
 
-            'free_lessons' =>
-                $user->canAccessPremium()
-                    ? []
-                    : $this->freeLessonSummaries(),
+            'free_lessons' => $this->freeLessonSummaries(),
         ];
     }
 
@@ -430,26 +385,23 @@ class DashboardApiService
             ->with('module.course')
             ->whereHas(
                 'module',
-                fn (Builder $moduleQuery): Builder =>
-                    $moduleQuery
-                        ->published()
-                        ->whereHas(
-                            'course',
-                            fn (Builder $courseQuery): Builder =>
-                                $courseQuery
-                                    ->published()
-                                    ->where(
-                                        'access_level',
-                                        Course::ACCESS_FREE
-                                    )
-                        )
+                fn (Builder $moduleQuery): Builder => $moduleQuery
+                    ->published()
+                    ->whereHas(
+                        'course',
+                        fn (Builder $courseQuery): Builder => $courseQuery
+                            ->published()
+                            ->where(
+                                'access_level',
+                                Course::ACCESS_FREE
+                            )
+                    )
             )
             ->orderBy('sort_order')
             ->orderBy('id')
             ->limit(8)
             ->get()
-            ->map(fn (Lesson $lesson): ?array =>
-                $this->learningLessonSummary($lesson))
+            ->map(fn (Lesson $lesson): ?array => $this->learningLessonSummary($lesson))
             ->filter()
             ->values()
             ->all();
@@ -462,16 +414,14 @@ class DashboardApiService
             ->with('module.course')
             ->whereHas(
                 'module',
-                fn (Builder $moduleQuery): Builder =>
-                    $moduleQuery
-                        ->published()
-                        ->whereHas(
-                            'course',
-                            fn (Builder $courseQuery): Builder =>
-                                $courseQuery
-                                    ->published()
-                                    ->where('access_level', $accessLevel)
-                        )
+                fn (Builder $moduleQuery): Builder => $moduleQuery
+                    ->published()
+                    ->whereHas(
+                        'course',
+                        fn (Builder $courseQuery): Builder => $courseQuery
+                            ->published()
+                            ->where('access_level', $accessLevel)
+                    )
             )
             ->orderBy('sort_order')
             ->orderBy('id')
@@ -552,21 +502,18 @@ class DashboardApiService
         return [
             'available' => true,
             'premium_required' => false,
-            'latest' =>
-                $tradeIdea instanceof TradeIdea
+            'latest' => $tradeIdea instanceof TradeIdea
                     ? [
                         ...$this->tradeIdeas
                             ->summary(
                                 $tradeIdea
                             ),
-                        'detail_url' =>
-                            route(
-                                'api.v1.trade-ideas.show',
-                                [
-                                    'tradeIdea' =>
-                                        $tradeIdea->uuid,
-                                ]
-                            ),
+                        'detail_url' => route(
+                            'api.v1.trade-ideas.show',
+                            [
+                                'tradeIdea' => $tradeIdea->uuid,
+                            ]
+                        ),
                     ]
                     : null,
         ];
@@ -614,30 +561,25 @@ class DashboardApiService
         }
 
         return [
-            'preferred_language_code' =>
-                $preferredLanguage !== ''
+            'preferred_language_code' => $preferredLanguage !== ''
                     ? $preferredLanguage
                     : null,
 
-            'matched_preferred_language' =>
-                $matchedPreferredLanguage,
+            'matched_preferred_language' => $matchedPreferredLanguage,
 
-            'latest_video' =>
-                $video instanceof ChannelVideo
+            'latest_video' => $video instanceof ChannelVideo
                     ? [
                         ...$this->ourChannel
                             ->summary(
                                 $video,
                                 $user
                             ),
-                        'detail_url' =>
-                            route(
-                                'api.v1.our-channel.videos.show',
-                                [
-                                    'channelVideo' =>
-                                        $video->uuid,
-                                ]
-                            ),
+                        'detail_url' => route(
+                            'api.v1.our-channel.videos.show',
+                            [
+                                'channelVideo' => $video->uuid,
+                            ]
+                        ),
                     ]
                     : null,
         ];
@@ -650,15 +592,13 @@ class DashboardApiService
             ->published()
             ->whereHas(
                 'module',
-                fn (Builder $moduleQuery): Builder =>
-                    $moduleQuery
-                        ->published()
-                        ->whereHas(
-                            'course',
-                            fn (Builder $courseQuery): Builder =>
-                                $courseQuery
-                                    ->published()
-                        )
+                fn (Builder $moduleQuery): Builder => $moduleQuery
+                    ->published()
+                    ->whereHas(
+                        'course',
+                        fn (Builder $courseQuery): Builder => $courseQuery
+                            ->published()
+                    )
             );
 
         if (! $user->canAccessPremium()) {
@@ -671,12 +611,11 @@ class DashboardApiService
                         )
                         ->orWhereHas(
                             'module.course',
-                            fn (Builder $courseQuery): Builder =>
-                                $courseQuery
-                                    ->where(
-                                        'access_level',
-                                        Course::ACCESS_FREE
-                                    )
+                            fn (Builder $courseQuery): Builder => $courseQuery
+                                ->where(
+                                    'access_level',
+                                    Course::ACCESS_FREE
+                                )
                         );
                 }
             );
@@ -702,53 +641,40 @@ class DashboardApiService
 
         return [
             'course' => [
-                'uuid' =>
-                    $course->uuid,
-                'title' =>
-                    $course->title,
+                'uuid' => $course->uuid,
+                'title' => $course->title,
                 'thumbnail_path' => $course->thumbnail_path,
             ],
 
             'module' => [
-                'uuid' =>
-                    $module->uuid,
-                'title' =>
-                    $module->title,
+                'uuid' => $module->uuid,
+                'title' => $module->title,
             ],
 
             'lesson' => [
-                'uuid' =>
-                    $lesson->uuid,
-                'title' =>
-                    $lesson->title,
-                'is_preview' =>
-                    (bool) $lesson->is_preview,
+                'uuid' => $lesson->uuid,
+                'title' => $lesson->title,
+                'is_preview' => (bool) $lesson->is_preview,
             ],
 
-            'last_video_uuid' =>
-                $progress->lastVideo?->uuid,
+            'last_video_uuid' => $progress->lastVideo?->uuid,
 
-            'last_position_seconds' =>
-                (int) $progress
-                    ->last_position_seconds,
+            'last_position_seconds' => (int) $progress
+                ->last_position_seconds,
 
-            'last_activity_at' =>
-                $progress->last_activity_at
-                    ?->toISOString(),
+            'last_activity_at' => $progress->last_activity_at
+                ?->toISOString(),
 
-            'progress_percent' =>
-                $progress->isCompleted()
+            'progress_percent' => $progress->isCompleted()
                     ? 100
                     : $this->progressPercent($progress),
 
-            'lesson_url' =>
-                route(
-                    'api.v1.education.lessons.show',
-                    [
-                        'lesson' =>
-                            $lesson->uuid,
-                    ]
-                ),
+            'lesson_url' => route(
+                'api.v1.education.lessons.show',
+                [
+                    'lesson' => $lesson->uuid,
+                ]
+            ),
         ];
     }
 
@@ -769,30 +695,25 @@ class DashboardApiService
         AffiliateStage $stage
     ): array {
         return [
-            'code' =>
-                $stage->code,
+            'code' => $stage->code,
 
-            'name' =>
-                $stage->name,
+            'name' => $stage->name,
 
             'qualified_sales_range' => [
-                'min' =>
-                    (int) $stage
-                        ->min_qualified_sales,
+                'min' => (int) $stage
+                    ->min_qualified_sales,
 
-                'max' =>
-                    $stage->max_qualified_sales
+                'max' => $stage->max_qualified_sales
                     !== null
                         ? (int) $stage
                             ->max_qualified_sales
                         : null,
             ],
 
-            'standard_commission_percent' =>
-                $this->percentFromBps(
-                    (int) $stage
-                        ->standard_commission_bps
-                ),
+            'standard_commission_percent' => $this->percentFromBps(
+                (int) $stage
+                    ->standard_commission_bps
+            ),
         ];
     }
 
@@ -819,29 +740,24 @@ class DashboardApiService
         }
 
         return [
-            'stage_code' =>
-                $stage->code,
+            'stage_code' => $stage->code,
 
-            'stage_name' =>
-                $stage->name,
+            'stage_name' => $stage->name,
 
-            'sales_target' =>
+            'sales_target' => (int) $stage
+                ->milestone_sales,
+
+            'remaining_qualified_sales' => max(
+                0,
                 (int) $stage
-                    ->milestone_sales,
+                    ->milestone_sales
+                - $qualifiedSalesCount
+            ),
 
-            'remaining_qualified_sales' =>
-                max(
-                    0,
-                    (int) $stage
-                        ->milestone_sales
-                    - $qualifiedSalesCount
-                ),
-
-            'gift' =>
-                $this->money(
-                    (int) $stage
-                        ->milestone_gift_cents
-                ),
+            'gift' => $this->money(
+                (int) $stage
+                    ->milestone_gift_cents
+            ),
         ];
     }
 
@@ -902,19 +818,16 @@ class DashboardApiService
         int $amountCents
     ): array {
         return [
-            'currency' =>
-                self::CURRENCY_USD,
+            'currency' => self::CURRENCY_USD,
 
-            'amount_cents' =>
-                $amountCents,
+            'amount_cents' => $amountCents,
 
-            'amount' =>
-                number_format(
-                    $amountCents / 100,
-                    2,
-                    '.',
-                    ''
-                ),
+            'amount' => number_format(
+                $amountCents / 100,
+                2,
+                '.',
+                ''
+            ),
         ];
     }
 }

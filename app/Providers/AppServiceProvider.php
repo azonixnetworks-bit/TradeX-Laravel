@@ -375,6 +375,13 @@ class AppServiceProvider extends ServiceProvider
         );
 
         RateLimiter::for(
+            'api-education-ai',
+            fn (Request $request): Limit => Limit::perMinute(
+                (int) config('tradex_education.rate_limits.ai_per_minute', 20)
+            )->by((string) ($request->user()?->getAuthIdentifier() ?? $request->ip()))
+        );
+
+        RateLimiter::for(
             'api-trade-ideas-read',
             fn (
                 Request $request

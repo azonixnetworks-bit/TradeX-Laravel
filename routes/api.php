@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Api\Auth\ConfirmRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\BootstrapRegistrationRecoveryCodesController;
+use App\Http\Controllers\Api\Auth\ConfirmRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\LoginController;
 use App\Http\Controllers\Api\Auth\LogoutAllController;
 use App\Http\Controllers\Api\Auth\LogoutController;
@@ -15,15 +15,21 @@ use App\Http\Controllers\Api\Auth\SetupRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\StartRegistrationController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationEmailController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationWhatsAppController;
+use App\Http\Controllers\Api\Education\AskTradeXAiController;
 use App\Http\Controllers\Api\Education\AssignmentIndexController;
 use App\Http\Controllers\Api\Education\AssignmentMaterialController;
 use App\Http\Controllers\Api\Education\AssignmentShowController;
 use App\Http\Controllers\Api\Education\AssignmentWhatsAppActionController;
 use App\Http\Controllers\Api\Education\CourseIndexController;
 use App\Http\Controllers\Api\Education\CourseShowController;
+use App\Http\Controllers\Api\Education\GlobalAssignmentIndexController;
 use App\Http\Controllers\Api\Education\IssueVideoPlaybackTokenController;
+use App\Http\Controllers\Api\Education\LearningOverviewController;
+use App\Http\Controllers\Api\Education\LearningProgressController;
+use App\Http\Controllers\Api\Education\LessonBookmarkController;
 use App\Http\Controllers\Api\Education\LessonShowController;
 use App\Http\Controllers\Api\Education\ModuleShowController;
+use App\Http\Controllers\Api\Education\MyLearningController;
 use App\Http\Controllers\Api\Education\PlaybackAssetController;
 use App\Http\Controllers\Api\Education\UpdateLessonProgressController;
 use App\Http\Controllers\Api\OurChannel\ChannelVideoIndexController;
@@ -38,8 +44,8 @@ use App\Http\Controllers\Api\Profile\UpdateFinancialProfileController;
 use App\Http\Controllers\Api\Profile\UpdateProfilePreferencesController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaChartController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaIndexController;
-use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShareActionController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaReactionController;
+use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShareActionController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShowController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
@@ -319,6 +325,26 @@ Route::prefix('v1')
             Route::prefix('education')
                 ->name('education.')
                 ->group(function (): void {
+                    Route::get('/overview', LearningOverviewController::class)
+                        ->middleware('throttle:api-education-read')
+                        ->name('overview');
+
+                    Route::get('/my-learning', MyLearningController::class)
+                        ->middleware('throttle:api-education-read')
+                        ->name('my-learning');
+
+                    Route::get('/progress', LearningProgressController::class)
+                        ->middleware('throttle:api-education-read')
+                        ->name('progress');
+
+                    Route::get('/assignments', GlobalAssignmentIndexController::class)
+                        ->middleware('throttle:api-education-read')
+                        ->name('assignments.index');
+
+                    Route::post('/ai/ask', AskTradeXAiController::class)
+                        ->middleware('throttle:api-education-ai')
+                        ->name('ai.ask');
+
                     Route::get(
                         '/courses',
                         CourseIndexController::class
@@ -377,6 +403,16 @@ Route::prefix('v1')
                             'throttle:api-education-progress'
                         )
                         ->name('lessons.progress.update');
+
+                    Route::put('/lessons/{lesson}/bookmark', [LessonBookmarkController::class, 'store'])
+                        ->whereUuid('lesson')
+                        ->middleware('throttle:api-education-progress')
+                        ->name('lessons.bookmark.store');
+
+                    Route::delete('/lessons/{lesson}/bookmark', [LessonBookmarkController::class, 'destroy'])
+                        ->whereUuid('lesson')
+                        ->middleware('throttle:api-education-progress')
+                        ->name('lessons.bookmark.destroy');
 
                     Route::get(
                         '/assignments/{assignment}',

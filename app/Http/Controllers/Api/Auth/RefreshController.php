@@ -21,7 +21,8 @@ class RefreshController extends Controller
             'data' => $refreshTokens->rotate(
                 $validated['refresh_token'],
                 $validated['installation_id'],
-                $request
+                $request,
+                $validated['quick_unlock_totp_code'] ?? null
             ),
         ]);
     }
