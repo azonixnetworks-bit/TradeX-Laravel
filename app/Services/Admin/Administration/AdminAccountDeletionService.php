@@ -38,12 +38,6 @@ class AdminAccountDeletionService
                 'You cannot delete your own admin account.'
             );
 
-            abort_if(
-                (bool) $locked->is_active,
-                422,
-                'Disable this admin account before deleting it.'
-            );
-
             $roleCodes = $locked->roles()
                 ->orderBy('code')
                 ->pluck('code')
@@ -62,7 +56,7 @@ class AdminAccountDeletionService
                 oldValues: [
                     'email' => $locked->email,
                     'role_codes' => $roleCodes,
-                    'is_active' => false,
+                    'is_active' => (bool) $locked->is_active,
                 ],
                 newValues: [
                     'deleted' => true,

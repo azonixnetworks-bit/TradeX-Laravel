@@ -137,7 +137,7 @@
 @if($canManageStatus)
 <section class="panel" style="padding:22px;margin-bottom:18px;">
     <h2>Account Status</h2>
-    <p>Disabling an admin blocks future password login and sends a security email. Disable the account before owner deletion.</p>
+    <p>Disabling an admin blocks future password login and sends a security email.</p>
 
     <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}">
         @csrf
@@ -167,9 +167,9 @@
 <section class="panel" style="padding:22px;border:1px solid rgba(239,68,68,.35);">
     <div class="panel-eyebrow">OWNER-ONLY DESTRUCTIVE ACTION</div>
     <h2>Delete Admin</h2>
-    <p>This is a soft delete for audit preservation. Only a disabled delegated admin can be deleted. The protected Super Admin and your own account cannot be deleted here.</p>
+    <p>This is a soft delete for audit preservation. A Super Admin can delete any delegated admin, whether active or disabled. The protected Super Admin and your own account cannot be deleted here.</p>
 
-    <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}" onsubmit="return confirm('Delete this disabled admin account? This removes active administration access.');">
+    <form method="POST" action="{{ route('admin.administration.admins.status', $adminUser) }}" onsubmit="return confirm('Delete this admin account? This immediately removes administration access.');">
         @csrf
         @method('PATCH')
         <input type="hidden" name="status" value="DELETE">
@@ -179,7 +179,7 @@
             <input name="reason" maxlength="500" required placeholder="Reason for deleting this admin account">
         </div>
 
-        <button class="secondary-btn" type="submit" style="margin-top:14px;">Delete Disabled Admin</button>
+        <button class="secondary-btn" type="submit" style="margin-top:14px;">Delete Admin Account</button>
     </form>
 </section>
 @endif
