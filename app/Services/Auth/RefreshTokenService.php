@@ -14,12 +14,10 @@ use Illuminate\Support\Str;
 class RefreshTokenService
 {
     public function __construct(
-        private readonly AccessTokenService
-            $accessTokens,
-        private readonly DeviceBindingService
-            $deviceBinding
-    ) {
-    }
+        private readonly AccessTokenService $accessTokens,
+        private readonly DeviceBindingService $deviceBinding,
+        private readonly TotpService $totp
+    ) {}
 
     public function issueInitial(
         User $user,
@@ -36,7 +34,8 @@ class RefreshTokenService
     public function rotate(
         string $plainTextToken,
         string $installationId,
-        Request $request
+        Request $request,
+        ?string $quickUnlockTotpCode = null
     ): array {
         $tokenHash = hash(
             'sha256',
@@ -78,6 +77,10 @@ class RefreshTokenService
                 'ACCOUNT_NOT_ACTIVE',
                 'This account is not allowed to access the API.'
             );
+        }
+
+        if ($quickUnlockTotpCode !== null) {
+            $this->totp->consume($user, $quickUnlockTotpCode);
         }
 
         if (
@@ -140,9 +143,8 @@ class RefreshTokenService
                         $device->getKey(),
                         null,
                         [
-                            'family_uuid' =>
-                                $locked
-                                    ->family_uuid,
+                            'family_uuid' => $locked
+                                ->family_uuid,
                         ],
                         $request->ip(),
                         $request->userAgent()
@@ -156,8 +158,7 @@ class RefreshTokenService
                 if ($locked->isExpired()) {
                     $locked->forceFill([
                         'revoked_at' => now(),
-                        'revoke_reason' =>
-                            'EXPIRED',
+                        'revoke_reason' => 'EXPIRED',
                     ])->save();
 
                     return [
@@ -168,8 +169,7 @@ class RefreshTokenService
                 $locked->forceFill([
                     'last_used_at' => now(),
                     'revoked_at' => now(),
-                    'revoke_reason' =>
-                        'ROTATED',
+                    'revoke_reason' => 'ROTATED',
                 ])->save();
 
                 $this->accessTokens
@@ -207,9 +207,8 @@ class RefreshTokenService
                     $device->getKey(),
                     null,
                     [
-                        'family_uuid' =>
-                            $locked
-                                ->family_uuid,
+                        'family_uuid' => $locked
+                            ->family_uuid,
                     ],
                     $request->ip(),
                     $request->userAgent()
@@ -246,27 +245,20 @@ class RefreshTokenService
         }
 
         return [
-            'access_token' =>
-                $result['access']
-                    ->plainTextToken,
+            'access_token' => $result['access']
+                ->plainTextToken,
             'token_type' => 'Bearer',
-            'expires_in' =>
-                (int) config(
-                    'tradex_auth.access_token_minutes',
-                    15
-                ) * 60,
-            'refresh_token' =>
-                $result['refresh']
-                    ['plain_text_token'],
-            'refresh_expires_in' =>
-                (int) config(
-                    'tradex_auth.refresh_token_days',
-                    30
-                ) * 86400,
-            'session_uuid' =>
-                $result['refresh']
-                    ['model']
-                    ->family_uuid,
+            'expires_in' => (int) config(
+                'tradex_auth.access_token_minutes',
+                15
+            ) * 60,
+            'refresh_token' => $result['refresh']['plain_text_token'],
+            'refresh_expires_in' => (int) config(
+                'tradex_auth.refresh_token_days',
+                30
+            ) * 86400,
+            'session_uuid' => $result['refresh']['model']
+                        ->family_uuid,
         ];
     }
 
@@ -317,32 +309,25 @@ class RefreshTokenService
         $model =
             UserRefreshToken::query()
                 ->create([
-                    'uuid' =>
-                        (string) Str::uuid(),
-                    'user_id' =>
-                        $user->getKey(),
-                    'user_device_id' =>
-                        $device->getKey(),
-                    'token_hash' =>
-                        hash(
-                            'sha256',
-                            $plainTextToken
-                        ),
-                    'family_uuid' =>
-                        $familyUuid,
-                    'expires_at' =>
-                        now()->addDays(
-                            (int) config(
-                                'tradex_auth.refresh_token_days',
-                                30
-                            )
-                        ),
+                    'uuid' => (string) Str::uuid(),
+                    'user_id' => $user->getKey(),
+                    'user_device_id' => $device->getKey(),
+                    'token_hash' => hash(
+                        'sha256',
+                        $plainTextToken
+                    ),
+                    'family_uuid' => $familyUuid,
+                    'expires_at' => now()->addDays(
+                        (int) config(
+                            'tradex_auth.refresh_token_days',
+                            30
+                        )
+                    ),
                 ]);
 
         return [
             'model' => $model,
-            'plain_text_token' =>
-                $plainTextToken,
+            'plain_text_token' => $plainTextToken,
         ];
     }
 }

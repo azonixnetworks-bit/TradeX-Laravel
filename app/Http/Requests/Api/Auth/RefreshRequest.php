@@ -25,6 +25,10 @@ class RefreshRequest extends FormRequest
                 'required',
                 'uuid',
             ],
+            'quick_unlock_totp_code' => [
+                'nullable',
+                'digits:6',
+            ],
         ];
     }
 }
