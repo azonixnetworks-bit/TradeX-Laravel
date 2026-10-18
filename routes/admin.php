@@ -100,6 +100,22 @@ Route::prefix('admin')
                     ->name('users.status.update');
 
 
+                Route::patch(
+                    '/users/{user}/account-type',
+                    [UserController::class, 'updateAccountType']
+                )
+                    ->whereNumber('user')
+                    ->name('users.account-type.update');
+
+
+                Route::delete(
+                    '/users/{user}',
+                    [UserController::class, 'destroy']
+                )
+                    ->whereNumber('user')
+                    ->name('users.destroy');
+
+
                 Route::get(
                     '/users/{user}',
                     [UserController::class, 'show']
