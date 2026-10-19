@@ -7,6 +7,7 @@ use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserDevice;
 use App\Models\UserDeviceQuickUnlockSetting;
+use App\Services\Security\QuickUnlock\DeviceCredentialVerifier;
 use App\Services\Security\QuickUnlock\QuickUnlockPolicyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,8 @@ class LoginService
         private readonly DeviceBindingService $devices,
         private readonly AccessTokenService $accessTokens,
         private readonly RefreshTokenService $refreshTokens,
-        private readonly QuickUnlockPolicyService $quickUnlockPolicy
+        private readonly QuickUnlockPolicyService $quickUnlockPolicy,
+        private readonly DeviceCredentialVerifier $deviceCredentials
     ) {}
 
     public function login(
@@ -222,6 +224,26 @@ class LoginService
             return null;
         }
 
+        $credentialId = $payload['quick_unlock_credential_id'] ?? null;
+        $credentialAlgorithm = $payload['quick_unlock_credential_algorithm'] ?? null;
+        $credentialPublicKey = $payload['quick_unlock_credential_public_key'] ?? null;
+
+        if (
+            ! is_string($credentialId)
+            || ! is_string($credentialAlgorithm)
+            || ! is_string($credentialPublicKey)
+        ) {
+            // Older mobile builds may still send only the method. Keep their
+            // strong login working, but never create an unusable or insecure
+            // quick-login enrollment without a device-bound public key.
+            return null;
+        }
+
+        $this->deviceCredentials->validatePublicKey(
+            $credentialAlgorithm,
+            $credentialPublicKey
+        );
+
         if (! $device->isMobile() || $device->trusted_at === null) {
             throw new AuthApiException(
                 422,
@@ -252,6 +274,10 @@ class LoginService
                 'trusted_at_snapshot' => $device->trusted_at,
                 'enrolled_at' => now(),
                 'disabled_at' => null,
+                'credential_id' => strtolower($credentialId),
+                'credential_algorithm' => $credentialAlgorithm,
+                'credential_public_key' => $credentialPublicKey,
+                'credential_rotated_at' => now(),
             ]
         );
 

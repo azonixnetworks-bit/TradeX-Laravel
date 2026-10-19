@@ -15,40 +15,42 @@ class QuickUnlockRouteSecurityTest extends TestCase
         $routes = collect(
             Route::getRoutes()->getRoutes()
         )->filter(
-            fn ($route): bool =>
-                str_starts_with(
-                    $route->uri(),
-                    'api/v1/security/quick-unlock'
-                )
+            fn ($route): bool => str_starts_with(
+                $route->uri(),
+                'api/v1/security/quick-unlock'
+            )
         );
 
         $this->assertCount(
-            2,
+            3,
             $routes
         );
 
         $show = $routes->first(
-            fn ($route): bool =>
-                in_array(
-                    'GET',
-                    $route->methods(),
-                    true
-                )
+            fn ($route): bool => in_array(
+                'GET',
+                $route->methods(),
+                true
+            )
         );
 
         $update = $routes->first(
-            fn ($route): bool =>
-                in_array(
-                    'PATCH',
-                    $route->methods(),
-                    true
-                )
+            fn ($route): bool => in_array(
+                'PATCH',
+                $route->methods(),
+                true
+            )
+        );
+
+        $forget = $routes->first(
+            fn ($route): bool => in_array('DELETE', $route->methods(), true)
         );
 
         $this->assertNotNull($show);
         $this->assertNotNull($update);
+        $this->assertNotNull($forget);
 
-        foreach ([$show, $update] as $route) {
+        foreach ([$show, $update, $forget] as $route) {
             $middleware =
                 $route->gatherMiddleware();
 
@@ -71,6 +73,11 @@ class QuickUnlockRouteSecurityTest extends TestCase
         $this->assertContains(
             'throttle:api-mobile-security-change',
             $update->gatherMiddleware()
+        );
+
+        $this->assertContains(
+            'throttle:api-mobile-security-change',
+            $forget->gatherMiddleware()
         );
     }
 }

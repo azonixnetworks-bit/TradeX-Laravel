@@ -8,11 +8,13 @@ use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
+use Tests\Concerns\CreatesQuickUnlockCredential;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
 
 class QuickUnlockSecurityTest extends TestCase
 {
+    use CreatesQuickUnlockCredential;
     use CreatesTradeXMobileSession;
     use RefreshDatabase;
 
@@ -53,8 +55,7 @@ class QuickUnlockSecurityTest extends TestCase
                 'face_id',
                 'local_secret',
                 'refresh_token',
-            ]
-            as $column
+            ] as $column
         ) {
             $this->assertFalse(
                 Schema::hasColumn(
@@ -72,6 +73,7 @@ class QuickUnlockSecurityTest extends TestCase
 
         $device = $user->devices()
             ->firstOrFail();
+        $credential = $this->createQuickUnlockCredential();
 
         UserDeviceQuickUnlockSetting::query()
             ->create([
@@ -80,12 +82,15 @@ class QuickUnlockSecurityTest extends TestCase
                 'method' => 'PIN',
                 'trusted_at_snapshot' => $device->trusted_at,
                 'enrolled_at' => now(),
+                'credential_id' => $credential['id'],
+                'credential_algorithm' => $credential['algorithm'],
+                'credential_public_key' => $credential['public_key'],
+                'credential_rotated_at' => now(),
             ]);
 
         $device->forceFill([
-            'trusted_at' =>
-                $device->trusted_at->copy()
-                    ->addMinute(),
+            'trusted_at' => $device->trusted_at->copy()
+                ->addMinute(),
         ])->save();
 
         $this->withToken($token)
@@ -118,38 +123,28 @@ class QuickUnlockSecurityTest extends TestCase
         $device =
             UserDevice::query()
                 ->create([
-                    'uuid' =>
-                        (string) Str::uuid(),
+                    'uuid' => (string) Str::uuid(),
 
-                    'user_id' =>
-                        $user->getKey(),
+                    'user_id' => $user->getKey(),
 
-                    'device_slot' =>
-                        UserDevice::SLOT_DESKTOP,
+                    'device_slot' => UserDevice::SLOT_DESKTOP,
 
-                    'platform' =>
-                        UserDevice::PLATFORM_WINDOWS,
+                    'platform' => UserDevice::PLATFORM_WINDOWS,
 
-                    'device_name' =>
-                        'Desktop Test',
+                    'device_name' => 'Desktop Test',
 
-                    'installation_id_hash' =>
-                        hash(
-                            'sha256',
-                            (string) Str::uuid()
-                        ),
+                    'installation_id_hash' => hash(
+                        'sha256',
+                        (string) Str::uuid()
+                    ),
 
-                    'is_trusted' =>
-                        true,
+                    'is_trusted' => true,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'registered_at' =>
-                        now(),
+                    'registered_at' => now(),
 
-                    'trusted_at' =>
-                        now(),
+                    'trusted_at' => now(),
                 ]);
 
         $sessionUuid =
@@ -164,11 +159,9 @@ class QuickUnlockSecurityTest extends TestCase
 
         $token->accessToken
             ->forceFill([
-                'user_device_id' =>
-                    $device->getKey(),
+                'user_device_id' => $device->getKey(),
 
-                'session_uuid' =>
-                    $sessionUuid,
+                'session_uuid' => $sessionUuid,
             ])
             ->save();
 
@@ -188,8 +181,7 @@ class QuickUnlockSecurityTest extends TestCase
     public function test_biometric_can_be_disabled_by_server_policy(): void
     {
         config([
-            'tradex_mobile_security.quick_unlock.biometric_allowed' =>
-                false,
+            'tradex_mobile_security.quick_unlock.biometric_allowed' => false,
         ]);
 
         $user = $this->createApiUser();
@@ -202,6 +194,7 @@ class QuickUnlockSecurityTest extends TestCase
             (string) $user->totp_secret,
             time()
         );
+        $credential = $this->createQuickUnlockCredential();
 
         $this->withToken($token)
             ->patchJson(
@@ -210,6 +203,9 @@ class QuickUnlockSecurityTest extends TestCase
                     'enabled' => true,
                     'method' => 'BIOMETRIC',
                     'totp_code' => $totp,
+                    'credential_id' => $credential['id'],
+                    'credential_algorithm' => $credential['algorithm'],
+                    'credential_public_key' => $credential['public_key'],
                 ]
             )
             ->assertStatus(409)

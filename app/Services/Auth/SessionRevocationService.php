@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserDevice;
+use App\Models\UserDeviceQuickUnlockSetting;
 use App\Models\UserRefreshToken;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,10 +14,8 @@ use Illuminate\Support\Facades\DB;
 class SessionRevocationService
 {
     public function __construct(
-        private readonly AccessTokenService
-            $accessTokens
-    ) {
-    }
+        private readonly AccessTokenService $accessTokens
+    ) {}
 
     public function logoutCurrent(
         User $user,
@@ -49,8 +48,7 @@ class SessionRevocationService
                     )
                     ->update([
                         'revoked_at' => now(),
-                        'revoke_reason' =>
-                            'USER_LOGOUT',
+                        'revoke_reason' => 'USER_LOGOUT',
                     ]);
 
                 $this->accessTokens
@@ -69,8 +67,7 @@ class SessionRevocationService
                     $device->getKey(),
                     null,
                     [
-                        'session_uuid' =>
-                            $sessionUuid,
+                        'session_uuid' => $sessionUuid,
                     ],
                     $request->ip(),
                     $request->userAgent()
@@ -101,8 +98,7 @@ class SessionRevocationService
                         )
                         ->update([
                             'revoked_at' => now(),
-                            'revoke_reason' =>
-                                'USER_LOGOUT_ALL',
+                            'revoke_reason' => 'USER_LOGOUT_ALL',
                         ]);
 
                 $accessCount =
@@ -110,6 +106,19 @@ class SessionRevocationService
                         ->revokeAll(
                             $user
                         );
+
+                UserDeviceQuickUnlockSetting::query()
+                    ->whereHas('device', fn ($query) => $query->where('user_id', $user->getKey()))
+                    ->update([
+                        'enabled' => false,
+                        'method' => null,
+                        'trusted_at_snapshot' => null,
+                        'disabled_at' => now(),
+                        'credential_id' => null,
+                        'credential_algorithm' => null,
+                        'credential_public_key' => null,
+                        'credential_rotated_at' => now(),
+                    ]);
 
                 AuditLog::record(
                     'USER',
@@ -120,10 +129,8 @@ class SessionRevocationService
                     $user->getKey(),
                     null,
                     [
-                        'refresh_tokens_revoked' =>
-                            $refreshCount,
-                        'access_tokens_revoked' =>
-                            $accessCount,
+                        'refresh_tokens_revoked' => $refreshCount,
+                        'access_tokens_revoked' => $accessCount,
                     ],
                     $request->ip(),
                     $request->userAgent()
@@ -148,8 +155,7 @@ class SessionRevocationService
                 $device->forceFill([
                     'is_active' => false,
                     'revoked_at' => now(),
-                    'revoke_reason' =>
-                        'USER_SELF_REVOKE',
+                    'revoke_reason' => 'USER_SELF_REVOKE',
                 ])->save();
 
                 UserRefreshToken::query()
@@ -166,8 +172,7 @@ class SessionRevocationService
                     )
                     ->update([
                         'revoked_at' => now(),
-                        'revoke_reason' =>
-                            'USER_DEVICE_REVOKE',
+                        'revoke_reason' => 'USER_DEVICE_REVOKE',
                     ]);
 
                 $this->accessTokens
@@ -175,6 +180,19 @@ class SessionRevocationService
                         $user,
                         $device
                     );
+
+                UserDeviceQuickUnlockSetting::query()
+                    ->where('user_device_id', $device->getKey())
+                    ->update([
+                        'enabled' => false,
+                        'method' => null,
+                        'trusted_at_snapshot' => null,
+                        'disabled_at' => now(),
+                        'credential_id' => null,
+                        'credential_algorithm' => null,
+                        'credential_public_key' => null,
+                        'credential_rotated_at' => now(),
+                    ]);
 
                 AuditLog::record(
                     'USER',
@@ -185,8 +203,7 @@ class SessionRevocationService
                     $device->getKey(),
                     null,
                     [
-                        'device_slot' =>
-                            $device->device_slot,
+                        'device_slot' => $device->device_slot,
                     ],
                     $request->ip(),
                     $request->userAgent()

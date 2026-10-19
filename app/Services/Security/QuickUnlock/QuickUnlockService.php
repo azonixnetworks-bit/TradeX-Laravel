@@ -15,9 +15,9 @@ class QuickUnlockService
 {
     public function __construct(
         private readonly TotpService $totp,
-        private readonly QuickUnlockPolicyService $policy
-    ) {
-    }
+        private readonly QuickUnlockPolicyService $policy,
+        private readonly DeviceCredentialVerifier $credentials
+    ) {}
 
     public function show(
         User $user,
@@ -35,37 +35,42 @@ class QuickUnlockService
                 )
                 ->first();
 
-        $enrolled = $setting !== null
+        $serverEnabled = $setting !== null
             && (bool) $setting->enabled;
 
+        $credentialReady = $serverEnabled
+            && filled($setting->credential_id)
+            && filled($setting->credential_public_key)
+            && $setting->credential_algorithm === DeviceCredentialVerifier::ALGORITHM_ES256;
+
+        $enrolled = $credentialReady;
+
         $trustMatches =
-            $enrolled
+            $credentialReady
             && $this->trustEpochMatches(
                 $setting,
                 $device
             );
 
         return [
-            'device_uuid' =>
-                $device->uuid,
+            'device_uuid' => $device->uuid,
 
-            'enabled' =>
-                $trustMatches,
+            'enabled' => $trustMatches,
 
-            'method' =>
-                $trustMatches
+            'method' => $trustMatches
                     ? $setting->method
                     : null,
 
-            'enrolled' =>
-                $enrolled,
+            'enrolled' => $enrolled,
 
-            'requires_reenrollment' =>
-                $enrolled
+            'requires_reenrollment' => $serverEnabled
                 && ! $trustMatches,
 
-            'policy' =>
-                $this->policy->policy(),
+            'policy' => $this->policy->policy(),
+
+            'credential_id' => $trustMatches
+                    ? $setting->credential_id
+                    : null,
         ];
     }
 
@@ -75,6 +80,9 @@ class QuickUnlockService
         bool $enabled,
         ?string $method,
         string $totpCode,
+        ?string $credentialId,
+        ?string $credentialAlgorithm,
+        ?string $credentialPublicKey,
         Request $request
     ): array {
         $this->assertMobileDevice(
@@ -88,6 +96,9 @@ class QuickUnlockService
                 $enabled,
                 $method,
                 $totpCode,
+                $credentialId,
+                $credentialAlgorithm,
+                $credentialPublicKey,
                 $request
             ): void {
                 $lockedUser = User::query()
@@ -140,8 +151,7 @@ class QuickUnlockService
                 if ($setting === null) {
                     $setting =
                         new UserDeviceQuickUnlockSetting([
-                            'user_device_id' =>
-                                $lockedDevice->getKey(),
+                            'user_device_id' => $lockedDevice->getKey(),
                         ]);
                 }
 
@@ -186,38 +196,62 @@ class QuickUnlockService
                         );
                     }
 
+                    if (
+                        $credentialId === null
+                        || $credentialAlgorithm === null
+                        || $credentialPublicKey === null
+                    ) {
+                        throw new AuthApiException(
+                            422,
+                            'QUICK_UNLOCK_CREDENTIAL_REQUIRED',
+                            'A protected device credential is required.'
+                        );
+                    }
+
+                    $this->credentials->validatePublicKey(
+                        $credentialAlgorithm,
+                        $credentialPublicKey
+                    );
+
                     $setting->forceFill([
-                        'enabled' =>
-                            true,
+                        'enabled' => true,
 
-                        'method' =>
-                            $method,
+                        'method' => $method,
 
-                        'trusted_at_snapshot' =>
-                            $lockedDevice->trusted_at,
+                        'trusted_at_snapshot' => $lockedDevice->trusted_at,
 
-                        'enrolled_at' =>
-                            now(),
+                        'enrolled_at' => now(),
 
-                        'disabled_at' =>
-                            null,
+                        'disabled_at' => null,
+
+                        'credential_id' => strtolower($credentialId),
+
+                        'credential_algorithm' => $credentialAlgorithm,
+
+                        'credential_public_key' => $credentialPublicKey,
+
+                        'credential_rotated_at' => now(),
                     ])->save();
 
                     $action =
                         'QUICK_UNLOCK_ENABLED';
                 } else {
                     $setting->forceFill([
-                        'enabled' =>
-                            false,
+                        'enabled' => false,
 
-                        'method' =>
-                            null,
+                        'method' => null,
 
-                        'trusted_at_snapshot' =>
-                            null,
+                        'trusted_at_snapshot' => null,
 
-                        'disabled_at' =>
-                            now(),
+                        'disabled_at' => now(),
+
+                        'credential_id' => null,
+
+                        'credential_algorithm' => null,
+
+                        'credential_public_key' => null,
+
+                        'credential_rotated_at' => now(),
                     ])->save();
 
                     $action =
@@ -233,19 +267,16 @@ class QuickUnlockService
                     $lockedDevice->getKey(),
                     null,
                     [
-                        'enabled' =>
-                            $enabled,
+                        'enabled' => $enabled,
 
-                        'method' =>
-                            $enabled
+                        'method' => $enabled
                                 ? $method
                                 : null,
 
-                        'policy_version' =>
-                            (string) config(
-                                'tradex_mobile_security.quick_unlock.policy_version',
-                                'MOBILE-SEC-01-v1'
-                            ),
+                        'policy_version' => (string) config(
+                            'tradex_mobile_security.quick_unlock.policy_version',
+                            'MOBILE-SEC-01-v1'
+                        ),
                     ],
                     $request->ip(),
                     $request->userAgent()
@@ -258,6 +289,47 @@ class QuickUnlockService
             $user->fresh(),
             $device->fresh()
         );
+    }
+
+    public function forget(
+        User $user,
+        UserDevice $device,
+        Request $request
+    ): void {
+        $this->assertMobileDevice($device);
+
+        DB::transaction(function () use ($user, $device, $request): void {
+            $setting = UserDeviceQuickUnlockSetting::query()
+                ->where('user_device_id', $device->getKey())
+                ->lockForUpdate()
+                ->first();
+
+            if ($setting !== null) {
+                $setting->forceFill([
+                    'enabled' => false,
+                    'method' => null,
+                    'trusted_at_snapshot' => null,
+                    'disabled_at' => now(),
+                    'credential_id' => null,
+                    'credential_algorithm' => null,
+                    'credential_public_key' => null,
+                    'credential_rotated_at' => now(),
+                ])->save();
+            }
+
+            AuditLog::record(
+                'USER',
+                $user->getKey(),
+                'QUICK_UNLOCK_FORGOTTEN',
+                'SECURITY',
+                'USER_DEVICE',
+                $device->getKey(),
+                null,
+                [],
+                $request->ip(),
+                $request->userAgent()
+            );
+        }, 3);
     }
 
     private function assertMobileDevice(

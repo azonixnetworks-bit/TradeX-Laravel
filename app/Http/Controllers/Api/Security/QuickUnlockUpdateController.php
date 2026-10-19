@@ -43,6 +43,9 @@ class QuickUnlockUpdateController extends Controller
                 (bool) $data['enabled'],
                 $data['method'] ?? null,
                 (string) $data['totp_code'],
+                $data['credential_id'] ?? null,
+                $data['credential_algorithm'] ?? null,
+                $data['credential_public_key'] ?? null,
                 $request
             ),
         ]);

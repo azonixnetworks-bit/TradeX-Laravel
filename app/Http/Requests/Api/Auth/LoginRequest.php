@@ -97,6 +97,23 @@ class LoginRequest extends FormRequest
                 'string',
                 Rule::in(UserDeviceQuickUnlockSetting::METHODS),
             ],
+
+            'quick_unlock_credential_id' => [
+                'nullable',
+                'uuid',
+                Rule::unique('user_device_quick_unlock_settings', 'credential_id'),
+            ],
+
+            'quick_unlock_credential_algorithm' => [
+                'nullable',
+                Rule::in(['ES256']),
+            ],
+
+            'quick_unlock_credential_public_key' => [
+                'nullable',
+                'string',
+                'max:4096',
+            ],
         ];
     }
 

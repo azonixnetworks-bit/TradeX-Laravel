@@ -9,10 +9,12 @@ use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Tests\Concerns\CreatesQuickUnlockCredential;
 use Tests\TestCase;
 
 class AuthenticationFlowTest extends TestCase
 {
+    use CreatesQuickUnlockCredential;
     use RefreshDatabase;
 
     public function test_valid_password_totp_and_device_receive_tokens(): void
@@ -105,6 +107,10 @@ class AuthenticationFlowTest extends TestCase
         $user = $this->createTotpUser();
         $payload = $this->loginPayload($user);
         $payload['quick_unlock_method'] = 'BIOMETRIC';
+        $credential = $this->createQuickUnlockCredential();
+        $payload['quick_unlock_credential_id'] = $credential['id'];
+        $payload['quick_unlock_credential_algorithm'] = $credential['algorithm'];
+        $payload['quick_unlock_credential_public_key'] = $credential['public_key'];
 
         $response = $this->postJson('/api/v1/auth/login', $payload);
 
@@ -119,7 +125,20 @@ class AuthenticationFlowTest extends TestCase
             'user_device_id' => $device->getKey(),
             'enabled' => true,
             'method' => UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC,
+            'credential_id' => $credential['id'],
         ]);
+    }
+
+    public function test_legacy_method_only_login_does_not_create_insecure_enrollment(): void
+    {
+        $user = $this->createTotpUser();
+        $payload = $this->loginPayload($user);
+        $payload['quick_unlock_method'] = 'PIN';
+
+        $response = $this->postJson('/api/v1/auth/login', $payload);
+
+        $response->assertOk()->assertJsonPath('data.quick_unlock_method', null);
+        $this->assertDatabaseCount('user_device_quick_unlock_settings', 0);
     }
 
     public function test_same_totp_step_cannot_be_replayed(): void

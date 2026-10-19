@@ -37,6 +37,26 @@ class UpdateQuickUnlockRequest extends FormRequest
                 'digits:6',
             ],
 
+            'credential_id' => [
+                'nullable',
+                Rule::requiredIf($this->boolean('enabled')),
+                'uuid',
+                Rule::unique('user_device_quick_unlock_settings', 'credential_id'),
+            ],
+
+            'credential_algorithm' => [
+                'nullable',
+                Rule::requiredIf($this->boolean('enabled')),
+                Rule::in(['ES256']),
+            ],
+
+            'credential_public_key' => [
+                'nullable',
+                Rule::requiredIf($this->boolean('enabled')),
+                'string',
+                'max:4096',
+            ],
+
             /*
              * MOBILE-SEC-01 server contract:
              * local PIN and biometric material must never cross the network.
@@ -50,6 +70,7 @@ class UpdateQuickUnlockRequest extends FormRequest
             'face_id' => ['prohibited'],
             'local_secret' => ['prohibited'],
             'refresh_token' => ['prohibited'],
+            'credential_private_key' => ['prohibited'],
         ];
     }
 
@@ -57,14 +78,13 @@ class UpdateQuickUnlockRequest extends FormRequest
     {
         if ($this->has('method')) {
             $this->merge([
-                'method' =>
-                    strtoupper(
-                        trim(
-                            (string) $this->input(
-                                'method'
-                            )
+                'method' => strtoupper(
+                    trim(
+                        (string) $this->input(
+                            'method'
                         )
                     )
+                )
                     ?: null,
             ]);
         }

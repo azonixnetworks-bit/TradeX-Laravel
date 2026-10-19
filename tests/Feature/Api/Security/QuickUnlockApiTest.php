@@ -2,15 +2,16 @@
 
 namespace Tests\Feature\Api\Security;
 
-use App\Models\AuditLog;
 use App\Models\UserDeviceQuickUnlockSetting;
 use App\Services\Auth\TotpService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Concerns\CreatesQuickUnlockCredential;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
 
 class QuickUnlockApiTest extends TestCase
 {
+    use CreatesQuickUnlockCredential;
     use CreatesTradeXMobileSession;
     use RefreshDatabase;
 
@@ -66,6 +67,7 @@ class QuickUnlockApiTest extends TestCase
             (string) $user->totp_secret,
             time()
         );
+        $credential = $this->createQuickUnlockCredential();
 
         $response = $this->withToken($token)
             ->patchJson(
@@ -74,6 +76,9 @@ class QuickUnlockApiTest extends TestCase
                     'enabled' => true,
                     'method' => 'pin',
                     'totp_code' => $totp,
+                    'credential_id' => $credential['id'],
+                    'credential_algorithm' => $credential['algorithm'],
+                    'credential_public_key' => $credential['public_key'],
                 ]
             )
             ->assertOk()
@@ -99,6 +104,7 @@ class QuickUnlockApiTest extends TestCase
                 'user_device_id' => $device->getKey(),
                 'enabled' => 1,
                 'method' => 'PIN',
+                'credential_id' => $credential['id'],
             ]
         );
 
