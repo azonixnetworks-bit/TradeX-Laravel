@@ -11,7 +11,14 @@ return new class extends Migration
         Schema::create('user_device_quick_unlock_challenges', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignId('quick_unlock_setting_id')
-                ->constrained('user_device_quick_unlock_settings')
+                // cPanel's MySQL enforces the 64-character identifier limit.
+                // Laravel's generated foreign-key name for these two long table
+                // names exceeds it, so keep the database constraint explicit.
+                ->constrained(
+                    'user_device_quick_unlock_settings',
+                    'id',
+                    'quick_unlock_challenge_setting_fk'
+                )
                 ->cascadeOnDelete();
             $table->char('nonce_hash', 64);
             $table->unsignedTinyInteger('failed_attempts')->default(0);
