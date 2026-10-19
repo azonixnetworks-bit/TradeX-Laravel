@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Admin\Users;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\Users\UserAccountTypeUpdateRequest;
+use App\Http\Requests\Admin\Users\UserDeletionRequest;
 use App\Http\Requests\Admin\Users\UserIndexRequest;
 use App\Http\Requests\Admin\Users\UserStatusActionRequest;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\User;
 use App\Models\UserRefreshToken;
+use App\Services\Admin\Users\UserAccountManagementService;
 use App\Services\Admin\Users\UserAccountStatusService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -679,6 +682,63 @@ class UserController extends Controller
     }
 
 
+    public function updateAccountType(
+        UserAccountTypeUpdateRequest $request,
+        User $user,
+        UserAccountManagementService $service
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requireSuperAdmin($admin);
+
+        $validated = $request->validated();
+
+        $service->changeAccountType(
+            user: $user,
+            admin: $admin,
+            accountType: $validated['account_type'],
+            reason: trim($validated['reason']),
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return redirect()
+            ->route('admin.users.show', $user)
+            ->with(
+                'success',
+                "User membership changed to {$validated['account_type']}."
+            );
+    }
+
+
+    public function destroy(
+        UserDeletionRequest $request,
+        User $user,
+        UserAccountManagementService $service
+    ): RedirectResponse {
+        $admin = $this->authenticatedAdmin();
+
+        $this->requireSuperAdmin($admin);
+
+        $validated = $request->validated();
+
+        $service->softDelete(
+            user: $user,
+            admin: $admin,
+            reason: trim($validated['reason']),
+            ipAddress: $request->ip(),
+            userAgent: $request->userAgent()
+        );
+
+        return redirect()
+            ->route('admin.users.index')
+            ->with(
+                'success',
+                'User account deleted. Existing records remain retained for audit purposes.'
+            );
+    }
+
+
     /*
     |--------------------------------------------------------------------------
     | ADMIN-02E-4C — Authenticated Admin Resolver
@@ -724,6 +784,16 @@ class UserController extends Controller
             $admin->hasPermission(
                 $permission
             ),
+            403
+        );
+    }
+
+
+    private function requireSuperAdmin(
+        AdminUser $admin
+    ): void {
+        abort_unless(
+            $admin->isSuperAdmin(),
             403
         );
     }

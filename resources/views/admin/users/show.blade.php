@@ -35,6 +35,10 @@
             'users.block'
         ) ?? false;
 
+    $canManageUserLifecycle =
+        $currentAdmin?->isSuperAdmin()
+        ?? false;
+
     $canRevokeDevices =
         $canViewDevices
         &&
@@ -423,6 +427,7 @@
 
             </div>
 
+
         </section>
 
 
@@ -731,6 +736,75 @@
 
             </div>
 
+
+            @if($canManageUserLifecycle)
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.users.account-type.update', $user) }}"
+                    class="super-admin-user-form"
+                    data-secure-mutation-form
+                >
+
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="panel-eyebrow super-admin-form-eyebrow">
+                        SUPER ADMIN CONTROL
+                    </div>
+
+                    <label for="accountType">
+                        Membership plan
+                    </label>
+
+                    <select
+                        id="accountType"
+                        name="account_type"
+                        required
+                    >
+                        <option
+                            value="FREE"
+                            @selected($user->account_type === 'FREE')
+                        >
+                            Free
+                        </option>
+                        <option
+                            value="PREMIUM"
+                            @selected($user->account_type === 'PREMIUM')
+                        >
+                            Premium
+                        </option>
+                    </select>
+
+                    <label for="accountTypeReason">
+                        Reason for membership change
+                    </label>
+
+                    <textarea
+                        id="accountTypeReason"
+                        name="reason"
+                        rows="3"
+                        minlength="10"
+                        maxlength="500"
+                        required
+                        placeholder="Explain why this membership access is changing..."
+                    >{{ old('reason') }}</textarea>
+
+                    <p class="super-admin-form-hint">
+                        Premium selection grants the education entitlement; Free selection revokes it. This is fully audited.
+                    </p>
+
+                    <button
+                        type="submit"
+                        class="user-action-btn activate"
+                    >
+                        Update Membership
+                    </button>
+
+                </form>
+
+            @endif
+
         </section>
 
 
@@ -918,6 +992,82 @@
             </div>
 
         </section>
+
+
+        @if($canManageUserLifecycle)
+
+            <section class="panel user-detail-panel super-admin-danger-zone">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="panel-eyebrow">
+                            SUPER ADMIN ONLY
+                        </div>
+
+                        <h2>
+                            Delete User Account
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <p class="super-admin-danger-copy">
+                    This immediately blocks the account, revokes its active devices and sessions, and soft-deletes the customer record. Financial and audit records are retained.
+                </p>
+
+
+                <form
+                    method="POST"
+                    action="{{ route('admin.users.destroy', $user) }}"
+                    class="super-admin-user-form"
+                    data-secure-mutation-form
+                >
+
+                    @csrf
+                    @method('DELETE')
+
+                    <label for="deleteUserReason">
+                        Deletion reason
+                    </label>
+
+                    <textarea
+                        id="deleteUserReason"
+                        name="reason"
+                        rows="3"
+                        minlength="10"
+                        maxlength="500"
+                        required
+                        placeholder="Explain why this customer account must be deleted..."
+                    ></textarea>
+
+                    <label for="deleteUserConfirmation">
+                        Type <strong>DELETE USER</strong> to confirm
+                    </label>
+
+                    <input
+                        id="deleteUserConfirmation"
+                        type="text"
+                        name="confirmation"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <button
+                        type="submit"
+                        class="user-action-btn block"
+                    >
+                        Delete User Account
+                    </button>
+
+                </form>
+
+            </section>
+
+        @endif
 
 
         {{-- LOGIN SECURITY --}}
@@ -1877,6 +2027,7 @@
                     id="deviceRevokeReason"
                     name="reason"
                     rows="5"
+                    minlength="10"
                     maxlength="500"
                     required
                     placeholder="Example: Customer lost this device and requested access removal."
@@ -2380,119 +2531,6 @@ document.addEventListener(
 
                     closeSecurityModal(
                         statusModal
-                    );
-                }
-            );
-
-
-        /*
-        |--------------------------------------------------------------------------
-        | Revoke Single Device
-        |--------------------------------------------------------------------------
-        */
-
-        const deviceRevokeModal =
-            document.getElementById(
-                'deviceRevokeModal'
-            );
-
-        const deviceRevokeForm =
-            document.getElementById(
-                'deviceRevokeForm'
-            );
-
-        const deviceRevokeName =
-            document.getElementById(
-                'deviceRevokeName'
-            );
-
-        const deviceRevokeReason =
-            document.getElementById(
-                'deviceRevokeReason'
-            );
-
-
-        document
-            .querySelectorAll(
-                '[data-device-revoke]'
-            )
-            .forEach(
-                function (button) {
-
-                    button.addEventListener(
-                        'click',
-                        function () {
-
-                            if (
-                                !deviceRevokeModal
-                                ||
-                                !deviceRevokeForm
-                                ||
-                                !deviceRevokeName
-                            ) {
-                                return;
-                            }
-
-
-                            const actionUrl =
-                                button.dataset.actionUrl;
-
-                            if (!actionUrl) {
-                                return;
-                            }
-
-
-                            /*
-                             * Clear previous modal-local input
-                             * before assigning the next device.
-                             */
-
-                            deviceRevokeForm.reset();
-
-                            deviceRevokeForm.action =
-                                actionUrl;
-
-                            deviceRevokeName.textContent =
-                                button.dataset.deviceName
-                                ?? 'this device';
-
-
-                            openSecurityModal(
-                                deviceRevokeModal,
-                                deviceRevokeReason
-                            );
-                        }
-                    );
-
-                }
-            );
-
-
-        document
-            .getElementById(
-                'deviceRevokeClose'
-            )
-            ?.addEventListener(
-                'click',
-                function () {
-
-                    closeSecurityModal(
-                        deviceRevokeModal
-                    );
-                }
-            );
-
-
-        document
-            .getElementById(
-                'deviceRevokeCancel'
-            )
-            ?.addEventListener(
-                'click',
-                function () {
-
-                    closeSecurityModal(
-                        deviceRevokeModal
                     );
                 }
             );

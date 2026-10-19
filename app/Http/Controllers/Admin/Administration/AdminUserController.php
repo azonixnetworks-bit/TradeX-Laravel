@@ -129,8 +129,7 @@ class AdminUserController extends Controller
         $data['canDelete'] =
             $admin->isSuperAdmin()
             && ! $adminUser->isSuperAdmin()
-            && $admin->getKey() !== $adminUser->getKey()
-            && ! (bool) $adminUser->is_active;
+            && $admin->getKey() !== $adminUser->getKey();
 
         return view('admin.admins.edit', $data);
     }

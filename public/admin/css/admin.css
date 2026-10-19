@@ -2531,6 +2531,76 @@ input {
 }
 
 
+.super-admin-user-form {
+    margin-top: 18px;
+
+    display: grid;
+    gap: 10px;
+
+    padding: 16px;
+
+    border: 1px solid rgba(217, 168, 60, .16);
+    border-radius: 12px;
+
+    background: rgba(217, 168, 60, .035);
+}
+
+
+.super-admin-user-form label {
+    color: #9ab0c4;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.super-admin-user-form select,
+.super-admin-user-form textarea,
+.super-admin-user-form input {
+    width: 100%;
+
+    border: 1px solid rgba(130, 161, 190, .22);
+    border-radius: 8px;
+
+    padding: 11px 12px;
+
+    color: #eaf3ff;
+    background: rgba(4, 16, 29, .68);
+}
+
+
+.super-admin-user-form textarea {
+    resize: vertical;
+}
+
+
+.super-admin-form-eyebrow {
+    margin-bottom: 2px;
+}
+
+
+.super-admin-form-hint,
+.super-admin-danger-copy {
+    margin: 0;
+
+    color: #8298ad;
+
+    font-size: 12px;
+    line-height: 1.55;
+}
+
+
+.super-admin-danger-zone {
+    border-color: rgba(255, 97, 110, .25);
+}
+
+
+.super-admin-danger-zone .super-admin-user-form {
+    border-color: rgba(255, 97, 110, .18);
+    background: rgba(255, 97, 110, .035);
+}
+
+
 .status-history-box {
     margin-top: 18px;
 

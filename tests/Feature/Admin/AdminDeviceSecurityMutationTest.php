@@ -6,6 +6,8 @@ use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Models\User;
+use App\Models\UserDevice;
+use App\Services\Security\UserDeviceSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -173,6 +175,179 @@ class AdminDeviceSecurityMutationTest extends TestCase
             'DEVICE_REVOKED: '
                 . $reason
         );
+    }
+
+
+    public function test_device_user_foreign_key_is_normalized_to_an_integer_for_ownership_guards(): void
+    {
+        $user =
+            $this->createUser();
+
+        $deviceId =
+            $this->createDevice(
+                user: $user,
+                slot: 'MOBILE',
+                platform: 'ANDROID',
+                deviceName: 'Ownership Type Test Phone'
+            );
+
+        $device =
+            UserDevice::query()
+                ->findOrFail($deviceId);
+
+        /*
+        |------------------------------------------------------------------
+        | MySQL can hydrate this foreign key as a string. The cast ensures
+        | ownership checks cannot reject the real owner because of type only.
+        |------------------------------------------------------------------
+        */
+        $device->setRawAttributes([
+            ...$device->getAttributes(),
+            'user_id' => (string) $user->id,
+        ]);
+
+        $this->assertSame(
+            $user->id,
+            $device->user_id
+        );
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Revoke Releases the Mobile and Desktop Slots
+    |--------------------------------------------------------------------------
+    |
+    | An administrator's revoke action must remove the active device from its
+    | slot. The customer may then enrol either the same installation again or a
+    | different installation, without carrying the old trust state forward.
+    |
+    */
+
+    public function test_admin_revocation_releases_mobile_and_desktop_slots_for_same_or_new_installations(): void
+    {
+        $admin =
+            $this->createAdminWithPermissions([
+                'users.devices.revoke',
+            ]);
+
+        $user =
+            $this->createUser();
+
+        $service =
+            $this->app->make(
+                UserDeviceSecurityService::class
+            );
+
+        foreach ([
+            'ANDROID' => 'MOBILE',
+            'WINDOWS' => 'DESKTOP',
+        ] as $platform => $slot) {
+
+            $sameInstallation =
+                'tradex-test-installation-'
+                . Str::uuid()
+                    ->toString();
+
+            $initial =
+                $service->registerDevice(
+                    user: $user,
+                    deviceData: [
+                        'platform' => $platform,
+                        'installation_id' => $sameInstallation,
+                        'device_name' => "Initial {$slot} Device",
+                    ]
+                );
+
+            $this
+                ->actingAs(
+                    $admin,
+                    'admin'
+                )
+                ->patch(
+                    route(
+                        'admin.users.devices.revoke',
+                        [
+                            'user' => $user,
+                            'device' => $initial,
+                        ]
+                    ),
+                    [
+                        'reason' => "Customer requested {$slot} replacement.",
+                    ]
+                )
+                ->assertRedirect(
+                    route(
+                        'admin.users.show',
+                        $user
+                    )
+                );
+
+            $sameInstallationDevice =
+                $service->registerDevice(
+                    user: $user,
+                    deviceData: [
+                        'platform' => $platform,
+                        'installation_id' => $sameInstallation,
+                        'device_name' => "Re-enrolled {$slot} Device",
+                    ]
+                );
+
+            $this->assertSame(
+                $initial->id,
+                $sameInstallationDevice->id
+            );
+
+            $this->assertTrue(
+                $sameInstallationDevice->is_active
+            );
+
+            $this->assertFalse(
+                $sameInstallationDevice->is_trusted
+            );
+
+            $this->assertNull(
+                $sameInstallationDevice->revoked_at
+            );
+
+            $service->revokeDevice(
+                device: $sameInstallationDevice,
+                reason: "Customer requested a new {$slot} device.",
+                admin: $admin
+            );
+
+            $replacement =
+                $service->registerDevice(
+                    user: $user,
+                    deviceData: [
+                        'platform' => $platform,
+                        'installation_id' =>
+                            'tradex-replacement-installation-'
+                            . Str::uuid()
+                                ->toString(),
+                        'device_name' => "Replacement {$slot} Device",
+                    ]
+                );
+
+            $this->assertNotSame(
+                $initial->id,
+                $replacement->id
+            );
+
+            $this->assertSame(
+                $slot,
+                $replacement->device_slot
+            );
+
+            $this->assertSame(
+                1,
+                UserDevice::query()
+                    ->where('user_id', $user->id)
+                    ->where('device_slot', $slot)
+                    ->active()
+                    ->count()
+            );
+        }
     }
 
 
