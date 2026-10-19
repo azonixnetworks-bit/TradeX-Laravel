@@ -8,6 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // A previous interrupted release can create the table before Laravel
+        // records this migration. Treat that state as already migrated so a
+        // retry is safe and does not fail with "table already exists".
+        if (Schema::hasTable('user_device_quick_unlock_challenges')) {
+            return;
+        }
+
         Schema::create('user_device_quick_unlock_challenges', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignId('quick_unlock_setting_id')
