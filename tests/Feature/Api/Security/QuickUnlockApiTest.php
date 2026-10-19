@@ -133,6 +133,37 @@ class QuickUnlockApiTest extends TestCase
         );
     }
 
+    public function test_user_can_enable_fingerprint_and_passcode_together(): void
+    {
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $user->refresh();
+        $totp = app(TotpService::class)->codeAt(
+            (string) $user->totp_secret,
+            time()
+        );
+        $credential = $this->createQuickUnlockCredential();
+
+        $this->withToken($token)
+            ->patchJson('/api/v1/security/quick-unlock', [
+                'enabled' => true,
+                'method' => 'both',
+                'totp_code' => $totp,
+                'credential_id' => $credential['id'],
+                'credential_algorithm' => $credential['algorithm'],
+                'credential_public_key' => $credential['public_key'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.method', 'BOTH');
+
+        $this->assertDatabaseHas('user_device_quick_unlock_settings', [
+            'user_device_id' => $user->devices()->firstOrFail()->getKey(),
+            'enabled' => 1,
+            'method' => UserDeviceQuickUnlockSetting::METHOD_BOTH,
+            'credential_id' => $credential['id'],
+        ]);
+    }
+
     public function test_user_can_disable_existing_quick_unlock_with_totp(): void
     {
         $user = $this->createApiUser();

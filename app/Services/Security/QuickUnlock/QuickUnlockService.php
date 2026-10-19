@@ -171,8 +171,14 @@ class QuickUnlockService
                     }
 
                     if (
-                        $method
-                        === UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC
+                        in_array(
+                            $method,
+                            [
+                                UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC,
+                                UserDeviceQuickUnlockSetting::METHOD_BOTH,
+                            ],
+                            true
+                        )
                         && ! (bool) config(
                             'tradex_mobile_security.quick_unlock.biometric_allowed',
                             true

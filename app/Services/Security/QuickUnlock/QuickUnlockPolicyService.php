@@ -15,8 +15,9 @@ class QuickUnlockPolicyService
             ),
 
             'allowed_methods' => [
-            UserDeviceQuickUnlockSetting::METHOD_PIN,
-            UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC,
+                UserDeviceQuickUnlockSetting::METHOD_PIN,
+                UserDeviceQuickUnlockSetting::METHOD_BIOMETRIC,
+                UserDeviceQuickUnlockSetting::METHOD_BOTH,
             ],
 
             'pin_length' => (int) config(

@@ -11,9 +11,12 @@ class UserDeviceQuickUnlockSetting extends Model
 
     public const METHOD_BIOMETRIC = 'BIOMETRIC';
 
+    public const METHOD_BOTH = 'BOTH';
+
     public const METHODS = [
         self::METHOD_PIN,
         self::METHOD_BIOMETRIC,
+        self::METHOD_BOTH,
     ];
 
     protected $fillable = [
