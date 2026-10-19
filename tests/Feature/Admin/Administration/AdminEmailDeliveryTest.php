@@ -103,7 +103,7 @@ class AdminEmailDeliveryTest extends TestCase
         ]);
     }
 
-    public function test_owner_can_soft_delete_only_disabled_delegated_admin(): void
+    public function test_owner_can_soft_delete_delegated_admin(): void
     {
         Mail::fake();
 
@@ -138,7 +138,7 @@ class AdminEmailDeliveryTest extends TestCase
         ]);
     }
 
-    public function test_owner_cannot_delete_active_admin_before_disabling(): void
+    public function test_owner_can_delete_active_delegated_admin(): void
     {
         Mail::fake();
 
@@ -150,14 +150,15 @@ class AdminEmailDeliveryTest extends TestCase
                 route('admin.administration.admins.status', $target),
                 [
                     'status' => 'DELETE',
-                    'reason' => 'Attempted active deletion',
+                    'reason' => 'Removing active delegated admin',
                 ]
             )
-            ->assertStatus(422);
+            ->assertRedirect(
+                route('admin.administration.admins.index')
+            );
 
-        $this->assertDatabaseHas('admin_users', [
+        $this->assertSoftDeleted('admin_users', [
             'id' => $target->id,
-            'deleted_at' => null,
         ]);
     }
 

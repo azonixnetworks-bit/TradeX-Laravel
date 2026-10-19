@@ -51,6 +51,8 @@ class AdminRouteHardeningTest extends TestCase
             'admin.users.index',
             'admin.users.show',
             'admin.users.status.update',
+            'admin.users.account-type.update',
+            'admin.users.destroy',
             'admin.users.devices.revoke',
             'admin.users.devices.reset',
             'admin.users.sessions.revoke',
@@ -96,6 +98,14 @@ class AdminRouteHardeningTest extends TestCase
 
             'admin.users.status.update' => [
                 'PATCH',
+            ],
+
+            'admin.users.account-type.update' => [
+                'PATCH',
+            ],
+
+            'admin.users.destroy' => [
+                'DELETE',
             ],
 
             'admin.users.devices.revoke' => [
@@ -150,6 +160,12 @@ class AdminRouteHardeningTest extends TestCase
 
             'admin.users.status.update' =>
                 'admin/users/{user}/status',
+
+            'admin.users.account-type.update' =>
+                'admin/users/{user}/account-type',
+
+            'admin.users.destroy' =>
+                'admin/users/{user}',
 
             'admin.users.devices.revoke' =>
                 'admin/users/{user}/devices/{device}/revoke',
@@ -216,6 +232,10 @@ class AdminRouteHardeningTest extends TestCase
             'admin.users.show',
 
             'admin.users.status.update',
+
+            'admin.users.account-type.update',
+
+            'admin.users.destroy',
 
             'admin.users.devices.reset',
 
@@ -284,6 +304,10 @@ class AdminRouteHardeningTest extends TestCase
             'admin.users.show',
 
             'admin.users.status.update',
+
+            'admin.users.account-type.update',
+
+            'admin.users.destroy',
 
             'admin.users.devices.revoke',
 

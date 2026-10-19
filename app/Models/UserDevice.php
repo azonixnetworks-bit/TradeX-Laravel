@@ -61,6 +61,8 @@ class UserDevice extends Model
     protected function casts(): array
     {
         return [
+            'user_id' => 'integer',
+
             'is_trusted' => 'boolean',
             'is_active' => 'boolean',
 
