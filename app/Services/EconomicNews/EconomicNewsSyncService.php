@@ -16,8 +16,7 @@ class EconomicNewsSyncService
 {
     public function __construct(
         private readonly EconomicCalendarProvider $provider
-    ) {
-    }
+    ) {}
 
     /**
      * @return array{enabled:bool,source_enabled:bool,provider:string,fetched:int,created:int,updated:int,unchanged:int,failed:int}
@@ -57,6 +56,7 @@ class EconomicNewsSyncService
         $source = $this->source();
         if (! $source->is_enabled) {
             $result['source_enabled'] = false;
+
             return $result;
         }
 
@@ -167,7 +167,7 @@ class EconomicNewsSyncService
                 ->first();
 
             $isNew = $event === null;
-            $event ??= new EconomicEvent();
+            $event ??= new EconomicEvent;
 
             $beforeActual = $event->actual;
             $beforePrevious = $event->previous;
@@ -209,8 +209,9 @@ class EconomicNewsSyncService
                 $attributes['released_at'] = $scheduledAt;
             }
 
+            $autoPublish = (bool) config('economic_news.sync.auto_publish', true);
+
             if ($isNew) {
-                $autoPublish = (bool) config('economic_news.sync.auto_publish', false);
                 $attributes += [
                     'bias' => EconomicEvent::BIAS_NEUTRAL,
                     'confidence_score' => 0,
@@ -222,6 +223,12 @@ class EconomicNewsSyncService
                     'created_by_admin_id' => null,
                     'updated_by_admin_id' => null,
                 ];
+            } elseif ($autoPublish && ! $event->is_published) {
+                // Provider-managed events must become visible without an admin
+                // having to publish every imported row manually. Manual events
+                // are not processed by this synchronization service.
+                $attributes['is_published'] = true;
+                $attributes['published_at'] = $syncedAt;
             }
 
             $event->forceFill($attributes)->save();
@@ -447,6 +454,7 @@ class EconomicNewsSyncService
         }
 
         $value = trim((string) $value);
+
         return $value === '' || strtolower($value) === 'null' ? null : $value;
     }
 }

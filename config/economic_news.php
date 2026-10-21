@@ -34,13 +34,13 @@ $countries = array_values(array_filter(array_map(
 
 return [
     'sync' => [
-        'enabled' => env('TRADEX_ECONOMIC_NEWS_SYNC_ENABLED', false),
+        'enabled' => env('TRADEX_ECONOMIC_NEWS_SYNC_ENABLED', true),
         'provider' => env('TRADEX_ECONOMIC_NEWS_PROVIDER', 'forex_factory_json'),
         'frequency_minutes' => max(1, min(30, (int) env('TRADEX_ECONOMIC_NEWS_SYNC_FREQUENCY_MINUTES', 5))),
         'lookback_days' => max(0, min(14, (int) env('TRADEX_ECONOMIC_NEWS_LOOKBACK_DAYS', 2))),
         'lookahead_days' => max(1, min(90, (int) env('TRADEX_ECONOMIC_NEWS_LOOKAHEAD_DAYS', 14))),
         'minimum_importance' => max(1, min(3, (int) env('TRADEX_ECONOMIC_NEWS_MIN_IMPORTANCE', 2))),
-        'auto_publish' => env('TRADEX_ECONOMIC_NEWS_AUTO_PUBLISH', false),
+        'auto_publish' => env('TRADEX_ECONOMIC_NEWS_AUTO_PUBLISH', true),
         'countries' => $countries,
     ],
 
