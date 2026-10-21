@@ -182,10 +182,8 @@ class CustomerManagementTest extends TestCase
                 ),
                 $this->invitationPayload([
                     'country_code' => 'JP',
-                    'email' =>
-                        'japan.customer@example.test',
-                    'whatsapp_number' =>
-                        '+819012345678',
+                    'email' => 'japan.customer@example.test',
+                    'whatsapp_number' => '+819012345678',
                 ])
             )
             ->assertRedirect(
@@ -223,8 +221,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'language_code' =>
-                        'ta',
+                    'language_code' => 'ta',
                 ])
             )
             ->assertRedirect(
@@ -267,12 +264,9 @@ class CustomerManagementTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'CUSTOMER_ONBOARDING_INVITATION_CREATED',
-                'target_type' =>
-                    'CUSTOMER_ONBOARDING_INVITATION',
-                'target_id' =>
-                    $invitation->id,
+                'action' => 'CUSTOMER_ONBOARDING_INVITATION_CREATED',
+                'target_type' => 'CUSTOMER_ONBOARDING_INVITATION',
+                'target_id' => $invitation->id,
             ]
         );
     }
@@ -296,8 +290,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'internal_note' =>
-                        $canary,
+                    'internal_note' => $canary,
                 ])
             )
             ->assertRedirect();
@@ -370,10 +363,8 @@ class CustomerManagementTest extends TestCase
             ]);
 
         $this->createCustomer([
-            'email' =>
-                'registered@example.test',
-            'whatsapp_number' =>
-                '+94770000011',
+            'email' => 'registered@example.test',
+            'whatsapp_number' => '+94770000011',
         ]);
 
         $this->actingAs(
@@ -385,8 +376,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'email' =>
-                        'registered@example.test',
+                    'email' => 'registered@example.test',
                 ])
             )
             ->assertStatus(409);
@@ -400,10 +390,8 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'email' =>
-                        'another@example.test',
-                    'whatsapp_number' =>
-                        '+94770000011',
+                    'email' => 'another@example.test',
+                    'whatsapp_number' => '+94770000011',
                 ])
             )
             ->assertStatus(409);
@@ -442,8 +430,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'whatsapp_number' =>
-                        '+94771112244',
+                    'whatsapp_number' => '+94771112244',
                 ])
             )
             ->assertStatus(409);
@@ -457,8 +444,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'email' =>
-                        'different@example.test',
+                    'email' => 'different@example.test',
                 ])
             )
             ->assertStatus(409);
@@ -485,8 +471,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'referral_code' =>
-                        'NOT-A-VALID-REFERRAL',
+                    'referral_code' => 'NOT-A-VALID-REFERRAL',
                 ])
             )
             ->assertStatus(422);
@@ -506,14 +491,10 @@ class CustomerManagementTest extends TestCase
 
         $referrer =
             $this->createCustomer([
-                'email' =>
-                    'referrer@example.test',
-                'whatsapp_number' =>
-                    '+94770000021',
-                'referral_code' =>
-                    'TXADMIN20REF',
-                'status' =>
-                    'ACTIVE',
+                'email' => 'referrer@example.test',
+                'whatsapp_number' => '+94770000021',
+                'referral_code' => 'TXADMIN20REF',
+                'status' => 'ACTIVE',
             ]);
 
         $this->actingAs(
@@ -525,8 +506,7 @@ class CustomerManagementTest extends TestCase
                     'admin.customers.store'
                 ),
                 $this->invitationPayload([
-                    'referral_code' =>
-                        'txadmin20ref',
+                    'referral_code' => 'txadmin20ref',
                 ])
             )
             ->assertRedirect();
@@ -575,12 +555,9 @@ class CustomerManagementTest extends TestCase
 
         $customer =
             $this->createCustomer([
-                'email' =>
-                    $payload['email'],
-                'whatsapp_number' =>
-                    $payload['whatsapp_number'],
-                'status' =>
-                    'ACTIVE',
+                'email' => $payload['email'],
+                'whatsapp_number' => $payload['whatsapp_number'],
+                'status' => 'ACTIVE',
             ]);
 
         $this->actingAs(
@@ -631,44 +608,29 @@ class CustomerManagementTest extends TestCase
 
         $free =
             $this->createCustomer([
-                'name' =>
-                    'ADMIN20 Free Canary',
-                'email' =>
-                    'free@example.test',
-                'whatsapp_number' =>
-                    '+94770000101',
-                'account_type' =>
-                    'FREE',
-                'status' =>
-                    'ACTIVE',
+                'name' => 'ADMIN20 Free Canary',
+                'email' => 'free@example.test',
+                'whatsapp_number' => '+94770000101',
+                'account_type' => 'FREE',
+                'status' => 'ACTIVE',
             ]);
 
         $premium =
             $this->createCustomer([
-                'name' =>
-                    'ADMIN20 Premium Canary',
-                'email' =>
-                    'premium@example.test',
-                'whatsapp_number' =>
-                    '+94770000102',
-                'account_type' =>
-                    'PREMIUM',
-                'status' =>
-                    'ACTIVE',
+                'name' => 'ADMIN20 Premium Canary',
+                'email' => 'premium@example.test',
+                'whatsapp_number' => '+94770000102',
+                'account_type' => 'PREMIUM',
+                'status' => 'ACTIVE',
             ]);
 
         $restricted =
             $this->createCustomer([
-                'name' =>
-                    'ADMIN20 Restricted Canary',
-                'email' =>
-                    'restricted@example.test',
-                'whatsapp_number' =>
-                    '+94770000103',
-                'account_type' =>
-                    'FREE',
-                'status' =>
-                    'BLOCKED',
+                'name' => 'ADMIN20 Restricted Canary',
+                'email' => 'restricted@example.test',
+                'whatsapp_number' => '+94770000103',
+                'account_type' => 'FREE',
+                'status' => 'BLOCKED',
             ]);
 
         $freeResponse =
@@ -740,30 +702,20 @@ class CustomerManagementTest extends TestCase
 
         $recent =
             $this->createCustomer([
-                'name' =>
-                    'ADMIN20 Recent Canary',
-                'email' =>
-                    'recent@example.test',
-                'whatsapp_number' =>
-                    '+94770000111',
-                'created_at' =>
-                    now()->subDays(3),
-                'updated_at' =>
-                    now()->subDays(3),
+                'name' => 'ADMIN20 Recent Canary',
+                'email' => 'recent@example.test',
+                'whatsapp_number' => '+94770000111',
+                'created_at' => now()->subDays(3),
+                'updated_at' => now()->subDays(3),
             ]);
 
         $old =
             $this->createCustomer([
-                'name' =>
-                    'ADMIN20 Old Canary',
-                'email' =>
-                    'old@example.test',
-                'whatsapp_number' =>
-                    '+94770000112',
-                'created_at' =>
-                    now()->subDays(90),
-                'updated_at' =>
-                    now()->subDays(90),
+                'name' => 'ADMIN20 Old Canary',
+                'email' => 'old@example.test',
+                'whatsapp_number' => '+94770000112',
+                'created_at' => now()->subDays(90),
+                'updated_at' => now()->subDays(90),
             ]);
 
         $response =
@@ -784,25 +736,106 @@ class CustomerManagementTest extends TestCase
             ->assertDontSee($old->name);
     }
 
+    public function test_customer_dashboard_exposes_search_by_requested_identifiers(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'users.view',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.customers.dashboard'))
+            ->assertOk()
+            ->assertSee('Find a Customer')
+            ->assertSee('name="search"', false)
+            ->assertSee('name, email, mobile number or referral code');
+    }
+
+    public function test_customer_search_finds_name_email_mobile_and_referral_code(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'users.view',
+        ]);
+
+        $customer = $this->createCustomer([
+            'name' => 'Searchable Client Alpha',
+            'email' => 'find.client@example.test',
+            'whatsapp_number' => '+94771239876',
+            'referral_code' => 'TXFINDCLIENT',
+        ]);
+        $other = $this->createCustomer([
+            'name' => 'Unrelated Customer',
+            'email' => 'unrelated@example.test',
+            'whatsapp_number' => '+94770000000',
+            'referral_code' => 'TXUNRELATED',
+        ]);
+
+        foreach ([
+            'Client Alpha',
+            'find.client@example.test',
+            '+94771239876',
+            'TXFINDCLIENT',
+        ] as $search) {
+            $this->actingAs($admin, 'admin')
+                ->get(route('admin.users.index', ['search' => $search]))
+                ->assertOk()
+                ->assertSee($customer->email)
+                ->assertDontSee($other->email);
+        }
+    }
+
+    public function test_customer_detail_consolidates_financial_device_and_referral_data(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'users.view',
+            'users.view_details',
+            'users.devices.view',
+        ]);
+
+        $customer = $this->createCustomer([
+            'name' => 'Consolidated Customer',
+            'referral_code' => 'TXCONSOLIDATED',
+        ]);
+        $customer->profile()->create([
+            'telegram_username' => 'consolidated_user',
+            'paypal_email' => 'paypal.customer@example.test',
+            'binance_email' => 'binance.customer@example.test',
+            'usdt_trc20_address' => 'TCONSOLIDATEDUSDTADDRESS12345',
+            'bank_name' => 'Consolidated Bank',
+            'bank_branch' => 'Colombo Main',
+            'bank_account_holder' => 'Consolidated Customer',
+            'bank_account_number' => '009988776655',
+            'financial_updated_at' => now(),
+        ]);
+        $referral = $this->createCustomer([
+            'name' => 'Direct Referral Customer',
+            'email' => 'direct.referral@example.test',
+            'referred_by_user_id' => $customer->getKey(),
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.users.show', $customer))
+            ->assertOk()
+            ->assertSee('Withdrawal & Bank Details', false)
+            ->assertSee('Consolidated Bank')
+            ->assertSee('009988776655')
+            ->assertSee('TCONSOLIDATEDUSDTADDRESS12345')
+            ->assertSee('2 MOBILE + 1 DESKTOP')
+            ->assertSee('Direct Referral Customers')
+            ->assertSee($referral->email);
+    }
+
     private function invitationPayload(
         array $overrides = []
     ): array {
         return array_merge(
             [
-                'name' =>
-                    'ADMIN-20 Customer',
-                'email' =>
-                    'customer.admin20@example.test',
-                'whatsapp_number' =>
-                    '+94771112233',
-                'country_code' =>
-                    'LK',
-                'language_code' =>
-                    'en',
-                'referral_code' =>
-                    null,
-                'internal_note' =>
-                    null,
+                'name' => 'ADMIN-20 Customer',
+                'email' => 'customer.admin20@example.test',
+                'whatsapp_number' => '+94771112233',
+                'country_code' => 'LK',
+                'language_code' => 'en',
+                'referral_code' => null,
+                'internal_note' => null,
             ],
             $overrides
         );
@@ -815,29 +848,21 @@ class CustomerManagementTest extends TestCase
             ->create(
                 array_merge(
                     [
-                        'uuid' =>
-                            (string) Str::uuid(),
-                        'whatsapp_number' =>
-                            '+9477'
+                        'uuid' => (string) Str::uuid(),
+                        'whatsapp_number' => '+9477'
                             .random_int(
                                 1000000,
                                 9999999
                             ),
-                        'whatsapp_verified_at' =>
-                            now(),
-                        'referral_code' =>
-                            'TX'
+                        'whatsapp_verified_at' => now(),
+                        'referral_code' => 'TX'
                             .Str::upper(
                                 Str::random(10)
                             ),
-                        'country_code' =>
-                            'LK',
-                        'language_code' =>
-                            'en',
-                        'account_type' =>
-                            'FREE',
-                        'status' =>
-                            'ACTIVE',
+                        'country_code' => 'LK',
+                        'language_code' => 'en',
+                        'account_type' => 'FREE',
+                        'status' => 'ACTIVE',
                     ],
                     $overrides
                 )
@@ -850,42 +875,30 @@ class CustomerManagementTest extends TestCase
         $admin =
             AdminUser::query()
                 ->create([
-                    'uuid' =>
-                        (string) Str::uuid(),
-                    'name' =>
-                        'ADMIN-20 Test Actor',
-                    'email' =>
-                        'admin20-'
+                    'uuid' => (string) Str::uuid(),
+                    'name' => 'ADMIN-20 Test Actor',
+                    'email' => 'admin20-'
                         .Str::lower(
                             Str::random(10)
                         )
                         .'@example.test',
-                    'email_verified_at' =>
-                        now(),
-                    'password' =>
-                        'Testing-Admin-Pass-123!',
-                    'is_active' =>
-                        true,
-                    'failed_login_attempts' =>
-                        0,
+                    'email_verified_at' => now(),
+                    'password' => 'Testing-Admin-Pass-123!',
+                    'is_active' => true,
+                    'failed_login_attempts' => 0,
                 ]);
 
         $role =
             AdminRole::query()
                 ->create([
-                    'code' =>
-                        'ADMIN20_TEST_'
+                    'code' => 'ADMIN20_TEST_'
                         .Str::upper(
                             Str::random(8)
                         ),
-                    'name' =>
-                        'ADMIN-20 Test Role',
-                    'description' =>
-                        null,
-                    'is_system' =>
-                        false,
-                    'is_active' =>
-                        true,
+                    'name' => 'ADMIN-20 Test Role',
+                    'description' => null,
+                    'is_system' => false,
+                    'is_active' => true,
                 ]);
 
         $permissionIds = [];

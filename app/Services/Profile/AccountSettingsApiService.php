@@ -18,8 +18,7 @@ class AccountSettingsApiService
         private readonly ProfilePresenter $profilePresenter,
         private readonly TotpService $totpService,
         private readonly AccessTokenService $accessTokens
-    ) {
-    }
+    ) {}
 
     public function overview(User $user, Request $request): array
     {
@@ -43,6 +42,20 @@ class AccountSettingsApiService
     {
         $currentDevice = $this->currentDevice($user, $request);
         $activeDevices = $user->devices()->active()->get();
+        $mobileLimit = max(
+            0,
+            (int) config(
+                'tradex_mobile_security.customer_devices.mobile_active_limit',
+                2
+            )
+        );
+        $desktopLimit = max(
+            0,
+            (int) config(
+                'tradex_mobile_security.customer_devices.desktop_active_limit',
+                1
+            )
+        );
 
         return [
             'verification' => [
@@ -57,8 +70,8 @@ class AccountSettingsApiService
                 'remote_device_revoke_requires_totp' => true,
             ],
             'device_policy' => [
-                'maximum_active_mobile_devices' => 1,
-                'maximum_active_desktop_devices' => 1,
+                'maximum_active_mobile_devices' => $mobileLimit,
+                'maximum_active_desktop_devices' => $desktopLimit,
                 'active_mobile_devices' => $activeDevices
                     ->where('device_slot', UserDevice::SLOT_MOBILE)
                     ->count(),
@@ -77,6 +90,20 @@ class AccountSettingsApiService
     public function devices(User $user, Request $request): array
     {
         $currentDevice = $this->currentDevice($user, $request);
+        $mobileLimit = max(
+            0,
+            (int) config(
+                'tradex_mobile_security.customer_devices.mobile_active_limit',
+                2
+            )
+        );
+        $desktopLimit = max(
+            0,
+            (int) config(
+                'tradex_mobile_security.customer_devices.desktop_active_limit',
+                1
+            )
+        );
 
         $devices = $user->devices()
             ->orderByRaw(
@@ -94,8 +121,8 @@ class AccountSettingsApiService
                 ->values()
                 ->all(),
             'policy' => [
-                'one_mobile_slot' => true,
-                'one_desktop_slot' => true,
+                'maximum_active_mobile_devices' => $mobileLimit,
+                'maximum_active_desktop_devices' => $desktopLimit,
             ],
             'current_device_revoke_endpoint' => 'POST /api/v1/auth/device/revoke',
         ];

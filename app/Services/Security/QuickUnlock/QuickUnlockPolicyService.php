@@ -45,7 +45,7 @@ class QuickUnlockPolicyService
                 0,
                 (int) config(
                     'tradex_mobile_security.quick_unlock.background_lock_seconds',
-                    30
+                    1800
                 )
             ),
 

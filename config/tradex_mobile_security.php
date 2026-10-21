@@ -1,6 +1,18 @@
 <?php
 
 return [
+    'customer_devices' => [
+        'mobile_active_limit' => (int) env(
+            'TRADEX_CUSTOMER_MOBILE_DEVICE_LIMIT',
+            2
+        ),
+
+        'desktop_active_limit' => (int) env(
+            'TRADEX_CUSTOMER_DESKTOP_DEVICE_LIMIT',
+            1
+        ),
+    ],
+
     'quick_unlock' => [
         'policy_version' => env(
             'TRADEX_QUICK_UNLOCK_POLICY_VERSION',
@@ -21,7 +33,7 @@ return [
 
         'background_lock_seconds' => (int) env(
             'TRADEX_QUICK_UNLOCK_BACKGROUND_LOCK_SECONDS',
-            30
+            1800
         ),
 
         'inactivity_lock_seconds' => (int) env(

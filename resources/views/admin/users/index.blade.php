@@ -83,7 +83,7 @@
                 type="text"
                 name="search"
                 value="{{ request('search') }}"
-                placeholder="Name, email, WhatsApp, referral code..."
+                placeholder="Name, email, mobile number or referral code"
             >
         </div>
 

@@ -86,7 +86,6 @@ class UserDeviceSecurityService
                     ->lockForUpdate()
                     ->firstOrFail();
 
-
                 /*
                 |--------------------------------------------------------------------------
                 | Existing Same Installation
@@ -105,7 +104,6 @@ class UserDeviceSecurityService
                     ->lockForUpdate()
                     ->first();
 
-
                 if (
                     $existingDevice
                     &&
@@ -120,23 +118,18 @@ class UserDeviceSecurityService
                     ) {
 
                         throw new DeviceSecurityException(
-                            errorCode:
-                                'DEVICE_SLOT_MISMATCH',
+                            errorCode: 'DEVICE_SLOT_MISMATCH',
 
-                            message:
-                                'This installation is registered under a different device slot.',
+                            message: 'This installation is registered under a different device slot.',
 
                             context: [
-                                'expected_slot' =>
-                                    $existingDevice
-                                        ->device_slot,
+                                'expected_slot' => $existingDevice
+                                    ->device_slot,
 
-                                'requested_slot' =>
-                                    $slot,
+                                'requested_slot' => $slot,
                             ]
                         );
                     }
-
 
                     /*
                      * Do not replace the public key of an
@@ -144,32 +137,26 @@ class UserDeviceSecurityService
                      */
 
                     $updates = [
-                        'device_name' =>
-                            $deviceData['device_name']
+                        'device_name' => $deviceData['device_name']
                             ?? $existingDevice
                                 ->device_name,
 
-                        'device_model' =>
-                            $deviceData['device_model']
+                        'device_model' => $deviceData['device_model']
                             ?? $existingDevice
                                 ->device_model,
 
-                        'os_version' =>
-                            $deviceData['os_version']
+                        'os_version' => $deviceData['os_version']
                             ?? $existingDevice
                                 ->os_version,
 
-                        'app_version' =>
-                            $deviceData['app_version']
+                        'app_version' => $deviceData['app_version']
                             ?? $existingDevice
                                 ->app_version,
 
                         'last_seen_at' => now(),
 
-                        'last_login_ip' =>
-                            $ipAddress,
+                        'last_login_ip' => $ipAddress,
                     ];
-
 
                     if (
                         ! $existingDevice->is_trusted
@@ -187,16 +174,13 @@ class UserDeviceSecurityService
                             ];
                     }
 
-
                     $existingDevice->update(
                         $updates
                     );
 
-
                     return $existingDevice
                         ->fresh();
                 }
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -204,7 +188,7 @@ class UserDeviceSecurityService
                 |--------------------------------------------------------------------------
                 */
 
-                $occupiedDevice =
+                $activeSlotDevices =
                     UserDevice::query()
                         ->where(
                             'user_id',
@@ -222,64 +206,58 @@ class UserDeviceSecurityService
                             'revoked_at'
                         )
                         ->lockForUpdate()
-                        ->first();
+                        ->get();
 
+                $slotLimit = $this->activeDeviceLimit(
+                    $slot
+                );
 
-                if ($occupiedDevice) {
+                if ($activeSlotDevices->count() >= $slotLimit) {
+
+                    $occupiedDevice =
+                        $activeSlotDevices->first();
 
                     AuditLog::record(
                         actorType: 'USER',
                         actorId: $lockedUser->id,
-                        action:
-                            'DEVICE_LIMIT_BLOCKED',
-                        module:
-                            'DEVICE_SECURITY',
-                        targetType:
-                            'USER_DEVICE',
-                        targetId:
-                            $occupiedDevice->id,
+                        action: 'DEVICE_LIMIT_BLOCKED',
+                        module: 'DEVICE_SECURITY',
+                        targetType: 'USER_DEVICE',
+                        targetId: $occupiedDevice?->id,
                         newValues: [
                             'slot' => $slot,
-                            'platform' =>
-                                $platform,
+                            'platform' => $platform,
+                            'limit' => $slotLimit,
+                            'active_count' => $activeSlotDevices->count(),
                         ],
-                        ipAddress:
-                            $ipAddress,
-                        userAgent:
-                            $userAgent
+                        ipAddress: $ipAddress,
+                        userAgent: $userAgent
                     );
 
-
                     throw new DeviceSecurityException(
-                        errorCode:
-                            'DEVICE_LIMIT_REACHED',
+                        errorCode: 'DEVICE_LIMIT_REACHED',
 
-                        message:
-                            "The {$slot} device slot is already occupied.",
+                        message: "The {$slot} device limit of {$slotLimit} active device(s) has been reached.",
 
                         context: [
                             'slot' => $slot,
 
-                            'current_device_id' =>
-                                $occupiedDevice->id,
+                            'limit' => $slotLimit,
 
-                            'current_device_name' =>
-                                $occupiedDevice
-                                    ->device_name,
+                            'active_count' => $activeSlotDevices->count(),
 
-                            'current_platform' =>
-                                $occupiedDevice
-                                    ->platform,
+                            'current_device_id' => $occupiedDevice?->id,
 
-                            'registered_at' =>
-                                optional(
-                                    $occupiedDevice
-                                        ->registered_at
-                                )?->toISOString(),
+                            'current_device_name' => $occupiedDevice?->device_name,
+
+                            'current_platform' => $occupiedDevice?->platform,
+
+                            'registered_at' => optional(
+                                $occupiedDevice?->registered_at
+                            )?->toISOString(),
                         ]
                     );
                 }
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -294,28 +272,23 @@ class UserDeviceSecurityService
 
                         'platform' => $platform,
 
-                        'device_name' =>
-                            $deviceData[
+                        'device_name' => $deviceData[
                                 'device_name'
                             ] ?? null,
 
-                        'device_model' =>
-                            $deviceData[
+                        'device_model' => $deviceData[
                                 'device_model'
                             ] ?? null,
 
-                        'os_version' =>
-                            $deviceData[
+                        'os_version' => $deviceData[
                                 'os_version'
                             ] ?? null,
 
-                        'app_version' =>
-                            $deviceData[
+                        'app_version' => $deviceData[
                                 'app_version'
                             ] ?? null,
 
-                        'device_public_key' =>
-                            $deviceData[
+                        'device_public_key' => $deviceData[
                                 'device_public_key'
                             ] ?? null,
 
@@ -331,17 +304,14 @@ class UserDeviceSecurityService
 
                         'last_login_at' => null,
 
-                        'last_login_ip' =>
-                            $ipAddress,
+                        'last_login_ip' => $ipAddress,
 
                         'revoked_at' => null,
 
-                        'revoked_by_admin_id' =>
-                            null,
+                        'revoked_by_admin_id' => null,
 
                         'revoke_reason' => null,
                     ]);
-
 
                     $device =
                         $existingDevice->fresh();
@@ -359,68 +329,51 @@ class UserDeviceSecurityService
 
                     $device =
                         UserDevice::create([
-                            'uuid' =>
-                                Str::uuid()
-                                    ->toString(),
+                            'uuid' => Str::uuid()
+                                ->toString(),
 
-                            'user_id' =>
-                                $lockedUser->id,
+                            'user_id' => $lockedUser->id,
 
-                            'device_slot' =>
-                                $slot,
+                            'device_slot' => $slot,
 
-                            'platform' =>
-                                $platform,
+                            'platform' => $platform,
 
-                            'device_name' =>
-                                $deviceData[
+                            'device_name' => $deviceData[
                                     'device_name'
                                 ] ?? null,
 
-                            'device_model' =>
-                                $deviceData[
+                            'device_model' => $deviceData[
                                     'device_model'
                                 ] ?? null,
 
-                            'os_version' =>
-                                $deviceData[
+                            'os_version' => $deviceData[
                                     'os_version'
                                 ] ?? null,
 
-                            'app_version' =>
-                                $deviceData[
+                            'app_version' => $deviceData[
                                     'app_version'
                                 ] ?? null,
 
-                            'installation_id_hash' =>
-                                $installationHash,
+                            'installation_id_hash' => $installationHash,
 
-                            'device_public_key' =>
-                                $deviceData[
+                            'device_public_key' => $deviceData[
                                     'device_public_key'
                                 ] ?? null,
 
-                            'is_trusted' =>
-                                false,
+                            'is_trusted' => false,
 
-                            'is_active' =>
-                                true,
+                            'is_active' => true,
 
-                            'registered_at' =>
-                                now(),
+                            'registered_at' => now(),
 
-                            'last_seen_at' =>
-                                now(),
+                            'last_seen_at' => now(),
 
-                            'last_login_ip' =>
-                                $ipAddress,
+                            'last_login_ip' => $ipAddress,
                         ]);
-
 
                     $auditAction =
                         'DEVICE_REGISTERED';
                 }
-
 
                 AuditLog::record(
                     actorType: 'USER',
@@ -430,21 +383,15 @@ class UserDeviceSecurityService
                     targetType: 'USER_DEVICE',
                     targetId: $device->id,
                     newValues: [
-                        'slot' =>
-                            $device->device_slot,
+                        'slot' => $device->device_slot,
 
-                        'platform' =>
-                            $device->platform,
+                        'platform' => $device->platform,
 
-                        'device_name' =>
-                            $device->device_name,
+                        'device_name' => $device->device_name,
                     ],
-                    ipAddress:
-                        $ipAddress,
-                    userAgent:
-                        $userAgent
+                    ipAddress: $ipAddress,
+                    userAgent: $userAgent
                 );
-
 
                 return $device;
             },
@@ -452,6 +399,29 @@ class UserDeviceSecurityService
         );
     }
 
+    private function activeDeviceLimit(
+        string $slot
+    ): int {
+        return match ($slot) {
+            UserDevice::SLOT_MOBILE => max(
+                0,
+                (int) config(
+                    'tradex_mobile_security.customer_devices.mobile_active_limit',
+                    2
+                )
+            ),
+
+            UserDevice::SLOT_DESKTOP => max(
+                0,
+                (int) config(
+                    'tradex_mobile_security.customer_devices.desktop_active_limit',
+                    1
+                )
+            ),
+
+            default => 0,
+        };
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -480,7 +450,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-
                 if (
                     ! $lockedDevice->is_active
                     ||
@@ -488,19 +457,15 @@ class UserDeviceSecurityService
                 ) {
 
                     throw new DeviceSecurityException(
-                        errorCode:
-                            'DEVICE_REVOKED',
+                        errorCode: 'DEVICE_REVOKED',
 
-                        message:
-                            'A revoked device cannot be trusted.'
+                        message: 'A revoked device cannot be trusted.'
                     );
                 }
-
 
                 if ($lockedDevice->is_trusted) {
                     return $lockedDevice;
                 }
-
 
                 $lockedDevice->update([
                     'is_trusted' => true,
@@ -510,42 +475,31 @@ class UserDeviceSecurityService
                     'last_seen_at' => now(),
                 ]);
 
-
                 AuditLog::record(
                     actorType: 'USER',
 
-                    actorId:
-                        $lockedDevice->user_id,
+                    actorId: $lockedDevice->user_id,
 
-                    action:
-                        'DEVICE_TRUSTED',
+                    action: 'DEVICE_TRUSTED',
 
-                    module:
-                        'DEVICE_SECURITY',
+                    module: 'DEVICE_SECURITY',
 
-                    targetType:
-                        'USER_DEVICE',
+                    targetType: 'USER_DEVICE',
 
-                    targetId:
-                        $lockedDevice->id,
+                    targetId: $lockedDevice->id,
 
                     newValues: [
-                        'slot' =>
-                            $lockedDevice
-                                ->device_slot,
+                        'slot' => $lockedDevice
+                            ->device_slot,
 
-                        'platform' =>
-                            $lockedDevice
-                                ->platform,
+                        'platform' => $lockedDevice
+                            ->platform,
                     ],
 
-                    ipAddress:
-                        $ipAddress,
+                    ipAddress: $ipAddress,
 
-                    userAgent:
-                        $userAgent
+                    userAgent: $userAgent
                 );
-
 
                 return $lockedDevice
                     ->fresh();
@@ -553,7 +507,6 @@ class UserDeviceSecurityService
             3
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -596,7 +549,6 @@ class UserDeviceSecurityService
                 $installationId
             );
 
-
         return DB::transaction(
             function () use (
                 $user,
@@ -614,7 +566,6 @@ class UserDeviceSecurityService
                         ->whereKey($user->id)
                         ->lockForUpdate()
                         ->firstOrFail();
-
 
                 $currentDevice =
                     UserDevice::query()
@@ -636,7 +587,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->first();
 
-
                 /*
                  * If exact same installation is already
                  * active, replacement is unnecessary.
@@ -657,10 +607,8 @@ class UserDeviceSecurityService
                     return $currentDevice;
                 }
 
-
                 $oldDeviceId =
                     $currentDevice?->id;
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -671,17 +619,13 @@ class UserDeviceSecurityService
                 if ($currentDevice) {
 
                     $this->revokeLockedDevice(
-                        device:
-                            $currentDevice,
+                        device: $currentDevice,
 
-                        reason:
-                            $reason,
+                        reason: $reason,
 
-                        adminId:
-                            null
+                        adminId: null
                     );
                 }
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -702,38 +646,30 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->first();
 
-
                 if ($newDevice) {
 
                     $newDevice->update([
-                        'device_slot' =>
-                            $slot,
+                        'device_slot' => $slot,
 
-                        'platform' =>
-                            $platform,
+                        'platform' => $platform,
 
-                        'device_name' =>
-                            $newDeviceData[
+                        'device_name' => $newDeviceData[
                                 'device_name'
                             ] ?? null,
 
-                        'device_model' =>
-                            $newDeviceData[
+                        'device_model' => $newDeviceData[
                                 'device_model'
                             ] ?? null,
 
-                        'os_version' =>
-                            $newDeviceData[
+                        'os_version' => $newDeviceData[
                                 'os_version'
                             ] ?? null,
 
-                        'app_version' =>
-                            $newDeviceData[
+                        'app_version' => $newDeviceData[
                                 'app_version'
                             ] ?? null,
 
-                        'device_public_key' =>
-                            $newDeviceData[
+                        'device_public_key' => $newDeviceData[
                                 'device_public_key'
                             ] ?? null,
 
@@ -742,144 +678,105 @@ class UserDeviceSecurityService
                          * complete trust verification.
                          */
 
-                        'is_trusted' =>
-                            false,
+                        'is_trusted' => false,
 
-                        'is_active' =>
-                            true,
+                        'is_active' => true,
 
-                        'registered_at' =>
-                            now(),
+                        'registered_at' => now(),
 
-                        'trusted_at' =>
-                            null,
+                        'trusted_at' => null,
 
-                        'last_seen_at' =>
-                            now(),
+                        'last_seen_at' => now(),
 
-                        'last_login_at' =>
-                            null,
+                        'last_login_at' => null,
 
-                        'last_login_ip' =>
-                            $ipAddress,
+                        'last_login_ip' => $ipAddress,
 
-                        'revoked_at' =>
-                            null,
+                        'revoked_at' => null,
 
-                        'revoked_by_admin_id' =>
-                            null,
+                        'revoked_by_admin_id' => null,
 
-                        'revoke_reason' =>
-                            null,
+                        'revoke_reason' => null,
                     ]);
 
                 } else {
 
                     $newDevice =
                         UserDevice::create([
-                            'uuid' =>
-                                Str::uuid()
-                                    ->toString(),
+                            'uuid' => Str::uuid()
+                                ->toString(),
 
-                            'user_id' =>
-                                $lockedUser->id,
+                            'user_id' => $lockedUser->id,
 
-                            'device_slot' =>
-                                $slot,
+                            'device_slot' => $slot,
 
-                            'platform' =>
-                                $platform,
+                            'platform' => $platform,
 
-                            'device_name' =>
-                                $newDeviceData[
+                            'device_name' => $newDeviceData[
                                     'device_name'
                                 ] ?? null,
 
-                            'device_model' =>
-                                $newDeviceData[
+                            'device_model' => $newDeviceData[
                                     'device_model'
                                 ] ?? null,
 
-                            'os_version' =>
-                                $newDeviceData[
+                            'os_version' => $newDeviceData[
                                     'os_version'
                                 ] ?? null,
 
-                            'app_version' =>
-                                $newDeviceData[
+                            'app_version' => $newDeviceData[
                                     'app_version'
                                 ] ?? null,
 
-                            'installation_id_hash' =>
-                                $installationHash,
+                            'installation_id_hash' => $installationHash,
 
-                            'device_public_key' =>
-                                $newDeviceData[
+                            'device_public_key' => $newDeviceData[
                                     'device_public_key'
                                 ] ?? null,
 
-                            'is_trusted' =>
-                                false,
+                            'is_trusted' => false,
 
-                            'is_active' =>
-                                true,
+                            'is_active' => true,
 
-                            'registered_at' =>
-                                now(),
+                            'registered_at' => now(),
 
-                            'last_seen_at' =>
-                                now(),
+                            'last_seen_at' => now(),
 
-                            'last_login_ip' =>
-                                $ipAddress,
+                            'last_login_ip' => $ipAddress,
                         ]);
                 }
-
 
                 AuditLog::record(
                     actorType: 'USER',
 
-                    actorId:
-                        $lockedUser->id,
+                    actorId: $lockedUser->id,
 
-                    action:
-                        'DEVICE_REPLACED',
+                    action: 'DEVICE_REPLACED',
 
-                    module:
-                        'DEVICE_SECURITY',
+                    module: 'DEVICE_SECURITY',
 
-                    targetType:
-                        'USER_DEVICE',
+                    targetType: 'USER_DEVICE',
 
-                    targetId:
-                        $newDevice->id,
+                    targetId: $newDevice->id,
 
                     oldValues: [
-                        'old_device_id' =>
-                            $oldDeviceId,
+                        'old_device_id' => $oldDeviceId,
 
-                        'slot' =>
-                            $slot,
+                        'slot' => $slot,
                     ],
 
                     newValues: [
-                        'new_device_id' =>
-                            $newDevice->id,
+                        'new_device_id' => $newDevice->id,
 
-                        'platform' =>
-                            $platform,
+                        'platform' => $platform,
 
-                        'reason' =>
-                            $reason,
+                        'reason' => $reason,
                     ],
 
-                    ipAddress:
-                        $ipAddress,
+                    ipAddress: $ipAddress,
 
-                    userAgent:
-                        $userAgent
+                    userAgent: $userAgent
                 );
-
 
                 return $newDevice
                     ->fresh();
@@ -887,7 +784,6 @@ class UserDeviceSecurityService
             3
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -925,7 +821,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-
                 $lockedDevice =
                     UserDevice::query()
                         ->whereKey(
@@ -938,70 +833,52 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-
                 if ($lockedDevice->isRevoked()) {
                     return;
                 }
 
-
                 $this->revokeLockedDevice(
-                    device:
-                        $lockedDevice,
+                    device: $lockedDevice,
 
-                    reason:
-                        $reason,
+                    reason: $reason,
 
-                    adminId:
-                        $admin?->id
+                    adminId: $admin?->id
                 );
 
-
                 AuditLog::record(
-                    actorType:
-                        $admin
+                    actorType: $admin
                             ? 'ADMIN'
                             : 'USER',
 
-                    actorId:
-                        $admin?->id
+                    actorId: $admin?->id
                         ?? $lockedUser->id,
 
-                    action:
-                        'DEVICE_REVOKED',
+                    action: 'DEVICE_REVOKED',
 
-                    module:
-                        'DEVICE_SECURITY',
+                    module: 'DEVICE_SECURITY',
 
-                    targetType:
-                        'USER_DEVICE',
+                    targetType: 'USER_DEVICE',
 
-                    targetId:
-                        $lockedDevice->id,
+                    targetId: $lockedDevice->id,
 
                     newValues: [
-                        'slot' =>
-                            $lockedDevice
-                                ->device_slot,
+                        'slot' => $lockedDevice
+                            ->device_slot,
 
-                        'platform' =>
-                            $lockedDevice
-                                ->platform,
+                        'platform' => $lockedDevice
+                            ->platform,
 
-                        'reason' =>
-                            $reason,
+                        'reason' => $reason,
                     ],
 
-                    ipAddress:
-                        $ipAddress,
+                    ipAddress: $ipAddress,
 
-                    userAgent:
-                        $userAgent
+                    userAgent: $userAgent
                 );
             },
             3
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1032,7 +909,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-
                 $devices =
                     UserDevice::query()
                         ->where(
@@ -1049,7 +925,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->get();
 
-
                 foreach ($devices as $device) {
 
                     $this->revokeLockedDevice(
@@ -1061,46 +936,35 @@ class UserDeviceSecurityService
                     );
                 }
 
-
                 AuditLog::record(
                     actorType: 'ADMIN',
 
                     actorId: $admin->id,
 
-                    action:
-                        'DEVICE_SLOTS_RESET',
+                    action: 'DEVICE_SLOTS_RESET',
 
-                    module:
-                        'DEVICE_SECURITY',
+                    module: 'DEVICE_SECURITY',
 
-                    targetType:
-                        'USER',
+                    targetType: 'USER',
 
-                    targetId:
-                        $lockedUser->id,
+                    targetId: $lockedUser->id,
 
                     newValues: [
-                        'revoked_device_count' =>
-                            $devices->count(),
+                        'revoked_device_count' => $devices->count(),
 
-                        'reason' =>
-                            $reason,
+                        'reason' => $reason,
                     ],
 
-                    ipAddress:
-                        $ipAddress,
+                    ipAddress: $ipAddress,
 
-                    userAgent:
-                        $userAgent
+                    userAgent: $userAgent
                 );
-
 
                 return $devices->count();
             },
             3
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1150,7 +1014,6 @@ class UserDeviceSecurityService
                         ->lockForUpdate()
                         ->firstOrFail();
 
-
                 /*
                 |--------------------------------------------------------------------------
                 | Stable Revocation Timestamp
@@ -1158,7 +1021,6 @@ class UserDeviceSecurityService
                 */
 
                 $revokedAt = now();
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1180,7 +1042,6 @@ class UserDeviceSecurityService
                             'id'
                         );
 
-
                 /*
                 |--------------------------------------------------------------------------
                 | Count Currently Active Sessions
@@ -1193,7 +1054,6 @@ class UserDeviceSecurityService
                 */
 
                 $activeSessionCount = 0;
-
 
                 if ($tokenIds->isNotEmpty()) {
 
@@ -1210,7 +1070,6 @@ class UserDeviceSecurityService
                             )
                             ->count();
 
-
                     /*
                     |--------------------------------------------------------------------------
                     | Revoke Snapshot
@@ -1226,17 +1085,13 @@ class UserDeviceSecurityService
                             'revoked_at'
                         )
                         ->update([
-                            'revoked_at' =>
-                                $revokedAt,
+                            'revoked_at' => $revokedAt,
 
-                            'revoke_reason' =>
-                                $reason,
+                            'revoke_reason' => $reason,
 
-                            'updated_at' =>
-                                $revokedAt,
+                            'updated_at' => $revokedAt,
                         ]);
                 }
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -1245,52 +1100,39 @@ class UserDeviceSecurityService
                 */
 
                 AuditLog::record(
-                    actorType:
-                        $admin
+                    actorType: $admin
                             ? 'ADMIN'
                             : 'USER',
 
-                    actorId:
-                        $admin?->id
+                    actorId: $admin?->id
                         ?? $lockedUser->id,
 
-                    action:
-                        'USER_SESSIONS_REVOKED',
+                    action: 'USER_SESSIONS_REVOKED',
 
-                    module:
-                        'DEVICE_SECURITY',
+                    module: 'DEVICE_SECURITY',
 
-                    targetType:
-                        'USER',
+                    targetType: 'USER',
 
-                    targetId:
-                        $lockedUser->id,
+                    targetId: $lockedUser->id,
 
                     newValues: [
-                        'revoked_sessions' =>
-                            $activeSessionCount,
+                        'revoked_sessions' => $activeSessionCount,
 
-                        'revoked_refresh_tokens_total' =>
-                            $tokenIds->count(),
+                        'revoked_refresh_tokens_total' => $tokenIds->count(),
 
-                        'reason' =>
-                            $reason,
+                        'reason' => $reason,
                     ],
 
-                    ipAddress:
-                        $ipAddress,
+                    ipAddress: $ipAddress,
 
-                    userAgent:
-                        $userAgent
+                    userAgent: $userAgent
                 );
-
 
                 return $activeSessionCount;
             },
             3
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1309,7 +1151,6 @@ class UserDeviceSecurityService
                     $installationId
                 )
             );
-
 
         return UserDevice::query()
             ->where(
@@ -1334,7 +1175,6 @@ class UserDeviceSecurityService
             ->first();
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Internal Device Revoke
@@ -1355,24 +1195,17 @@ class UserDeviceSecurityService
 
         $revokedAt = now();
 
-
         $device->update([
-            'is_active' =>
-                false,
+            'is_active' => false,
 
-            'is_trusted' =>
-                false,
+            'is_trusted' => false,
 
-            'revoked_at' =>
-                $revokedAt,
+            'revoked_at' => $revokedAt,
 
-            'revoked_by_admin_id' =>
-                $adminId,
+            'revoked_by_admin_id' => $adminId,
 
-            'revoke_reason' =>
-                $reason,
+            'revoke_reason' => $reason,
         ]);
-
 
         /*
         |--------------------------------------------------------------------------
@@ -1394,18 +1227,14 @@ class UserDeviceSecurityService
                 'revoked_at'
             )
             ->update([
-                'revoked_at' =>
-                    $revokedAt,
+                'revoked_at' => $revokedAt,
 
-                'revoke_reason' =>
-                    'DEVICE_REVOKED: '
-                    . $reason,
+                'revoke_reason' => 'DEVICE_REVOKED: '
+                    .$reason,
 
-                'updated_at' =>
-                    $revokedAt,
+                'updated_at' => $revokedAt,
             ]);
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1424,37 +1253,25 @@ class UserDeviceSecurityService
         return match ($platform) {
 
             UserDevice::PLATFORM_ANDROID,
-            UserDevice::PLATFORM_IOS
-                =>
-                UserDevice::SLOT_MOBILE,
-
+            UserDevice::PLATFORM_IOS => UserDevice::SLOT_MOBILE,
 
             UserDevice::PLATFORM_WINDOWS,
             UserDevice::PLATFORM_MACOS,
-            UserDevice::PLATFORM_WEB
-                =>
-                UserDevice::SLOT_DESKTOP,
+            UserDevice::PLATFORM_WEB => UserDevice::SLOT_DESKTOP,
 
+            default => throw new DeviceSecurityException(
+                errorCode: 'INVALID_DEVICE_PLATFORM',
 
-            default =>
-                throw new DeviceSecurityException(
-                    errorCode:
-                        'INVALID_DEVICE_PLATFORM',
+                message: 'Unsupported device platform.',
 
-                    message:
-                        'Unsupported device platform.',
+                context: [
+                    'platform' => $platform,
+                ],
 
-                    context: [
-                        'platform' =>
-                            $platform,
-                    ],
-
-                    httpStatus:
-                        422
-                ),
+                httpStatus: 422
+            ),
         };
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1469,22 +1286,17 @@ class UserDeviceSecurityService
         if (! is_string($platform)) {
 
             throw new DeviceSecurityException(
-                errorCode:
-                    'INVALID_DEVICE_PLATFORM',
+                errorCode: 'INVALID_DEVICE_PLATFORM',
 
-                message:
-                    'Device platform is required.',
+                message: 'Device platform is required.',
 
-                httpStatus:
-                    422
+                httpStatus: 422
             );
         }
-
 
         $platform = strtoupper(
             trim($platform)
         );
-
 
         $allowed = [
             UserDevice::PLATFORM_ANDROID,
@@ -1493,7 +1305,6 @@ class UserDeviceSecurityService
             UserDevice::PLATFORM_MACOS,
             UserDevice::PLATFORM_WEB,
         ];
-
 
         if (
             ! in_array(
@@ -1504,26 +1315,20 @@ class UserDeviceSecurityService
         ) {
 
             throw new DeviceSecurityException(
-                errorCode:
-                    'INVALID_DEVICE_PLATFORM',
+                errorCode: 'INVALID_DEVICE_PLATFORM',
 
-                message:
-                    'Unsupported device platform.',
+                message: 'Unsupported device platform.',
 
                 context: [
-                    'platform' =>
-                        $platform,
+                    'platform' => $platform,
                 ],
 
-                httpStatus:
-                    422
+                httpStatus: 422
             );
         }
 
-
         return $platform;
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1538,27 +1343,21 @@ class UserDeviceSecurityService
         if (! is_string($installationId)) {
 
             throw new DeviceSecurityException(
-                errorCode:
-                    'INVALID_INSTALLATION_ID',
+                errorCode: 'INVALID_INSTALLATION_ID',
 
-                message:
-                    'Device installation ID is required.',
+                message: 'Device installation ID is required.',
 
-                httpStatus:
-                    422
+                httpStatus: 422
             );
         }
 
-
         $installationId =
             trim($installationId);
-
 
         $length =
             strlen(
                 $installationId
             );
-
 
         if (
             $length < 16
@@ -1567,21 +1366,16 @@ class UserDeviceSecurityService
         ) {
 
             throw new DeviceSecurityException(
-                errorCode:
-                    'INVALID_INSTALLATION_ID',
+                errorCode: 'INVALID_INSTALLATION_ID',
 
-                message:
-                    'The device installation ID is invalid.',
+                message: 'The device installation ID is invalid.',
 
-                httpStatus:
-                    422
+                httpStatus: 422
             );
         }
 
-
         return $installationId;
     }
-
 
     /*
     |--------------------------------------------------------------------------

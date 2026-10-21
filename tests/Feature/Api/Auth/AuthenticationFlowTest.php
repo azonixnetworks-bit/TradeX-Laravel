@@ -169,23 +169,28 @@ class AuthenticationFlowTest extends TestCase
             );
     }
 
-    public function test_second_mobile_installation_is_blocked_when_mobile_slot_is_occupied(): void
+    public function test_third_mobile_installation_is_blocked_when_two_mobile_slots_are_occupied(): void
     {
         $user = $this->createTotpUser();
 
-        $user->devices()->create([
-            'uuid' => (string) Str::uuid(),
-            'device_slot' => UserDevice::SLOT_MOBILE,
-            'platform' => UserDevice::PLATFORM_ANDROID,
-            'installation_id_hash' => hash(
-                'sha256',
-                (string) Str::uuid()
-            ),
-            'is_trusted' => true,
-            'is_active' => true,
-            'registered_at' => now(),
-            'trusted_at' => now(),
-        ]);
+        foreach ([
+            UserDevice::PLATFORM_ANDROID,
+            UserDevice::PLATFORM_IOS,
+        ] as $platform) {
+            $user->devices()->create([
+                'uuid' => (string) Str::uuid(),
+                'device_slot' => UserDevice::SLOT_MOBILE,
+                'platform' => $platform,
+                'installation_id_hash' => hash(
+                    'sha256',
+                    (string) Str::uuid()
+                ),
+                'is_trusted' => true,
+                'is_active' => true,
+                'registered_at' => now(),
+                'trusted_at' => now(),
+            ]);
+        }
 
         $this
             ->postJson(
@@ -197,7 +202,7 @@ class AuthenticationFlowTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath(
                 'error.code',
-                'DEVICE_SLOT_OCCUPIED'
+                'DEVICE_LIMIT_REACHED'
             );
     }
 

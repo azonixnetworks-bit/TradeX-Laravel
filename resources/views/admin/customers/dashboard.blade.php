@@ -33,6 +33,30 @@
     </div>
 </div>
 
+<section class="panel user-filter-panel" style="margin-bottom:18px;">
+    <form
+        method="GET"
+        action="{{ route('admin.users.index') }}"
+        class="user-filter-form"
+    >
+        <div class="filter-search" style="flex:1 1 420px;">
+            <label for="customer-search">Find a Customer</label>
+            <input
+                id="customer-search"
+                type="search"
+                name="search"
+                value="{{ request('search') }}"
+                placeholder="Search by name, email, mobile number or referral code"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="filter-actions">
+            <button type="submit" class="primary-btn">Search Customer</button>
+        </div>
+    </form>
+</section>
+
 <div class="user-stat-grid">
     <div class="user-stat-card">
         <span>Total Customers</span>

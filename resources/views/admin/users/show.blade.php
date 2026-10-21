@@ -1133,6 +1133,87 @@
         </section>
 
 
+        {{-- FINANCIAL / WITHDRAWAL DETAILS --}}
+
+        <section class="panel user-detail-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <div class="panel-eyebrow">
+                        FINANCIAL PROFILE
+                    </div>
+
+                    <h2>
+                        Withdrawal & Bank Details
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="user-info-list">
+
+                <div class="user-info-row">
+                    <span>PayPal Email</span>
+                    <strong>{{ $user->profile?->paypal_email ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Binance Email</span>
+                    <strong>{{ $user->profile?->binance_email ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>USDT TRC20 Address</span>
+                    <strong class="user-mono" style="overflow-wrap:anywhere;">
+                        {{ $user->profile?->usdt_trc20_address ?? 'Not configured' }}
+                    </strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Bank Name</span>
+                    <strong>{{ $user->profile?->bank_name ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Bank Branch</span>
+                    <strong>{{ $user->profile?->bank_branch ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Account Holder</span>
+                    <strong>{{ $user->profile?->bank_account_holder ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Bank Account Number</span>
+                    <strong class="user-mono">
+                        {{ $user->profile?->bank_account_number ?? 'Not configured' }}
+                    </strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Telegram</span>
+                    <strong>{{ $user->profile?->telegram_username ?? 'Not configured' }}</strong>
+                </div>
+
+                <div class="user-info-row">
+                    <span>Financial Details Updated</span>
+                    <strong>
+                        {{ $user->profile?->financial_updated_at
+                            ? $user->profile->financial_updated_at->format('d M Y H:i')
+                            : 'Never' }}
+                    </strong>
+                </div>
+
+            </div>
+
+        </section>
+
+
         {{-- ====================================================
              DEVICE SECURITY
         ===================================================== --}}
@@ -1140,15 +1221,18 @@
         @if($canViewDevices)
 
             @php
-                $activeMobileDevice =
-                    $devices->first(
+                $activeMobileDevices =
+                    $devices->filter(
                         fn ($device) =>
                             $device->device_slot === 'MOBILE'
                             &&
                             $device->is_active
                             &&
                             $device->revoked_at === null
-                    );
+                    )->values();
+
+                $activeMobileDevice =
+                    $activeMobileDevices->first();
 
                 $activeDesktopDevice =
                     $devices->first(
@@ -1161,7 +1245,7 @@
                     );
 
                 $hasActiveDevice =
-                    $activeMobileDevice
+                    $activeMobileDevices->isNotEmpty()
                     ||
                     $activeDesktopDevice;
             @endphp
@@ -1184,7 +1268,7 @@
                     </div>
 
                     <span class="device-limit-badge">
-                        1 MOBILE + 1 DESKTOP
+                        2 MOBILE + 1 DESKTOP
                     </span>
 
                 </div>
@@ -1210,10 +1294,7 @@
                                 </span>
 
                                 <strong>
-                                    {{ $activeMobileDevice
-                                        ? 'Occupied'
-                                        : 'Available'
-                                    }}
+                                    {{ $activeMobileDevices->count() }} / 2 Active
                                 </strong>
 
                             </div>
@@ -1592,6 +1673,79 @@
     </div>
 
 </div>
+
+
+{{-- ============================================================
+     DIRECT REFERRAL CUSTOMERS
+============================================================ --}}
+
+<section class="panel users-panel" style="margin-bottom:18px;">
+
+    <div class="panel-header">
+
+        <div>
+            <div class="panel-eyebrow">AFFILIATE NETWORK</div>
+            <h2>Direct Referral Customers</h2>
+        </div>
+
+        <div class="panel-count">
+            {{ number_format($referralCustomers->count()) }} customers
+        </div>
+
+    </div>
+
+    <div class="users-table-wrap">
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Mobile Number</th>
+                    <th>Referral Code</th>
+                    <th>Account</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($referralCustomers as $referralCustomer)
+                <tr>
+                    <td>
+                        <div class="user-contact">
+                            <strong>{{ $referralCustomer->name }}</strong>
+                            <span>{{ $referralCustomer->email }}</span>
+                        </div>
+                    </td>
+                    <td>{{ $referralCustomer->whatsapp_number ?? '—' }}</td>
+                    <td>
+                        <code class="referral-code">
+                            {{ $referralCustomer->referral_code ?? '—' }}
+                        </code>
+                    </td>
+                    <td>{{ $referralCustomer->account_type }}</td>
+                    <td>{{ $referralCustomer->status }}</td>
+                    <td>{{ $referralCustomer->created_at?->format('d M Y H:i') ?? '—' }}</td>
+                    <td>
+                        <a
+                            class="table-action"
+                            href="{{ route('admin.users.show', $referralCustomer) }}"
+                            title="View referred customer"
+                        >→</a>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" class="users-empty">
+                        <strong>No direct referrals</strong>
+                        <span>This customer has not referred another registered customer yet.</span>
+                    </td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+
+</section>
 
 
 {{-- ============================================================

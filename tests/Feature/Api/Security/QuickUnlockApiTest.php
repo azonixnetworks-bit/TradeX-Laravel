@@ -42,6 +42,10 @@ class QuickUnlockApiTest extends TestCase
                 4
             )
             ->assertJsonPath(
+                'data.policy.background_lock_seconds',
+                1800
+            )
+            ->assertJsonPath(
                 'data.policy.pin_transport',
                 'NEVER_SEND_TO_SERVER'
             )

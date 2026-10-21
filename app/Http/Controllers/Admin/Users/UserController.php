@@ -43,7 +43,6 @@ class UserController extends Controller
             'users.view'
         );
 
-
         $filters =
             $request->validated();
 
@@ -96,7 +95,6 @@ class UserController extends Controller
             )
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | Users Query
@@ -123,7 +121,6 @@ class UserController extends Controller
                     'created_at',
                 ]);
 
-
         /*
         |--------------------------------------------------------------------------
         | ADMIN-20 — Customer Segment
@@ -135,46 +132,39 @@ class UserController extends Controller
         */
 
         match ($segment) {
-            'PENDING' =>
-                $query->where(
-                    'status',
-                    'PENDING'
-                ),
+            'PENDING' => $query->where(
+                'status',
+                'PENDING'
+            ),
 
-            'FREE' =>
-                $query->where(
-                    'account_type',
-                    'FREE'
-                ),
+            'FREE' => $query->where(
+                'account_type',
+                'FREE'
+            ),
 
-            'PREMIUM' =>
-                $query->where(
-                    'account_type',
-                    'PREMIUM'
-                ),
+            'PREMIUM' => $query->where(
+                'account_type',
+                'PREMIUM'
+            ),
 
-            'RESTRICTED' =>
-                $query->whereIn(
-                    'status',
-                    [
-                        'SUSPENDED',
-                        'BLOCKED',
-                    ]
-                ),
+            'RESTRICTED' => $query->whereIn(
+                'status',
+                [
+                    'SUSPENDED',
+                    'BLOCKED',
+                ]
+            ),
 
-            'RECENT' =>
-                $query->where(
-                    'created_at',
-                    '>=',
-                    now()->subDays(
-                        $recentDays
-                    )
-                ),
+            'RECENT' => $query->where(
+                'created_at',
+                '>=',
+                now()->subDays(
+                    $recentDays
+                )
+            ),
 
-            default =>
-                null,
+            default => null,
         };
-
 
         /*
         |--------------------------------------------------------------------------
@@ -194,29 +184,29 @@ class UserController extends Controller
                             'name',
                             'like',
                             '%'
-                            . $search
-                            . '%'
+                            .$search
+                            .'%'
                         )
                         ->orWhere(
                             'email',
                             'like',
                             '%'
-                            . $search
-                            . '%'
+                            .$search
+                            .'%'
                         )
                         ->orWhere(
                             'whatsapp_number',
                             'like',
                             '%'
-                            . $search
-                            . '%'
+                            .$search
+                            .'%'
                         )
                         ->orWhere(
                             'referral_code',
                             'like',
                             '%'
-                            . $search
-                            . '%'
+                            .$search
+                            .'%'
                         )
                         ->orWhere(
                             'uuid',
@@ -225,7 +215,6 @@ class UserController extends Controller
                 }
             );
         }
-
 
         /*
         |--------------------------------------------------------------------------
@@ -241,7 +230,6 @@ class UserController extends Controller
             );
         }
 
-
         if ($status) {
 
             $query->where(
@@ -249,7 +237,6 @@ class UserController extends Controller
                 $status
             );
         }
-
 
         if ($country) {
 
@@ -259,7 +246,6 @@ class UserController extends Controller
             );
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | Sorting
@@ -268,31 +254,26 @@ class UserController extends Controller
 
         match ($sort) {
 
-            'oldest' =>
-                $query->orderBy(
-                    'created_at',
-                    'asc'
-                ),
+            'oldest' => $query->orderBy(
+                'created_at',
+                'asc'
+            ),
 
-            'name_asc' =>
-                $query->orderBy(
-                    'name',
-                    'asc'
-                ),
+            'name_asc' => $query->orderBy(
+                'name',
+                'asc'
+            ),
 
-            'name_desc' =>
-                $query->orderBy(
-                    'name',
-                    'desc'
-                ),
+            'name_desc' => $query->orderBy(
+                'name',
+                'desc'
+            ),
 
-            default =>
-                $query->orderBy(
-                    'created_at',
-                    'desc'
-                ),
+            default => $query->orderBy(
+                'created_at',
+                'desc'
+            ),
         };
-
 
         /*
         |--------------------------------------------------------------------------
@@ -307,7 +288,6 @@ class UserController extends Controller
                 )
                 ->withQueryString();
 
-
         /*
         |--------------------------------------------------------------------------
         | Summary Cards
@@ -316,38 +296,32 @@ class UserController extends Controller
 
         $stats = [
 
-            'total' =>
-                User::count(),
+            'total' => User::count(),
 
-            'active' =>
-                User::where(
-                    'status',
-                    'ACTIVE'
-                )->count(),
+            'active' => User::where(
+                'status',
+                'ACTIVE'
+            )->count(),
 
-            'free' =>
-                User::where(
-                    'account_type',
-                    'FREE'
-                )->count(),
+            'free' => User::where(
+                'account_type',
+                'FREE'
+            )->count(),
 
-            'premium' =>
-                User::where(
-                    'account_type',
-                    'PREMIUM'
-                )->count(),
+            'premium' => User::where(
+                'account_type',
+                'PREMIUM'
+            )->count(),
 
-            'suspended' =>
-                User::where(
-                    'status',
-                    'SUSPENDED'
-                )->count(),
+            'suspended' => User::where(
+                'status',
+                'SUSPENDED'
+            )->count(),
 
-            'blocked' =>
-                User::where(
-                    'status',
-                    'BLOCKED'
-                )->count(),
+            'blocked' => User::where(
+                'status',
+                'BLOCKED'
+            )->count(),
         ];
 
         $segmentLabel = match ($segment) {
@@ -358,7 +332,6 @@ class UserController extends Controller
             'RECENT' => 'Recently Joined',
             default => 'All Customers',
         };
-
 
         return view(
             'admin.users.index',
@@ -372,7 +345,6 @@ class UserController extends Controller
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -398,7 +370,6 @@ class UserController extends Controller
             'users.view_details'
         );
 
-
         /*
         |--------------------------------------------------------------------------
         | User Information
@@ -407,26 +378,43 @@ class UserController extends Controller
 
         $user->load([
 
-            'referrer' =>
-                function ($query) {
+            'referrer' => function ($query) {
 
-                    $query->select([
-                        'id',
-                        'uuid',
-                        'name',
-                        'email',
-                        'referral_code',
-                    ]);
-                },
+                $query->select([
+                    'id',
+                    'uuid',
+                    'name',
+                    'email',
+                    'referral_code',
+                ]);
+            },
 
             'statusChangedByAdmin',
-        ]);
 
+            'profile',
+        ]);
 
         $user->loadCount(
             'referrals'
         );
 
+        $referralCustomers =
+            $user
+                ->referrals()
+                ->select([
+                    'id',
+                    'uuid',
+                    'name',
+                    'email',
+                    'whatsapp_number',
+                    'referral_code',
+                    'referred_by_user_id',
+                    'account_type',
+                    'status',
+                    'created_at',
+                ])
+                ->orderByDesc('created_at')
+                ->get();
 
         /*
         |--------------------------------------------------------------------------
@@ -445,7 +433,6 @@ class UserController extends Controller
                 'users.devices.view'
             );
 
-
         if ($canViewDevices) {
 
             $devices =
@@ -455,19 +442,18 @@ class UserController extends Controller
                         'revokedByAdmin',
                     ])
                     ->withCount([
-                        'refreshTokens as active_refresh_tokens_count'
-                            => function ($query) {
+                        'refreshTokens as active_refresh_tokens_count' => function ($query) {
 
-                                $query
-                                    ->whereNull(
-                                        'revoked_at'
-                                    )
-                                    ->where(
-                                        'expires_at',
-                                        '>',
-                                        now()
-                                    );
-                            },
+                            $query
+                                ->whereNull(
+                                    'revoked_at'
+                                )
+                                ->where(
+                                    'expires_at',
+                                    '>',
+                                    now()
+                                );
+                        },
                     ])
                     ->orderByDesc(
                         'registered_at'
@@ -476,7 +462,6 @@ class UserController extends Controller
                         'id'
                     )
                     ->get();
-
 
             $activeSessionCount =
                 UserRefreshToken::query()
@@ -488,7 +473,6 @@ class UserController extends Controller
                     ->count();
         }
 
-
         /*
         |--------------------------------------------------------------------------
         | Audit User Detail Access
@@ -496,31 +480,22 @@ class UserController extends Controller
         */
 
         AuditLog::record(
-            actorType:
-                'ADMIN',
+            actorType: 'ADMIN',
 
-            actorId:
-                $admin->id,
+            actorId: $admin->id,
 
-            action:
-                'USER_DETAIL_VIEWED',
+            action: 'USER_DETAIL_VIEWED',
 
-            module:
-                'USERS',
+            module: 'USERS',
 
-            targetType:
-                'USER',
+            targetType: 'USER',
 
-            targetId:
-                $user->id,
+            targetId: $user->id,
 
-            ipAddress:
-                request()->ip(),
+            ipAddress: request()->ip(),
 
-            userAgent:
-                request()->userAgent()
+            userAgent: request()->userAgent()
         );
-
 
         return view(
             'admin.users.show',
@@ -528,11 +503,11 @@ class UserController extends Controller
                 'user',
                 'devices',
                 'activeSessionCount',
-                'canViewDevices'
+                'canViewDevices',
+                'referralCustomers'
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -549,7 +524,6 @@ class UserController extends Controller
         $validated =
             $request->validated();
 
-
         /*
         |--------------------------------------------------------------------------
         | ADMIN-02E-4C — Authenticated Admin Boundary
@@ -558,7 +532,6 @@ class UserController extends Controller
 
         $admin =
             $this->authenticatedAdmin();
-
 
         /*
         |--------------------------------------------------------------------------
@@ -579,19 +552,14 @@ class UserController extends Controller
                 $validated['action']
             ) {
 
-                'ACTIVATE' =>
-                    'users.activate',
+                'ACTIVATE' => 'users.activate',
 
-                'SUSPEND' =>
-                    'users.suspend',
+                'SUSPEND' => 'users.suspend',
 
-                'BLOCK' =>
-                    'users.block',
+                'BLOCK' => 'users.block',
 
-                default =>
-                    null,
+                default => null,
             };
-
 
         /*
         |--------------------------------------------------------------------------
@@ -609,12 +577,10 @@ class UserController extends Controller
             'Unsupported account status action.'
         );
 
-
         $this->requirePermission(
             $admin,
             $requiredPermission
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -623,27 +589,20 @@ class UserController extends Controller
         */
 
         $statusService->changeStatus(
-            user:
-                $user,
+            user: $user,
 
-            admin:
-                $admin,
+            admin: $admin,
 
-            action:
-                $validated['action'],
+            action: $validated['action'],
 
-            reason:
-                trim(
-                    $validated['reason']
-                ),
+            reason: trim(
+                $validated['reason']
+            ),
 
-            ipAddress:
-                $request->ip(),
+            ipAddress: $request->ip(),
 
-            userAgent:
-                $request->userAgent()
+            userAgent: $request->userAgent()
         );
-
 
         /*
         |--------------------------------------------------------------------------
@@ -656,19 +615,14 @@ class UserController extends Controller
                 $validated['action']
             ) {
 
-                'ACTIVATE' =>
-                    'User account activated successfully.',
+                'ACTIVATE' => 'User account activated successfully.',
 
-                'SUSPEND' =>
-                    'User account suspended successfully.',
+                'SUSPEND' => 'User account suspended successfully.',
 
-                'BLOCK' =>
-                    'User account blocked successfully.',
+                'BLOCK' => 'User account blocked successfully.',
 
-                default =>
-                    'User account updated successfully.',
+                default => 'User account updated successfully.',
             };
-
 
         return redirect()
             ->route(
@@ -680,7 +634,6 @@ class UserController extends Controller
                 $message
             );
     }
-
 
     public function updateAccountType(
         UserAccountTypeUpdateRequest $request,
@@ -710,7 +663,6 @@ class UserController extends Controller
             );
     }
 
-
     public function destroy(
         UserDeletionRequest $request,
         User $user,
@@ -738,7 +690,6 @@ class UserController extends Controller
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ADMIN-02E-4C — Authenticated Admin Resolver
@@ -758,16 +709,13 @@ class UserController extends Controller
         $admin =
             auth('admin')->user();
 
-
         abort_unless(
             $admin instanceof AdminUser,
             401
         );
 
-
         return $admin;
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -787,7 +735,6 @@ class UserController extends Controller
             403
         );
     }
-
 
     private function requireSuperAdmin(
         AdminUser $admin

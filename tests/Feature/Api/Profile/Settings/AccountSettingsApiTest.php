@@ -2,9 +2,11 @@
 
 namespace Tests\Feature\Api\Profile\Settings;
 
+use App\Exceptions\DeviceSecurityException;
 use App\Models\User;
 use App\Models\UserDevice;
 use App\Services\Auth\TotpService;
+use App\Services\Security\UserDeviceSecurityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\Concerns\CreatesTradeXMobileSession;
@@ -43,7 +45,7 @@ class AccountSettingsApiTest extends TestCase
             ->assertJsonPath('data.profile.preferences.language_code', 'ta')
             ->assertJsonPath('data.profile.financial.paypal.configured', true)
             ->assertJsonPath('data.account_security.verification.totp_confirmed', true)
-            ->assertJsonPath('data.account_security.device_policy.maximum_active_mobile_devices', 1)
+            ->assertJsonPath('data.account_security.device_policy.maximum_active_mobile_devices', 2)
             ->assertJsonPath('data.account_security.device_policy.maximum_active_desktop_devices', 1)
             ->assertJsonPath('data.account_security.current_device.is_current', true);
 
@@ -67,8 +69,8 @@ class AccountSettingsApiTest extends TestCase
             ->withToken($token)
             ->getJson('/api/v1/profile/settings/devices')
             ->assertOk()
-            ->assertJsonPath('data.policy.one_mobile_slot', true)
-            ->assertJsonPath('data.policy.one_desktop_slot', true);
+            ->assertJsonPath('data.policy.maximum_active_mobile_devices', 2)
+            ->assertJsonPath('data.policy.maximum_active_desktop_devices', 1);
 
         $items = $response->json('data.items');
         $this->assertCount(2, $items);
@@ -169,6 +171,59 @@ class AccountSettingsApiTest extends TestCase
 
         $this->assertTrue((bool) $current->fresh()->is_active);
         $this->assertTrue((bool) $otherDevice->fresh()->is_active);
+    }
+
+    public function test_customer_can_register_two_mobile_devices_and_one_desktop_only(): void
+    {
+        $user = $this->createApiUser();
+        $this->issueBoundToken($user);
+        $service = app(UserDeviceSecurityService::class);
+
+        $service->registerDevice($user, [
+            'platform' => UserDevice::PLATFORM_IOS,
+            'installation_id' => (string) Str::uuid(),
+            'device_name' => 'Second Mobile',
+        ]);
+
+        $this->assertSame(
+            2,
+            $user->devices()->active()->mobile()->count()
+        );
+
+        try {
+            $service->registerDevice($user, [
+                'platform' => UserDevice::PLATFORM_ANDROID,
+                'installation_id' => (string) Str::uuid(),
+                'device_name' => 'Third Mobile',
+            ]);
+            $this->fail('A third active mobile device must be rejected.');
+        } catch (DeviceSecurityException $exception) {
+            $this->assertSame('DEVICE_LIMIT_REACHED', $exception->errorCode);
+            $this->assertSame(2, $exception->context['limit']);
+        }
+
+        $service->registerDevice($user, [
+            'platform' => UserDevice::PLATFORM_WINDOWS,
+            'installation_id' => (string) Str::uuid(),
+            'device_name' => 'Customer Desktop',
+        ]);
+
+        try {
+            $service->registerDevice($user, [
+                'platform' => UserDevice::PLATFORM_MACOS,
+                'installation_id' => (string) Str::uuid(),
+                'device_name' => 'Second Desktop',
+            ]);
+            $this->fail('A second active desktop device must be rejected.');
+        } catch (DeviceSecurityException $exception) {
+            $this->assertSame('DEVICE_LIMIT_REACHED', $exception->errorCode);
+            $this->assertSame(1, $exception->context['limit']);
+        }
+
+        $this->assertSame(
+            1,
+            $user->devices()->active()->desktop()->count()
+        );
     }
 
     private function createDesktopDevice(User $user): UserDevice
