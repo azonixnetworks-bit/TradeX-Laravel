@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Screener;
 use App\Exceptions\ScreenerProviderException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Screener\MarketBubbleService;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
@@ -171,6 +172,26 @@ class ScreenerController extends Controller
             return $this->providerError($exception);
         } catch (InvalidArgumentException $exception) {
             return $this->unsupportedError($exception);
+        }
+    }
+
+    public function bubbles(
+        Request $request,
+        MarketBubbleService $bubbleService
+    ): JsonResponse {
+        $this->requireUser($request);
+
+        $validated = Validator::make(
+            ['limit' => $request->query('limit', 50)],
+            ['limit' => ['required', 'integer', 'between:20,100']]
+        )->validate();
+
+        try {
+            return $this->json(
+                $bubbleService->crypto24h((int) $validated['limit'])
+            );
+        } catch (ScreenerProviderException $exception) {
+            return $this->providerError($exception);
         }
     }
 

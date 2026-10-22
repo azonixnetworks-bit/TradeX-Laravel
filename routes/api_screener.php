@@ -49,6 +49,14 @@ Route::prefix('v1')
                 )->name('results');
 
                 Route::get(
+                    '/bubbles',
+                    [
+                        ScreenerController::class,
+                        'bubbles',
+                    ]
+                )->name('bubbles');
+
+                Route::get(
                     '/symbols/{symbol}',
                     [
                         ScreenerController::class,
