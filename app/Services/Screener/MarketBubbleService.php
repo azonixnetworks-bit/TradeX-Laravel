@@ -34,7 +34,9 @@ class MarketBubbleService
     {
         $limit = max(20, min(300, $limit));
 
-        $cached = Cache::get(self::CACHE_KEY);
+        $cacheKey = self::CACHE_KEY.':'.$limit;
+        $staleCacheKey = self::STALE_CACHE_KEY.':'.$limit;
+        $cached = Cache::get($cacheKey);
 
         if (is_array($cached) && isset($cached['assets'])) {
             return [
@@ -66,8 +68,8 @@ class MarketBubbleService
 
             $resolved = $this->normalise((array) $response->json(), $limit);
 
-            Cache::put(self::CACHE_KEY, $resolved, now()->addSeconds(10));
-            Cache::put(self::STALE_CACHE_KEY, $resolved, now()->addMinutes(10));
+            Cache::put($cacheKey, $resolved, now()->addSeconds(10));
+            Cache::put($staleCacheKey, $resolved, now()->addMinutes(10));
 
             return [
                 ...$resolved,
@@ -75,7 +77,7 @@ class MarketBubbleService
                 'stale' => false,
             ];
         } catch (ConnectionException|ScreenerProviderException) {
-            $stale = Cache::get(self::STALE_CACHE_KEY);
+            $stale = Cache::get($staleCacheKey);
 
             if (is_array($stale) && isset($stale['assets'])) {
                 return [

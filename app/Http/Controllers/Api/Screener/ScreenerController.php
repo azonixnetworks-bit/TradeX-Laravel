@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api\Screener;
 use App\Exceptions\ScreenerProviderException;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Screener\BinanceFuturesCatalogService;
+use App\Services\Screener\BinanceSpotCatalogService;
+use App\Services\Screener\MarketBubbleService;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
@@ -76,19 +79,30 @@ class ScreenerController extends Controller
         );
     }
 
-    public function symbols(Request $request, ScreenerEngine $engine): JsonResponse
+    public function symbols(
+        Request $request,
+        ScreenerEngine $engine,
+        BinanceSpotCatalogService $spotCatalog,
+        BinanceFuturesCatalogService $futuresCatalog
+    ): JsonResponse
     {
         $this->requireUser($request);
 
         $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
         $region = strtoupper(trim((string) $request->query('region', '')));
         $exchange = strtoupper(trim((string) $request->query('exchange', '')));
+        $page = $request->query('page');
+        $perPage = $request->query('per_page');
+        $search = trim((string) $request->query('search', ''));
 
         $validator = Validator::make(
             [
                 'market' => $market,
                 'region' => $region,
                 'exchange' => $exchange,
+                'page' => $page,
+                'per_page' => $perPage,
+                'search' => $search,
             ],
             [
                 'market' => [
@@ -97,6 +111,9 @@ class ScreenerController extends Controller
                 ],
                 'region' => ['nullable', 'string', 'max:32'],
                 'exchange' => ['nullable', 'string', 'max:32'],
+                'page' => ['nullable', 'integer', 'min:1'],
+                'per_page' => ['nullable', 'integer', 'between:10,50'],
+                'search' => ['nullable', 'string', 'max:30'],
             ]
         );
 
@@ -127,7 +144,14 @@ class ScreenerController extends Controller
 
         $validator->validate();
 
-        $symbols = $engine->symbols($market);
+        $segment = $this->cryptoSegment($request, $market);
+        $symbols = match (true) {
+            $market === 'CRYPTO' && $segment === 'FUTURES' =>
+                (array) ($futuresCatalog->catalog()['symbols'] ?? []),
+            $market === 'CRYPTO' =>
+                (array) ($spotCatalog->catalog()['symbols'] ?? []),
+            default => $engine->symbols($market),
+        };
 
         if ($market === 'STOCKS') {
             $symbols = array_values(array_filter(
@@ -152,25 +176,134 @@ class ScreenerController extends Controller
             ));
         }
 
+        $pagination = null;
+        if ($request->hasAny(['page', 'per_page', 'search'])) {
+            $needle = strtoupper($search);
+            $symbols = array_values(array_filter(
+                $symbols,
+                static fn (array $symbol): bool => $needle === ''
+                    || str_contains(strtoupper(implode(' ', [
+                        (string) ($symbol['symbol'] ?? ''),
+                        (string) ($symbol['name'] ?? ''),
+                        (string) ($symbol['base_currency'] ?? ''),
+                    ])), $needle)
+            ));
+            $currentPage = max(1, (int) ($page ?? 1));
+            $pageSize = (int) ($perPage ?? 20);
+            $total = count($symbols);
+            $lastPage = max(1, (int) ceil($total / $pageSize));
+            $currentPage = min($currentPage, $lastPage);
+            $symbols = array_slice(
+                $symbols,
+                ($currentPage - 1) * $pageSize,
+                $pageSize
+            );
+            $pagination = [
+                'current_page' => $currentPage,
+                'per_page' => $pageSize,
+                'total' => $total,
+                'last_page' => $lastPage,
+                'has_more' => $currentPage < $lastPage,
+            ];
+        }
+
         return $this->json([
             'market' => $market,
+            'segment' => $market === 'CRYPTO' ? $segment : null,
             'region' => $market === 'STOCKS' ? $region : null,
             'exchange' => $market === 'STOCKS' ? $exchange : null,
             'symbols' => $symbols,
+            'pagination' => $pagination,
         ]);
     }
 
-    public function results(Request $request, ScreenerEngine $engine): JsonResponse
+    public function results(
+        Request $request,
+        ScreenerEngine $engine,
+        BinanceFuturesCatalogService $futuresCatalog
+    ): JsonResponse
     {
         $this->requireUser($request);
-        $filters = $this->validatedFilters($request, $engine);
+        $market = strtoupper((string) $request->query('market', 'FOREX'));
+        $segment = $this->cryptoSegment($request, $market);
+        $symbolConfigs = null;
+        if ($market === 'CRYPTO' && $segment === 'FUTURES') {
+            $symbolConfigs = (array) ($futuresCatalog->catalog()['symbols'] ?? []);
+        }
+        $filters = $this->validatedFilters($request, $engine, $symbolConfigs);
+        $filters['crypto_segment'] = $segment;
 
         try {
-            return $this->json($engine->screen($filters));
+            return $this->json($engine->screenWithSymbols($filters, $symbolConfigs));
         } catch (ScreenerProviderException $exception) {
             return $this->providerError($exception);
         } catch (InvalidArgumentException $exception) {
             return $this->unsupportedError($exception);
+        }
+    }
+
+    public function bubbles(
+        Request $request,
+        MarketBubbleService $bubbleService
+    ): JsonResponse {
+        $this->requireUser($request);
+
+        $validated = Validator::make(
+            [
+                'limit' => $request->query('limit', 50),
+                'page' => $request->query('page'),
+                'per_page' => $request->query('per_page'),
+                'search' => trim((string) $request->query('search', '')),
+            ],
+            [
+                'limit' => ['required', 'integer', 'between:20,100'],
+                'page' => ['nullable', 'integer', 'min:1'],
+                'per_page' => ['nullable', 'integer', 'between:10,50'],
+                'search' => ['nullable', 'string', 'max:30'],
+            ]
+        )->validate();
+
+        $paginated = $request->hasAny(['page', 'per_page', 'search']);
+
+        try {
+            $dataset = $bubbleService->crypto24h(
+                $paginated ? 300 : (int) $validated['limit']
+            );
+            if ($paginated) {
+                $search = strtoupper((string) ($validated['search'] ?? ''));
+                $allAssets = (array) ($dataset['assets'] ?? []);
+                $assets = array_values(array_filter(
+                    $allAssets,
+                    static fn (array $asset): bool => $search === ''
+                        || str_contains(strtoupper(implode(' ', [
+                            (string) ($asset['symbol'] ?? ''),
+                            (string) ($asset['name'] ?? ''),
+                            (string) ($asset['base_currency'] ?? ''),
+                        ])), $search)
+                ));
+                $page = (int) ($validated['page'] ?? 1);
+                $perPage = (int) ($validated['per_page'] ?? 20);
+                $total = count($assets);
+                $lastPage = max(1, (int) ceil($total / $perPage));
+                $page = min($page, $lastPage);
+                $dataset['bubbles'] = array_slice($allAssets, 0, 18);
+                $dataset['assets'] = array_slice(
+                    $assets,
+                    ($page - 1) * $perPage,
+                    $perPage
+                );
+                $dataset['pagination'] = [
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $total,
+                    'last_page' => $lastPage,
+                    'has_more' => $page < $lastPage,
+                ];
+            }
+
+            return $this->json($dataset);
+        } catch (ScreenerProviderException $exception) {
+            return $this->providerError($exception);
         }
     }
 
@@ -217,7 +350,8 @@ class ScreenerController extends Controller
      */
     private function validatedFilters(
         Request $request,
-        ScreenerEngine $engine
+        ScreenerEngine $engine,
+        ?array $availableSymbolConfigs = null
     ): array {
         $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
         $timeframe = strtoupper(trim((string) $request->query('timeframe', 'H1')));
@@ -237,7 +371,7 @@ class ScreenerController extends Controller
             static fn (string $symbol): bool => $symbol !== ''
         ));
 
-        $availableSymbolConfigs = $engine->symbols($market);
+        $availableSymbolConfigs ??= $engine->symbols($market);
 
         if ($market === 'STOCKS') {
             $availableSymbolConfigs = array_values(array_filter(
@@ -408,6 +542,17 @@ class ScreenerController extends Controller
         );
 
         return $validator->validate();
+    }
+
+    private function cryptoSegment(Request $request, string $market): string
+    {
+        if (strtoupper(trim($market)) !== 'CRYPTO') {
+            return 'SPOT';
+        }
+
+        return strtoupper(trim((string) $request->query('segment', $request->query('crypto_segment', 'SPOT')))) === 'FUTURES'
+            ? 'FUTURES'
+            : 'SPOT';
     }
 
     private function requireUser(Request $request): void

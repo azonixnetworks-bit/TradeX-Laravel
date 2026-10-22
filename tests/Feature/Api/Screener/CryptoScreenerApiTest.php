@@ -82,8 +82,7 @@ class CryptoScreenerApiTest extends TestCase
         Http::assertSentCount(1);
 
         Http::assertSent(
-            static fn ($request): bool =>
-                $request['symbol'] === 'BTCUSDT'
+            static fn ($request): bool => $request['symbol'] === 'BTCUSDT'
                 && $request['interval'] === '1h'
                 && (int) $request['limit'] === 260
         );
@@ -113,9 +112,60 @@ class CryptoScreenerApiTest extends TestCase
             ->assertJsonPath('data.symbol.quote_currency', 'USDT');
 
         Http::assertSent(
-            static fn ($request): bool =>
-                $request['interval'] === '4h'
+            static fn ($request): bool => $request['interval'] === '4h'
         );
+    }
+
+    public function test_crypto_bubbles_are_available_to_mobile_users(): void
+    {
+        Http::fake([
+            'https://data-api.binance.vision/api/v3/exchangeInfo' => Http::response([
+                'symbols' => [[
+                    'symbol' => 'BTCUSDT',
+                    'baseAsset' => 'BTC',
+                    'quoteAsset' => 'USDT',
+                    'status' => 'TRADING',
+                    'isSpotTradingAllowed' => true,
+                ]],
+            ], 200),
+            'https://data-api.binance.vision/api/v3/ticker/24hr' => Http::response([[
+                'symbol' => 'BTCUSDT',
+                'lastPrice' => '67842.20',
+                'priceChangePercent' => '2.48',
+                'priceChange' => '1643.20',
+                'volume' => '32500',
+                'quoteVolume' => '2200000000',
+                'openPrice' => '66199.00',
+                'highPrice' => '68100.00',
+                'lowPrice' => '65500.00',
+                'weightedAvgPrice' => '67100.00',
+                'count' => 1250000,
+            ]], 200),
+        ]);
+
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=50')
+            ->assertOk()
+            ->assertJsonPath('data.market', 'CRYPTO')
+            ->assertJsonPath('data.provider', 'BINANCE')
+            ->assertJsonPath('data.assets.0.symbol', 'BTCUSDT')
+            ->assertJsonPath('data.assets.0.price', 67842.2)
+            ->assertJsonPath('data.summary.gainers', 1)
+            ->assertJsonPath('data.summary.total_quote_volume', 2200000000);
+    }
+
+    public function test_crypto_bubble_limit_is_bounded(): void
+    {
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=101')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('limit');
     }
 
     public function test_binance_rate_limit_returns_safe_503_without_stale_cache(): void
