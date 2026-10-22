@@ -25,12 +25,13 @@ class MarketBubbleService
      *   assets:array<int,array<string,mixed>>
      * }
      */
-    public function crypto24h(int $limit = 50): array
+    public function crypto24h(int $limit = 50, string $segment = 'SPOT'): array
     {
         $limit = max(20, min(300, $limit));
+        $segment = strtoupper($segment) === 'FUTURES' ? 'FUTURES' : 'SPOT';
 
-        $cacheKey = self::CACHE_KEY.':'.$limit;
-        $staleCacheKey = self::STALE_CACHE_KEY.':'.$limit;
+        $cacheKey = self::CACHE_KEY.':'.strtolower($segment).':'.$limit;
+        $staleCacheKey = self::STALE_CACHE_KEY.':'.strtolower($segment).':'.$limit;
         $cached = Cache::get($cacheKey);
 
         if (is_array($cached) && isset($cached['assets'])) {
@@ -42,10 +43,12 @@ class MarketBubbleService
         }
 
         try {
-            $response = Http::acceptJson()
+            $request = Http::acceptJson()
                 ->connectTimeout($this->connectTimeout())
-                ->timeout($this->timeout())
-                ->get(
+                ->timeout($this->timeout());
+            $response = $segment === 'FUTURES'
+                ? $request->get($this->futuresBaseUrl().'/fapi/v1/ticker/24hr')
+                : $request->get(
                     $this->baseUrl().'/api/v3/ticker/24hr',
                     ['type' => 'MINI']
                 );
@@ -66,7 +69,7 @@ class MarketBubbleService
                 );
             }
 
-            $resolved = $this->normalise($payload, $limit);
+            $resolved = $this->normalise($payload, $limit, $segment);
 
             Cache::put($cacheKey, $resolved, now()->addSeconds(10));
             Cache::put($staleCacheKey, $resolved, now()->addMinutes(10));
@@ -98,8 +101,13 @@ class MarketBubbleService
      * @param array<int,mixed> $tickers
      * @return array<string,mixed>
      */
-    public function normalise(array $tickers, int $limit = 50): array
+    public function normalise(
+        array $tickers,
+        int $limit = 50,
+        string $segment = 'SPOT'
+    ): array
     {
+        $segment = strtoupper($segment) === 'FUTURES' ? 'FUTURES' : 'SPOT';
         $assets = [];
 
         foreach ($tickers as $ticker) {
@@ -135,9 +143,10 @@ class MarketBubbleService
             $assets[] = [
                 'id' => $symbol,
                 'symbol' => $symbol,
-                'name' => $base.' / USDT',
+                'name' => $base.' / USDT'.($segment === 'FUTURES' ? ' Perpetual' : ''),
                 'base_currency' => $base,
                 'quote_currency' => 'USDT',
+                'segment' => $segment,
                 'logo_url' => 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/'.strtolower($base).'.png',
                 'price' => $price,
                 'change_percent' => $change,
@@ -179,6 +188,7 @@ class MarketBubbleService
 
         return [
             'market' => 'CRYPTO',
+            'segment' => $segment,
             'timeframe' => '24H',
             'provider' => 'BINANCE',
             'generated_at_utc' => now('UTC')->toIso8601String(),
@@ -202,6 +212,17 @@ class MarketBubbleService
             (string) config(
                 'tradex_screener.providers.binance.base_url',
                 'https://data-api.binance.vision'
+            ),
+            '/'
+        );
+    }
+
+    private function futuresBaseUrl(): string
+    {
+        return rtrim(
+            (string) config(
+                'binance_futures.live_catalog.base_url',
+                'https://fapi.binance.com'
             ),
             '/'
         );

@@ -83,9 +83,9 @@ class ScreenerController extends Controller
         Request $request,
         ScreenerEngine $engine,
         BinanceSpotCatalogService $spotCatalog,
-        BinanceFuturesCatalogService $futuresCatalog
-    ): JsonResponse
-    {
+        BinanceFuturesCatalogService $futuresCatalog,
+        MarketBubbleService $bubbleService
+    ): JsonResponse {
         $this->requireUser($request);
 
         $market = strtoupper(trim((string) $request->query('market', 'FOREX')));
@@ -94,6 +94,7 @@ class ScreenerController extends Controller
         $page = $request->query('page');
         $perPage = $request->query('per_page');
         $search = trim((string) $request->query('search', ''));
+        $sort = strtoupper(trim((string) $request->query('sort', 'SYMBOL')));
 
         $validator = Validator::make(
             [
@@ -103,6 +104,7 @@ class ScreenerController extends Controller
                 'page' => $page,
                 'per_page' => $perPage,
                 'search' => $search,
+                'sort' => $sort,
             ],
             [
                 'market' => [
@@ -114,6 +116,7 @@ class ScreenerController extends Controller
                 'page' => ['nullable', 'integer', 'min:1'],
                 'per_page' => ['nullable', 'integer', 'between:10,50'],
                 'search' => ['nullable', 'string', 'max:30'],
+                'sort' => ['nullable', Rule::in(['SYMBOL', 'VOLUME'])],
             ]
         );
 
@@ -146,12 +149,53 @@ class ScreenerController extends Controller
 
         $segment = $this->cryptoSegment($request, $market);
         $symbols = match (true) {
-            $market === 'CRYPTO' && $segment === 'FUTURES' =>
-                (array) ($futuresCatalog->catalog()['symbols'] ?? []),
-            $market === 'CRYPTO' =>
-                (array) ($spotCatalog->catalog()['symbols'] ?? []),
+            $market === 'CRYPTO' && $segment === 'FUTURES' => (array) ($futuresCatalog->catalog()['symbols'] ?? []),
+            $market === 'CRYPTO' => (array) ($spotCatalog->catalog()['symbols'] ?? []),
             default => $engine->symbols($market),
         };
+
+        if ($market === 'CRYPTO') {
+            $marketBySymbol = [];
+            if ($sort === 'VOLUME') {
+                try {
+                    $marketBySymbol = collect(
+                        (array) ($bubbleService->crypto24h(300, $segment)['assets'] ?? [])
+                    )->keyBy(
+                        static fn (array $asset): string => strtoupper((string) ($asset['symbol'] ?? ''))
+                    )->all();
+                } catch (ScreenerProviderException) {
+                    $marketBySymbol = [];
+                }
+            }
+
+            $symbols = array_map(
+                static function (array $symbol) use ($marketBySymbol, $segment): array {
+                    $key = strtoupper((string) ($symbol['symbol'] ?? ''));
+                    $marketData = (array) ($marketBySymbol[$key] ?? []);
+
+                    return [
+                        ...$symbol,
+                        ...$marketData,
+                        'name' => (string) ($symbol['name'] ?? $marketData['name'] ?? ''),
+                        'logo_url' => (string) ($symbol['logo_url'] ?? $marketData['logo_url'] ?? ''),
+                        'segment' => $segment,
+                    ];
+                },
+                $symbols
+            );
+
+            if ($sort === 'VOLUME') {
+                usort(
+                    $symbols,
+                    static fn (array $left, array $right): int => ((float) ($right['quote_volume'] ?? 0)
+                            <=> (float) ($left['quote_volume'] ?? 0))
+                        ?: strnatcasecmp(
+                            (string) ($left['symbol'] ?? ''),
+                            (string) ($right['symbol'] ?? '')
+                        )
+                );
+            }
+        }
 
         if ($market === 'STOCKS') {
             $symbols = array_values(array_filter(
@@ -221,8 +265,7 @@ class ScreenerController extends Controller
         Request $request,
         ScreenerEngine $engine,
         BinanceFuturesCatalogService $futuresCatalog
-    ): JsonResponse
-    {
+    ): JsonResponse {
         $this->requireUser($request);
         $market = strtoupper((string) $request->query('market', 'FOREX'));
         $segment = $this->cryptoSegment($request, $market);
@@ -254,12 +297,16 @@ class ScreenerController extends Controller
                 'page' => $request->query('page'),
                 'per_page' => $request->query('per_page'),
                 'search' => trim((string) $request->query('search', '')),
+                'segment' => strtoupper(trim((string) $request->query('segment', 'SPOT'))),
+                'bubble_mode' => strtoupper(trim((string) $request->query('bubble_mode', 'GAINERS'))),
             ],
             [
                 'limit' => ['required', 'integer', 'between:20,100'],
                 'page' => ['nullable', 'integer', 'min:1'],
                 'per_page' => ['nullable', 'integer', 'between:10,50'],
                 'search' => ['nullable', 'string', 'max:30'],
+                'segment' => ['nullable', Rule::in(['SPOT', 'FUTURES'])],
+                'bubble_mode' => ['nullable', Rule::in(['GAINERS', 'LOSERS'])],
             ]
         )->validate();
 
@@ -267,11 +314,31 @@ class ScreenerController extends Controller
 
         try {
             $dataset = $bubbleService->crypto24h(
-                $paginated ? 300 : (int) $validated['limit']
+                $paginated ? 300 : (int) $validated['limit'],
+                (string) ($validated['segment'] ?? 'SPOT')
             );
+            $bubbleMode = (string) ($validated['bubble_mode'] ?? 'GAINERS');
+            $allAssets = (array) ($dataset['assets'] ?? []);
+            $rankedBubbles = array_values($allAssets);
+            usort(
+                $rankedBubbles,
+                static function (array $left, array $right) use ($bubbleMode): int {
+                    $changeOrder = $bubbleMode === 'LOSERS'
+                        ? ((float) ($left['change_percent'] ?? 0)
+                            <=> (float) ($right['change_percent'] ?? 0))
+                        : ((float) ($right['change_percent'] ?? 0)
+                            <=> (float) ($left['change_percent'] ?? 0));
+
+                    return $changeOrder ?: ((float) ($right['quote_volume'] ?? 0)
+                        <=> (float) ($left['quote_volume'] ?? 0));
+                }
+            );
+            $dataset['bubbles'] = array_slice($rankedBubbles, 0, 20);
+            $dataset['bubble_selection'] = $bubbleMode === 'LOSERS'
+                ? 'TOP_LOSERS_24H'
+                : 'TOP_GAINERS_24H';
             if ($paginated) {
                 $search = strtoupper((string) ($validated['search'] ?? ''));
-                $allAssets = (array) ($dataset['assets'] ?? []);
                 $assets = array_values(array_filter(
                     $allAssets,
                     static fn (array $asset): bool => $search === ''
@@ -286,7 +353,6 @@ class ScreenerController extends Controller
                 $total = count($assets);
                 $lastPage = max(1, (int) ceil($total / $perPage));
                 $page = min($page, $lastPage);
-                $dataset['bubbles'] = array_slice($allAssets, 0, 18);
                 $dataset['assets'] = array_slice(
                     $assets,
                     ($page - 1) * $perPage,
