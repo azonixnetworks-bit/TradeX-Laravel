@@ -119,20 +119,9 @@ class CryptoScreenerApiTest extends TestCase
     public function test_crypto_bubbles_are_available_to_mobile_users(): void
     {
         Http::fake([
-            'https://data-api.binance.vision/api/v3/exchangeInfo' => Http::response([
-                'symbols' => [[
-                    'symbol' => 'BTCUSDT',
-                    'baseAsset' => 'BTC',
-                    'quoteAsset' => 'USDT',
-                    'status' => 'TRADING',
-                    'isSpotTradingAllowed' => true,
-                ]],
-            ], 200),
-            'https://data-api.binance.vision/api/v3/ticker/24hr' => Http::response([[
+            'https://data-api.binance.vision/api/v3/ticker/24hr*' => Http::response([[
                 'symbol' => 'BTCUSDT',
                 'lastPrice' => '67842.20',
-                'priceChangePercent' => '2.48',
-                'priceChange' => '1643.20',
                 'volume' => '32500',
                 'quoteVolume' => '2200000000',
                 'openPrice' => '66199.00',
@@ -155,6 +144,11 @@ class CryptoScreenerApiTest extends TestCase
             ->assertJsonPath('data.assets.0.price', 67842.2)
             ->assertJsonPath('data.summary.gainers', 1)
             ->assertJsonPath('data.summary.total_quote_volume', 2200000000);
+
+        Http::assertSentCount(1);
+        Http::assertSent(
+            static fn ($request): bool => $request['type'] === 'MINI'
+        );
     }
 
     public function test_crypto_bubble_limit_is_bounded(): void

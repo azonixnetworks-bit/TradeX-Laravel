@@ -9,14 +9,9 @@ use Illuminate\Support\Facades\Http;
 
 class MarketBubbleService
 {
-    private const CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:v1';
+    private const CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:v2';
 
-    private const STALE_CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:stale:v1';
-
-    public function __construct(
-        private readonly BinanceSpotCatalogService $catalog
-    ) {
-    }
+    private const STALE_CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:stale:v2';
 
     /**
      * @return array{
@@ -50,7 +45,12 @@ class MarketBubbleService
             $response = Http::acceptJson()
                 ->connectTimeout($this->connectTimeout())
                 ->timeout($this->timeout())
-                ->get($this->baseUrl().'/api/v3/ticker/24hr');
+                ->get(
+                    $this->baseUrl().'/api/v3/ticker/24hr',
+                    ['type' => 'MINI']
+                );
+
+            $payload = $response->json();
 
             if (in_array($response->status(), [418, 429], true)) {
                 throw new ScreenerProviderException(
@@ -59,14 +59,14 @@ class MarketBubbleService
                 );
             }
 
-            if (! $response->successful() || ! is_array($response->json())) {
+            if (! $response->successful() || ! is_array($payload)) {
                 throw new ScreenerProviderException(
                     'SCREENER_PROVIDER_HTTP_ERROR',
                     'Binance bubble data is temporarily unavailable.'
                 );
             }
 
-            $resolved = $this->normalise((array) $response->json(), $limit);
+            $resolved = $this->normalise($payload, $limit);
 
             Cache::put($cacheKey, $resolved, now()->addSeconds(10));
             Cache::put($staleCacheKey, $resolved, now()->addMinutes(10));
@@ -100,11 +100,6 @@ class MarketBubbleService
      */
     public function normalise(array $tickers, int $limit = 50): array
     {
-        $catalog = $this->catalog->catalog();
-
-        $symbols = collect((array) ($catalog['symbols'] ?? []))
-            ->keyBy(static fn (array $item): string => strtoupper((string) ($item['symbol'] ?? '')));
-
         $assets = [];
 
         foreach ($tickers as $ticker) {
@@ -113,14 +108,24 @@ class MarketBubbleService
             }
 
             $symbol = strtoupper(trim((string) ($ticker['symbol'] ?? '')));
-            $config = $symbols->get($symbol);
+            if (! str_ends_with($symbol, 'USDT')) {
+                continue;
+            }
 
-            if (! is_array($config)) {
+            $base = substr($symbol, 0, -4);
+            if ($base === '') {
                 continue;
             }
 
             $price = (float) ($ticker['lastPrice'] ?? 0);
-            $change = (float) ($ticker['priceChangePercent'] ?? 0);
+            $open = (float) ($ticker['openPrice'] ?? 0);
+            $changeAmount = array_key_exists('priceChange', $ticker)
+                ? (float) $ticker['priceChange']
+                : $price - $open;
+            $change = array_key_exists('priceChangePercent', $ticker)
+                ? (float) $ticker['priceChangePercent']
+                : ($open > 0 ? ($changeAmount / $open) * 100 : 0.0);
+            $volume = (float) ($ticker['volume'] ?? 0);
             $quoteVolume = (float) ($ticker['quoteVolume'] ?? 0);
 
             if ($price <= 0 || $quoteVolume <= 0) {
@@ -130,19 +135,21 @@ class MarketBubbleService
             $assets[] = [
                 'id' => $symbol,
                 'symbol' => $symbol,
-                'name' => (string) ($config['name'] ?? $symbol),
-                'base_currency' => (string) ($config['base_currency'] ?? ''),
-                'quote_currency' => (string) ($config['quote_currency'] ?? 'USDT'),
-                'logo_url' => $config['logo_url'] ?? null,
+                'name' => $base.' / USDT',
+                'base_currency' => $base,
+                'quote_currency' => 'USDT',
+                'logo_url' => 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/'.strtolower($base).'.png',
                 'price' => $price,
                 'change_percent' => $change,
-                'change_amount' => (float) ($ticker['priceChange'] ?? 0),
-                'volume' => (float) ($ticker['volume'] ?? 0),
+                'change_amount' => $changeAmount,
+                'volume' => $volume,
                 'quote_volume' => $quoteVolume,
-                'open' => (float) ($ticker['openPrice'] ?? 0),
+                'open' => $open,
                 'high' => (float) ($ticker['highPrice'] ?? 0),
                 'low' => (float) ($ticker['lowPrice'] ?? 0),
-                'weighted_average_price' => (float) ($ticker['weightedAvgPrice'] ?? 0),
+                'weighted_average_price' => array_key_exists('weightedAvgPrice', $ticker)
+                    ? (float) $ticker['weightedAvgPrice']
+                    : ($volume > 0 ? $quoteVolume / $volume : 0.0),
                 'trade_count' => (int) ($ticker['count'] ?? 0),
             ];
         }
