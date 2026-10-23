@@ -162,6 +162,86 @@ class CryptoScreenerApiTest extends TestCase
             ->assertJsonValidationErrors('limit');
     }
 
+    public function test_crypto_ticker_snapshot_is_shared_across_different_limits(): void
+    {
+        Http::fake([
+            'https://data-api.binance.vision/api/v3/exchangeInfo*' => Http::response([
+                'symbols' => [
+                    $this->spotSymbol('BTCUSDT', 'BTC'),
+                    $this->spotSymbol('ETHUSDT', 'ETH'),
+                ],
+            ], 200),
+            'https://data-api.binance.vision/api/v3/ticker/24hr*' => Http::response([
+                $this->ticker('BTCUSDT', 101, 100, 1000000),
+                $this->ticker('ETHUSDT', 108, 100, 9000000),
+            ], 200),
+        ]);
+
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=50')
+            ->assertOk()
+            ->assertJsonPath('data.assets.0.price', 108);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=100')
+            ->assertOk()
+            ->assertJsonPath('data.assets.0.price', 108)
+            ->assertJsonPath('data.source', 'BINANCE_CACHE');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/symbols?market=CRYPTO&segment=SPOT&sort=VOLUME&page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('data.symbols.0.symbol', 'ETHUSDT')
+            ->assertJsonPath('data.symbols.0.price', 108)
+            ->assertJsonPath('data.symbols.1.price', 101);
+
+        // One exchange-info call plus one shared ticker call. The second
+        // bubble limit and the coin-list endpoint do not call ticker again.
+        Http::assertSentCount(2);
+    }
+
+    public function test_crypto_rate_limit_uses_stale_prices_and_cooldown(): void
+    {
+        Http::fake([
+            'https://data-api.binance.vision/api/v3/ticker/24hr*' => Http::sequence()
+                ->push([
+                    $this->ticker('BTCUSDT', 101, 100, 1000000),
+                ], 200)
+                ->push(['code' => -1003, 'msg' => 'Too many requests'], 429),
+        ]);
+
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=50')
+            ->assertOk()
+            ->assertJsonPath('data.assets.0.price', 101)
+            ->assertJsonPath('data.stale', false);
+
+        $this->travel(16)->seconds();
+
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=100')
+            ->assertOk()
+            ->assertJsonPath('data.assets.0.price', 101)
+            ->assertJsonPath('data.source', 'BINANCE_STALE_CACHE')
+            ->assertJsonPath('data.stale', true);
+
+        // The next app refresh stays on stale data during the cooldown instead
+        // of immediately spending another Binance request weight.
+        $this->withToken($token)
+            ->getJson('/api/v1/screener/bubbles?limit=100')
+            ->assertOk()
+            ->assertJsonPath('data.assets.0.price', 101)
+            ->assertJsonPath('data.source', 'BINANCE_STALE_CACHE');
+
+        Http::assertSentCount(2);
+    }
+
     public function test_paginated_crypto_bubbles_rank_live_top_gainers(): void
     {
         Http::fake([

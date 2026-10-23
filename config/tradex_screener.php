@@ -432,6 +432,17 @@ return [
         ),
     ],
 
+    'crypto_market' => [
+        // One shared Binance ticker snapshot serves bubbles, coin pages and
+        // search results, preventing every mobile refresh from hitting Binance.
+        'fresh_seconds' => env('TRADEX_CRYPTO_MARKET_CACHE_SECONDS', 15),
+        'stale_seconds' => env('TRADEX_CRYPTO_MARKET_STALE_SECONDS', 3600),
+        'rate_limit_cooldown_seconds' => env(
+            'TRADEX_CRYPTO_MARKET_RATE_LIMIT_COOLDOWN_SECONDS',
+            60
+        ),
+    ],
+
     'indicators' => [
         'volatility' => [
             'low_max_percent' => 0.35,

@@ -3,15 +3,20 @@
 namespace App\Services\Screener;
 
 use App\Exceptions\ScreenerProviderException;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class MarketBubbleService
 {
-    private const CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:v2';
+    private const CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:v3';
 
-    private const STALE_CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:stale:v2';
+    private const STALE_CACHE_KEY = 'tradex:screener:market-bubbles:crypto:24h:stale:v3';
+
+    private const REFRESH_LOCK_KEY = 'tradex:screener:market-bubbles:crypto:24h:refresh-lock:v3';
+
+    private const RATE_LIMIT_KEY = 'tradex:screener:market-bubbles:crypto:24h:rate-limited:v3';
 
     /**
      * @return array{
@@ -30,83 +35,211 @@ class MarketBubbleService
         $limit = max(20, min(300, $limit));
         $segment = strtoupper($segment) === 'FUTURES' ? 'FUTURES' : 'SPOT';
 
-        $cacheKey = self::CACHE_KEY.':'.strtolower($segment).':'.$limit;
-        $staleCacheKey = self::STALE_CACHE_KEY.':'.strtolower($segment).':'.$limit;
+        $cacheKey = self::CACHE_KEY.':'.strtolower($segment);
+        $staleCacheKey = self::STALE_CACHE_KEY.':'.strtolower($segment);
+        $rateLimitKey = self::RATE_LIMIT_KEY.':'.strtolower($segment);
         $cached = Cache::get($cacheKey);
 
         if (is_array($cached) && isset($cached['assets'])) {
-            return [
-                ...$cached,
-                'source' => 'BINANCE_CACHE',
-                'stale' => false,
-            ];
+            return $this->limitDataset($cached, $limit, 'BINANCE_CACHE', false);
+        }
+
+        $rateLimited = new ScreenerProviderException(
+            'SCREENER_PROVIDER_RATE_LIMITED',
+            'Binance bubble data is temporarily rate limited.'
+        );
+        if (Cache::get($rateLimitKey) === true) {
+            return $this->staleOrFail($staleCacheKey, $limit, $rateLimited);
         }
 
         try {
-            $request = Http::acceptJson()
-                ->connectTimeout($this->connectTimeout())
-                ->timeout($this->timeout());
-            $response = $segment === 'FUTURES'
-                ? $request->get($this->futuresBaseUrl().'/fapi/v1/ticker/24hr')
-                : $request->get(
-                    $this->baseUrl().'/api/v3/ticker/24hr',
-                    ['type' => 'MINI']
-                );
+            $dataset = Cache::lock(
+                self::REFRESH_LOCK_KEY.':'.strtolower($segment),
+                max(5, $this->timeout() + 2)
+            )->block(5, function () use (
+                $cacheKey,
+                $staleCacheKey,
+                $rateLimitKey,
+                $rateLimited,
+                $segment
+            ): array {
+                $cachedInsideLock = Cache::get($cacheKey);
+                if (is_array($cachedInsideLock) && isset($cachedInsideLock['assets'])) {
+                    return [
+                        'dataset' => $cachedInsideLock,
+                        'source' => 'BINANCE_CACHE',
+                        'stale' => false,
+                    ];
+                }
 
-            $payload = $response->json();
+                if (Cache::get($rateLimitKey) === true) {
+                    $stale = $this->staleDataset($staleCacheKey);
+                    if ($stale !== null) {
+                        return [
+                            'dataset' => $stale,
+                            'source' => 'BINANCE_STALE_CACHE',
+                            'stale' => true,
+                        ];
+                    }
+                    throw $rateLimited;
+                }
 
-            if (in_array($response->status(), [418, 429], true)) {
-                throw new ScreenerProviderException(
-                    'SCREENER_PROVIDER_RATE_LIMITED',
-                    'Binance bubble data is temporarily rate limited.'
-                );
+                try {
+                    $request = Http::acceptJson()
+                        ->connectTimeout($this->connectTimeout())
+                        ->timeout($this->timeout());
+                    $response = $segment === 'FUTURES'
+                        ? $request->get($this->futuresBaseUrl().'/fapi/v1/ticker/24hr')
+                        : $request->get(
+                            $this->baseUrl().'/api/v3/ticker/24hr',
+                            ['type' => 'MINI']
+                        );
+
+                    $payload = $response->json();
+                    if (in_array($response->status(), [418, 429], true)) {
+                        Cache::put(
+                            $rateLimitKey,
+                            true,
+                            now()->addSeconds($this->rateLimitCooldownSeconds())
+                        );
+                        throw $rateLimited;
+                    }
+                    if (! $response->successful() || ! is_array($payload)) {
+                        throw new ScreenerProviderException(
+                            'SCREENER_PROVIDER_HTTP_ERROR',
+                            'Binance bubble data is temporarily unavailable.'
+                        );
+                    }
+
+                    // Binance already returns the complete ticker collection.
+                    // Cache it once, then derive each requested limit locally.
+                    $resolved = $this->normalise($payload, 300, $segment);
+                    Cache::put(
+                        $cacheKey,
+                        $resolved,
+                        now()->addSeconds($this->freshSeconds())
+                    );
+                    Cache::put(
+                        $staleCacheKey,
+                        $resolved,
+                        now()->addSeconds($this->staleSeconds())
+                    );
+
+                    return [
+                        'dataset' => $resolved,
+                        'source' => 'BINANCE_LIVE',
+                        'stale' => false,
+                    ];
+                } catch (ConnectionException|ScreenerProviderException $exception) {
+                    $stale = $this->staleDataset($staleCacheKey);
+                    if ($stale !== null) {
+                        return [
+                            'dataset' => $stale,
+                            'source' => 'BINANCE_STALE_CACHE',
+                            'stale' => true,
+                        ];
+                    }
+                    throw $exception;
+                }
+            });
+
+            return $this->limitDataset(
+                (array) $dataset['dataset'],
+                $limit,
+                (string) $dataset['source'],
+                (bool) $dataset['stale']
+            );
+        } catch (LockTimeoutException) {
+            $fresh = Cache::get($cacheKey);
+            if (is_array($fresh) && isset($fresh['assets'])) {
+                return $this->limitDataset($fresh, $limit, 'BINANCE_CACHE', false);
             }
 
-            if (! $response->successful() || ! is_array($payload)) {
-                throw new ScreenerProviderException(
-                    'SCREENER_PROVIDER_HTTP_ERROR',
-                    'Binance bubble data is temporarily unavailable.'
-                );
-            }
-
-            $resolved = $this->normalise($payload, $limit, $segment);
-
-            Cache::put($cacheKey, $resolved, now()->addSeconds(10));
-            Cache::put($staleCacheKey, $resolved, now()->addMinutes(10));
-
-            return [
-                ...$resolved,
-                'source' => 'BINANCE_LIVE',
-                'stale' => false,
-            ];
-        } catch (ConnectionException|ScreenerProviderException) {
-            $stale = Cache::get($staleCacheKey);
-
-            if (is_array($stale) && isset($stale['assets'])) {
-                return [
-                    ...$stale,
-                    'source' => 'BINANCE_STALE_CACHE',
-                    'stale' => true,
-                ];
-            }
-
-            throw new ScreenerProviderException(
-                'SCREENER_PROVIDER_UNAVAILABLE',
-                'Crypto bubble data is temporarily unavailable.'
+            return $this->staleOrFail(
+                $staleCacheKey,
+                $limit,
+                new ScreenerProviderException(
+                    'SCREENER_PROVIDER_UNAVAILABLE',
+                    'Crypto market refresh is busy. Please retry shortly.'
+                )
             );
         }
     }
 
+    /** @param array<string,mixed> $dataset */
+    private function limitDataset(
+        array $dataset,
+        int $limit,
+        string $source,
+        bool $stale
+    ): array {
+        $assets = array_slice((array) ($dataset['assets'] ?? []), 0, $limit);
+        $gainers = count(array_filter(
+            $assets,
+            static fn (array $asset): bool => (float) ($asset['change_percent'] ?? 0) > 0
+        ));
+        $losers = count(array_filter(
+            $assets,
+            static fn (array $asset): bool => (float) ($asset['change_percent'] ?? 0) < 0
+        ));
+        $totalChange = array_sum(array_map(
+            static fn (array $asset): float => (float) ($asset['change_percent'] ?? 0),
+            $assets
+        ));
+
+        return [
+            ...$dataset,
+            'source' => $source,
+            'stale' => $stale,
+            'summary' => [
+                'total_assets' => count($assets),
+                'gainers' => $gainers,
+                'losers' => $losers,
+                'unchanged' => max(0, count($assets) - $gainers - $losers),
+                'average_change' => count($assets) > 0
+                    ? round($totalChange / count($assets), 2)
+                    : 0.0,
+                'total_quote_volume' => round(array_sum(array_column($assets, 'quote_volume')), 2),
+            ],
+            'assets' => $assets,
+        ];
+    }
+
+    /** @return array<string,mixed>|null */
+    private function staleDataset(string $staleCacheKey): ?array
+    {
+        $stale = Cache::get($staleCacheKey);
+
+        return is_array($stale) && isset($stale['assets']) ? $stale : null;
+    }
+
+    private function staleOrFail(
+        string $staleCacheKey,
+        int $limit,
+        ScreenerProviderException $exception
+    ): array {
+        $stale = $this->staleDataset($staleCacheKey);
+        if ($stale !== null) {
+            return $this->limitDataset(
+                $stale,
+                $limit,
+                'BINANCE_STALE_CACHE',
+                true
+            );
+        }
+
+        throw $exception;
+    }
+
     /**
-     * @param array<int,mixed> $tickers
+     * @param  array<int,mixed>  $tickers
      * @return array<string,mixed>
      */
     public function normalise(
         array $tickers,
         int $limit = 50,
         string $segment = 'SPOT'
-    ): array
-    {
+    ): array {
         $segment = strtoupper($segment) === 'FUTURES' ? 'FUTURES' : 'SPOT';
         $assets = [];
 
@@ -165,8 +298,7 @@ class MarketBubbleService
 
         usort(
             $assets,
-            static fn (array $left, array $right): int =>
-                ($right['quote_volume'] <=> $left['quote_volume'])
+            static fn (array $left, array $right): int => ($right['quote_volume'] <=> $left['quote_volume'])
         );
 
         $assets = array_slice($assets, 0, max(20, min(300, $limit)));
@@ -251,6 +383,48 @@ class MarketBubbleService
                 (int) config(
                     'tradex_screener.providers.binance.connect_timeout_seconds',
                     5
+                )
+            )
+        );
+    }
+
+    private function freshSeconds(): int
+    {
+        return max(
+            10,
+            min(
+                60,
+                (int) config(
+                    'tradex_screener.crypto_market.fresh_seconds',
+                    15
+                )
+            )
+        );
+    }
+
+    private function staleSeconds(): int
+    {
+        return max(
+            300,
+            min(
+                86400,
+                (int) config(
+                    'tradex_screener.crypto_market.stale_seconds',
+                    3600
+                )
+            )
+        );
+    }
+
+    private function rateLimitCooldownSeconds(): int
+    {
+        return max(
+            30,
+            min(
+                300,
+                (int) config(
+                    'tradex_screener.crypto_market.rate_limit_cooldown_seconds',
+                    60
                 )
             )
         );
