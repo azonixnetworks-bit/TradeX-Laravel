@@ -7,6 +7,7 @@ use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\CustomerOnboardingInvitation;
+use App\Models\TradeJournalEntry;
 use App\Models\User;
 use Database\Seeders\AdminPermissionSeeder;
 use Database\Seeders\AdminRoleSeeder;
@@ -822,6 +823,85 @@ class CustomerManagementTest extends TestCase
             ->assertSee('2 MOBILE + 1 DESKTOP')
             ->assertSee('Direct Referral Customers')
             ->assertSee($referral->email);
+    }
+
+    public function test_customer_detail_shows_only_that_customers_trade_journal(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'users.view',
+            'users.view_details',
+        ]);
+
+        $customer = $this->createCustomer([
+            'name' => 'Journal Customer',
+        ]);
+        $otherCustomer = $this->createCustomer([
+            'name' => 'Other Journal Customer',
+        ]);
+
+        $ownedEntry = new TradeJournalEntry([
+            'uuid' => (string) Str::uuid(),
+            'market' => 'crypto',
+            'symbol' => 'SHELLUSDT',
+            'direction' => 'buy',
+            'status' => 'closed',
+            'trade_at' => now()->subHour(),
+            'user_timezone' => 'Asia/Colombo',
+            'session_source' => 'manual',
+            'setup_strategy' => 'Liquidity sweep',
+            'entry_reason' => 'Confirmed customer setup',
+            'planned_entry' => '100.000000000000',
+            'actual_entry' => '100.000000000000',
+            'current_sl' => '99.000000000000',
+            'current_tp' => '105.000000000000',
+            'exit_price' => '105.000000000000',
+            'result' => 'win',
+            'gross_pnl' => '102.25000000',
+            'fees' => '2.00000000',
+            'net_pnl' => '100.25000000',
+            'pnl_currency' => 'USD',
+            'emotion_before' => 'calm',
+            'emotion_after' => 'satisfied',
+            'followed_plan_after' => 'yes',
+            'mistake_tags' => ['early_entry', 'fomo'],
+            'went_well' => 'Managed risk and followed the plan.',
+            'went_wrong' => 'Entered slightly early.',
+            'lesson_learned' => 'Wait for confirmation.',
+            'improvement_next_trade' => 'Be patient at the entry.',
+            'rating' => 4,
+            'opened_at' => now()->subHour(),
+            'exit_at' => now()->subMinutes(10),
+            'closed_at' => now()->subMinutes(10),
+        ]);
+        $ownedEntry->user()->associate($customer);
+        $ownedEntry->save();
+
+        $otherEntry = new TradeJournalEntry([
+            'uuid' => (string) Str::uuid(),
+            'market' => 'crypto',
+            'symbol' => 'OTHERUSDT',
+            'direction' => 'sell',
+            'status' => 'planned',
+            'trade_at' => now(),
+            'user_timezone' => 'UTC',
+            'session_source' => 'manual',
+            'entry_reason' => 'Must remain private.',
+        ]);
+        $otherEntry->user()->associate($otherCustomer);
+        $otherEntry->save();
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.users.show', $customer))
+            ->assertOk()
+            ->assertSee('Trade Journal')
+            ->assertSee('Total Saved')
+            ->assertSee('SHELLUSDT')
+            ->assertSee('Liquidity sweep')
+            ->assertSee('Early Entry, Fomo')
+            ->assertSee('Wait for confirmation.')
+            ->assertSeeInOrder(['100.25', 'USD'])
+            ->assertDontSee('OTHERUSDT')
+            ->assertDontSee('Must remain private.');
     }
 
     private function invitationPayload(

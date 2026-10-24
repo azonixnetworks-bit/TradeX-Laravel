@@ -2355,12 +2355,395 @@ input {
 }
 
 
+/* CUSTOMER TRADE JOURNAL */
+
+.customer-trade-journal {
+    margin-bottom: 18px;
+
+    border-color: rgba(36,142,255,.2);
+
+    background:
+        radial-gradient(
+            circle at 86% 0,
+            rgba(36,142,255,.08),
+            transparent 34%
+        ),
+        linear-gradient(
+            145deg,
+            #071725,
+            #071321
+        );
+}
+
+
+.customer-journal-header {
+    align-items: flex-start;
+}
+
+
+.customer-journal-header p {
+    max-width: 680px;
+
+    margin: 7px 0 0;
+
+    color: #6e8499;
+
+    font-size: 10px;
+    line-height: 1.65;
+}
+
+
+.customer-journal-stat-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(5, minmax(0, 1fr));
+
+    gap: 10px;
+
+    margin-bottom: 17px;
+}
+
+
+.customer-journal-stat {
+    min-height: 76px;
+
+    padding: 14px 15px;
+
+    border: 1px solid rgba(255,255,255,.055);
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(10,32,61,.9),
+            rgba(5,20,38,.94)
+        );
+}
+
+
+.customer-journal-stat span,
+.customer-journal-stat strong {
+    display: block;
+}
+
+
+.customer-journal-stat span {
+    color: #7890a7;
+
+    font-size: 9px;
+}
+
+
+.customer-journal-stat strong {
+    margin-top: 8px;
+
+    color: #f5f8ff;
+
+    font-size: 18px;
+}
+
+
+.customer-journal-stat.planned strong,
+.customer-journal-stat.win-rate strong {
+    color: #f0c75a;
+}
+
+
+.customer-journal-stat.open strong {
+    color: #2cdb9f;
+}
+
+
+.customer-journal-stat.closed strong {
+    color: #5da8ff;
+}
+
+
+.customer-journal-table-wrap {
+    border: 1px solid rgba(34,81,134,.48);
+    border-radius: 14px;
+}
+
+
+.customer-journal-table {
+    min-width: 1120px;
+}
+
+
+.customer-journal-table td {
+    vertical-align: top;
+}
+
+
+.customer-journal-symbol strong,
+.customer-journal-symbol code,
+.customer-journal-date,
+.customer-journal-date small {
+    display: block;
+}
+
+
+.customer-journal-symbol strong {
+    color: #f5f8ff;
+
+    font-size: 11px;
+}
+
+
+.customer-journal-symbol code {
+    margin-top: 5px;
+
+    color: #60788e;
+
+    font-size: 8px;
+}
+
+
+.customer-journal-market,
+.customer-journal-price {
+    color: #aabbd0;
+
+    font-size: 10px;
+}
+
+
+.customer-journal-badge {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 5px 8px;
+
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 999px;
+
+    color: #9eb3d1;
+    background: rgba(255,255,255,.035);
+
+    font-size: 8px;
+    font-weight: 850;
+    letter-spacing: .35px;
+}
+
+
+.customer-journal-badge.buy,
+.customer-journal-badge.status-open {
+    color: #2cdb9f;
+    border-color: rgba(0,213,165,.28);
+    background: rgba(0,213,165,.08);
+}
+
+
+.customer-journal-badge.sell,
+.customer-journal-badge.status-cancelled {
+    color: #ff6a79;
+    border-color: rgba(255,70,88,.28);
+    background: rgba(255,70,88,.08);
+}
+
+
+.customer-journal-badge.status-planned {
+    color: #f0c75a;
+    border-color: rgba(255,201,77,.26);
+    background: rgba(255,201,77,.07);
+}
+
+
+.customer-journal-badge.status-closed {
+    color: #5da8ff;
+    border-color: rgba(36,142,255,.28);
+    background: rgba(36,142,255,.08);
+}
+
+
+.customer-journal-status-stack {
+    display: grid;
+    justify-items: start;
+
+    gap: 5px;
+}
+
+
+.customer-journal-result {
+    color: #7f96ad;
+
+    font-size: 8px;
+    font-weight: 800;
+}
+
+
+.customer-journal-date {
+    color: #b7c6d5;
+
+    white-space: nowrap;
+
+    font-size: 9px;
+}
+
+
+.customer-journal-date small {
+    margin-top: 4px;
+
+    color: #60788e;
+
+    font-size: 8px;
+}
+
+
+.customer-journal-pnl {
+    color: #9eb3d1;
+
+    white-space: nowrap;
+
+    font-size: 10px;
+    font-weight: 800;
+}
+
+
+.customer-journal-pnl.positive {
+    color: #2cdb9f;
+}
+
+
+.customer-journal-pnl.negative {
+    color: #ff6675;
+}
+
+
+.customer-journal-details {
+    width: min(640px, 62vw);
+}
+
+
+.customer-journal-details summary {
+    width: max-content;
+
+    padding: 6px 9px;
+
+    cursor: pointer;
+
+    border: 1px solid rgba(36,142,255,.24);
+    border-radius: 8px;
+
+    color: #6fb0ff;
+    background: rgba(36,142,255,.06);
+
+    list-style: none;
+
+    font-size: 9px;
+    font-weight: 800;
+}
+
+
+.customer-journal-details summary::-webkit-details-marker {
+    display: none;
+}
+
+
+.customer-journal-details[open] summary {
+    margin-bottom: 10px;
+
+    color: #f0c75a;
+    border-color: rgba(255,201,77,.24);
+    background: rgba(255,201,77,.06);
+}
+
+
+.customer-journal-detail-content {
+    padding: 13px;
+
+    border: 1px solid rgba(169,75,255,.22);
+    border-radius: 12px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(11,31,58,.98),
+            rgba(5,18,34,.98)
+        );
+}
+
+
+.customer-journal-detail-grid,
+.customer-journal-review-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 8px;
+}
+
+
+.customer-journal-review-grid {
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    margin-top: 10px;
+}
+
+
+.customer-journal-detail-grid > div,
+.customer-journal-review-grid > div {
+    min-width: 0;
+
+    padding: 10px;
+
+    border: 1px solid rgba(255,255,255,.045);
+    border-radius: 9px;
+
+    background: rgba(255,255,255,.018);
+}
+
+
+.customer-journal-detail-grid span,
+.customer-journal-review-grid span {
+    display: block;
+
+    color: #6f87a0;
+
+    font-size: 8px;
+    font-weight: 750;
+}
+
+
+.customer-journal-detail-grid strong,
+.customer-journal-review-grid p {
+    display: block;
+
+    margin: 5px 0 0;
+
+    color: #c2cfdd;
+
+    overflow-wrap: anywhere;
+
+    font-size: 9px;
+    line-height: 1.55;
+}
+
+
+.customer-journal-detail-wide {
+    grid-column: 1 / -1;
+}
+
+
+.customer-journal-pagination {
+    padding-top: 17px;
+}
+
+
 /* DETAIL RESPONSIVE */
 
 @media(max-width: 1050px) {
 
     .user-detail-layout {
         grid-template-columns: 1fr;
+    }
+
+
+    .customer-journal-stat-grid {
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
     }
 
 }
@@ -2392,6 +2775,31 @@ input {
 
     .user-detail-stat-grid {
         grid-template-columns: 1fr;
+    }
+
+
+    .customer-journal-header {
+        gap: 12px;
+
+        flex-direction: column;
+    }
+
+
+    .customer-journal-stat-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+
+    .customer-journal-details {
+        width: 540px;
+    }
+
+
+    .customer-journal-detail-grid,
+    .customer-journal-review-grid {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
     }
 
 

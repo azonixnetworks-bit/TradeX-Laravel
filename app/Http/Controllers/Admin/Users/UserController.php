@@ -418,6 +418,68 @@ class UserController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | Customer Trade Journal
+        |--------------------------------------------------------------------------
+        |
+        | Always start from the selected customer's relationship. This keeps the
+        | customer-details view tenant-scoped even for privileged administrators.
+        | Journal retention is enforced by the existing 45-day service/command.
+        |
+        */
+
+        $tradeJournalQuery =
+            $user->tradeJournalEntries();
+
+        $tradeJournalAggregate =
+            (clone $tradeJournalQuery)
+                ->selectRaw('COUNT(*) as total_count')
+                ->selectRaw(
+                    'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as planned_count',
+                    ['planned']
+                )
+                ->selectRaw(
+                    'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as open_count',
+                    ['open']
+                )
+                ->selectRaw(
+                    'SUM(CASE WHEN status = ? THEN 1 ELSE 0 END) as closed_count',
+                    ['closed']
+                )
+                ->selectRaw(
+                    'SUM(CASE WHEN result = ? THEN 1 ELSE 0 END) as win_count',
+                    ['win']
+                )
+                ->first();
+
+        $closedTradeCount =
+            (int) ($tradeJournalAggregate?->closed_count ?? 0);
+
+        $winningTradeCount =
+            (int) ($tradeJournalAggregate?->win_count ?? 0);
+
+        $tradeJournalStats = [
+            'total' => (int) ($tradeJournalAggregate?->total_count ?? 0),
+            'planned' => (int) ($tradeJournalAggregate?->planned_count ?? 0),
+            'open' => (int) ($tradeJournalAggregate?->open_count ?? 0),
+            'closed' => $closedTradeCount,
+            'win_rate' => $closedTradeCount > 0
+                ? round(($winningTradeCount / $closedTradeCount) * 100, 1)
+                : null,
+        ];
+
+        $tradeJournalEntries =
+            (clone $tradeJournalQuery)
+                ->orderByDesc('trade_at')
+                ->orderByDesc('id')
+                ->paginate(
+                    10,
+                    ['*'],
+                    'journal_page'
+                )
+                ->withQueryString();
+
+        /*
+        |--------------------------------------------------------------------------
         | Device Security
         |--------------------------------------------------------------------------
         */
@@ -504,7 +566,9 @@ class UserController extends Controller
                 'devices',
                 'activeSessionCount',
                 'canViewDevices',
-                'referralCustomers'
+                'referralCustomers',
+                'tradeJournalEntries',
+                'tradeJournalStats'
             )
         );
     }
