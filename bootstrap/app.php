@@ -3,6 +3,7 @@
 use App\Console\Commands\AdminReleaseCheckCommand;
 use App\Console\Commands\MobileApiReleaseCheckCommand;
 use App\Console\Commands\NowPaymentsCheckCommand;
+use App\Console\Commands\PruneTradeJournalCommand;
 use App\Console\Commands\StripeCheckCommand;
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminSecurityHeaders;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
         AdminReleaseCheckCommand::class,
         MobileApiReleaseCheckCommand::class,
         NowPaymentsCheckCommand::class,
+        PruneTradeJournalCommand::class,
         StripeCheckCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {

@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'retention_days' => 45,
+
     'markets' => ['forex', 'crypto', 'deriv', 'stocks'],
     'stock_regions' => ['sri_lanka_cse', 'india', 'international'],
     'directions' => ['buy', 'sell'],

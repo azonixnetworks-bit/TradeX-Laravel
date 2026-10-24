@@ -13,7 +13,8 @@ use Illuminate\Validation\ValidationException;
 class TradeJournalService
 {
     public function __construct(
-        private readonly MarketClockService $marketClock
+        private readonly MarketClockService $marketClock,
+        private readonly TradeJournalRetentionService $retention
     ) {
     }
 
@@ -49,6 +50,10 @@ class TradeJournalService
 
     public function create(User $user, array $data): array
     {
+        // Keep the customer's private journal bounded even if the scheduler
+        // has not run yet. The daily command performs the same cleanup globally.
+        $this->retention->pruneExpired($user);
+
         $timezone = $this->timezone($data['timezone'] ?? null);
         $tradeAt = $this->localToUtc($data['trade_date'], $data['trade_time'], $timezone);
         $status = $data['status'];

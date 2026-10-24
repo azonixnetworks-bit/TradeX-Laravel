@@ -95,6 +95,11 @@ Schedule::command('tradex:trading-floor:memberships-sweep')
         fn (): bool => (bool) config('trading_floor.memberships.sweep_enabled', true)
     );
 
+Schedule::command('tradex:trade-journal:prune')
+    ->dailyAt('00:30')
+    ->timezone('UTC')
+    ->withoutOverlapping(60);
+
 Schedule::command('tradex:trading-floor:reminders')
     ->dailyAt((string) config('trading_floor.reminders.schedule_time', '08:00'))
     ->timezone((string) config('trading_floor.reminders.timezone', 'Asia/Colombo'))
