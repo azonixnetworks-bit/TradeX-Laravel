@@ -14,6 +14,16 @@ class AffiliatePaginationRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'search' => [
+                'sometimes',
+                'string',
+                'max:80',
+            ],
+            'qualification' => [
+                'sometimes',
+                'string',
+                'in:QUALIFIED,NO_QUALIFIED_SALE',
+            ],
             'per_page' => [
                 'sometimes',
                 'integer',

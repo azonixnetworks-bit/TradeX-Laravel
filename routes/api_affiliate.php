@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Affiliate\AffiliateCommissionIndexController;
+use App\Http\Controllers\Api\Affiliate\AffiliateEarningsSeriesController;
 use App\Http\Controllers\Api\Affiliate\AffiliateMilestoneIndexController;
 use App\Http\Controllers\Api\Affiliate\AffiliateOverviewController;
 use App\Http\Controllers\Api\Affiliate\AffiliateQualifiedSaleIndexController;
@@ -79,6 +80,13 @@ Route::middleware([
                 'throttle:api-affiliate-read'
             )
             ->name('commissions.index');
+
+        Route::get(
+            '/earnings-series',
+            AffiliateEarningsSeriesController::class
+        )
+            ->middleware('throttle:api-affiliate-read')
+            ->name('earnings-series');
 
         Route::get(
             '/milestones',
