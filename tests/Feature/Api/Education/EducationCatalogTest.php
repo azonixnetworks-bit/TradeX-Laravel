@@ -10,9 +10,9 @@ use Tests\TestCase;
 
 class EducationCatalogTest extends TestCase
 {
-    use RefreshDatabase;
-    use CreatesTradeXMobileSession;
     use CreatesEducationContent;
+    use CreatesTradeXMobileSession;
+    use RefreshDatabase;
 
     public function test_published_course_module_and_lesson_are_available_to_authenticated_user(): void
     {
@@ -23,6 +23,10 @@ class EducationCatalogTest extends TestCase
         ] = $this->createEducationTree(
             Course::ACCESS_FREE
         );
+
+        $course->forceFill([
+            'thumbnail_path' => 'education/courses/market-structure/thumbnail.webp',
+        ])->save();
 
         $user =
             $this->createApiUser();
@@ -47,6 +51,10 @@ class EducationCatalogTest extends TestCase
             ->assertJsonPath(
                 'data.items.0.can_access',
                 true
+            )
+            ->assertJsonPath(
+                'data.items.0.thumbnail_path',
+                'education/courses/market-structure/thumbnail.webp'
             );
 
         $this
@@ -61,6 +69,10 @@ class EducationCatalogTest extends TestCase
             ->assertJsonPath(
                 'data.modules.0.uuid',
                 $module->uuid
+            )
+            ->assertJsonPath(
+                'data.course.thumbnail_path',
+                'education/courses/market-structure/thumbnail.webp'
             );
 
         $this
@@ -91,8 +103,7 @@ class EducationCatalogTest extends TestCase
         ] = $this->createEducationTree();
 
         $course->forceFill([
-            'status' =>
-                Course::STATUS_DRAFT,
+            'status' => Course::STATUS_DRAFT,
         ])->save();
 
         $user =

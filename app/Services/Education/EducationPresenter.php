@@ -14,8 +14,7 @@ class EducationPresenter
         private readonly EducationAccessService $access,
         private readonly EducationProgressService $progress,
         private readonly EducationContentLocalizationService $localization
-    ) {
-    }
+    ) {}
 
     public function courseSummary(
         User $user,
@@ -94,17 +93,13 @@ class EducationPresenter
         return [
             'uuid' => $video->uuid,
             'title' => $fields['title'],
-            'short_description' =>
-                $fields['short_description'],
-            'duration_seconds' =>
-                $video->duration_seconds,
-            'playback_ready' =>
-                $video->isPlaybackReady()
+            'short_description' => $fields['short_description'],
+            'duration_seconds' => $video->duration_seconds,
+            'playback_ready' => $video->isPlaybackReady()
                 && $video->hasHlsStream(),
             'is_downloadable' => false,
             'sort_order' => $video->sort_order,
-            'localization' =>
-                $localized['localization'],
+            'localization' => $localized['localization'],
         ];
     }
 
@@ -124,8 +119,9 @@ class EducationPresenter
             'code' => $course->code,
             'slug' => $course->slug,
             'title' => $fields['title'],
-            'short_description' =>
-                $fields['short_description'],
+            'short_description' => $fields['short_description'],
+            'thumbnail_path' => $course->thumbnail_path,
+            'thumbnail_url' => $course->thumbnailUrl(),
             /*
             | language_code remains the source-language catalog field.
             | Display language is reported under localization.*.
@@ -137,8 +133,7 @@ class EducationPresenter
             'is_locked' => ! $canAccess,
             'progress' => $this->progress
                 ->courseProgress($user, $course),
-            'localization' =>
-                $localized['localization'],
+            'localization' => $localized['localization'],
         ];
 
         if ($includeDescription) {
@@ -163,18 +158,15 @@ class EducationPresenter
             'code' => $module->code,
             'slug' => $module->slug,
             'title' => $fields['title'],
-            'short_description' =>
-                $fields['short_description'],
+            'short_description' => $fields['short_description'],
             'sort_order' => $module->sort_order,
-            'lesson_count' =>
-                $module->relationLoaded('lessons')
+            'lesson_count' => $module->relationLoaded('lessons')
                     ? $module->lessons->count()
                     : Lesson::query()
                         ->published()
                         ->forModule($module)
                         ->count(),
-            'localization' =>
-                $localized['localization'],
+            'localization' => $localized['localization'],
         ];
 
         if ($includeDescription) {
@@ -202,16 +194,14 @@ class EducationPresenter
             'slug' => $lesson->slug,
             'title' => $fields['title'],
             'heading' => $fields['heading'],
-            'short_description' =>
-                $fields['short_description'],
+            'short_description' => $fields['short_description'],
             'is_preview' => (bool) $lesson->is_preview,
             'can_access' => $canAccess,
             'is_locked' => ! $canAccess,
             'sort_order' => $lesson->sort_order,
             'progress' => $this->progress
                 ->lessonProgress($user, $lesson),
-            'localization' =>
-                $localized['localization'],
+            'localization' => $localized['localization'],
         ];
 
         if ($includeDescription) {
