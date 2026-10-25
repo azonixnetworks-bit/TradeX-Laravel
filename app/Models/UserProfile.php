@@ -13,6 +13,12 @@ class UserProfile extends Model
     protected $fillable = [
         'user_id',
         'telegram_username',
+        'profile_photo_path',
+        'profile_photo_mime_type',
+        'profile_photo_size_bytes',
+        'profile_photo_sha256',
+        'profile_photo_version',
+        'profile_photo_updated_at',
         'paypal_email',
         'binance_email',
         'usdt_trc20_address',
@@ -37,6 +43,9 @@ class UserProfile extends Model
     {
         return [
             'telegram_username' => 'encrypted',
+            'profile_photo_size_bytes' => 'integer',
+            'profile_photo_version' => 'integer',
+            'profile_photo_updated_at' => 'datetime',
             'paypal_email' => 'encrypted',
             'binance_email' => 'encrypted',
             'usdt_trc20_address' => 'encrypted',

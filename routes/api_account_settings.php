@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Profile\Settings\AccountSecurityController;
 use App\Http\Controllers\Api\Profile\Settings\AccountSettingsController;
+use App\Http\Controllers\Api\Profile\Settings\ProfilePhotoController;
 use App\Http\Controllers\Api\Profile\Settings\RevokeTrustedDeviceController;
 use App\Http\Controllers\Api\Profile\Settings\TrustedDeviceIndexController;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +22,18 @@ Route::middleware([
         Route::get('/security', AccountSecurityController::class)
             ->middleware('throttle:api-account-settings-read')
             ->name('security');
+
+        Route::get('/photo', [ProfilePhotoController::class, 'show'])
+            ->middleware('throttle:api-account-settings-read')
+            ->name('photo.show');
+
+        Route::post('/photo', [ProfilePhotoController::class, 'store'])
+            ->middleware('throttle:api-account-settings-upload')
+            ->name('photo.store');
+
+        Route::delete('/photo', [ProfilePhotoController::class, 'destroy'])
+            ->middleware('throttle:api-account-settings-upload')
+            ->name('photo.destroy');
 
         Route::get('/devices', TrustedDeviceIndexController::class)
             ->middleware('throttle:api-account-settings-read')

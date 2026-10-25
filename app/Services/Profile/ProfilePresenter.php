@@ -15,26 +15,19 @@ class ProfilePresenter
 
         return [
             'identity' => [
-                'uuid' =>
-                    $user->uuid,
+                'uuid' => $user->uuid,
 
-                'name' =>
-                    $user->name,
+                'name' => $user->name,
 
-                'email' =>
-                    $user->email,
+                'email' => $user->email,
 
-                'country_code' =>
-                    $user->country_code,
+                'country_code' => $user->country_code,
 
-                'account_type' =>
-                    $user->account_type,
+                'account_type' => $user->account_type,
 
-                'status' =>
-                    $user->status,
+                'status' => $user->status,
 
-                'referral_code' =>
-                    $user->referral_code,
+                'referral_code' => $user->referral_code,
 
                 'locked_fields' => [
                     'name',
@@ -44,37 +37,38 @@ class ProfilePresenter
             ],
 
             'preferences' => [
-                'language_code' =>
-                    $user->language_code,
+                'language_code' => $user->language_code,
+            ],
+
+            'photo' => [
+                'available' => filled($profile?->profile_photo_path),
+                'version' => (int) ($profile?->profile_photo_version ?? 0),
+                'updated_at' => $profile?->profile_photo_updated_at?->toISOString(),
+                'endpoint' => filled($profile?->profile_photo_path)
+                    ? '/api/v1/profile/settings/photo'
+                    : null,
             ],
 
             'contact' => [
-                'whatsapp_number' =>
-                    $user->whatsapp_number,
+                'whatsapp_number' => $user->whatsapp_number,
 
-                'whatsapp_verified' =>
-                    $user->whatsapp_verified_at
+                'whatsapp_verified' => $user->whatsapp_verified_at
                     !== null,
 
-                'telegram_username' =>
-                    $profile
-                        ?->telegram_username,
+                'telegram_username' => $profile
+                    ?->telegram_username,
 
-                'contact_change_security' =>
-                    'TOTP_AND_EMAIL_OTP',
+                'contact_change_security' => 'TOTP_AND_EMAIL_OTP',
             ],
 
-            'financial' =>
-                $this->financial(
-                    $profile
-                ),
+            'financial' => $this->financial(
+                $profile
+            ),
 
             'security' => [
-                'totp_confirmed' =>
-                    $user->hasConfirmedTotp(),
+                'totp_confirmed' => $user->hasConfirmedTotp(),
 
-                'sensitive_changes_require_totp' =>
-                    true,
+                'sensitive_changes_require_totp' => true,
             ],
         ];
     }
@@ -113,76 +107,64 @@ class ProfilePresenter
 
         return [
             'paypal' => [
-                'configured' =>
-                    filled(
-                        $profile->paypal_email
-                    ),
+                'configured' => filled(
+                    $profile->paypal_email
+                ),
 
-                'email_masked' =>
-                    $this->maskEmail(
-                        $profile->paypal_email
-                    ),
+                'email_masked' => $this->maskEmail(
+                    $profile->paypal_email
+                ),
             ],
 
             'binance' => [
-                'configured' =>
-                    filled(
-                        $profile->binance_email
-                    ),
+                'configured' => filled(
+                    $profile->binance_email
+                ),
 
-                'email_masked' =>
-                    $this->maskEmail(
-                        $profile->binance_email
-                    ),
+                'email_masked' => $this->maskEmail(
+                    $profile->binance_email
+                ),
             ],
 
             'usdt_trc20' => [
-                'configured' =>
-                    filled(
-                        $profile->usdt_trc20_address
-                    ),
+                'configured' => filled(
+                    $profile->usdt_trc20_address
+                ),
 
-                'address_masked' =>
-                    $this->maskMiddle(
-                        $profile->usdt_trc20_address,
-                        6,
-                        6
-                    ),
+                'address_masked' => $this->maskMiddle(
+                    $profile->usdt_trc20_address,
+                    6,
+                    6
+                ),
             ],
 
             'bank' => [
-                'configured' =>
-                    filled(
-                        $profile->bank_account_number
-                    ),
+                'configured' => filled(
+                    $profile->bank_account_number
+                ),
 
-                'name_masked' =>
-                    $this->maskText(
-                        $profile->bank_name
-                    ),
+                'name_masked' => $this->maskText(
+                    $profile->bank_name
+                ),
 
-                'branch_masked' =>
-                    $this->maskText(
-                        $profile->bank_branch
-                    ),
+                'branch_masked' => $this->maskText(
+                    $profile->bank_branch
+                ),
 
-                'holder_masked' =>
-                    $this->maskText(
-                        $profile->bank_account_holder
-                    ),
+                'holder_masked' => $this->maskText(
+                    $profile->bank_account_holder
+                ),
 
-                'account_masked' =>
-                    $this->maskMiddle(
-                        $profile->bank_account_number,
-                        2,
-                        4
-                    ),
+                'account_masked' => $this->maskMiddle(
+                    $profile->bank_account_number,
+                    2,
+                    4
+                ),
             ],
 
-            'updated_at' =>
-                $profile
-                    ->financial_updated_at
-                    ?->toIso8601String(),
+            'updated_at' => $profile
+                ->financial_updated_at
+                ?->toIso8601String(),
         ];
     }
 
