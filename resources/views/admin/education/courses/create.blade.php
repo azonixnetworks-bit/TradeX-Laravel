@@ -360,6 +360,7 @@
     method="POST"
     action="{{ route('admin.education.courses.store') }}"
     autocomplete="off"
+    enctype="multipart/form-data"
 >
     @csrf
 
@@ -719,26 +720,23 @@
 
                     <div class="education-field full">
 
-                        <label for="course-thumbnail-path">
-                            Thumbnail Cloud Path / Asset Reference
+                        <label for="course-thumbnail-image">
+                            Course Thumbnail Image
                             <small>Optional</small>
                         </label>
 
                         <input
-                            id="course-thumbnail-path"
-                            type="text"
-                            name="thumbnail_path"
-                            value="{{ old('thumbnail_path') }}"
-                            maxlength="500"
-                            spellcheck="false"
-                            placeholder="education/courses/smc-pro/thumbnail.webp"
+                            id="course-thumbnail-image"
+                            type="file"
+                            name="thumbnail_image"
+                            accept="image/jpeg,image/png,image/webp"
                         >
 
                         <span class="field-help">
-                            Store a stable cloud object path or asset reference here — not an expiring signed URL.
+                            Upload a JPG, PNG or WebP image up to 5 MB. It will be stored securely and displayed in the Flutter learning catalogue.
                         </span>
 
-                        @error('thumbnail_path')
+                        @error('thumbnail_image')
                             <span class="field-error">
                                 {{ $message }}
                             </span>

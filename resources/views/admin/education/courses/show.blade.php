@@ -755,14 +755,18 @@
                     <div class="course-info-item">
 
                         <span>
-                            Thumbnail Cloud Reference
+                            Course Thumbnail
                         </span>
 
-                        <code>
-                            {{ $course->thumbnail_path
-                                ?: 'Not configured'
-                            }}
-                        </code>
+                        @if($course->thumbnailUrl() !== null)
+                            <img
+                                src="{{ $course->thumbnailUrl() }}"
+                                alt="{{ $course->title }} thumbnail"
+                                style="display:block;width:min(100%,360px);aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-top:8px;border:1px solid rgba(95,155,214,.35);"
+                            >
+                        @else
+                            <strong>Not configured</strong>
+                        @endif
 
                     </div>
 

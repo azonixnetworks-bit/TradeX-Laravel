@@ -29,7 +29,6 @@ class Course extends Model
 
     public const STATUS_ARCHIVED = 'ARCHIVED';
 
-
     /*
     |--------------------------------------------------------------------------
     | Mass Assignment
@@ -54,7 +53,6 @@ class Course extends Model
         'updated_by_admin_id',
     ];
 
-
     /*
     |--------------------------------------------------------------------------
     | Attribute Casting
@@ -69,7 +67,6 @@ class Course extends Model
             'is_featured' => 'boolean',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -94,7 +91,6 @@ class Course extends Model
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -110,7 +106,6 @@ class Course extends Model
             ->orderBy('id');
     }
 
-
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -119,7 +114,6 @@ class Course extends Model
         );
     }
 
-
     public function updatedByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -127,7 +121,6 @@ class Course extends Model
             'updated_by_admin_id'
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -153,7 +146,6 @@ class Course extends Model
             );
     }
 
-
     public function scopeDraft(
         Builder $query
     ): Builder {
@@ -162,7 +154,6 @@ class Course extends Model
             self::STATUS_DRAFT
         );
     }
-
 
     public function scopeArchived(
         Builder $query
@@ -173,7 +164,6 @@ class Course extends Model
         );
     }
 
-
     public function scopeFeatured(
         Builder $query
     ): Builder {
@@ -182,7 +172,6 @@ class Course extends Model
             true
         );
     }
-
 
     public function scopeFree(
         Builder $query
@@ -193,7 +182,6 @@ class Course extends Model
         );
     }
 
-
     public function scopePremium(
         Builder $query
     ): Builder {
@@ -202,7 +190,6 @@ class Course extends Model
             self::ACCESS_PREMIUM
         );
     }
-
 
     public function scopeOrdered(
         Builder $query
@@ -216,7 +203,6 @@ class Course extends Model
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | State Helpers
@@ -228,7 +214,6 @@ class Course extends Model
         return $this->status === self::STATUS_DRAFT;
     }
 
-
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED
@@ -236,21 +221,47 @@ class Course extends Model
             && $this->published_at->lte(now());
     }
 
-
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
     }
-
 
     public function isFree(): bool
     {
         return $this->access_level === self::ACCESS_FREE;
     }
 
-
     public function isPremium(): bool
     {
         return $this->access_level === self::ACCESS_PREMIUM;
+    }
+
+    public function thumbnailUrl(): ?string
+    {
+        $thumbnail = trim(
+            (string) $this->thumbnail_path
+        );
+
+        if ($thumbnail === '') {
+            return null;
+        }
+
+        if (
+            str_starts_with($thumbnail, 'https://')
+            || str_starts_with($thumbnail, 'http://')
+        ) {
+            return $thumbnail;
+        }
+
+        $normalized = ltrim(
+            str_replace('\\', '/', $thumbnail),
+            '/'
+        );
+
+        return url(
+            str_starts_with($normalized, 'storage/')
+                ? $normalized
+                : 'storage/'.$normalized
+        );
     }
 }

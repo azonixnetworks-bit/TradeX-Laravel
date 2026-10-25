@@ -31,7 +31,6 @@ class StoreCourseRequest extends FormRequest
             && $admin->hasPermission('education.create');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Input Normalization
@@ -85,7 +84,6 @@ class StoreCourseRequest extends FormRequest
             $this->merge($normalized);
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -147,6 +145,14 @@ class StoreCourseRequest extends FormRequest
                 'max:500',
             ],
 
+            'thumbnail_image' => [
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
             'language_code' => [
                 'required',
                 'string',
@@ -196,7 +202,6 @@ class StoreCourseRequest extends FormRequest
         ];
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Messages
@@ -218,7 +223,6 @@ class StoreCourseRequest extends FormRequest
             'deleted_at.prohibited' => 'The deletion state cannot be supplied when creating a course.',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------

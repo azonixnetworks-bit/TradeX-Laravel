@@ -373,6 +373,7 @@
         $course
     ) }}"
     autocomplete="off"
+    enctype="multipart/form-data"
 >
     @csrf
     @method('PATCH')
@@ -740,29 +741,52 @@
 
                     <div class="education-field full">
 
-                        <label for="course-thumbnail-path">
-                            Thumbnail Cloud Path / Asset Reference
+                        <label for="course-thumbnail-image">
+                            Course Thumbnail Image
                             <small>Optional</small>
                         </label>
 
+                        @php
+                            $courseThumbnailUrl = $course->thumbnailUrl();
+                        @endphp
+
+                        @if($courseThumbnailUrl !== null)
+                            <img
+                                src="{{ $courseThumbnailUrl }}"
+                                alt="{{ $course->title }} thumbnail"
+                                style="display:block;width:min(100%,420px);aspect-ratio:16/9;object-fit:cover;border-radius:14px;margin:0 0 14px;border:1px solid rgba(95,155,214,.35);"
+                            >
+
+                            <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                                <input
+                                    type="checkbox"
+                                    name="remove_thumbnail"
+                                    value="1"
+                                    @checked(old('remove_thumbnail'))
+                                    style="width:auto;"
+                                >
+                                Remove current thumbnail
+                            </label>
+                        @endif
+
                         <input
-                            id="course-thumbnail-path"
-                            type="text"
-                            name="thumbnail_path"
-                            value="{{ old(
-                                'thumbnail_path',
-                                $course->thumbnail_path
-                            ) }}"
-                            maxlength="500"
-                            spellcheck="false"
-                            placeholder="education/courses/smc-pro/thumbnail.webp"
+                            id="course-thumbnail-image"
+                            type="file"
+                            name="thumbnail_image"
+                            accept="image/jpeg,image/png,image/webp"
                         >
 
                         <span class="field-help">
-                            Store only the stable cloud path or provider asset reference — never an expiring signed delivery URL.
+                            Uploading a new JPG, PNG or WebP (maximum 5 MB) replaces the current image. Flutter loads this image from the saved database path.
                         </span>
 
-                        @error('thumbnail_path')
+                        @error('thumbnail_image')
+                            <span class="field-error">
+                                {{ $message }}
+                            </span>
+                        @enderror
+
+                        @error('remove_thumbnail')
                             <span class="field-error">
                                 {{ $message }}
                             </span>

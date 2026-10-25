@@ -12,9 +12,14 @@ use App\Models\Course;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class CourseController extends Controller
 {
@@ -169,34 +174,29 @@ class CourseController extends Controller
         }
 
         match ($sort) {
-            'newest' =>
-                $query->orderByDesc(
-                    'created_at'
-                ),
+            'newest' => $query->orderByDesc(
+                'created_at'
+            ),
 
-            'oldest' =>
-                $query->orderBy(
-                    'created_at'
-                ),
+            'oldest' => $query->orderBy(
+                'created_at'
+            ),
 
-            'title_asc' =>
-                $query->orderBy(
-                    'title'
-                ),
+            'title_asc' => $query->orderBy(
+                'title'
+            ),
 
-            'title_desc' =>
-                $query->orderByDesc(
-                    'title'
-                ),
+            'title_desc' => $query->orderByDesc(
+                'title'
+            ),
 
-            default =>
-                $query
-                    ->orderBy(
-                        'sort_order'
-                    )
-                    ->orderBy(
-                        'id'
-                    ),
+            default => $query
+                ->orderBy(
+                    'sort_order'
+                )
+                ->orderBy(
+                    'id'
+                ),
         };
 
         $courses = $query
@@ -206,49 +206,43 @@ class CourseController extends Controller
             ->withQueryString();
 
         $stats = [
-            'total' =>
-                Course::query()
-                    ->count(),
+            'total' => Course::query()
+                ->count(),
 
-            'draft' =>
-                Course::query()
-                    ->where(
-                        'status',
-                        Course::STATUS_DRAFT
-                    )
-                    ->count(),
+            'draft' => Course::query()
+                ->where(
+                    'status',
+                    Course::STATUS_DRAFT
+                )
+                ->count(),
 
-            'published' =>
-                Course::query()
-                    ->where(
-                        'status',
-                        Course::STATUS_PUBLISHED
-                    )
-                    ->count(),
+            'published' => Course::query()
+                ->where(
+                    'status',
+                    Course::STATUS_PUBLISHED
+                )
+                ->count(),
 
-            'archived' =>
-                Course::query()
-                    ->where(
-                        'status',
-                        Course::STATUS_ARCHIVED
-                    )
-                    ->count(),
+            'archived' => Course::query()
+                ->where(
+                    'status',
+                    Course::STATUS_ARCHIVED
+                )
+                ->count(),
 
-            'free' =>
-                Course::query()
-                    ->where(
-                        'access_level',
-                        Course::ACCESS_FREE
-                    )
-                    ->count(),
+            'free' => Course::query()
+                ->where(
+                    'access_level',
+                    Course::ACCESS_FREE
+                )
+                ->count(),
 
-            'premium' =>
-                Course::query()
-                    ->where(
-                        'access_level',
-                        Course::ACCESS_PREMIUM
-                    )
-                    ->count(),
+            'premium' => Course::query()
+                ->where(
+                    'access_level',
+                    Course::ACCESS_PREMIUM
+                )
+                ->count(),
         ];
 
         $permissions = $this->educationPermissions(
@@ -265,7 +259,6 @@ class CourseController extends Controller
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -295,7 +288,6 @@ class CourseController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Store Course
@@ -314,98 +306,104 @@ class CourseController extends Controller
 
         $validated = $request->validated();
 
-        $course = DB::transaction(
-            function () use (
-                $validated,
-                $request,
-                $admin
-            ): Course {
-                $course = Course::create([
-                    'code' =>
-                        $validated['code'],
+        $courseUuid = (string) Str::uuid();
+        $thumbnailUpload = $request->file(
+            'thumbnail_image'
+        );
+        $uploadedThumbnailPath =
+            $thumbnailUpload instanceof UploadedFile
+                ? $this->storeCourseThumbnail(
+                    $thumbnailUpload,
+                    $courseUuid
+                )
+                : null;
+        $thumbnailPath =
+            $uploadedThumbnailPath
+            ?? ($validated['thumbnail_path'] ?? null);
 
-                    'slug' =>
-                        $validated['slug'],
+        try {
+            $course = DB::transaction(
+                function () use (
+                    $validated,
+                    $request,
+                    $admin,
+                    $courseUuid,
+                    $thumbnailPath
+                ): Course {
+                    $course = Course::create([
+                        'uuid' => $courseUuid,
 
-                    'title' =>
-                        $validated['title'],
+                        'code' => $validated['code'],
 
-                    'short_description' =>
-                        $validated['short_description']
-                        ?? null,
+                        'slug' => $validated['slug'],
 
-                    'description' =>
-                        $validated['description']
-                        ?? null,
+                        'title' => $validated['title'],
 
-                    'thumbnail_path' =>
-                        $validated['thumbnail_path']
-                        ?? null,
+                        'short_description' => $validated['short_description']
+                            ?? null,
 
-                    'language_code' =>
-                        $validated['language_code'],
+                        'description' => $validated['description']
+                            ?? null,
 
-                    'access_level' =>
-                        $validated['access_level'],
+                        'thumbnail_path' => $thumbnailPath,
 
-                    'status' =>
-                        Course::STATUS_DRAFT,
+                        'language_code' => $validated['language_code'],
 
-                    'published_at' =>
-                        null,
+                        'access_level' => $validated['access_level'],
 
-                    'sort_order' =>
-                        (int) (
+                        'status' => Course::STATUS_DRAFT,
+
+                        'published_at' => null,
+
+                        'sort_order' => (int) (
                             $validated['sort_order']
                             ?? 0
                         ),
 
-                    'is_featured' =>
-                        $request->boolean(
+                        'is_featured' => $request->boolean(
                             'is_featured'
                         ),
 
-                    'created_by_admin_id' =>
-                        $admin->id,
+                        'created_by_admin_id' => $admin->id,
 
-                    'updated_by_admin_id' =>
-                        $admin->id,
-                ]);
+                        'updated_by_admin_id' => $admin->id,
+                    ]);
 
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                        actorId: $admin->id,
 
-                    action:
-                        'COURSE_CREATED',
+                        action: 'COURSE_CREATED',
 
-                    module:
-                        'EDUCATION',
+                        module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE',
+                        targetType: 'COURSE',
 
-                    targetId:
-                        $course->id,
+                        targetId: $course->id,
 
-                    newValues:
-                        $this->auditSnapshot(
+                        newValues: $this->auditSnapshot(
                             $course
                         ),
 
-                    ipAddress:
-                        $request->ip(),
+                        ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                        userAgent: $request->userAgent()
+                    );
+
+                    return $course;
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedCourseThumbnail(
+                    $uploadedThumbnailPath,
+                    $courseUuid
                 );
-
-                return $course;
             }
-        );
+
+            throw $exception;
+        }
 
         return redirect()
             ->route(
@@ -417,7 +415,6 @@ class CourseController extends Controller
                 'Course created successfully as draft.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -439,45 +436,36 @@ class CourseController extends Controller
             'createdByAdmin',
             'updatedByAdmin',
 
-            'modules' =>
-                function ($query): void {
-                    $query
-                        ->withCount(
-                            'lessons'
-                        )
-                        ->orderBy(
-                            'sort_order'
-                        )
-                        ->orderBy(
-                            'id'
-                        );
-                },
+            'modules' => function ($query): void {
+                $query
+                    ->withCount(
+                        'lessons'
+                    )
+                    ->orderBy(
+                        'sort_order'
+                    )
+                    ->orderBy(
+                        'id'
+                    );
+            },
         ]);
 
         AuditLog::record(
-            actorType:
-                'ADMIN',
+            actorType: 'ADMIN',
 
-            actorId:
-                $admin->id,
+            actorId: $admin->id,
 
-            action:
-                'COURSE_VIEWED',
+            action: 'COURSE_VIEWED',
 
-            module:
-                'EDUCATION',
+            module: 'EDUCATION',
 
-            targetType:
-                'COURSE',
+            targetType: 'COURSE',
 
-            targetId:
-                $course->id,
+            targetId: $course->id,
 
-            ipAddress:
-                request()->ip(),
+            ipAddress: request()->ip(),
 
-            userAgent:
-                request()->userAgent()
+            userAgent: request()->userAgent()
         );
 
         $permissions = $this->educationPermissions(
@@ -492,7 +480,6 @@ class CourseController extends Controller
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -524,7 +511,6 @@ class CourseController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Update Course
@@ -544,129 +530,179 @@ class CourseController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(
-            function () use (
-                $course,
-                $validated,
-                $request,
-                $admin
-            ): void {
-                $lockedCourse = Course::query()
-                    ->lockForUpdate()
-                    ->findOrFail(
-                        $course->id
+        $thumbnailUpload = $request->file(
+            'thumbnail_image'
+        );
+        $uploadedThumbnailPath =
+            $thumbnailUpload instanceof UploadedFile
+                ? $this->storeCourseThumbnail(
+                    $thumbnailUpload,
+                    $course->uuid
+                )
+                : null;
+        $previousThumbnailPath = null;
+
+        try {
+            DB::transaction(
+                function () use (
+                    $course,
+                    $validated,
+                    $request,
+                    $admin,
+                    $uploadedThumbnailPath,
+                    &$previousThumbnailPath
+                ): void {
+                    $lockedCourse = Course::query()
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $course->id
+                        );
+
+                    $before = $this->auditSnapshot(
+                        $lockedCourse
                     );
 
-                $before = $this->auditSnapshot(
-                    $lockedCourse
-                );
+                    $updates = [];
 
-                $updates = [];
+                    foreach ([
+                        'code',
+                        'slug',
+                        'title',
+                        'short_description',
+                        'description',
+                        'language_code',
+                        'access_level',
+                    ] as $field) {
+                        if (
+                            array_key_exists(
+                                $field,
+                                $validated
+                            )
+                        ) {
+                            $updates[$field] =
+                                $validated[$field];
+                        }
+                    }
 
-                foreach ([
-                    'code',
-                    'slug',
-                    'title',
-                    'short_description',
-                    'description',
-                    'thumbnail_path',
-                    'language_code',
-                    'access_level',
-                ] as $field) {
-                    if (
+                    if ($uploadedThumbnailPath !== null) {
+                        $previousThumbnailPath =
+                            $lockedCourse->thumbnail_path;
+                        $updates['thumbnail_path'] =
+                            $uploadedThumbnailPath;
+                    } elseif (
+                        $request->boolean(
+                            'remove_thumbnail'
+                        )
+                    ) {
+                        $previousThumbnailPath =
+                            $lockedCourse->thumbnail_path;
+                        $updates['thumbnail_path'] = null;
+                    } elseif (
                         array_key_exists(
-                            $field,
+                            'thumbnail_path',
                             $validated
                         )
                     ) {
-                        $updates[$field] =
-                            $validated[$field];
+                        $previousThumbnailPath =
+                            $lockedCourse->thumbnail_path;
+                        $updates['thumbnail_path'] =
+                            $validated['thumbnail_path'];
                     }
-                }
 
-                if (
-                    array_key_exists(
-                        'sort_order',
-                        $validated
-                    )
-                ) {
-                    $updates['sort_order'] =
-                        (int) (
-                            $validated['sort_order']
-                            ?? 0
-                        );
-                }
+                    if (
+                        array_key_exists(
+                            'sort_order',
+                            $validated
+                        )
+                    ) {
+                        $updates['sort_order'] =
+                            (int) (
+                                $validated['sort_order']
+                                ?? 0
+                            );
+                    }
 
-                if (
-                    array_key_exists(
-                        'is_featured',
-                        $validated
-                    )
-                ) {
-                    $updates['is_featured'] =
-                        $request->boolean(
-                            'is_featured'
-                        );
-                }
+                    if (
+                        array_key_exists(
+                            'is_featured',
+                            $validated
+                        )
+                    ) {
+                        $updates['is_featured'] =
+                            $request->boolean(
+                                'is_featured'
+                            );
+                    }
 
-                $updates['updated_by_admin_id'] =
-                    $admin->id;
+                    $updates['updated_by_admin_id'] =
+                        $admin->id;
 
-                $lockedCourse->fill(
-                    $updates
-                );
+                    $lockedCourse->fill(
+                        $updates
+                    );
 
-                if (! $lockedCourse->isDirty()) {
-                    return;
-                }
+                    if (! $lockedCourse->isDirty()) {
+                        return;
+                    }
 
-                $lockedCourse->save();
+                    $lockedCourse->save();
 
-                $after = $this->auditSnapshot(
-                    $lockedCourse->fresh()
-                );
+                    $after = $this->auditSnapshot(
+                        $lockedCourse->fresh()
+                    );
 
-                [
-                    $oldValues,
-                    $newValues,
-                ] = $this->auditChanges(
-                    $before,
-                    $after
-                );
-
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
-
-                    actorId:
-                        $admin->id,
-
-                    action:
-                        'COURSE_UPDATED',
-
-                    module:
-                        'EDUCATION',
-
-                    targetType:
-                        'COURSE',
-
-                    targetId:
-                        $lockedCourse->id,
-
-                    oldValues:
+                    [
                         $oldValues,
-
-                    newValues:
                         $newValues,
+                    ] = $this->auditChanges(
+                        $before,
+                        $after
+                    );
 
-                    ipAddress:
-                        $request->ip(),
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    userAgent:
-                        $request->userAgent()
+                        actorId: $admin->id,
+
+                        action: 'COURSE_UPDATED',
+
+                        module: 'EDUCATION',
+
+                        targetType: 'COURSE',
+
+                        targetId: $lockedCourse->id,
+
+                        oldValues: $oldValues,
+
+                        newValues: $newValues,
+
+                        ipAddress: $request->ip(),
+
+                        userAgent: $request->userAgent()
+                    );
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedCourseThumbnail(
+                    $uploadedThumbnailPath,
+                    $course->uuid
                 );
             }
-        );
+
+            throw $exception;
+        }
+
+        if (
+            $previousThumbnailPath !== null
+            && $previousThumbnailPath
+                !== $uploadedThumbnailPath
+        ) {
+            $this->deleteManagedCourseThumbnail(
+                $previousThumbnailPath,
+                $course->uuid
+            );
+        }
 
         return redirect()
             ->route(
@@ -678,7 +714,6 @@ class CourseController extends Controller
                 'Course updated successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -787,35 +822,25 @@ class CourseController extends Controller
                 }
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        $auditAction,
+                    action: $auditAction,
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE',
+                    targetType: 'COURSE',
 
-                    targetId:
-                        $lockedCourse->id,
+                    targetId: $lockedCourse->id,
 
-                    oldValues:
-                        $oldValues,
+                    oldValues: $oldValues,
 
-                    newValues:
-                        $newValues,
+                    newValues: $newValues,
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
 
                 return $message;
@@ -832,7 +857,6 @@ class CourseController extends Controller
                 $message
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -887,39 +911,29 @@ class CourseController extends Controller
                 $lockedCourse->delete();
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        'COURSE_DELETED',
+                    action: 'COURSE_DELETED',
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE',
+                    targetType: 'COURSE',
 
-                    targetId:
-                        $lockedCourse->id,
+                    targetId: $lockedCourse->id,
 
-                    oldValues:
-                        $before,
+                    oldValues: $before,
 
                     newValues: [
-                        'deleted_at' =>
-                            $lockedCourse
-                                ->deleted_at
-                                ?->toISOString(),
+                        'deleted_at' => $lockedCourse
+                            ->deleted_at
+                            ?->toISOString(),
                     ],
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
             }
         );
@@ -933,7 +947,6 @@ class CourseController extends Controller
                 'Course deleted successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -956,7 +969,6 @@ class CourseController extends Controller
         return $admin;
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ADMIN-03 — Permission Boundary
@@ -975,7 +987,6 @@ class CourseController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Education Permission Map
@@ -986,33 +997,27 @@ class CourseController extends Controller
         AdminUser $admin
     ): array {
         return [
-            'view' =>
-                $admin->hasPermission(
-                    'education.view'
-                ),
+            'view' => $admin->hasPermission(
+                'education.view'
+            ),
 
-            'create' =>
-                $admin->hasPermission(
-                    'education.create'
-                ),
+            'create' => $admin->hasPermission(
+                'education.create'
+            ),
 
-            'update' =>
-                $admin->hasPermission(
-                    'education.update'
-                ),
+            'update' => $admin->hasPermission(
+                'education.update'
+            ),
 
-            'delete' =>
-                $admin->hasPermission(
-                    'education.delete'
-                ),
+            'delete' => $admin->hasPermission(
+                'education.delete'
+            ),
 
-            'publish' =>
-                $admin->hasPermission(
-                    'education.publish'
-                ),
+            'publish' => $admin->hasPermission(
+                'education.publish'
+            ),
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1032,67 +1037,50 @@ class CourseController extends Controller
             $course->description;
 
         return [
-            'uuid' =>
-                $course->uuid,
+            'uuid' => $course->uuid,
 
-            'code' =>
-                $course->code,
+            'code' => $course->code,
 
-            'slug' =>
-                $course->slug,
+            'slug' => $course->slug,
 
-            'title' =>
-                $course->title,
+            'title' => $course->title,
 
-            'short_description' =>
-                $course->short_description,
+            'short_description' => $course->short_description,
 
-            'description_sha256' =>
-                $description !== null
+            'description_sha256' => $description !== null
                     ? hash(
                         'sha256',
                         $description
                     )
                     : null,
 
-            'description_length' =>
-                $description !== null
+            'description_length' => $description !== null
                     ? mb_strlen(
                         $description
                     )
                     : 0,
 
-            'thumbnail_path' =>
-                $course->thumbnail_path,
+            'thumbnail_path' => $course->thumbnail_path,
 
-            'language_code' =>
-                $course->language_code,
+            'language_code' => $course->language_code,
 
-            'access_level' =>
-                $course->access_level,
+            'access_level' => $course->access_level,
 
-            'status' =>
-                $course->status,
+            'status' => $course->status,
 
-            'published_at' =>
-                $course
-                    ->published_at
-                    ?->toISOString(),
+            'published_at' => $course
+                ->published_at
+                ?->toISOString(),
 
-            'sort_order' =>
-                $course->sort_order,
+            'sort_order' => $course->sort_order,
 
-            'is_featured' =>
-                $course->is_featured,
+            'is_featured' => $course->is_featured,
 
-            'created_by_admin_id' =>
-                $course->created_by_admin_id,
+            'created_by_admin_id' => $course->created_by_admin_id,
 
-            'updated_by_admin_id' =>
-                $course->updated_by_admin_id,
+            'updated_by_admin_id' => $course->updated_by_admin_id,
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -1144,6 +1132,58 @@ class CourseController extends Controller
         ];
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Course Thumbnail Storage
+    |--------------------------------------------------------------------------
+    */
+
+    private function storeCourseThumbnail(
+        UploadedFile $image,
+        string $courseUuid
+    ): string {
+        $extension = strtolower(
+            $image->extension()
+        );
+        $filename = 'thumbnail-'
+            .Str::uuid()
+            .'.'
+            .$extension;
+        $path = $image->storeAs(
+            'education/courses/'.$courseUuid,
+            $filename,
+            'public'
+        );
+
+        if (! is_string($path) || trim($path) === '') {
+            throw new RuntimeException(
+                'Unable to store the course thumbnail image.'
+            );
+        }
+
+        return $path;
+    }
+
+    private function deleteManagedCourseThumbnail(
+        string $path,
+        string $courseUuid
+    ): void {
+        $normalized = ltrim(
+            str_replace('\\', '/', trim($path)),
+            '/'
+        );
+        $prefix = 'education/courses/'
+            .$courseUuid
+            .'/';
+
+        if (! str_starts_with($normalized, $prefix)) {
+            return;
+        }
+
+        Storage::disk('public')->delete(
+            $normalized
+        );
+    }
 
     /*
     |--------------------------------------------------------------------------

@@ -5,9 +5,10 @@ namespace Tests\Feature\Admin\Education;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
-use App\Models\AuditLog;
 use App\Models\Course;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -17,6 +18,8 @@ class CourseManagementCrudTest extends TestCase
 
     public function test_authorized_admin_can_create_course_as_draft_with_audit_log(): void
     {
+        Storage::fake('public');
+
         $admin = $this->createAdminWithPermissions([
             'education.create',
         ]);
@@ -28,35 +31,30 @@ class CourseManagementCrudTest extends TestCase
                     'admin.education.courses.store'
                 ),
                 [
-                    'code' =>
-                        'SMC-PRO-01',
+                    'code' => 'SMC-PRO-01',
 
-                    'slug' =>
-                        'smc-professional-trading',
+                    'slug' => 'smc-professional-trading',
 
-                    'title' =>
-                        'SMC Professional Trading',
+                    'title' => 'SMC Professional Trading',
 
-                    'short_description' =>
-                        'Professional TradeX education course.',
+                    'short_description' => 'Professional TradeX education course.',
 
-                    'description' =>
-                        'Complete trading education programme.',
+                    'description' => 'Complete trading education programme.',
 
-                    'thumbnail_path' =>
-                        'education/courses/smc-pro/thumbnail.webp',
+                    'thumbnail_image' => UploadedFile::fake()->createWithContent(
+                        'smc-course.png',
+                        base64_decode(
+                            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlB8AAAAASUVORK5CYII='
+                        )
+                    ),
 
-                    'language_code' =>
-                        'ta',
+                    'language_code' => 'ta',
 
-                    'access_level' =>
-                        Course::ACCESS_PREMIUM,
+                    'access_level' => Course::ACCESS_PREMIUM,
 
-                    'sort_order' =>
-                        1,
+                    'sort_order' => 1,
 
-                    'is_featured' =>
-                        true,
+                    'is_featured' => true,
                 ]
             );
 
@@ -97,32 +95,37 @@ class CourseManagementCrudTest extends TestCase
             $course->updated_by_admin_id
         );
 
+        $this->assertStringStartsWith(
+            'education/courses/'.$course->uuid.'/thumbnail-',
+            (string) $course->thumbnail_path
+        );
+
+        Storage::disk('public')->assertExists(
+            (string) $course->thumbnail_path
+        );
+
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'actor_type' =>
-                    'ADMIN',
+                'actor_type' => 'ADMIN',
 
-                'actor_id' =>
-                    $admin->id,
+                'actor_id' => $admin->id,
 
-                'action' =>
-                    'COURSE_CREATED',
+                'action' => 'COURSE_CREATED',
 
-                'module' =>
-                    'EDUCATION',
+                'module' => 'EDUCATION',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
     }
 
     public function test_authorized_admin_can_update_course_and_clear_featured_flag(): void
     {
+        Storage::fake('public');
+
         $admin = $this->createAdminWithPermissions([
             'education.update',
         ]);
@@ -130,6 +133,16 @@ class CourseManagementCrudTest extends TestCase
         $course = $this->createCourse([
             'is_featured' => true,
         ]);
+        $oldThumbnailPath = 'education/courses/'
+            .$course->uuid
+            .'/thumbnail-old.webp';
+        Storage::disk('public')->put(
+            $oldThumbnailPath,
+            'old-thumbnail'
+        );
+        $course->forceFill([
+            'thumbnail_path' => $oldThumbnailPath,
+        ])->save();
 
         $response = $this
             ->actingAs($admin, 'admin')
@@ -139,14 +152,18 @@ class CourseManagementCrudTest extends TestCase
                     $course
                 ),
                 [
-                    'title' =>
-                        'Updated TradeX Course',
+                    'title' => 'Updated TradeX Course',
 
-                    'short_description' =>
-                        'Updated short description.',
+                    'short_description' => 'Updated short description.',
 
-                    'is_featured' =>
-                        0,
+                    'is_featured' => 0,
+
+                    'thumbnail_image' => UploadedFile::fake()->createWithContent(
+                        'replacement.png',
+                        base64_decode(
+                            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9ZlB8AAAAASUVORK5CYII='
+                        )
+                    ),
                 ]
             );
 
@@ -187,17 +204,27 @@ class CourseManagementCrudTest extends TestCase
             $fresh->updated_by_admin_id
         );
 
+        $this->assertNotSame(
+            $oldThumbnailPath,
+            $fresh->thumbnail_path
+        );
+
+        Storage::disk('public')->assertMissing(
+            $oldThumbnailPath
+        );
+
+        Storage::disk('public')->assertExists(
+            (string) $fresh->thumbnail_path
+        );
+
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'COURSE_UPDATED',
+                'action' => 'COURSE_UPDATED',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
     }
@@ -218,11 +245,9 @@ class CourseManagementCrudTest extends TestCase
                     $course
                 ),
                 [
-                    'action' =>
-                        'PUBLISH',
+                    'action' => 'PUBLISH',
 
-                    'reason' =>
-                        'Curriculum review completed.',
+                    'reason' => 'Curriculum review completed.',
                 ]
             );
 
@@ -252,14 +277,11 @@ class CourseManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'COURSE_PUBLISHED',
+                'action' => 'COURSE_PUBLISHED',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
 
@@ -271,11 +293,9 @@ class CourseManagementCrudTest extends TestCase
                     $course
                 ),
                 [
-                    'action' =>
-                        'UNPUBLISH',
+                    'action' => 'UNPUBLISH',
 
-                    'reason' =>
-                        'Returning course to draft for revision.',
+                    'reason' => 'Returning course to draft for revision.',
                 ]
             );
 
@@ -300,14 +320,11 @@ class CourseManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'COURSE_UNPUBLISHED',
+                'action' => 'COURSE_UNPUBLISHED',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
     }
@@ -319,11 +336,9 @@ class CourseManagementCrudTest extends TestCase
         ]);
 
         $course = $this->createCourse([
-            'status' =>
-                Course::STATUS_PUBLISHED,
+            'status' => Course::STATUS_PUBLISHED,
 
-            'published_at' =>
-                now(),
+            'published_at' => now(),
         ]);
 
         $response = $this
@@ -342,14 +357,11 @@ class CourseManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'courses',
             [
-                'id' =>
-                    $course->id,
+                'id' => $course->id,
 
-                'status' =>
-                    Course::STATUS_PUBLISHED,
+                'status' => Course::STATUS_PUBLISHED,
 
-                'deleted_at' =>
-                    null,
+                'deleted_at' => null,
             ]
         );
     }
@@ -380,28 +392,22 @@ class CourseManagementCrudTest extends TestCase
         $this->assertSoftDeleted(
             'courses',
             [
-                'id' =>
-                    $course->id,
+                'id' => $course->id,
             ]
         );
 
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'actor_id' =>
-                    $admin->id,
+                'actor_id' => $admin->id,
 
-                'action' =>
-                    'COURSE_DELETED',
+                'action' => 'COURSE_DELETED',
 
-                'module' =>
-                    'EDUCATION',
+                'module' => 'EDUCATION',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
     }
@@ -413,11 +419,9 @@ class CourseManagementCrudTest extends TestCase
         ]);
 
         $course = $this->createCourse([
-            'status' =>
-                Course::STATUS_PUBLISHED,
+            'status' => Course::STATUS_PUBLISHED,
 
-            'published_at' =>
-                now(),
+            'published_at' => now(),
         ]);
 
         $response = $this
@@ -428,8 +432,7 @@ class CourseManagementCrudTest extends TestCase
                     $course
                 ),
                 [
-                    'action' =>
-                        'PUBLISH',
+                    'action' => 'PUBLISH',
                 ]
             );
 
@@ -445,14 +448,11 @@ class CourseManagementCrudTest extends TestCase
         $this->assertDatabaseMissing(
             'audit_logs',
             [
-                'action' =>
-                    'COURSE_PUBLISHED',
+                'action' => 'COURSE_PUBLISHED',
 
-                'target_type' =>
-                    'COURSE',
+                'target_type' => 'COURSE',
 
-                'target_id' =>
-                    $course->id,
+                'target_id' => $course->id,
             ]
         );
     }
@@ -462,54 +462,41 @@ class CourseManagementCrudTest extends TestCase
     ): AdminUser {
         $admin = AdminUser::query()
             ->create([
-                'uuid' =>
-                    Str::uuid()->toString(),
+                'uuid' => Str::uuid()->toString(),
 
-                'name' =>
-                    'Education CRUD Admin',
+                'name' => 'Education CRUD Admin',
 
-                'email' =>
-                    'education-crud-'
+                'email' => 'education-crud-'
                     .Str::lower(
                         Str::random(12)
                     )
                     .'@tradex.test',
 
-                'email_verified_at' =>
-                    now(),
+                'email_verified_at' => now(),
 
-                'password' =>
-                    'TestingPassword123!',
+                'password' => 'TestingPassword123!',
 
-                'is_active' =>
-                    true,
+                'is_active' => true,
 
-                'failed_login_attempts' =>
-                    0,
+                'failed_login_attempts' => 0,
 
-                'locked_until' =>
-                    null,
+                'locked_until' => null,
             ]);
 
         $role = AdminRole::query()
             ->create([
-                'code' =>
-                    'EDU_CRUD_'
+                'code' => 'EDU_CRUD_'
                     .strtoupper(
                         Str::random(10)
                     ),
 
-                'name' =>
-                    'Education CRUD Test Role',
+                'name' => 'Education CRUD Test Role',
 
-                'description' =>
-                    'ADMIN-03 automated CRUD test role.',
+                'description' => 'ADMIN-03 automated CRUD test role.',
 
-                'is_system' =>
-                    false,
+                'is_system' => false,
 
-                'is_active' =>
-                    true,
+                'is_active' => true,
             ]);
 
         $admin->roles()
@@ -520,17 +507,13 @@ class CourseManagementCrudTest extends TestCase
         foreach ($permissions as $permissionCode) {
             $permission = AdminPermission::query()
                 ->create([
-                    'code' =>
-                        $permissionCode,
+                    'code' => $permissionCode,
 
-                    'name' =>
-                        $permissionCode,
+                    'name' => $permissionCode,
 
-                    'module' =>
-                        'EDUCATION',
+                    'module' => 'EDUCATION',
 
-                    'description' =>
-                        'ADMIN-03 automated CRUD permission.',
+                    'description' => 'ADMIN-03 automated CRUD permission.',
                 ]);
 
             $role->permissions()
@@ -549,47 +532,35 @@ class CourseManagementCrudTest extends TestCase
             ->create(
                 array_merge(
                     [
-                        'code' =>
-                            'CRUD-COURSE-'
+                        'code' => 'CRUD-COURSE-'
                             .strtoupper(
                                 Str::random(6)
                             ),
 
-                        'slug' =>
-                            'crud-course-'
+                        'slug' => 'crud-course-'
                             .Str::lower(
                                 Str::random(8)
                             ),
 
-                        'title' =>
-                            'CRUD Test Course',
+                        'title' => 'CRUD Test Course',
 
-                        'short_description' =>
-                            'Course fixture for ADMIN-03 CRUD tests.',
+                        'short_description' => 'Course fixture for ADMIN-03 CRUD tests.',
 
-                        'description' =>
-                            'CRUD test course description.',
+                        'description' => 'CRUD test course description.',
 
-                        'thumbnail_path' =>
-                            null,
+                        'thumbnail_path' => null,
 
-                        'language_code' =>
-                            'en',
+                        'language_code' => 'en',
 
-                        'access_level' =>
-                            Course::ACCESS_PREMIUM,
+                        'access_level' => Course::ACCESS_PREMIUM,
 
-                        'status' =>
-                            Course::STATUS_DRAFT,
+                        'status' => Course::STATUS_DRAFT,
 
-                        'published_at' =>
-                            null,
+                        'published_at' => null,
 
-                        'sort_order' =>
-                            1,
+                        'sort_order' => 1,
 
-                        'is_featured' =>
-                            false,
+                        'is_featured' => false,
                     ],
                     $overrides
                 )

@@ -30,7 +30,6 @@ class UpdateCourseRequest extends FormRequest
             && $admin->hasPermission('education.update');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Input Normalization
@@ -99,7 +98,6 @@ class UpdateCourseRequest extends FormRequest
             $this->merge($normalized);
         }
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -170,6 +168,20 @@ class UpdateCourseRequest extends FormRequest
                 'max:500',
             ],
 
+            'thumbnail_image' => [
+                'sometimes',
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
+            'remove_thumbnail' => [
+                'sometimes',
+                'boolean',
+            ],
+
             'language_code' => [
                 'sometimes',
                 'required',
@@ -223,7 +235,6 @@ class UpdateCourseRequest extends FormRequest
         ];
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Messages
@@ -245,7 +256,6 @@ class UpdateCourseRequest extends FormRequest
             'deleted_at.prohibited' => 'The deletion state cannot be changed through the normal course update request.',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -272,7 +282,6 @@ class UpdateCourseRequest extends FormRequest
 
         return null;
     }
-
 
     /*
     |--------------------------------------------------------------------------
