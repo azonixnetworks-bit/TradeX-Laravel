@@ -19,11 +19,34 @@ class TradeJournalAnalyticsService
         $timezone = $this->journal->timezone($timezone);
         $now = CarbonImmutable::now($timezone);
 
+        $periods = [
+            'today' => [$now->startOfDay(), $now->endOfDay()],
+            'week' => [$now->startOfWeek(), $now->endOfWeek()],
+            'month' => [$now->startOfMonth(), $now->endOfMonth()],
+        ];
+
+        $rangeFrom = collect($periods)
+            ->pluck(0)
+            ->sortBy(fn (CarbonImmutable $date): int => $date->timestamp)
+            ->first();
+        $rangeTo = collect($periods)
+            ->pluck(1)
+            ->sortByDesc(fn (CarbonImmutable $date): int => $date->timestamp)
+            ->first();
+
+        $entries = $this->entries($user, $rangeFrom, $rangeTo);
+
         return [
             'timezone' => $timezone,
-            'today' => $this->summary($user, $now->startOfDay(), $now->endOfDay()),
-            'week' => $this->summary($user, $now->startOfWeek(), $now->endOfWeek()),
-            'month' => $this->summary($user, $now->startOfMonth(), $now->endOfMonth()),
+            'today' => $this->summaryFromEntries(
+                $this->entriesInRange($entries, ...$periods['today'])
+            ),
+            'week' => $this->summaryFromEntries(
+                $this->entriesInRange($entries, ...$periods['week'])
+            ),
+            'month' => $this->summaryFromEntries(
+                $this->entriesInRange($entries, ...$periods['month'])
+            ),
             'recent' => TradeJournalEntry::query()
                 ->where('user_id', $user->getKey())
                 ->orderByRaw('COALESCE(opened_at, trade_at) desc')
@@ -80,7 +103,13 @@ class TradeJournalAnalyticsService
         CarbonImmutable $localFrom,
         CarbonImmutable $localTo
     ): array {
-        $entries = $this->entries($user, $localFrom, $localTo);
+        return $this->summaryFromEntries(
+            $this->entries($user, $localFrom, $localTo)
+        );
+    }
+
+    private function summaryFromEntries(Collection $entries): array
+    {
         $executed = $entries->whereIn('status', ['open', 'closed'])->values();
         $closed = $entries->where('status', 'closed')->values();
         $overview = $this->overview($executed, $closed);
@@ -101,6 +130,27 @@ class TradeJournalAnalyticsService
             'most_common_emotion' => $this->mostCommonKey($emotions),
             'most_common_mistake' => $discipline['most_common_mistake'],
         ]);
+    }
+
+    private function entriesInRange(
+        Collection $entries,
+        CarbonImmutable $localFrom,
+        CarbonImmutable $localTo
+    ): Collection {
+        $fromUtc = $localFrom->setTimezone('UTC');
+        $toUtc = $localTo->setTimezone('UTC');
+
+        return $entries
+            ->filter(function (TradeJournalEntry $entry) use ($fromUtc, $toUtc): bool {
+                $date = in_array($entry->status, ['open', 'closed'], true)
+                    ? $entry->opened_at
+                    : $entry->trade_at;
+
+                return $date !== null
+                    && $date->greaterThanOrEqualTo($fromUtc)
+                    && $date->lessThanOrEqualTo($toUtc);
+            })
+            ->values();
     }
 
     private function entries(
