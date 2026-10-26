@@ -55,6 +55,7 @@ class CopyTradeBrokerAccountController extends Controller
 
         return view('admin.copy_trading.accounts.index', [
             'accounts' => $service->accounts($filters),
+            'marketSummary' => $service->marketSummary(),
             'filters' => $filters,
             'statuses' => CopyTradeBrokerAccount::VALID_STATUSES,
             'marketCategories' => (array) config(
@@ -93,9 +94,29 @@ class CopyTradeBrokerAccountController extends Controller
             userAgent: $request->userAgent()
         );
 
+        $fullAccountNumber = null;
+
+        if ($admin->isSuperAdmin()) {
+            $fullAccountNumber = $copyTradeBrokerAccount->account_number;
+
+            AuditLog::record(
+                actorType: 'ADMIN',
+                actorId: $admin->id,
+                action: 'COPY_TRADE_BROKER_ACCOUNT_SENSITIVE_VIEWED',
+                module: 'COPY_TRADING',
+                targetType: 'COPY_TRADE_BROKER_ACCOUNT',
+                targetId: $copyTradeBrokerAccount->id,
+                newValues: [
+                    'account_masked' => $copyTradeBrokerAccount->maskedAccountNumber(),
+                ],
+                ipAddress: $request->ip(),
+                userAgent: $request->userAgent()
+            );
+        }
+
         return view('admin.copy_trading.verifications.review', [
             'account' => $copyTradeBrokerAccount,
-            'fullAccountNumber' => $copyTradeBrokerAccount->account_number,
+            'fullAccountNumber' => $fullAccountNumber,
             'permissions' => [
                 'verify' => $admin->hasPermission('copy_trading.accounts.verify'),
                 'reject' => $admin->hasPermission('copy_trading.accounts.reject'),
