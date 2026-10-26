@@ -8,6 +8,7 @@ use App\Services\TradeJournal\TradeJournalAnalyticsService;
 use App\Services\TradeJournal\TradeJournalService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -105,6 +106,35 @@ class TradeJournalServiceTest extends TestCase
 
         $this->assertSame(0, $data['overview']['total_executed']);
         $this->assertSame(0, $data['overview']['closed']);
+    }
+
+    public function test_home_reuses_one_period_query_for_all_summaries(): void
+    {
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-09-01T12:00:00Z'));
+        $user = User::factory()->create();
+        $service = app(TradeJournalService::class);
+        $analytics = app(TradeJournalAnalyticsService::class);
+
+        $entry = $service->create($user, $this->payload())['entry'];
+        $service->open($user, $entry, [
+            'actual_entry' => '100',
+            'entry_date' => '2026-09-01',
+            'entry_time' => '10:00',
+            'timezone' => 'UTC',
+        ]);
+
+        $queryCount = 0;
+        DB::listen(static function () use (&$queryCount): void {
+            $queryCount++;
+        });
+
+        $data = $analytics->home($user, 'UTC');
+
+        $this->assertSame(1, $data['today']['total_executed']);
+        $this->assertSame(1, $data['week']['total_executed']);
+        $this->assertSame(1, $data['month']['total_executed']);
+        $this->assertCount(1, $data['recent']);
+        $this->assertSame(2, $queryCount);
     }
 
     private function payload(array $overrides = []): array
