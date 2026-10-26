@@ -5,7 +5,6 @@ namespace Tests\Feature\Api\Affiliate;
 use App\Models\AffiliateCommission;
 use App\Models\AffiliateQualifiedSale;
 use App\Models\AffiliateStage;
-use App\Models\AuditLog;
 use App\Services\Affiliates\AffiliateCommercialService;
 use Database\Seeders\AffiliateStageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,17 +29,16 @@ class AffiliateApiTest extends TestCase
 
         $affiliate = $this->createApiUser([
             'account_type' => 'PREMIUM',
+            'name' => 'Arun Trader',
             'referral_code' => 'TXAFF001',
         ]);
 
         $buyer = $this->createApiUser([
-            'referred_by_user_id' =>
-                $affiliate->getKey(),
+            'referred_by_user_id' => $affiliate->getKey(),
         ]);
 
         $this->createApiUser([
-            'referred_by_user_id' =>
-                $affiliate->getKey(),
+            'referred_by_user_id' => $affiliate->getKey(),
         ]);
 
         app(
@@ -67,6 +65,10 @@ class AffiliateApiTest extends TestCase
             ->assertJsonPath(
                 'data.program.model',
                 'PROGRESSIVE_DIRECT_SALE'
+            )
+            ->assertJsonPath(
+                'data.affiliate.name',
+                'Arun Trader'
             )
             ->assertJsonPath(
                 'data.program.single_level_only',
@@ -110,6 +112,10 @@ class AffiliateApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.financials.lifetime_commission_earned.amount_cents',
+                1500
+            )
+            ->assertJsonPath(
+                'data.financials.average_commission_per_qualified_sale.amount_cents',
                 1500
             )
             ->assertJsonPath(
@@ -220,14 +226,12 @@ class AffiliateApiTest extends TestCase
 
         $direct = $this->createApiUser([
             'name' => 'Direct Referral',
-            'referred_by_user_id' =>
-                $affiliate->getKey(),
+            'referred_by_user_id' => $affiliate->getKey(),
         ]);
 
         $downline = $this->createApiUser([
             'name' => 'Must Not Appear',
-            'referred_by_user_id' =>
-                $direct->getKey(),
+            'referred_by_user_id' => $direct->getKey(),
         ]);
 
         app(
@@ -298,8 +302,7 @@ class AffiliateApiTest extends TestCase
         ]);
 
         $buyer = $this->createApiUser([
-            'referred_by_user_id' =>
-                $affiliate->getKey(),
+            'referred_by_user_id' => $affiliate->getKey(),
         ]);
 
         $commission = app(
@@ -405,6 +408,7 @@ class AffiliateApiTest extends TestCase
             '/api/v1/affiliate/referrals',
             '/api/v1/affiliate/sales',
             '/api/v1/affiliate/commissions',
+            '/api/v1/affiliate/earnings-series',
             '/api/v1/affiliate/milestones',
         ] as $uri) {
             $this
@@ -422,8 +426,7 @@ class AffiliateApiTest extends TestCase
             ->postJson(
                 '/api/v1/affiliate/share-action',
                 [
-                    'channel' =>
-                        'WHATSAPP',
+                    'channel' => 'WHATSAPP',
                 ]
             )
             ->assertForbidden()
@@ -454,8 +457,7 @@ class AffiliateApiTest extends TestCase
             ->postJson(
                 '/api/v1/affiliate/share-action',
                 [
-                    'channel' =>
-                        'whatsapp',
+                    'channel' => 'whatsapp',
                 ]
             )
             ->assertOk()
@@ -494,18 +496,87 @@ class AffiliateApiTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'actor_type' =>
-                    'USER',
+                'actor_type' => 'USER',
 
-                'actor_id' =>
-                    $affiliate->getKey(),
+                'actor_id' => $affiliate->getKey(),
 
-                'action' =>
-                    'AFFILIATE_USER_SHARE_ACTION_PREPARED',
+                'action' => 'AFFILIATE_USER_SHARE_ACTION_PREPARED',
 
-                'module' =>
-                    'AFFILIATES',
+                'module' => 'AFFILIATES',
             ]
+        );
+    }
+
+    public function test_referrals_support_validated_search_and_qualification_filters(): void
+    {
+        $this->seed(AffiliateStageSeeder::class);
+        $affiliate = $this->createApiUser([
+            'account_type' => 'PREMIUM',
+            'referral_code' => 'TXFILTER1',
+        ]);
+        $qualified = $this->createApiUser([
+            'name' => 'Qualified Trader',
+            'referred_by_user_id' => $affiliate->getKey(),
+        ]);
+        $this->createApiUser([
+            'name' => 'No Sale Trader',
+            'referred_by_user_id' => $affiliate->getKey(),
+        ]);
+        app(AffiliateCommercialService::class)->recordClearedPayPalSale(
+            $affiliate,
+            $qualified,
+            'PAYPAL-FILTER-1',
+            10000
+        );
+
+        $token = $this->issueBoundToken($affiliate);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/affiliate/referrals?qualification=QUALIFIED&search=Qualified')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.name', 'Qualified Trader')
+            ->assertJsonPath('data.items.0.qualification.has_qualified_sale', true);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/affiliate/referrals?qualification=NO_QUALIFIED_SALE')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.items')
+            ->assertJsonPath('data.items.0.name', 'No Sale Trader');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/affiliate/referrals?qualification=PENDING')
+            ->assertUnprocessable();
+    }
+
+    public function test_earnings_series_returns_complete_real_month_buckets(): void
+    {
+        $this->seed(AffiliateStageSeeder::class);
+        $affiliate = $this->createApiUser([
+            'account_type' => 'PREMIUM',
+            'referral_code' => 'TXSERIES1',
+        ]);
+        $buyer = $this->createApiUser([
+            'referred_by_user_id' => $affiliate->getKey(),
+        ]);
+        app(AffiliateCommercialService::class)->recordClearedPayPalSale(
+            $affiliate,
+            $buyer,
+            'PAYPAL-SERIES-1',
+            10000
+        );
+
+        $token = $this->issueBoundToken($affiliate);
+        $response = $this->withToken($token)
+            ->getJson('/api/v1/affiliate/earnings-series?months=3')
+            ->assertOk()
+            ->assertJsonPath('data.months_requested', 3)
+            ->assertJsonCount(3, 'data.items')
+            ->assertJsonPath('data.total_net_commission.amount_cents', 1500);
+
+        $this->assertSame(
+            1500,
+            collect($response->json('data.items'))->sum('net_commission.amount_cents')
         );
     }
 

@@ -18,11 +18,14 @@ class AffiliateAuthenticationTest extends TestCase
             ->assertUnauthorized();
 
         $this
+            ->getJson('/api/v1/affiliate/earnings-series')
+            ->assertUnauthorized();
+
+        $this
             ->postJson(
                 '/api/v1/affiliate/share-action',
                 [
-                    'channel' =>
-                        'WHATSAPP',
+                    'channel' => 'WHATSAPP',
                 ]
             )
             ->assertUnauthorized();
