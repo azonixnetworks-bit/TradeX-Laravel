@@ -22,8 +22,8 @@
         <h1>Broker Account <span>Review</span></h1>
         <p>
             Review partner attribution and broker-account eligibility evidence.
-            Opening this page is audit logged because the full account number is
-            exposed to an authorized reviewer.
+            Opening this page is audit logged. The decrypted account number is
+            restricted to the Super Admin.
         </p>
     </div>
 
@@ -75,6 +75,33 @@
         </div>
 
         <div class="form-group">
+            <label>Customer Contact</label>
+            <div>{{ $account->user?->whatsapp_number ?? '—' }}</div>
+            <small class="form-help">
+                Country {{ $account->user?->country_code ?? '—' }} ·
+                Customer status {{ $account->user?->status ?? '—' }}
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label>Customer Account</label>
+            <div>{{ $account->user?->uuid ?? '—' }}</div>
+            <small class="form-help">
+                Premium {{ $account->user?->canAccessPremium() ? 'ACTIVE' : 'INACTIVE' }}
+            </small>
+            @if($account->user)
+                <div style="margin-top:10px;">
+                    <a
+                        class="secondary-btn"
+                        href="{{ route('admin.users.show', $account->user) }}"
+                    >
+                        Open Full Customer Details
+                    </a>
+                </div>
+            @endif
+        </div>
+
+        <div class="form-group">
             <label>Broker</label>
             <div>{{ $account->broker?->name ?? '—' }}</div>
             <small class="form-help">{{ $account->broker?->code ?? '—' }}</small>
@@ -97,14 +124,20 @@
         </div>
 
         <div class="form-group full-width">
-            <label>Full Broker Account Number — Sensitive</label>
+            <label>
+                {{ $fullAccountNumber ? 'Full Broker Account Number — Sensitive' : 'Broker Account Number — Protected' }}
+            </label>
             <div
                 style="font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:18px;letter-spacing:2px;"
             >
-                {{ $fullAccountNumber }}
+                {{ $fullAccountNumber ?? $account->maskedAccountNumber() }}
             </div>
             <small class="form-help">
-                This value is encrypted at rest. Access to this review page is audit logged.
+                @if($fullAccountNumber)
+                    Decrypted only for this Super Admin view. Sensitive access is separately audit logged.
+                @else
+                    Encrypted at rest. Only the Super Admin can view the complete value.
+                @endif
             </small>
         </div>
 

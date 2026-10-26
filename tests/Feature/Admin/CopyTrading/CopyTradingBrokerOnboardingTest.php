@@ -239,6 +239,73 @@ class CopyTradingBrokerOnboardingTest extends TestCase
         $this->assertFalse($presented['copy_trade_ready']);
     }
 
+    public function test_account_register_summary_separates_forex_crypto_and_all_totals(): void
+    {
+        $this->pendingAccount('111222333');
+
+        $broker = CopyTradeBroker::query()->firstOrFail();
+        $crypto = CopyTradeBrokerMarket::query()->create([
+            'broker_id' => $broker->id,
+            'market_category' => 'CRYPTO',
+            'referral_url' => 'https://broker.example.test/tradex-crypto',
+            'required_currency' => 'USDT',
+            'live_account_only' => true,
+            'is_active' => true,
+        ]);
+        $service = app(CopyTradeOnboardingService::class);
+        $user = $this->createApiUser();
+        $request = Request::create('/copy-trade', 'POST');
+        $intent = $service->openAccountAction($user, $crypto, $request);
+        $service->submitBrokerAccount($user, $intent, '444555666', $request);
+
+        $summary = app(CopyTradeVerificationService::class)->marketSummary();
+
+        $this->assertSame(2, $summary['ALL']['total']);
+        $this->assertSame(2, $summary['ALL']['review']);
+        $this->assertSame(1, $summary['FOREX']['total']);
+        $this->assertSame(1, $summary['CRYPTO']['total']);
+        $this->assertSame(0, $summary['DERIV']['total']);
+    }
+
+    public function test_full_broker_account_number_is_visible_only_to_super_admin(): void
+    {
+        $accountNumber = '7788990011';
+        $account = $this->pendingAccount($accountNumber);
+        $reviewer = $this->adminWithPermissions([
+            'copy_trading.accounts.view',
+        ]);
+
+        $this->actingAs($reviewer, 'admin')
+            ->get(route('admin.copy_trading.accounts.show', $account))
+            ->assertOk()
+            ->assertSee($account->maskedAccountNumber())
+            ->assertDontSee($accountNumber);
+
+        $superAdmin = $this->adminWithPermissions([]);
+        $superRole = AdminRole::query()->updateOrCreate(
+            ['code' => 'SUPER_ADMIN'],
+            [
+                'name' => 'Super Admin',
+                'description' => 'System owner role.',
+                'is_system' => true,
+                'is_active' => true,
+            ]
+        );
+        $superAdmin->roles()->sync([$superRole->id]);
+
+        $this->actingAs($superAdmin->fresh('roles'), 'admin')
+            ->get(route('admin.copy_trading.accounts.show', $account))
+            ->assertOk()
+            ->assertSee($accountNumber);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_type' => 'ADMIN',
+            'actor_id' => $superAdmin->id,
+            'action' => 'COPY_TRADE_BROKER_ACCOUNT_SENSITIVE_VIEWED',
+            'target_id' => $account->id,
+        ]);
+    }
+
     private function pendingAccount(string $accountNumber): CopyTradeBrokerAccount
     {
         [, $market] = $this->brokerMarket();

@@ -16,6 +16,69 @@ use Illuminate\Support\Str;
 
 class CopyTradeVerificationService
 {
+    public function marketSummary(): array
+    {
+        $markets = (array) config(
+            'tradex_copy_trading.market_categories',
+            []
+        );
+
+        $summary = [
+            'ALL' => $this->emptySummary(),
+        ];
+
+        foreach ($markets as $market) {
+            $summary[strtoupper((string) $market)] = $this->emptySummary();
+        }
+
+        $rows = CopyTradeBrokerAccount::query()
+            ->join(
+                'copy_trade_broker_markets',
+                'copy_trade_broker_markets.id',
+                '=',
+                'copy_trade_broker_accounts.broker_market_id'
+            )
+            ->selectRaw(
+                'copy_trade_broker_markets.market_category as market_category, copy_trade_broker_accounts.status as status, COUNT(*) as aggregate'
+            )
+            ->groupBy(
+                'copy_trade_broker_markets.market_category',
+                'copy_trade_broker_accounts.status'
+            )
+            ->get();
+
+        foreach ($rows as $row) {
+            $market = strtoupper((string) $row->market_category);
+            $count = (int) $row->aggregate;
+
+            if (! array_key_exists($market, $summary)) {
+                $summary[$market] = $this->emptySummary();
+            }
+
+            foreach (['ALL', $market] as $key) {
+                $summary[$key]['total'] += $count;
+
+                if (in_array($row->status, [
+                    CopyTradeBrokerAccount::STATUS_PENDING,
+                    CopyTradeBrokerAccount::STATUS_NEEDS_RESUBMISSION,
+                    CopyTradeBrokerAccount::STATUS_ESCALATED,
+                ], true)) {
+                    $summary[$key]['review'] += $count;
+                }
+
+                if ($row->status === CopyTradeBrokerAccount::STATUS_VERIFIED) {
+                    $summary[$key]['verified'] += $count;
+                }
+
+                if ($row->status === CopyTradeBrokerAccount::STATUS_ACTIVE) {
+                    $summary[$key]['active'] += $count;
+                }
+            }
+        }
+
+        return $summary;
+    }
+
     public function verificationQueue(array $filters): LengthAwarePaginator
     {
         $filters['queue_only'] = true;
@@ -521,6 +584,16 @@ class CopyTradeVerificationService
             ->latest('submitted_at')
             ->paginate((int) ($filters['per_page'] ?? 20))
             ->withQueryString();
+    }
+
+    private function emptySummary(): array
+    {
+        return [
+            'total' => 0,
+            'review' => 0,
+            'verified' => 0,
+            'active' => 0,
+        ];
     }
 
     private function accountSnapshot(

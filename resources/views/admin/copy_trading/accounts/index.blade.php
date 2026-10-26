@@ -25,6 +25,33 @@
     </div>
 </div>
 
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:18px 0;">
+    @foreach($marketSummary as $market => $summary)
+        @php
+            $marketUrl = route('admin.copy_trading.accounts.index', array_filter([
+                'market' => $market === 'ALL' ? null : $market,
+                'status' => $filters['status'] ?? null,
+                'search' => $filters['search'] ?? null,
+                'per_page' => $filters['per_page'] ?? null,
+            ]));
+            $selectedMarket = strtoupper((string) ($filters['market'] ?? 'ALL')) === $market;
+        @endphp
+        <a
+            href="{{ $marketUrl }}"
+            class="panel"
+            style="padding:18px;text-decoration:none;color:inherit;border-color:{{ $selectedMarket ? 'var(--gold, #d5ad45)' : '' }};"
+        >
+            <div class="panel-eyebrow">{{ $market }} ACCOUNTS</div>
+            <div style="font-size:30px;font-weight:800;margin:6px 0;">{{ number_format($summary['total']) }}</div>
+            <small>
+                Review {{ number_format($summary['review']) }} ·
+                Verified {{ number_format($summary['verified']) }} ·
+                Active {{ number_format($summary['active']) }}
+            </small>
+        </a>
+    @endforeach
+</div>
+
 <form
     class="panel admin-form-panel"
     method="GET"
