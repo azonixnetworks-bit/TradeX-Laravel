@@ -29,6 +29,7 @@ class AffiliateApiTest extends TestCase
 
         $affiliate = $this->createApiUser([
             'account_type' => 'PREMIUM',
+            'name' => 'Arun Trader',
             'referral_code' => 'TXAFF001',
         ]);
 
@@ -64,6 +65,10 @@ class AffiliateApiTest extends TestCase
             ->assertJsonPath(
                 'data.program.model',
                 'PROGRESSIVE_DIRECT_SALE'
+            )
+            ->assertJsonPath(
+                'data.affiliate.name',
+                'Arun Trader'
             )
             ->assertJsonPath(
                 'data.program.single_level_only',
@@ -107,6 +112,10 @@ class AffiliateApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.financials.lifetime_commission_earned.amount_cents',
+                1500
+            )
+            ->assertJsonPath(
+                'data.financials.average_commission_per_qualified_sale.amount_cents',
                 1500
             )
             ->assertJsonPath(

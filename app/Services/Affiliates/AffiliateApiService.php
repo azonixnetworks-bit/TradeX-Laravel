@@ -82,6 +82,10 @@ class AffiliateApiService
             + $adjustments;
 
         return [
+            'affiliate' => [
+                'name' => (string) $user->name,
+            ],
+
             'program' => [
                 'model' => 'PROGRESSIVE_DIRECT_SALE',
 
@@ -153,6 +157,15 @@ class AffiliateApiService
 
                 'lifetime_commission_earned' => $this->money(
                     $earnedCommission
+                ),
+
+                'average_commission_per_qualified_sale' => $this->money(
+                    $qualifiedSalesCount > 0
+                        ? intdiv(
+                            $earnedCommission,
+                            $qualifiedSalesCount
+                        )
+                        : 0
                 ),
 
                 'processor_payment_adjustments' => $this->money(
