@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class SupportSlaPolicy extends Model
 {
@@ -11,5 +12,10 @@ class SupportSlaPolicy extends Model
     protected function casts(): array
     {
         return ['enabled' => 'boolean'];
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(SupportDepartment::class, 'department_id');
     }
 }

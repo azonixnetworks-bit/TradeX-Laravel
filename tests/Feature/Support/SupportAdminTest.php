@@ -32,6 +32,16 @@ class SupportAdminTest extends TestCase
         $this->actingAs($this->admin([]), 'admin')->get(route('admin.support.index'))->assertForbidden();
     }
 
+    public function test_support_manager_can_open_settings_with_sla_departments_loaded(): void
+    {
+        $manager = $this->admin(['support.sla.manage']);
+
+        $this->actingAs($manager, 'admin')
+            ->get(route('admin.support.settings'))
+            ->assertOk()
+            ->assertSee('SLA policies');
+    }
+
     public function test_agent_only_sees_assigned_ticket_and_internal_note_never_appears_in_customer_api(): void
     {
         $agent = $this->admin(['support.view', 'support.tickets.view_assigned', 'support.tickets.reply', 'support.notes.write']);
