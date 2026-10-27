@@ -6,6 +6,8 @@
         $admin->hasPermission('users.view')
         || $admin->hasPermission('users.invite');
 
+    $hasSupportNavigation = $admin->hasPermission('support.view');
+
     $hasTradingFloorNavigation =
         $admin->isSuperAdmin()
         || $admin->hasPermission('trading_floor.view');
@@ -81,6 +83,17 @@
             >
                 <span class="nav-icon">◈</span>
                 <span>Dashboard</span>
+            </a>
+        @endif
+
+        @if($hasSupportNavigation)
+            <div class="nav-section-title">SUPPORT</div>
+            <a
+                href="{{ route('admin.support.index') }}"
+                class="nav-link {{ request()->routeIs('admin.support.*') ? 'active' : '' }}"
+            >
+                <span class="nav-icon">◉</span>
+                <span>Customer Support</span>
             </a>
         @endif
 

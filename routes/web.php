@@ -173,11 +173,11 @@ Route::view(
     ['result' => 'cancel']
 )->name('payments.stripe.cancel');
 
-require __DIR__ . '/customer_onboarding.php';
-require __DIR__ . '/admin.php';
-require __DIR__ . '/staff_management.php';
-require __DIR__ . '/admin_video_playback.php';
-require __DIR__ . '/admin_our_channel.php';
+require __DIR__.'/customer_onboarding.php';
+require __DIR__.'/admin.php';
+require __DIR__.'/staff_management.php';
+require __DIR__.'/admin_video_playback.php';
+require __DIR__.'/admin_our_channel.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -189,7 +189,7 @@ require __DIR__ . '/admin_our_channel.php';
 |
 */
 
-require __DIR__ . '/admin_trade_ideas.php';
+require __DIR__.'/admin_trade_ideas.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -201,7 +201,7 @@ require __DIR__ . '/admin_trade_ideas.php';
 |
 */
 
-require __DIR__ . '/admin_market_clock.php';
+require __DIR__.'/admin_market_clock.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -213,7 +213,7 @@ require __DIR__ . '/admin_market_clock.php';
 |
 */
 
-require __DIR__ . '/admin_screener.php';
+require __DIR__.'/admin_screener.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -226,7 +226,7 @@ require __DIR__ . '/admin_screener.php';
 |
 */
 
-require __DIR__ . '/admin_affiliates.php';
+require __DIR__.'/admin_affiliates.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -238,7 +238,7 @@ require __DIR__ . '/admin_affiliates.php';
 |
 */
 
-require __DIR__ . '/admin_payments.php';
+require __DIR__.'/admin_payments.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -250,7 +250,7 @@ require __DIR__ . '/admin_payments.php';
 |
 */
 
-require __DIR__ . '/admin_payouts.php';
+require __DIR__.'/admin_payouts.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -262,7 +262,7 @@ require __DIR__ . '/admin_payouts.php';
 |
 */
 
-require __DIR__ . '/admin_finance.php';
+require __DIR__.'/admin_finance.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -274,7 +274,7 @@ require __DIR__ . '/admin_finance.php';
 |
 */
 
-require __DIR__ . '/admin_products.php';
+require __DIR__.'/admin_products.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -286,7 +286,7 @@ require __DIR__ . '/admin_products.php';
 |
 */
 
-require __DIR__ . '/admin_kyc.php';
+require __DIR__.'/admin_kyc.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -299,7 +299,7 @@ require __DIR__ . '/admin_kyc.php';
 |
 */
 
-require __DIR__ . '/admin_security.php';
+require __DIR__.'/admin_security.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -311,7 +311,7 @@ require __DIR__ . '/admin_security.php';
 |
 */
 
-require __DIR__ . '/admin_audit.php';
+require __DIR__.'/admin_audit.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -323,7 +323,7 @@ require __DIR__ . '/admin_audit.php';
 |
 */
 
-require __DIR__ . '/admin_administration.php';
+require __DIR__.'/admin_administration.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -336,7 +336,7 @@ require __DIR__ . '/admin_administration.php';
 |
 */
 
-require __DIR__ . '/admin_settings.php';
+require __DIR__.'/admin_settings.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -349,7 +349,7 @@ require __DIR__ . '/admin_settings.php';
 |
 */
 
-require __DIR__ . '/admin_notifications.php';
+require __DIR__.'/admin_notifications.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -362,7 +362,7 @@ require __DIR__ . '/admin_notifications.php';
 |
 */
 
-require __DIR__ . '/admin_integrations.php';
+require __DIR__.'/admin_integrations.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -374,7 +374,7 @@ require __DIR__ . '/admin_integrations.php';
 |
 */
 
-require __DIR__ . '/admin_legal.php';
+require __DIR__.'/admin_legal.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -386,7 +386,7 @@ require __DIR__ . '/admin_legal.php';
 |
 */
 
-require __DIR__ . '/admin_languages.php';
+require __DIR__.'/admin_languages.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -399,7 +399,7 @@ require __DIR__ . '/admin_languages.php';
 |
 */
 
-require __DIR__ . '/admin_hardening.php';
+require __DIR__.'/admin_hardening.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -412,7 +412,7 @@ require __DIR__ . '/admin_hardening.php';
 |
 */
 
-require __DIR__ . '/admin_customers.php';
+require __DIR__.'/admin_customers.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -425,7 +425,7 @@ require __DIR__ . '/admin_customers.php';
 |
 */
 
-require __DIR__ . '/admin_risk_reward.php';
+require __DIR__.'/admin_risk_reward.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -438,7 +438,7 @@ require __DIR__ . '/admin_risk_reward.php';
 |
 */
 
-require __DIR__ . '/admin_funded_account_advisor.php';
+require __DIR__.'/admin_funded_account_advisor.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -451,7 +451,7 @@ require __DIR__ . '/admin_funded_account_advisor.php';
 |
 */
 
-require __DIR__ . '/admin_trading_routine.php';
+require __DIR__.'/admin_trading_routine.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -464,7 +464,7 @@ require __DIR__ . '/admin_trading_routine.php';
 |
 */
 
-require __DIR__ . '/admin_economic_news.php';
+require __DIR__.'/admin_economic_news.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -477,7 +477,7 @@ require __DIR__ . '/admin_economic_news.php';
 |
 */
 
-require __DIR__ . '/admin_trading_floor.php';
+require __DIR__.'/admin_trading_floor.php';
 
 /*
 |--------------------------------------------------------------------------
@@ -490,4 +490,5 @@ require __DIR__ . '/admin_trading_floor.php';
 |
 */
 
-require __DIR__ . '/admin_second_brain_knowledge.php';
+require __DIR__.'/admin_second_brain_knowledge.php';
+require __DIR__.'/admin_support.php';

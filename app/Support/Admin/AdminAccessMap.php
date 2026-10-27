@@ -16,6 +16,7 @@ final class AdminAccessMap
      */
     private const LANDING_ROUTES = [
         ['permission' => 'dashboard.view', 'route' => 'admin.dashboard'],
+        ['permission' => 'support.view', 'route' => 'admin.support.index'],
         ['permission' => 'trading_floor.view', 'route' => 'admin.trading_floor.index'],
         ['permission' => 'users.view', 'route' => 'admin.customers.dashboard'],
         ['permission' => 'users.invite', 'route' => 'admin.customers.create'],
@@ -151,6 +152,19 @@ final class AdminAccessMap
         'kyc.request_resubmission' => ['kyc.view'],
         'notifications.create' => ['notifications.view'],
         'notifications.send' => ['notifications.view'],
+        'support.tickets.view_assigned' => ['support.view'],
+        'support.tickets.view_all' => ['support.view'],
+        'support.tickets.reply' => ['support.view'],
+        'support.tickets.assign' => ['support.view', 'support.tickets.view_all'],
+        'support.tickets.manage' => ['support.view'],
+        'support.notes.write' => ['support.view'],
+        'support.chat.participate' => ['support.view'],
+        'support.chat.supervise' => ['support.view', 'support.tickets.view_all'],
+        'support.sla.manage' => ['support.view'],
+        'support.settings.manage' => ['support.view'],
+        'support.reports.view' => ['support.view'],
+        'support.agents.manage' => ['support.view'],
+        'support.categories.manage' => ['support.view'],
         'integrations.manage' => ['integrations.view'],
         'legal.manage' => ['legal.view'],
         'legal.publish' => ['legal.view'],
@@ -175,7 +189,7 @@ final class AdminAccessMap
     }
 
     /**
-     * @param iterable<int, string> $permissionCodes
+     * @param  iterable<int, string>  $permissionCodes
      * @return array<string, array<int, string>>
      */
     public static function missingDependencies(iterable $permissionCodes): array

@@ -138,6 +138,21 @@ class AdminPermissionSeeder extends Seeder
             ['notifications.create', 'Create Notifications', 'NOTIFICATIONS'],
             ['notifications.send', 'Send Notifications', 'NOTIFICATIONS'],
 
+            ['support.view', 'View Support Dashboard', 'SUPPORT'],
+            ['support.tickets.view_assigned', 'View Assigned Support Tickets', 'SUPPORT'],
+            ['support.tickets.view_all', 'View All Support Tickets', 'SUPPORT'],
+            ['support.tickets.reply', 'Reply to Support Tickets', 'SUPPORT'],
+            ['support.tickets.assign', 'Assign Support Tickets', 'SUPPORT'],
+            ['support.tickets.manage', 'Manage Support Ticket Lifecycle', 'SUPPORT'],
+            ['support.notes.write', 'Write Internal Support Notes', 'SUPPORT'],
+            ['support.chat.participate', 'Participate in Support Chat', 'SUPPORT'],
+            ['support.chat.supervise', 'Supervise Support Chat', 'SUPPORT'],
+            ['support.sla.manage', 'Manage Support SLA Rules', 'SUPPORT'],
+            ['support.settings.manage', 'Manage Support Settings', 'SUPPORT'],
+            ['support.reports.view', 'View Support Reports', 'SUPPORT'],
+            ['support.agents.manage', 'Manage Support Agents', 'SUPPORT'],
+            ['support.categories.manage', 'Manage Support Categories', 'SUPPORT'],
+
             ['integrations.view', 'View Integrations', 'INTEGRATIONS'],
             ['integrations.manage', 'Manage Integrations', 'INTEGRATIONS'],
 

@@ -73,6 +73,20 @@ class AdminRoleSeeder extends Seeder
                 'is_system' => true,
                 'is_active' => true,
             ],
+            [
+                'code' => 'SUPPORT_AGENT',
+                'name' => 'Support Agent',
+                'description' => 'Handles assigned customer support tickets and live chats.',
+                'is_system' => true,
+                'is_active' => true,
+            ],
+            [
+                'code' => 'SUPPORT_MANAGER',
+                'name' => 'Support Manager',
+                'description' => 'Supervises support queues, assignments, SLAs and agents.',
+                'is_system' => true,
+                'is_active' => true,
+            ],
         ];
 
         foreach ($roles as $role) {

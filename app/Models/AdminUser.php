@@ -93,6 +93,16 @@ class AdminUser extends Authenticatable
         return $this->hasOne(AdminEmailDelivery::class)->latestOfMany();
     }
 
+    public function assignedSupportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class, 'assigned_admin_id');
+    }
+
+    public function supportAgentProfile(): HasOne
+    {
+        return $this->hasOne(SupportAgentProfile::class, 'admin_user_id');
+    }
+
     public function hasRole(string $roleCode): bool
     {
         return $this->roles()

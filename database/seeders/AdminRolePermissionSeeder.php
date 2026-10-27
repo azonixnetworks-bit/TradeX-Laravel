@@ -168,6 +168,38 @@ class AdminRolePermissionSeeder extends Seeder
                 'affiliates.view',
                 'payments.view',
                 'notifications.view',
+                'support.view',
+                'support.tickets.view_all',
+                'support.tickets.reply',
+                'support.tickets.assign',
+                'support.tickets.manage',
+                'support.notes.write',
+                'support.chat.participate',
+                'support.chat.supervise',
+                'support.reports.view',
+            ],
+
+            'SUPPORT_AGENT' => [
+                'support.view',
+                'support.tickets.view_assigned',
+                'support.tickets.reply',
+                'support.notes.write',
+                'support.chat.participate',
+            ],
+
+            'SUPPORT_MANAGER' => [
+                'support.view',
+                'support.tickets.view_all',
+                'support.tickets.reply',
+                'support.tickets.assign',
+                'support.tickets.manage',
+                'support.notes.write',
+                'support.chat.participate',
+                'support.chat.supervise',
+                'support.sla.manage',
+                'support.reports.view',
+                'support.agents.manage',
+                'support.categories.manage',
             ],
         ];
 
