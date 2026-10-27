@@ -79,16 +79,13 @@ class User extends Authenticatable
 
             'totp_secret' => 'encrypted',
 
-            'totp_confirmed_at' =>
-                'datetime',
+            'totp_confirmed_at' => 'datetime',
 
-            'totp_last_used_step' =>
-                'integer',
+            'totp_last_used_step' => 'integer',
 
             'password' => 'hashed',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -112,7 +109,6 @@ class User extends Authenticatable
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Admin Status Relationship
@@ -126,7 +122,6 @@ class User extends Authenticatable
             'status_changed_by_admin_id'
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -184,7 +179,6 @@ class User extends Authenticatable
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Profile Relationship
@@ -197,7 +191,6 @@ class User extends Authenticatable
             UserProfile::class
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -231,7 +224,6 @@ class User extends Authenticatable
             ->latestOfMany();
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Copy Trading Broker Relationships
@@ -252,7 +244,6 @@ class User extends Authenticatable
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Investment Relationships
@@ -266,7 +257,6 @@ class User extends Authenticatable
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Product / Entitlement Relationships
@@ -279,7 +269,6 @@ class User extends Authenticatable
             UserEntitlement::class
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -301,6 +290,10 @@ class User extends Authenticatable
         );
     }
 
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -317,7 +310,6 @@ class User extends Authenticatable
     {
         return $this->account_type === 'PREMIUM';
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -344,7 +336,6 @@ class User extends Authenticatable
     {
         return $this->status === 'BLOCKED';
     }
-
 
     /*
     |--------------------------------------------------------------------------

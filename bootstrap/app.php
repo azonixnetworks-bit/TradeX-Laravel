@@ -5,14 +5,17 @@ use App\Console\Commands\MobileApiReleaseCheckCommand;
 use App\Console\Commands\NowPaymentsCheckCommand;
 use App\Console\Commands\PruneTradeJournalCommand;
 use App\Console\Commands\StripeCheckCommand;
+use App\Console\Commands\SupportDailySummaryCommand;
+use App\Console\Commands\SupportSlaSweepCommand;
 use App\Http\Middleware\AdminAuthenticate;
 use App\Http\Middleware\AdminSecurityHeaders;
+use App\Http\Middleware\EnsureAdminDevice;
 use App\Http\Middleware\EnsureTradeXMobileApiSession;
 use App\Http\Middleware\EnsureTradingFloorAccessDevice;
 use App\Http\Middleware\ForceAdminTotp;
 use App\Http\Middleware\HardenAdminSession;
-use App\Http\Middleware\StaffAuthenticate;
 use App\Http\Middleware\HardenMobileApiRequests;
+use App\Http\Middleware\StaffAuthenticate;
 use App\Support\Admin\AdminWebExceptionResponder;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -38,6 +41,8 @@ return Application::configure(basePath: dirname(__DIR__))
         NowPaymentsCheckCommand::class,
         PruneTradeJournalCommand::class,
         StripeCheckCommand::class,
+        SupportDailySummaryCommand::class,
+        SupportSlaSweepCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         /*
@@ -51,8 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 '127.0.0.1',
                 '::1',
             ],
-            headers:
-                Request::HEADER_X_FORWARDED_FOR
+            headers: Request::HEADER_X_FORWARDED_FOR
                 | Request::HEADER_X_FORWARDED_HOST
                 | Request::HEADER_X_FORWARDED_PORT
                 | Request::HEADER_X_FORWARDED_PROTO
@@ -90,7 +94,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ForceAdminTotp::class
         );
 
-        $middleware->appendToGroup('web', \App\Http\Middleware\EnsureAdminDevice::class);
+        $middleware->appendToGroup('web', EnsureAdminDevice::class);
 
         $middleware->alias([
             'admin.auth' => AdminAuthenticate::class,
@@ -110,7 +114,7 @@ return Application::configure(basePath: dirname(__DIR__))
          * API requests remain on their existing JSON exception contracts.
          */
         $exceptions->render(
-            function (\Throwable $exception, Request $request) {
+            function (Throwable $exception, Request $request) {
                 return app(
                     AdminWebExceptionResponder::class
                 )->render(

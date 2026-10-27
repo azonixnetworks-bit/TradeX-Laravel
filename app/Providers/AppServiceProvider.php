@@ -452,5 +452,14 @@ class AppServiceProvider extends ServiceProvider
                 )
             )
         );
+
+        $supportKey = fn (Request $request): string => 'support|'.($request->user()?->getAuthIdentifier() ?? $request->ip());
+        RateLimiter::for('api-support-read', fn (Request $request): Limit => Limit::perMinute(120)->by($supportKey($request)));
+        RateLimiter::for('api-support-write', fn (Request $request): Limit => Limit::perMinute(20)->by($supportKey($request)));
+        RateLimiter::for('api-support-message', fn (Request $request): Limit => Limit::perMinute(30)->by($supportKey($request)));
+        RateLimiter::for('api-support-upload', fn (Request $request): Limit => Limit::perMinute(10)->by($supportKey($request)));
+        RateLimiter::for('api-support-download', fn (Request $request): Limit => Limit::perMinute(60)->by($supportKey($request)));
+        RateLimiter::for('api-support-chat-start', fn (Request $request): Limit => Limit::perHour(5)->by($supportKey($request)));
+        RateLimiter::for('api-support-heartbeat', fn (Request $request): Limit => Limit::perMinute(30)->by($supportKey($request)));
     }
 }

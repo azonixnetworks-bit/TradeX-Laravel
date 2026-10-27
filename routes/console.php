@@ -100,6 +100,17 @@ Schedule::command('tradex:trade-journal:prune')
     ->timezone('UTC')
     ->withoutOverlapping(60);
 
+Schedule::command('tradex:support:sweep')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10)
+    ->when(fn (): bool => (bool) config('support.sla_sweep_enabled', true));
+
+Schedule::command('tradex:support:daily-summary')
+    ->dailyAt((string) config('support.daily_summary_time', '08:30'))
+    ->timezone((string) config('support.timezone', 'Asia/Colombo'))
+    ->withoutOverlapping(30)
+    ->when(fn (): bool => (bool) config('support.daily_summary_enabled', false));
+
 Schedule::command('tradex:trading-floor:reminders')
     ->dailyAt((string) config('trading_floor.reminders.schedule_time', '08:00'))
     ->timezone((string) config('trading_floor.reminders.timezone', 'Asia/Colombo'))
