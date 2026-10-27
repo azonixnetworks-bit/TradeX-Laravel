@@ -5,6 +5,7 @@ namespace Tests\Feature\Support;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
+use App\Models\SupportAgentProfile;
 use App\Models\SupportCategory;
 use App\Models\SupportTicket;
 use Database\Seeders\SupportSystemSeeder;
@@ -51,6 +52,39 @@ class SupportAdminTest extends TestCase
         $this->assertDatabaseHas('support_tickets', ['id' => $ticket->id, 'assigned_admin_id' => $manager->id, 'status' => 'in_progress']);
         $this->actingAs($manager, 'admin')->post(route('admin.support.reply', $ticket), ['message' => 'We are reviewing this case.'])->assertRedirect();
         $this->assertDatabaseHas('support_ticket_messages', ['ticket_id' => $ticket->id, 'visibility' => 'public', 'body' => 'We are reviewing this case.']);
+    }
+
+    public function test_online_agent_heartbeat_and_live_event_feed_are_available(): void
+    {
+        $agent = $this->admin(['support.view', 'support.tickets.view_assigned', 'support.tickets.reply', 'support.chat.participate']);
+        SupportAgentProfile::create(['admin_user_id' => $agent->id, 'enabled' => true, 'availability' => 'online', 'capacity' => 3, 'heartbeat_at' => now()->subMinutes(5)]);
+        $ticket = $this->ticket($this->createApiUser()->id, $agent->id);
+        $message = $ticket->messages()->create(['sender_type' => 'customer', 'sender_user_id' => $ticket->user_id, 'visibility' => 'public', 'body' => 'I need help from a live agent.']);
+
+        $this->actingAs($agent, 'admin')->postJson(route('admin.support.agent-heartbeat'))
+            ->assertOk()
+            ->assertJsonPath('data.agents_online', 1);
+        $this->actingAs($agent, 'admin')->getJson(route('admin.support.live-events', ['supportTicket' => $ticket, 'after' => 0]))
+            ->assertOk()
+            ->assertJsonPath('data.events.0.cursor', $message->id)
+            ->assertJsonPath('data.events.0.message', 'I need help from a live agent.');
+        $this->actingAs($agent, 'admin')->postJson(route('admin.support.reply', $ticket), ['message' => 'Your agent is connected now.'])
+            ->assertOk()
+            ->assertJsonPath('data.sender_type', 'admin');
+    }
+
+    public function test_support_agent_can_see_and_claim_an_unassigned_live_chat(): void
+    {
+        $agent = $this->admin(['support.view', 'support.tickets.view_assigned', 'support.tickets.reply', 'support.chat.participate']);
+        $ticket = $this->ticket($this->createApiUser()->id, null);
+        $ticket->update(['source' => 'chat']);
+
+        $this->actingAs($agent, 'admin')->get(route('admin.support.index'))
+            ->assertOk()
+            ->assertSee($ticket->public_reference);
+        $this->actingAs($agent, 'admin')->post(route('admin.support.claim', $ticket))
+            ->assertRedirect();
+        $this->assertDatabaseHas('support_tickets', ['id' => $ticket->id, 'assigned_admin_id' => $agent->id]);
     }
 
     private function ticket(int $userId, ?int $adminId): SupportTicket

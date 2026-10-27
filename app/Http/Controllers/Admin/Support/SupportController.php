@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminUser;
 use App\Models\SupportAgentProfile;
 use App\Models\SupportCategory;
+use App\Models\SupportChatSession;
 use App\Models\SupportSlaPolicy;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketAttachment;
@@ -45,7 +46,10 @@ class SupportController extends Controller
                 'open' => SupportTicket::whereIn('status', ['open', 'in_progress', 'waiting_for_customer'])->count(),
                 'unassigned' => SupportTicket::whereNull('assigned_admin_id')->whereIn('status', ['open', 'in_progress'])->count(),
                 'overdue' => SupportTicket::whereNull('first_responded_at')->where('first_response_due_at', '<', now())->whereIn('status', ['open', 'in_progress'])->count(),
+                'queued_chats' => SupportChatSession::where('state', 'queued')->count(),
+                'agents_online' => SupportAgentProfile::query()->where('enabled', true)->where('availability', 'online')->where('heartbeat_at', '>=', now()->subSeconds((int) config('support.agent_presence_ttl_seconds')))->count(),
             ],
+            'agentProfile' => SupportAgentProfile::query()->where('admin_user_id', $admin->id)->first(),
             'canViewAll' => $admin->hasPermission('support.tickets.view_all'),
             'canManage' => $admin->hasPermission('support.tickets.manage'),
         ]);
@@ -75,13 +79,17 @@ class SupportController extends Controller
         return back()->with('status', 'Ticket claimed successfully.');
     }
 
-    public function reply(Request $request, SupportTicket $supportTicket): RedirectResponse
+    public function reply(Request $request, SupportTicket $supportTicket): RedirectResponse|JsonResponse
     {
         $admin = $this->admin($request);
         $this->authorizeTicket($admin, $supportTicket);
         $this->require($admin, 'support.tickets.reply');
         $data = $request->validate(['message' => ['required', 'string', 'max:10000']]);
-        $this->service->addAdminMessage($supportTicket, $admin, $data['message'], 'public');
+        $message = $this->service->addAdminMessage($supportTicket, $admin, $data['message'], 'public');
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'data' => $this->adminMessageData($message)]);
+        }
 
         return back()->with('status', 'Customer reply saved.');
     }
@@ -127,6 +135,43 @@ class SupportController extends Controller
         $supportTicket->chatSessions()->whereIn('state', ['assigned', 'active'])->where('accepted_by_admin_id', $admin->id)->update(['last_agent_heartbeat_at' => now(), 'state' => 'active']);
 
         return response()->json(['success' => true, 'data' => ['heartbeat_at' => now()->toISOString()]]);
+    }
+
+    public function agentHeartbeat(Request $request): JsonResponse
+    {
+        $admin = $this->admin($request);
+        $this->require($admin, 'support.chat.participate');
+        $profile = SupportAgentProfile::query()->where('admin_user_id', $admin->id)->first();
+        abort_unless($profile && in_array($profile->availability, ['online', 'away'], true), 422, 'Set your support availability before starting the heartbeat.');
+        $profile->update(['heartbeat_at' => now()]);
+
+        return response()->json(['success' => true, 'data' => [
+            'heartbeat_at' => now()->toISOString(),
+            'agents_online' => SupportAgentProfile::query()->where('enabled', true)->where('availability', 'online')->where('heartbeat_at', '>=', now()->subSeconds((int) config('support.agent_presence_ttl_seconds')))->count(),
+            'queued_chats' => SupportChatSession::query()->where('state', 'queued')->count(),
+        ]]);
+    }
+
+    public function liveEvents(Request $request, SupportTicket $supportTicket): JsonResponse
+    {
+        $admin = $this->admin($request);
+        $this->authorizeTicket($admin, $supportTicket);
+        $after = max(0, $request->integer('after'));
+        $messages = $supportTicket->messages()
+            ->where('visibility', 'public')
+            ->where('id', '>', $after)
+            ->orderBy('id')
+            ->limit(100)
+            ->get()
+            ->map(fn ($message) => $this->adminMessageData($message))
+            ->values();
+        $chat = $supportTicket->latestChatSession()->first();
+
+        return response()->json(['success' => true, 'data' => [
+            'events' => $messages,
+            'next_cursor' => $messages->last()['cursor'] ?? $after,
+            'chat_state' => $chat?->state,
+        ]]);
     }
 
     public function settings(Request $request): View
@@ -180,7 +225,12 @@ class SupportController extends Controller
     private function scope($query, AdminUser $admin): void
     {
         if (! $admin->hasPermission('support.tickets.view_all')) {
-            $query->where('assigned_admin_id', $admin->id);
+            $query->where(function ($scoped) use ($admin): void {
+                $scoped->where('assigned_admin_id', $admin->id);
+                if ($admin->hasPermission('support.chat.participate')) {
+                    $scoped->orWhere(fn ($waiting) => $waiting->whereNull('assigned_admin_id')->where('source', 'chat'));
+                }
+            });
         }
     }
 
@@ -188,7 +238,20 @@ class SupportController extends Controller
     {
         $this->require($admin, 'support.view');
         if (! $admin->hasPermission('support.tickets.view_all')) {
-            abort_unless($admin->hasPermission('support.tickets.view_assigned') && $ticket->assigned_admin_id === $admin->id, 403);
+            $assignedToAgent = $admin->hasPermission('support.tickets.view_assigned') && $ticket->assigned_admin_id === $admin->id;
+            $waitingLiveChat = $admin->hasPermission('support.chat.participate') && $ticket->source === 'chat' && $ticket->assigned_admin_id === null;
+            abort_unless($assignedToAgent || $waitingLiveChat, 403);
         }
+    }
+
+    private function adminMessageData($message): array
+    {
+        return [
+            'uuid' => $message->uuid,
+            'cursor' => $message->id,
+            'sender_type' => $message->sender_type,
+            'message' => $message->body,
+            'created_at' => $message->created_at?->toISOString(),
+        ];
     }
 }

@@ -5,7 +5,7 @@
 
 @section('content')
 <style>
-.support-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}.support-stat,.support-panel{background:linear-gradient(145deg,#101820,#090d11);border:1px solid #3a4650;border-radius:16px;padding:18px}.support-stat strong{display:block;font-size:30px;color:#f4c94d}.support-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px}.support-toolbar label{display:grid;gap:5px;color:#aeb8c2}.support-toolbar input,.support-toolbar select,.support-form textarea,.support-form select{background:#06090c;color:#fff;border:1px solid #43505c;border-radius:9px;padding:10px}.support-table{width:100%;border-collapse:collapse}.support-table th,.support-table td{padding:12px;border-bottom:1px solid #28313a;text-align:left}.support-badge{display:inline-block;padding:4px 9px;border:1px solid #8a6b18;border-radius:999px;color:#f4c94d;font-size:12px}.support-muted{color:#9aa5af}.support-actions{display:flex;gap:10px;justify-content:space-between;align-items:center}.support-btn{display:inline-block;background:#f4c94d;color:#090909;border:0;border-radius:9px;padding:10px 14px;font-weight:700;text-decoration:none}@media(max-width:800px){.support-grid{grid-template-columns:1fr}.support-table{min-width:850px}.support-scroll{overflow:auto}}
+.support-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin:18px 0}.support-stat,.support-panel{background:linear-gradient(145deg,#101820,#090d11);border:1px solid #3a4650;border-radius:16px;padding:18px}.support-stat strong{display:block;font-size:30px;color:#f4c94d}.support-stat.live{border-color:#217a62;box-shadow:0 0 22px rgba(20,205,153,.08)}.support-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px}.support-toolbar label{display:grid;gap:5px;color:#aeb8c2}.support-toolbar input,.support-toolbar select,.support-form textarea,.support-form select{background:#06090c;color:#fff;border:1px solid #43505c;border-radius:9px;padding:10px}.support-table{width:100%;border-collapse:collapse}.support-table th,.support-table td{padding:12px;border-bottom:1px solid #28313a;text-align:left}.support-badge{display:inline-block;padding:4px 9px;border:1px solid #8a6b18;border-radius:999px;color:#f4c94d;font-size:12px}.support-badge.chat{border-color:#217a62;color:#3ce2ae}.support-muted{color:#9aa5af}.support-actions{display:flex;gap:10px;justify-content:space-between;align-items:center}.support-btn{display:inline-block;background:#f4c94d;color:#090909;border:0;border-radius:9px;padding:10px 14px;font-weight:700;text-decoration:none}.support-presence{display:inline-flex;align-items:center;gap:7px}.support-presence::before{content:'';width:9px;height:9px;border-radius:50%;background:#2dd4a7;box-shadow:0 0 10px #2dd4a7}@media(max-width:800px){.support-grid{grid-template-columns:1fr 1fr}.support-table{min-width:850px}.support-scroll{overflow:auto}}@media(max-width:500px){.support-grid{grid-template-columns:1fr}}
 </style>
 <div class="page-header"><div><div class="page-eyebrow">SUPPORT · SECURE CASE QUEUE</div><h1>Customer <span>Support</span></h1><p>Persistent tickets, live-chat queue and SLA visibility. Internal notes are never exposed to customers.</p></div>@if(auth('admin')->user()->hasPermission('support.sla.manage') || auth('admin')->user()->hasPermission('support.categories.manage'))<a class="support-btn" href="{{ route('admin.support.settings') }}">Support Settings</a>@endif</div>
 
@@ -15,14 +15,16 @@
     <div class="support-stat"><span>Active cases</span><strong>{{ $counts['open'] }}</strong></div>
     <div class="support-stat"><span>Unassigned</span><strong>{{ $counts['unassigned'] }}</strong></div>
     <div class="support-stat"><span>First-response overdue</span><strong>{{ $counts['overdue'] }}</strong></div>
+    <div class="support-stat live"><span>Customers waiting</span><strong id="queued-chat-count">{{ $counts['queued_chats'] }}</strong></div>
+    <div class="support-stat live"><span>Agents online</span><strong id="online-agent-count">{{ $counts['agents_online'] }}</strong></div>
 </div>
 
 @if(auth('admin')->user()->hasPermission('support.chat.participate'))
 <form method="POST" action="{{ route('admin.support.availability') }}" class="support-toolbar support-panel">@csrf @method('PATCH')
-    <label>Agent availability<select name="availability"><option value="online">Online</option><option value="away">Away</option><option value="offline">Offline</option></select></label>
-    <label>Capacity<input type="number" name="capacity" value="3" min="1" max="20"></label>
+    <label>Agent availability<select name="availability"><option value="online" @selected($agentProfile?->availability === 'online')>Online</option><option value="away" @selected($agentProfile?->availability === 'away')>Away</option><option value="offline" @selected(!$agentProfile || $agentProfile->availability === 'offline')>Offline</option></select></label>
+    <label>Capacity<input type="number" name="capacity" value="{{ $agentProfile?->capacity ?? 3 }}" min="1" max="20"></label>
     <button class="support-btn" type="submit">Update presence</button>
-    <span class="support-muted">Presence expires automatically without heartbeat; it is never treated as permanently online.</span>
+    <span class="support-muted">@if($agentProfile?->availability === 'online')<span class="support-presence">Live heartbeat active</span>@else Set Online to receive live chats.@endif</span>
 </form>
 @endif
 
@@ -35,9 +37,26 @@
 </form>
 <div class="support-scroll"><table class="support-table"><thead><tr><th>Case</th><th>Customer</th><th>Category</th><th>Priority</th><th>Status</th><th>Agent</th><th>SLA</th><th></th></tr></thead><tbody>
 @forelse($tickets as $ticket)
-<tr><td><strong>{{ $ticket->public_reference }}</strong><br><span class="support-muted">{{ $ticket->subject }}</span></td><td>{{ $ticket->user->name }}<br><span class="support-muted">{{ $ticket->user->email }}</span></td><td>{{ $ticket->category?->label ?? '—' }}</td><td><span class="support-badge">{{ strtoupper($ticket->priority) }}</span></td><td>{{ str_replace('_',' ',ucfirst($ticket->status)) }}</td><td>{{ $ticket->assignedAdmin?->name ?? 'Unassigned' }}</td><td>@if(!$ticket->first_responded_at && $ticket->first_response_due_at)<span style="color:{{ $ticket->first_response_due_at->isPast() ? '#ff6375' : '#aeb8c2' }}">{{ $ticket->first_response_due_at->diffForHumans() }}</span>@else Responded @endif</td><td><a class="support-btn" href="{{ route('admin.support.show',$ticket) }}">Open</a></td></tr>
+<tr><td><strong>{{ $ticket->public_reference }}</strong> @if($ticket->source === 'chat')<span class="support-badge chat">LIVE CHAT</span>@endif<br><span class="support-muted">{{ $ticket->subject }}</span></td><td>{{ $ticket->user->name }}<br><span class="support-muted">{{ $ticket->user->email }}</span></td><td>{{ $ticket->category?->label ?? '—' }}</td><td><span class="support-badge">{{ strtoupper($ticket->priority) }}</span></td><td>{{ str_replace('_',' ',ucfirst($ticket->status)) }}</td><td>{{ $ticket->assignedAdmin?->name ?? 'Unassigned' }}</td><td>@if(!$ticket->first_responded_at && $ticket->first_response_due_at)<span style="color:{{ $ticket->first_response_due_at->isPast() ? '#ff6375' : '#aeb8c2' }}">{{ $ticket->first_response_due_at->diffForHumans() }}</span>@else Responded @endif</td><td><a class="support-btn" href="{{ route('admin.support.show',$ticket) }}">{{ $ticket->source === 'chat' ? 'Open chat' : 'Open' }}</a></td></tr>
 @empty<tr><td colspan="8">No support cases match this queue.</td></tr>@endforelse
 </tbody></table></div>
 <div style="margin-top:16px">{{ $tickets->links() }}</div>
 </section>
+@if(auth('admin')->user()->hasPermission('support.chat.participate') && $agentProfile && in_array($agentProfile->availability, ['online','away'], true))
+<script>
+(() => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    const beat = async () => {
+        try {
+            const response = await fetch(@json(route('admin.support.agent-heartbeat')), {method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json'}});
+            if (!response.ok) return;
+            const payload = await response.json();
+            document.getElementById('online-agent-count').textContent = payload.data.agents_online;
+            document.getElementById('queued-chat-count').textContent = payload.data.queued_chats;
+        } catch (_) {}
+    };
+    beat(); window.setInterval(beat, 25000);
+})();
+</script>
+@endif
 @endsection

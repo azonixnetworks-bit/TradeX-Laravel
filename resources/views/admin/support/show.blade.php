@@ -3,12 +3,13 @@
 @section('page-title', 'Support Case')
 @section('content')
 <style>
-.case-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px}.case-card{background:linear-gradient(145deg,#101820,#080b0e);border:1px solid #394550;border-radius:16px;padding:18px;margin-bottom:16px}.case-message{border-left:3px solid #d7ae3f;background:#0c1217;border-radius:8px;padding:13px;margin:10px 0}.case-message.internal{border-color:#9d61ff;background:#171021}.case-message.customer{border-color:#2dd4bf}.case-meta{display:flex;justify-content:space-between;gap:12px;color:#9ba7b3;font-size:12px}.case-form textarea,.case-form select{width:100%;box-sizing:border-box;background:#05080b;color:#fff;border:1px solid #43505c;border-radius:9px;padding:11px;margin:8px 0}.case-btn{background:#f4c94d;color:#090909;border:0;border-radius:9px;padding:10px 15px;font-weight:700;cursor:pointer}.case-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.case-label{color:#9ba7b3;font-size:12px}.case-value{font-weight:700}.case-attachment{display:inline-block;color:#f4c94d;margin:6px 8px 0 0}@media(max-width:900px){.case-layout{grid-template-columns:1fr}.case-grid{grid-template-columns:1fr}}
+.case-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:18px}.case-card{background:linear-gradient(145deg,#101820,#080b0e);border:1px solid #394550;border-radius:16px;padding:18px;margin-bottom:16px}.case-card.live{border-color:#7b641d;box-shadow:0 0 26px rgba(244,201,77,.08)}.case-message{border-left:3px solid #d7ae3f;background:#0c1217;border-radius:8px;padding:13px;margin:10px 0}.case-message.internal{border-color:#9d61ff;background:#171021}.case-message.customer{border-color:#2dd4bf}.case-meta{display:flex;justify-content:space-between;gap:12px;color:#9ba7b3;font-size:12px}.case-form textarea,.case-form select{width:100%;box-sizing:border-box;background:#05080b;color:#fff;border:1px solid #43505c;border-radius:9px;padding:11px;margin:8px 0}.case-btn{background:#f4c94d;color:#090909;border:0;border-radius:9px;padding:10px 15px;font-weight:700;cursor:pointer}.case-btn:disabled{opacity:.55;cursor:not-allowed}.case-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.case-label{color:#9ba7b3;font-size:12px}.case-value{font-weight:700}.case-attachment{display:inline-block;color:#f4c94d;margin:6px 8px 0 0}.case-live-state{display:inline-flex;align-items:center;gap:7px;color:#38dfae}.case-live-state::before{content:'';width:9px;height:9px;border-radius:50%;background:#2dd4a7;box-shadow:0 0 10px #2dd4a7}@media(max-width:900px){.case-layout{grid-template-columns:1fr}.case-grid{grid-template-columns:1fr}}
 </style>
 <div class="page-header"><div><div class="page-eyebrow">SUPPORT · {{ $ticket->public_reference }}</div><h1>{{ $ticket->subject }}</h1><p>{{ $ticket->category?->label }} · {{ strtoupper($ticket->priority) }} · {{ str_replace('_',' ',strtoupper($ticket->status)) }}</p></div><a class="case-btn" href="{{ route('admin.support.index') }}">Back to queue</a></div>
 @if(session('status'))<div class="admin-form-callout"><strong>{{ session('status') }}</strong></div>@endif
 <div class="case-layout"><main>
-<section class="case-card"><h2>Conversation</h2>
+<section class="case-card {{ $ticket->source === 'chat' ? 'live' : '' }}"><h2>Conversation @if($ticket->latestChatSession && in_array($ticket->latestChatSession->state, ['assigned','active'], true))<small id="chat-state" class="case-live-state">{{ strtoupper($ticket->latestChatSession->state) }}</small>@endif</h2>
+<div id="case-messages" data-cursor="{{ $ticket->messages->max('id') ?? 0 }}">
 @foreach($ticket->messages as $message)
 <article class="case-message {{ $message->visibility === 'internal' ? 'internal' : $message->sender_type }}">
 <div class="case-meta"><strong>{{ $message->visibility === 'internal' ? 'Internal note' : ucfirst($message->sender_type) }}</strong><time>{{ $message->created_at->format('Y-m-d H:i') }}</time></div>
@@ -16,8 +17,9 @@
 @foreach($message->attachments as $attachment)<a class="case-attachment" href="{{ route('admin.support.attachments.download',$attachment) }}">Download {{ $attachment->original_name }}</a>@endforeach
 </article>
 @endforeach
+</div>
 </section>
-@if($canReply)<form class="case-card case-form" method="POST" action="{{ route('admin.support.reply',$ticket) }}">@csrf<h3>Public customer reply</h3><textarea name="message" rows="5" required maxlength="10000"></textarea><button class="case-btn">Send reply</button></form>@endif
+@if($canReply)<form id="live-reply-form" class="case-card case-form" method="POST" action="{{ route('admin.support.reply',$ticket) }}">@csrf<h3>Public customer reply</h3><textarea name="message" rows="5" required maxlength="10000"></textarea><button class="case-btn" type="submit">Send reply</button><p id="reply-status" class="case-label" aria-live="polite"></p></form>@endif
 @if($canNote)<form class="case-card case-form" method="POST" action="{{ route('admin.support.notes.store',$ticket) }}">@csrf<h3>Internal note</h3><p class="case-label">Admin-only. Never returned by the customer API or customer email.</p><textarea name="message" rows="4" required maxlength="10000"></textarea><button class="case-btn">Save internal note</button></form>@endif
 </main><aside>
 <section class="case-card"><h3>Customer</h3><div class="case-grid"><div><div class="case-label">Name</div><div class="case-value">{{ $ticket->user->name }}</div></div><div><div class="case-label">Account</div><div class="case-value">{{ $ticket->user->account_type }}</div></div><div><div class="case-label">Verified email</div><div class="case-value">{{ $ticket->user->email_verified_at ? $ticket->user->email : 'Not verified' }}</div></div><div><div class="case-label">Country</div><div class="case-value">{{ $ticket->user->country_code ?: '—' }}</div></div></div></section>
@@ -30,7 +32,44 @@
 (() => {
     const token = document.querySelector('meta[name="csrf-token"]')?.content;
     const beat = () => fetch(@json(route('admin.support.heartbeat', $ticket)), {method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json'}}).catch(() => {});
-    beat(); window.setInterval(beat, 30000);
+    const container = document.getElementById('case-messages');
+    const state = document.getElementById('chat-state');
+    const escapeHtml = value => String(value ?? '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[char]));
+    const append = message => {
+        if (document.querySelector(`[data-message-uuid="${message.uuid}"]`)) return;
+        const article = document.createElement('article');
+        article.className = `case-message ${message.sender_type}`;
+        article.dataset.messageUuid = message.uuid;
+        article.innerHTML = `<div class="case-meta"><strong>${message.sender_type === 'admin' ? 'Admin' : 'Customer'}</strong><time>${new Date(message.created_at).toLocaleString()}</time></div><p style="white-space:pre-wrap">${escapeHtml(message.message)}</p>`;
+        container.appendChild(article);
+        article.scrollIntoView({behavior:'smooth',block:'nearest'});
+    };
+    const poll = async () => {
+        try {
+            const cursor = container.dataset.cursor || '0';
+            const response = await fetch(`${@json(route('admin.support.live-events', $ticket))}?after=${encodeURIComponent(cursor)}`, {headers:{'Accept':'application/json'}});
+            if (!response.ok) return;
+            const payload = await response.json();
+            payload.data.events.forEach(append);
+            container.dataset.cursor = payload.data.next_cursor;
+            if (state && payload.data.chat_state) state.textContent = String(payload.data.chat_state).toUpperCase();
+        } catch (_) {}
+    };
+    const form = document.getElementById('live-reply-form');
+    form?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const button = form.querySelector('button[type="submit"]');
+        const status = document.getElementById('reply-status');
+        button.disabled = true; status.textContent = 'Sending…';
+        try {
+            const response = await fetch(form.action, {method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json','Content-Type':'application/json'},body:JSON.stringify({message:form.elements.message.value})});
+            const payload = await response.json();
+            if (!response.ok) throw new Error(payload.message || 'Unable to send reply.');
+            append(payload.data); form.reset(); status.textContent = 'Reply delivered.';
+        } catch (error) { status.textContent = error.message || 'Unable to send reply.'; }
+        finally { button.disabled = false; }
+    });
+    beat(); poll(); window.setInterval(beat, 25000); window.setInterval(poll, 2000);
 })();
 </script>
 @endif

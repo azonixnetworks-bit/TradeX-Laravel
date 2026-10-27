@@ -3,6 +3,7 @@
 namespace App\Services\Support;
 
 use App\Models\AdminUser;
+use App\Models\SupportAgentProfile;
 use App\Models\SupportCategory;
 use App\Models\SupportChatSession;
 use App\Models\SupportSlaPolicy;
@@ -148,8 +149,9 @@ class SupportTicketService
                     'idempotency_key' => $key, 'queued_at' => now(), 'last_customer_heartbeat_at' => now(),
                 ]);
                 $this->event($ticket, 'chat.queued', 'customer', $user->id, ['chat_uuid' => $chat->uuid]);
+                $this->assignAvailableAgent($ticket, $chat);
 
-                return $chat;
+                return $chat->fresh(['ticket.assignedAdmin']);
             }, 3);
         } catch (QueryException $exception) {
             if ((string) $exception->getCode() !== '23000') {
@@ -186,6 +188,52 @@ class SupportTicketService
 
             return $locked;
         }, 3);
+    }
+
+    private function assignAvailableAgent(SupportTicket $ticket, SupportChatSession $chat): void
+    {
+        $cutoff = now()->subSeconds((int) config('support.agent_presence_ttl_seconds'));
+        $profiles = SupportAgentProfile::query()
+            ->with(['admin', 'departments'])
+            ->where('enabled', true)
+            ->where('availability', 'online')
+            ->where('heartbeat_at', '>=', $cutoff)
+            ->whereHas('admin', fn ($query) => $query->where('is_active', true))
+            ->lockForUpdate()
+            ->get()
+            ->filter(function (SupportAgentProfile $profile) use ($ticket): bool {
+                if ($profile->departments->isNotEmpty() && ! $profile->departments->contains('id', $ticket->department_id)) {
+                    return false;
+                }
+
+                $activeChats = SupportChatSession::query()
+                    ->where('accepted_by_admin_id', $profile->admin_user_id)
+                    ->whereIn('state', ['assigned', 'active'])
+                    ->count();
+
+                return $activeChats < $profile->capacity;
+            })
+            ->sortBy(function (SupportAgentProfile $profile): int {
+                return SupportChatSession::query()
+                    ->where('accepted_by_admin_id', $profile->admin_user_id)
+                    ->whereIn('state', ['assigned', 'active'])
+                    ->count();
+            })
+            ->first();
+
+        if (! $profiles) {
+            return;
+        }
+
+        $ticket->update(['assigned_admin_id' => $profiles->admin_user_id, 'status' => 'in_progress']);
+        $chat->update([
+            'state' => 'assigned',
+            'accepted_by_admin_id' => $profiles->admin_user_id,
+            'accepted_at' => now(),
+            'last_agent_heartbeat_at' => $profiles->heartbeat_at,
+        ]);
+        $this->event($ticket, 'chat.auto_assigned', 'system', null, ['admin_id' => $profiles->admin_user_id]);
+        $this->outbox->customer($ticket, 'ticket-assigned', ['reference' => $ticket->public_reference], 'chat-assigned:'.$profiles->admin_user_id);
     }
 
     public function transition(SupportTicket $ticket, AdminUser|User $actor, string $status): SupportTicket

@@ -30,6 +30,7 @@ class SupportController extends Controller
     {
         $user = $this->user($request);
         $base = SupportTicket::query()->where('user_id', $user->id);
+        $agentsOnline = $this->onlineAgentsCount();
 
         return $this->ok([
             'ticket_counts' => [
@@ -38,7 +39,8 @@ class SupportController extends Controller
                 'closed' => (clone $base)->where('status', 'closed')->count(),
             ],
             'live_chat' => [
-                'agents_online' => SupportAgentProfile::query()->where('enabled', true)->where('availability', 'online')->where('heartbeat_at', '>=', now()->subSeconds((int) config('support.agent_presence_ttl_seconds')))->exists(),
+                'agents_online' => $agentsOnline,
+                'available' => $agentsOnline > 0,
                 'eta_minutes' => null,
             ],
             'mail_delivery_configured' => (bool) config('support.mail_enabled'),
@@ -211,7 +213,10 @@ class SupportController extends Controller
     {
         $session = $this->ownedChat($chat, $this->user($request));
         abort_unless(in_array($session->state, SupportChatSession::ACTIVE_STATES, true), 422);
-        $session->update(['last_customer_heartbeat_at' => now()]);
+        $session->update([
+            'last_customer_heartbeat_at' => now(),
+            'state' => $session->state === 'assigned' ? 'active' : $session->state,
+        ]);
 
         return $this->ok($this->chatData($session->fresh()));
     }
@@ -279,9 +284,31 @@ class SupportController extends Controller
 
     private function chatData(SupportChatSession $chat): array
     {
+        $chat->loadMissing(['ticket.assignedAdmin']);
         $ahead = $chat->state === 'queued' ? SupportChatSession::query()->where('state', 'queued')->where('queued_at', '<', $chat->queued_at)->count() : 0;
 
-        return ['uuid' => $chat->uuid, 'ticket_uuid' => $chat->ticket->uuid, 'ticket_reference' => $chat->ticket->public_reference, 'state' => $chat->state, 'queue_position' => $chat->state === 'queued' ? $ahead + 1 : null, 'eta_minutes' => null, 'queued_at' => $chat->queued_at?->toISOString(), 'accepted_at' => $chat->accepted_at?->toISOString(), 'ended_at' => $chat->ended_at?->toISOString()];
+        return [
+            'uuid' => $chat->uuid,
+            'ticket_uuid' => $chat->ticket->uuid,
+            'ticket_reference' => $chat->ticket->public_reference,
+            'state' => $chat->state,
+            'queue_position' => $chat->state === 'queued' ? $ahead + 1 : null,
+            'eta_minutes' => null,
+            'agents_online' => $this->onlineAgentsCount(),
+            'assigned_agent' => $chat->ticket->assignedAdmin ? ['name' => $chat->ticket->assignedAdmin->name] : null,
+            'queued_at' => $chat->queued_at?->toISOString(),
+            'accepted_at' => $chat->accepted_at?->toISOString(),
+            'ended_at' => $chat->ended_at?->toISOString(),
+        ];
+    }
+
+    private function onlineAgentsCount(): int
+    {
+        return SupportAgentProfile::query()
+            ->where('enabled', true)
+            ->where('availability', 'online')
+            ->where('heartbeat_at', '>=', now()->subSeconds((int) config('support.agent_presence_ttl_seconds')))
+            ->count();
     }
 
     private function ok(mixed $data, int $status = 200): JsonResponse

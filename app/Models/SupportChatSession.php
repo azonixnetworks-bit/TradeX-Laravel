@@ -33,4 +33,9 @@ class SupportChatSession extends Model
     {
         return $this->belongsTo(SupportTicket::class, 'ticket_id');
     }
+
+    public function acceptedAdmin(): BelongsTo
+    {
+        return $this->belongsTo(AdminUser::class, 'accepted_by_admin_id');
+    }
 }

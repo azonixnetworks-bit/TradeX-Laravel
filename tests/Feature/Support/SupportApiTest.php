@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Support;
 
+use App\Models\AdminUser;
+use App\Models\SupportAgentProfile;
 use App\Models\SupportCategory;
 use App\Models\SupportTicket;
 use App\Models\SupportTicketMessage;
@@ -9,6 +11,7 @@ use Database\Seeders\SupportSystemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Tests\Concerns\CreatesTradeXMobileSession;
 use Tests\TestCase;
 
@@ -124,5 +127,42 @@ class SupportApiTest extends TestCase
         $this->withToken($this->issueBoundToken($first))->withHeader('Idempotency-Key', 'queue-first')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated()->assertJsonPath('data.queue_position', 1)->assertJsonPath('data.eta_minutes', null);
         $this->travel(1)->seconds();
         $this->withToken($this->issueBoundToken($second))->withHeader('Idempotency-Key', 'queue-second')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated()->assertJsonPath('data.queue_position', 2)->assertJsonPath('data.eta_minutes', null);
+    }
+
+    public function test_overview_and_chat_return_the_live_agent_count(): void
+    {
+        foreach (['one', 'two'] as $suffix) {
+            $admin = AdminUser::create([
+                'uuid' => (string) Str::uuid(),
+                'name' => 'Agent '.ucfirst($suffix),
+                'email' => "agent-{$suffix}@example.test",
+                'email_verified_at' => now(),
+                'password' => 'TestingPassword123!',
+                'is_active' => true,
+            ]);
+            SupportAgentProfile::create([
+                'admin_user_id' => $admin->id,
+                'enabled' => true,
+                'availability' => 'online',
+                'capacity' => 3,
+                'heartbeat_at' => now(),
+            ]);
+        }
+
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $category = SupportCategory::query()->firstOrFail();
+        $payload = ['category_uuid' => $category->uuid, 'subject' => 'Live agent count request', 'description' => 'Please connect this authenticated customer to an online support agent.'];
+
+        $this->withToken($token)->getJson('/api/v1/support/overview')
+            ->assertOk()
+            ->assertJsonPath('data.live_chat.agents_online', 2)
+            ->assertJsonPath('data.live_chat.available', true);
+        $this->withToken($token)->withHeader('Idempotency-Key', 'agent-count-chat')->postJson('/api/v1/support/live-chat/start', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.agents_online', 2)
+            ->assertJsonPath('data.state', 'assigned')
+            ->assertJsonPath('data.queue_position', null)
+            ->assertJsonPath('data.assigned_agent.name', 'Agent One');
     }
 }
