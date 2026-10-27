@@ -3,7 +3,9 @@
 namespace Tests\Feature\Support;
 
 use App\Models\SupportCategory;
+use App\Models\SupportChatSession;
 use App\Models\SupportTicket;
+use App\Models\SupportTicketAttachment;
 use App\Models\SupportTicketMessage;
 use Database\Seeders\SupportSystemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -115,6 +117,23 @@ class SupportApiTest extends TestCase
         $this->withToken($ownerToken)->post('/api/v1/support/tickets/'.$uuid.'/attachments', ['files' => [UploadedFile::fake()->create('unsafe.svg', 1, 'image/svg+xml')]], ['Accept' => 'application/json'])->assertUnprocessable();
     }
 
+    public function test_attachment_without_message_uuid_is_visible_in_history_and_upload_retry_is_idempotent(): void
+    {
+        Storage::fake('private');
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $category = SupportCategory::query()->firstOrFail();
+        $uuid = $this->withToken($token)->withHeader('Idempotency-Key', 'attachment-ticket')->postJson('/api/v1/support/tickets', ['category_uuid' => $category->uuid, 'subject' => 'Evidence is needed for this support case', 'description' => 'The selected screenshot should remain visible in the persisted conversation.'])->json('data.uuid');
+        $pngBytes = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true);
+
+        $first = $this->withToken($token)->withHeader('Idempotency-Key', 'attachment-upload-1')->post('/api/v1/support/tickets/'.$uuid.'/attachments', ['files' => [UploadedFile::fake()->createWithContent('evidence.png', $pngBytes)]], ['Accept' => 'application/json'])->assertCreated();
+        $second = $this->withToken($token)->withHeader('Idempotency-Key', 'attachment-upload-1')->post('/api/v1/support/tickets/'.$uuid.'/attachments', ['files' => [UploadedFile::fake()->createWithContent('evidence.png', $pngBytes)]], ['Accept' => 'application/json'])->assertCreated();
+
+        $this->assertSame($first->json('data.0.uuid'), $second->json('data.0.uuid'));
+        $this->assertSame(1, SupportTicketAttachment::query()->count());
+        $this->withToken($token)->getJson('/api/v1/support/tickets/'.$uuid.'/messages')->assertOk()->assertJsonPath('data.items.0.attachments.0.uuid', $first->json('data.0.uuid'));
+    }
+
     public function test_live_chat_queue_position_uses_actual_fifo_without_fake_eta(): void
     {
         $category = SupportCategory::query()->firstOrFail();
@@ -124,5 +143,22 @@ class SupportApiTest extends TestCase
         $this->withToken($this->issueBoundToken($first))->withHeader('Idempotency-Key', 'queue-first')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated()->assertJsonPath('data.queue_position', 1)->assertJsonPath('data.eta_minutes', null);
         $this->travel(1)->seconds();
         $this->withToken($this->issueBoundToken($second))->withHeader('Idempotency-Key', 'queue-second')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated()->assertJsonPath('data.queue_position', 2)->assertJsonPath('data.eta_minutes', null);
+    }
+
+    public function test_stale_customer_chat_is_closed_without_losing_ticket_and_customer_can_queue_again(): void
+    {
+        config()->set('support.customer_presence_ttl_seconds', 30);
+        $category = SupportCategory::query()->firstOrFail();
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $payload = ['category_uuid' => $category->uuid, 'subject' => 'Live support reconnect test', 'description' => 'This live support request should recover after a disconnected customer timeout.'];
+        $first = $this->withToken($token)->withHeader('Idempotency-Key', 'stale-chat-1')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated();
+        SupportChatSession::query()->where('uuid', $first->json('data.uuid'))->update(['last_customer_heartbeat_at' => now()->subMinutes(5)]);
+
+        $this->artisan('tradex:support:sweep')->assertSuccessful();
+
+        $this->assertDatabaseHas('support_chat_sessions', ['uuid' => $first->json('data.uuid'), 'state' => 'cancelled', 'active_user_id' => null, 'closure_reason' => 'customer_timeout']);
+        $second = $this->withToken($token)->withHeader('Idempotency-Key', 'stale-chat-2')->postJson('/api/v1/support/live-chat/start', $payload)->assertCreated();
+        $this->assertNotSame($first->json('data.uuid'), $second->json('data.uuid'));
     }
 }

@@ -7,6 +7,7 @@ return [
     'max_attachments_per_request' => (int) env('TRADEX_SUPPORT_MAX_ATTACHMENTS', 5),
     'allowed_mimes' => ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
     'agent_presence_ttl_seconds' => (int) env('TRADEX_SUPPORT_AGENT_PRESENCE_TTL_SECONDS', 90),
+    'customer_presence_ttl_seconds' => (int) env('TRADEX_SUPPORT_CUSTOMER_PRESENCE_TTL_SECONDS', 120),
     'reopen_days' => (int) env('TRADEX_SUPPORT_REOPEN_DAYS', 7),
     'mail_enabled' => filter_var(env('TRADEX_SUPPORT_MAIL_ENABLED', false), FILTER_VALIDATE_BOOL),
     'notification_queue' => env('TRADEX_SUPPORT_NOTIFICATION_QUEUE', 'support-notifications'),

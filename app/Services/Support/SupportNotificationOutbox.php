@@ -66,7 +66,7 @@ class SupportNotificationOutbox
     {
         AdminUser::query()->where('is_active', true)->where(function ($query): void {
             $query->whereHas('roles', fn ($roles) => $roles->where('code', 'SUPER_ADMIN')->where('is_active', true))
-                ->orWhereHas('roles.permissions', fn ($permissions) => $permissions->where('code', 'support.tickets.view_all'));
+                ->orWhereHas('roles', fn ($roles) => $roles->where('is_active', true)->whereHas('permissions', fn ($permissions) => $permissions->where('code', 'support.tickets.view_all')));
         })->each(fn (AdminUser $admin) => $this->admin($ticket, $admin, 'new-ticket-queue', ['reference' => $ticket->public_reference, 'subject' => $ticket->subject], 'queue-created'));
     }
 }

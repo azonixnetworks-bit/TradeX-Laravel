@@ -48,6 +48,9 @@ class SupportNotificationTest extends TestCase
         (new DeliverSupportNotification($inApp->id))->handle();
         $this->assertSame(1, NotificationMessage::where('uuid', $inApp->uuid)->count());
         $this->assertSame(1, UserNotificationReceipt::where('user_id', $user->id)->count());
+        $notification = NotificationMessage::where('uuid', $inApp->uuid)->firstOrFail();
+        $this->assertSame('You have a new reply in the TradeX support centre.', $notification->body);
+        $this->assertStringNotContainsString('A safe public support reply.', $notification->body);
     }
 
     private function ticket(int $userId): SupportTicket

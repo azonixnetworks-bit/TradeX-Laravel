@@ -2,34 +2,36 @@
 
 ## Branch
 
-`codex/s3-laravel-support-system`, based on current Laravel `main` commit `cddd297`. Not merged, pushed or deployed by this task.
+The hardening work originated on `codex/s3-laravel-support-finish`, based on the support implementation already present on `main`. Confirm the deployed revision and migration status from the target environment during each release.
 
 ## Implemented
 
 - Additive MySQL/SQLite-compatible support schema with UUID API identities, monotonic references, indexes, FKs, private attachment metadata, feedback cycles, FAQ, SLA, agent presence and notification outbox.
 - Customer REST API under `/api/v1/support` protected by existing Sanctum + trusted-device middleware.
 - Server-authoritative ownership, priority, state transitions, idempotency and atomic agent claim.
-- Persistent ticket/live-chat shared thread, FIFO queue position, TTL presence, disconnect requeue and cursor polling fallback.
-- Private MIME/signature-checked attachment upload and authorized stream download.
+- Persistent ticket/live-chat shared thread, stable priority/deadline queue position, independent customer/agent TTL presence, customer timeout, agent disconnect requeue and customer/admin cursor polling.
+- Private MIME/signature-checked attachment upload, retry idempotency, message-history visibility and authorized stream download.
 - Existing admin auth/TOTP/RBAC reused with deny-by-default controller checks, support roles/permissions, valid landing route and permission-gated sidebar.
 - Functional Blade queue, ticket conversation, public replies, internal notes, claim, lifecycle, presence, category and SLA settings.
 - Idempotent queued customer/team email outbox. Support mail is disabled by default.
-- Scheduler sweep for stale agents/chats and SLA breach escalation.
+- Scheduler sweep for stale agents/customers and first-response/resolution SLA breach escalation.
+- Row-locked lifecycle transitions with correct before/after audit state, locked customer replies and duplicate-key recovery for concurrent ticket creation.
+- Generic admin notifications contain no customer subject, reference or reply body at the shared notification boundary.
 - Optional idempotent daily super-admin support summary schedule (disabled until mail transport is verified).
 
 ## Flutter compatibility
 
-The local Flutter S3 UI was present, but `lib/features/support/data/support_repository.dart` is still an explicit unavailable placeholder and contains no API models/calls. Backend contract is therefore documented but Flutter end-to-end integration is **not verified**. No Flutter code was changed in this Laravel task.
+The local Flutter S3 UI is present on `main`, but `lib/features/support/data/support_repository.dart` still sets `phaseOneAvailable = false` and contains no support API calls. Backend contract is therefore documented but Flutter end-to-end integration is **not verified**. No Flutter code was changed in this Laravel task.
 
 ## Verification
 
-- `php artisan route:list --path=support`: 30 support routes registered once.
-- `vendor/bin/pint --dirty`: passed after formatting.
-- `php artisan test tests/Feature/Support tests/Unit/Support`: 20 tests, 78 assertions, passed.
-- Full `php artisan test` checkpoint: 1,297 tests; 1,267 passed and 30 existing unrelated failures in Screener, Quick Unlock/Auth, Affiliate share prerequisites and Public Website configuration/contract suites. The two initially exposed admin landing expectations were corrected and their complete test file passes. No remaining failure names the Support implementation. The subsequently added notification-pipeline test also passes in the targeted suite.
-- Test database migrations ran through Laravel `RefreshDatabase` on in-memory SQLite; production data was never touched.
+- `php artisan route:list --path=support --json`: 32 support routes registered once, including admin presence and cursor-event routes.
+- `vendor/bin/pint --test` on every changed PHP file and `git diff --check`: passed.
+- `php artisan test tests/Feature/Support tests/Unit/Support/SupportSlaClockTest.php`: 18 tests, 87 assertions, passed.
+- Full `php artisan test` after this hardening pass: 1,304 tests; 1,275 passed and 29 failures in the unrelated Screener area. No failure names the support implementation, and the targeted support regression suite passes after the changes.
+- Test database migrations ran through Laravel `RefreshDatabase` on in-memory SQLite. The configured local MySQL development database was audited before mutation, contained no support tickets/messages/chats/attachments, and the additive hardening migration ran as batch 89. No production database or external environment was touched.
 
-Coverage includes unauthenticated denial, trusted-device customer flow, owner-only ticket access, internal-note non-disclosure, idempotent ticket/message/chat creation, FIFO queue/no fake ETA, feedback/reopen, private attachment owner scope and MIME rejection, admin deny-by-default, assigned-agent scoping, claim/reply, and business-hour SLA weekend calculation.
+Coverage includes unauthenticated denial, trusted-device customer flow, owner-only ticket access, internal-note non-disclosure, idempotent ticket/message/chat/attachment creation, stable queue/no fake ETA, feedback/reopen, private attachment owner scope and MIME rejection, admin deny-by-default, online/offline agent queue claim behavior, end-to-end admin/customer event polling, transition audit correctness, customer timeout/agent requeue and configurable business-hour SLA calculation.
 
 ## Production readiness gaps
 
@@ -38,4 +40,4 @@ Coverage includes unauthenticated denial, trusted-device customer flow, owner-on
 - Flutter repository still requires wiring to this contract and device testing.
 - Holiday calendars and malware scanning provider are not configured.
 - Customer support updates create idempotent records in the existing in-app notification/receipt pipeline and invoke its configured push fan-out. Live push delivery still depends on the existing `TRADEX_PUSH_ENABLED` provider configuration and registered trusted-device tokens.
-- No production migration/deployment was run.
+- Production release still requires the migration, seeding, worker/scheduler and smoke-test sequence in `S3_DEPLOYMENT.md`; source control state alone is not proof of a successful live deployment.

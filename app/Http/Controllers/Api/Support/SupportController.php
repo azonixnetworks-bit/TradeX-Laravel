@@ -96,7 +96,7 @@ class SupportController extends Controller
 
     public function show(Request $request, string $ticket): JsonResponse
     {
-        return $this->ok($this->ticketData($this->ownedTicket($ticket, $this->user($request))->load(['category', 'department', 'assignedAdmin', 'latestChatSession'])));
+        return $this->ok($this->ticketData($this->ownedTicket($ticket, $this->user($request))->load(['category', 'department', 'assignedAdmin', 'attachments', 'latestChatSession'])));
     }
 
     public function messages(Request $request, string $ticket): JsonResponse
@@ -126,9 +126,29 @@ class SupportController extends Controller
     {
         $owned = $this->ownedTicket($ticket, $this->user($request));
         $request->validate(['files' => ['required', 'array', 'max:'.config('support.max_attachments_per_request')], 'files.*' => ['required', 'file', 'max:'.config('support.max_attachment_kb'), 'mimetypes:'.implode(',', config('support.allowed_mimes'))], 'message_uuid' => ['nullable', 'uuid']]);
-        $message = $request->filled('message_uuid') ? $owned->messages()->where('uuid', $request->string('message_uuid'))->firstOrFail() : null;
+        $requestKey = trim((string) $request->header('Idempotency-Key', ''));
+        if (mb_strlen($requestKey) > 100) {
+            throw ValidationException::withMessages(['idempotency_key' => 'The Idempotency-Key header may not exceed 100 characters.']);
+        }
+        $message = $request->filled('message_uuid')
+            ? $owned->messages()->where('uuid', $request->string('message_uuid'))->firstOrFail()
+            : $owned->messages()->where('sender_type', 'customer')->latest('id')->firstOrFail();
         $stored = [];
-        foreach ($request->file('files') as $file) {
+        foreach ($request->file('files') as $index => $file) {
+            $fileIdempotencyKey = $requestKey === '' ? null : hash('sha256', $requestKey.'|'.$index);
+            if ($fileIdempotencyKey) {
+                $existing = SupportTicketAttachment::query()
+                    ->where('ticket_id', $owned->id)
+                    ->where('uploader_type', 'customer')
+                    ->where('client_idempotency_key', $fileIdempotencyKey)
+                    ->first();
+                if ($existing) {
+                    $stored[] = $this->attachmentData($existing);
+
+                    continue;
+                }
+            }
+
             $uuid = (string) Str::uuid();
             $mime = (string) $file->getMimeType();
             if (! in_array($mime, config('support.allowed_mimes'), true)) {
@@ -138,13 +158,23 @@ class SupportController extends Controller
                 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'
             };
             $path = $file->storeAs('support/'.$owned->uuid, $uuid.'.'.$extension, config('support.private_disk'));
-            $attachment = SupportTicketAttachment::create([
-                'uuid' => $uuid, 'ticket_id' => $owned->id, 'message_id' => $message?->id,
+            $values = [
+                'uuid' => $uuid, 'ticket_id' => $owned->id, 'message_id' => $message->id,
                 'uploader_type' => 'customer', 'uploader_user_id' => $this->user($request)->id,
                 'disk' => config('support.private_disk'), 'path' => $path,
                 'original_name' => Str::limit(basename((string) $file->getClientOriginalName()), 255, ''),
                 'mime_type' => $mime, 'byte_size' => $file->getSize(), 'content_hash' => hash_file('sha256', $file->getRealPath()),
-            ]);
+                'client_idempotency_key' => $fileIdempotencyKey,
+            ];
+            $attachment = $fileIdempotencyKey
+                ? SupportTicketAttachment::firstOrCreate(
+                    ['ticket_id' => $owned->id, 'uploader_type' => 'customer', 'client_idempotency_key' => $fileIdempotencyKey],
+                    $values
+                )
+                : SupportTicketAttachment::create($values);
+            if (! $attachment->wasRecentlyCreated && $attachment->path !== $path) {
+                Storage::disk((string) config('support.private_disk'))->delete($path);
+            }
             $stored[] = $this->attachmentData($attachment);
         }
 
@@ -220,7 +250,7 @@ class SupportController extends Controller
     {
         $session = $this->ownedChat($chat, $this->user($request));
         $after = max(0, $request->integer('after'));
-        $events = $session->ticket->messages()->where('visibility', 'public')->where('id', '>', $after)->orderBy('id')->limit(100)->get()->map(fn ($message) => $this->messageData($message));
+        $events = $session->ticket->messages()->with('attachments')->where('visibility', 'public')->where('id', '>', $after)->orderBy('id')->limit(100)->get()->map(fn ($message) => $this->messageData($message));
 
         return $this->ok(['chat' => $this->chatData($session), 'events' => $events, 'next_cursor' => $events->last()['cursor'] ?? $after]);
     }
@@ -264,6 +294,7 @@ class SupportController extends Controller
             'first_response_due_at' => $ticket->first_response_due_at?->toISOString(), 'resolution_due_at' => $ticket->resolution_due_at?->toISOString(),
             'first_responded_at' => $ticket->first_responded_at?->toISOString(), 'resolved_at' => $ticket->resolved_at?->toISOString(),
             'created_at' => $ticket->created_at?->toISOString(), 'updated_at' => $ticket->updated_at?->toISOString(),
+            'attachments' => $ticket->relationLoaded('attachments') ? $ticket->attachments->map(fn ($item) => $this->attachmentData($item))->values() : [],
         ];
     }
 
@@ -279,9 +310,34 @@ class SupportController extends Controller
 
     private function chatData(SupportChatSession $chat): array
     {
-        $ahead = $chat->state === 'queued' ? SupportChatSession::query()->where('state', 'queued')->where('queued_at', '<', $chat->queued_at)->count() : 0;
+        $chat->loadMissing(['ticket.assignedAdmin', 'acceptedAdmin']);
 
-        return ['uuid' => $chat->uuid, 'ticket_uuid' => $chat->ticket->uuid, 'ticket_reference' => $chat->ticket->public_reference, 'state' => $chat->state, 'queue_position' => $chat->state === 'queued' ? $ahead + 1 : null, 'eta_minutes' => null, 'queued_at' => $chat->queued_at?->toISOString(), 'accepted_at' => $chat->accepted_at?->toISOString(), 'ended_at' => $chat->ended_at?->toISOString()];
+        return ['uuid' => $chat->uuid, 'ticket_uuid' => $chat->ticket->uuid, 'ticket_reference' => $chat->ticket->public_reference, 'state' => $chat->state, 'queue_position' => $this->queuePosition($chat), 'eta_minutes' => null, 'agents_online' => SupportAgentProfile::query()->where('enabled', true)->where('availability', 'online')->where('heartbeat_at', '>=', now()->subSeconds((int) config('support.agent_presence_ttl_seconds')))->count(), 'assigned_agent' => ($chat->acceptedAdmin ?: $chat->ticket->assignedAdmin) ? ['name' => ($chat->acceptedAdmin ?: $chat->ticket->assignedAdmin)->name] : null, 'queued_at' => $chat->queued_at?->toISOString(), 'accepted_at' => $chat->accepted_at?->toISOString(), 'ended_at' => $chat->ended_at?->toISOString(), 'closure_reason' => $chat->closure_reason];
+    }
+
+    private function queuePosition(SupportChatSession $chat): ?int
+    {
+        if ($chat->state !== 'queued') {
+            return null;
+        }
+
+        $query = SupportChatSession::query()
+            ->where('support_chat_sessions.state', 'queued')
+            ->join('support_tickets', 'support_tickets.id', '=', 'support_chat_sessions.ticket_id')
+            ->when(
+                $chat->ticket->department_id === null,
+                fn ($builder) => $builder->whereNull('support_tickets.department_id'),
+                fn ($builder) => $builder->where('support_tickets.department_id', $chat->ticket->department_id)
+            )
+            ->orderByRaw("CASE support_tickets.priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END")
+            ->orderByRaw('support_tickets.first_response_due_at is null')
+            ->orderBy('support_tickets.first_response_due_at')
+            ->orderBy('support_chat_sessions.queued_at')
+            ->orderBy('support_chat_sessions.id')
+            ->pluck('support_chat_sessions.id');
+        $position = $query->search($chat->id);
+
+        return $position === false ? null : $position + 1;
     }
 
     private function ok(mixed $data, int $status = 200): JsonResponse

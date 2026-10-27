@@ -85,13 +85,13 @@ class DeliverSupportNotification implements ShouldQueue
             'ticket-status' => 'Support status updated',
             default => 'Support update',
         };
-        $body = isset($delivery->payload['body'])
-            ? (string) $delivery->payload['body']
-            : trim(implode(' · ', array_filter([
-                $delivery->payload['reference'] ?? null,
-                $delivery->payload['subject'] ?? null,
-                $delivery->payload['status'] ?? null,
-            ])));
+        $body = match ($delivery->template) {
+            'ticket-received' => 'Your support request has been recorded securely.',
+            'admin-reply' => 'You have a new reply in the TradeX support centre.',
+            'ticket-assigned' => 'A support agent has accepted your request.',
+            'ticket-status' => 'Your support request status has changed.',
+            default => 'Open the TradeX support centre for details.',
+        };
 
         $message = NotificationMessage::query()->firstOrCreate(
             ['uuid' => $delivery->uuid],
@@ -100,7 +100,9 @@ class DeliverSupportNotification implements ShouldQueue
                 'category' => NotificationMessage::CATEGORY_SYSTEM,
                 'priority' => NotificationMessage::PRIORITY_NORMAL,
                 'title' => $title,
-                'body' => mb_substr($body ?: 'Open the TradeX support centre for details.', 0, 2000),
+                // Generic notification storage is visible to notification admins.
+                // Keep customer case text and references inside the support boundary.
+                'body' => $body,
                 'action_type' => NotificationMessage::ACTION_NONE,
                 'is_active' => true,
                 'published_at' => now(),

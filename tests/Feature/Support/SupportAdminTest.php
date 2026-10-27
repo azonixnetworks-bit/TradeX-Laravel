@@ -5,8 +5,11 @@ namespace Tests\Feature\Support;
 use App\Models\AdminPermission;
 use App\Models\AdminRole;
 use App\Models\AdminUser;
+use App\Models\SupportAgentProfile;
 use App\Models\SupportCategory;
+use App\Models\SupportChatSession;
 use App\Models\SupportTicket;
+use App\Models\SupportTicketEvent;
 use Database\Seeders\SupportSystemSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -51,6 +54,54 @@ class SupportAdminTest extends TestCase
         $this->assertDatabaseHas('support_tickets', ['id' => $ticket->id, 'assigned_admin_id' => $manager->id, 'status' => 'in_progress']);
         $this->actingAs($manager, 'admin')->post(route('admin.support.reply', $ticket), ['message' => 'We are reviewing this case.'])->assertRedirect();
         $this->assertDatabaseHas('support_ticket_messages', ['ticket_id' => $ticket->id, 'visibility' => 'public', 'body' => 'We are reviewing this case.']);
+    }
+
+    public function test_online_support_agent_can_see_and_claim_queued_live_chat(): void
+    {
+        $agent = $this->admin(['support.view', 'support.tickets.view_assigned', 'support.tickets.reply', 'support.notes.write', 'support.chat.participate']);
+        SupportAgentProfile::create(['admin_user_id' => $agent->id, 'enabled' => true, 'availability' => 'online', 'capacity' => 2, 'heartbeat_at' => now()]);
+        $user = $this->createApiUser();
+        $token = $this->issueBoundToken($user);
+        $ticket = $this->ticket($user->id, null);
+        $chat = SupportChatSession::create(['ticket_id' => $ticket->id, 'user_id' => $ticket->user_id, 'active_user_id' => $ticket->user_id, 'state' => 'queued', 'idempotency_key' => 'admin-claim-chat', 'queued_at' => now(), 'last_customer_heartbeat_at' => now()]);
+
+        $this->actingAs($agent, 'admin')->get(route('admin.support.index'))->assertOk()->assertSee($ticket->public_reference);
+        $this->actingAs($agent, 'admin')->get(route('admin.support.show', $ticket))->assertOk()->assertSee('Claim ticket');
+        $this->actingAs($agent, 'admin')->post(route('admin.support.claim', $ticket))->assertRedirect();
+
+        $this->assertDatabaseHas('support_tickets', ['id' => $ticket->id, 'assigned_admin_id' => $agent->id]);
+        $this->assertDatabaseHas('support_chat_sessions', ['id' => $chat->id, 'state' => 'assigned', 'accepted_by_admin_id' => $agent->id]);
+        $this->withToken($token)->getJson('/api/v1/support/live-chat/'.$chat->uuid)->assertOk()->assertJsonPath('data.state', 'assigned')->assertJsonPath('data.assigned_agent.name', $agent->name);
+
+        $this->actingAs($agent, 'admin')->post(route('admin.support.reply', $ticket), ['message' => 'Your live support connection is active.'])->assertRedirect();
+        $this->withToken($token)->getJson('/api/v1/support/live-chat/'.$chat->uuid.'/events?after=0')->assertOk()->assertJsonPath('data.events.0.message', 'Your live support connection is active.');
+        $this->actingAs($agent, 'admin')->getJson(route('admin.support.events', $ticket).'?after=0')->assertOk()->assertJsonPath('data.items.0.message', 'Your live support connection is active.');
+    }
+
+    public function test_offline_support_agent_cannot_claim_queued_live_chat(): void
+    {
+        $agent = $this->admin(['support.view', 'support.tickets.view_assigned', 'support.tickets.reply', 'support.chat.participate']);
+        SupportAgentProfile::create(['admin_user_id' => $agent->id, 'enabled' => true, 'availability' => 'offline', 'capacity' => 2]);
+        $ticket = $this->ticket($this->createApiUser()->id, null);
+        SupportChatSession::create(['ticket_id' => $ticket->id, 'user_id' => $ticket->user_id, 'active_user_id' => $ticket->user_id, 'state' => 'queued', 'idempotency_key' => 'offline-claim-chat', 'queued_at' => now(), 'last_customer_heartbeat_at' => now()]);
+
+        $this->actingAs($agent, 'admin')->post(route('admin.support.reply', $ticket), ['message' => 'Reply without claiming'])->assertForbidden();
+        $this->actingAs($agent, 'admin')->post(route('admin.support.claim', $ticket))->assertForbidden();
+        $this->assertDatabaseHas('support_tickets', ['id' => $ticket->id, 'assigned_admin_id' => null]);
+        $this->assertDatabaseMissing('support_ticket_messages', ['ticket_id' => $ticket->id, 'body' => 'Reply without claiming']);
+    }
+
+    public function test_status_transition_records_the_real_previous_state(): void
+    {
+        $manager = $this->admin(['support.view', 'support.tickets.view_all', 'support.tickets.manage']);
+        $ticket = $this->ticket($this->createApiUser()->id, $manager->id);
+        $ticket->update(['status' => 'in_progress']);
+
+        $this->actingAs($manager, 'admin')->patch(route('admin.support.status.update', $ticket), ['status' => 'resolved'])->assertRedirect();
+
+        $event = SupportTicketEvent::query()->where('ticket_id', $ticket->id)->where('event_type', 'ticket.status_changed')->latest('id')->firstOrFail();
+        $this->assertSame('in_progress', $event->payload['from']);
+        $this->assertSame('resolved', $event->payload['to']);
     }
 
     private function ticket(int $userId, ?int $adminId): SupportTicket

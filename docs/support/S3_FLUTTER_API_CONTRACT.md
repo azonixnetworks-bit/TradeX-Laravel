@@ -2,7 +2,7 @@
 
 ## Verification status
 
-The local Flutter support UI was inspected on `codex/support-system`. Its current `SupportRepository` is an explicit backend-unavailable placeholder and makes no support HTTP requests. Consequently the routes below are the canonical backend contract, but Flutter parsing/integration is **UNVERIFIED** until that repository is wired and device-tested. The eight Flutter screens were not changed by this Laravel task.
+The local Flutter support UI was inspected on its current `main` branch (including commits `2bcf485` and `185c39b`). The screens are complete, but `lib/features/support/data/support_repository.dart` still sets `phaseOneAvailable = false` and makes no support HTTP requests. Consequently the routes below are the canonical backend contract, but Flutter parsing/integration is **UNVERIFIED** until that repository is wired and device-tested. No Flutter files were changed by this Laravel task.
 
 All paths are relative to `/api/v1`, require a bearer token bound to a trusted TradeX mobile device, and return UTC ISO-8601 timestamps.
 
@@ -89,7 +89,7 @@ Public response fields: `uuid`, integer `cursor`, `sender_type`, `message`, `cre
 
 ## Attachments
 
-`multipart/form-data`: `files[]` (1-5) and optional `message_uuid`. Allowed server signatures: JPEG, PNG, WebP, PDF. Default max is 10 MiB each. The response exposes only attachment UUID, display name, MIME, byte count and authenticated download URL.
+`multipart/form-data`: `files[]` (1-5) and optional `message_uuid`. Send a stable optional `Idempotency-Key` header when retrying the same upload; the server derives a separate key per file. If `message_uuid` is omitted, files attach to the latest customer message. Allowed server signatures: JPEG, PNG, WebP, PDF. Default max is 10 MiB each. The response is an array exposing only attachment UUID, display name, MIME, byte count and authenticated download URL.
 
 ## Live chat
 
@@ -101,11 +101,14 @@ Public response fields: `uuid`, integer `cursor`, `sender_type`, `message`, `cre
   "state":"queued",
   "queue_position":2,
   "eta_minutes":null,
+  "agents_online":1,
+  "assigned_agent":null,
+  "closure_reason":null,
   "queued_at":"..."
 }
 ```
 
-`eta_minutes` remains null until an evidence-based estimator exists. Flutter should display queue position and an honest asynchronous fallback, never a fixed wait promise.
+`queue_position` follows priority, first-response deadline, queue time and ID ordering. `eta_minutes` remains null until an evidence-based estimator exists. Flutter should display queue position and an honest asynchronous fallback, never a fixed wait promise. While a chat is active, POST the heartbeat endpoint more frequently than `TRADEX_SUPPORT_CUSTOMER_PRESENCE_TTL_SECONDS` and poll `/events?after=` every three seconds (or on foreground/resume).
 
 ## Enums
 
@@ -116,4 +119,4 @@ Public response fields: `uuid`, integer `cursor`, `sender_type`, `message`, `cre
 
 ## Realtime handoff
 
-Use `/events?after=` after reconnect/background resume and de-duplicate by message `uuid`. No WebSocket endpoint is advertised because the production broadcast driver/process/TLS proxy is not installed or tested. When enabled later, private channel authorization must enforce the same owner/assignment rules.
+Use `/events?after=` after reconnect/background resume, persist `next_cursor`, and de-duplicate by message `uuid`. The event response includes the latest `chat` object, public `events` and `next_cursor`; internal notes are never returned. No WebSocket endpoint is advertised because the production broadcast driver/process/TLS proxy is not installed or tested. When enabled later, private channel authorization must enforce the same owner/assignment rules.

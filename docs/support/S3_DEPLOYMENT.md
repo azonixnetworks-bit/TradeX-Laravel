@@ -10,6 +10,7 @@ TRADEX_SUPPORT_DISK=private
 TRADEX_SUPPORT_MAX_ATTACHMENT_KB=10240
 TRADEX_SUPPORT_MAX_ATTACHMENTS=5
 TRADEX_SUPPORT_AGENT_PRESENCE_TTL_SECONDS=90
+TRADEX_SUPPORT_CUSTOMER_PRESENCE_TTL_SECONDS=120
 TRADEX_SUPPORT_REOPEN_DAYS=7
 TRADEX_SUPPORT_MAIL_ENABLED=false
 TRADEX_SUPPORT_NOTIFICATION_QUEUE=support-notifications
@@ -24,13 +25,13 @@ Set `TRADEX_SUPPORT_MAIL_ENABLED=true` only after `MAIL_MAILER` is a working non
 
 1. Back up the database and private storage metadata.
 2. Deploy application code and run `php artisan config:cache`.
-3. Review SQL on staging; run `php artisan migrate --force`. Never use `migrate:fresh` on production.
+3. Review both support migrations on staging, including `2026_10_27_000002_harden_support_live_chat`; run `php artisan migrate --force`. Never use `migrate:fresh` on production.
 4. Run `php artisan db:seed --class=SupportSystemSeeder --force`, then the normal RBAC seeders/deployment seeding policy so roles receive support permissions.
 5. Ensure `storage/app/private/support` is writable and inaccessible from the public web root.
 6. Start a dedicated worker, for example `php artisan queue:work --queue=support-notifications,default --tries=3 --backoff=30 --max-time=3600`, supervised and auto-restarted.
 7. Ensure scheduler cron runs every minute: `* * * * * php /path/artisan schedule:run >> /dev/null 2>&1`.
-8. Verify `/admin/support` as agent, manager and superadmin; verify deny paths with a non-support role.
-9. On staging, use a trusted mobile device token to create/retry/list/reply/upload/chat/reconnect/feedback/reopen.
+8. Verify `/admin/support` as an online department agent, offline agent, manager and superadmin; verify queue claim/capacity behavior and deny paths with a non-support role.
+9. On staging, use a trusted mobile device token to create/retry/list/reply/upload/chat/reconnect/heartbeat/customer-timeout/feedback/reopen.
 10. Verify real mail provider delivery separately. Automated `Mail::fake`/array transport is not proof of external delivery.
 
 ## Realtime
@@ -39,7 +40,7 @@ REST cursor sync is production-capable. WebSockets are infrastructure-blocked be
 
 ## Operations
 
-- `php artisan tradex:support:sweep` expires stale presence, requeues disconnected chats and creates idempotent SLA breach events.
+- `php artisan tradex:support:sweep` expires stale agent presence, ends/cancels stale customer sessions, requeues chats whose agent heartbeat stopped and creates idempotent first-response and resolution SLA breach events.
 - `php artisan tradex:support:daily-summary` queues one deduplicated daily operations summary per active super administrator. Enable its schedule only after mail transport verification.
 - Monitor `jobs`, `failed_jobs`, `support_notification_deliveries`, storage usage and SLA event counts.
 - Keep attachment malware scanning disabled only if the operational risk is explicitly accepted; integrate a scanner before allowing higher-risk formats.

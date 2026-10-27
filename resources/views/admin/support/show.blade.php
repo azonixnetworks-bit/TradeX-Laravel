@@ -8,20 +8,20 @@
 <div class="page-header"><div><div class="page-eyebrow">SUPPORT · {{ $ticket->public_reference }}</div><h1>{{ $ticket->subject }}</h1><p>{{ $ticket->category?->label }} · {{ strtoupper($ticket->priority) }} · {{ str_replace('_',' ',strtoupper($ticket->status)) }}</p></div><a class="case-btn" href="{{ route('admin.support.index') }}">Back to queue</a></div>
 @if(session('status'))<div class="admin-form-callout"><strong>{{ session('status') }}</strong></div>@endif
 <div class="case-layout"><main>
-<section class="case-card"><h2>Conversation</h2>
+<section class="case-card"><h2>Conversation</h2><div id="case-conversation">
 @foreach($ticket->messages as $message)
-<article class="case-message {{ $message->visibility === 'internal' ? 'internal' : $message->sender_type }}">
+<article class="case-message {{ $message->visibility === 'internal' ? 'internal' : $message->sender_type }}" data-cursor="{{ $message->id }}">
 <div class="case-meta"><strong>{{ $message->visibility === 'internal' ? 'Internal note' : ucfirst($message->sender_type) }}</strong><time>{{ $message->created_at->format('Y-m-d H:i') }}</time></div>
 <p style="white-space:pre-wrap">{{ $message->body }}</p>
 @foreach($message->attachments as $attachment)<a class="case-attachment" href="{{ route('admin.support.attachments.download',$attachment) }}">Download {{ $attachment->original_name }}</a>@endforeach
 </article>
 @endforeach
-</section>
+</div></section>
 @if($canReply)<form class="case-card case-form" method="POST" action="{{ route('admin.support.reply',$ticket) }}">@csrf<h3>Public customer reply</h3><textarea name="message" rows="5" required maxlength="10000"></textarea><button class="case-btn">Send reply</button></form>@endif
 @if($canNote)<form class="case-card case-form" method="POST" action="{{ route('admin.support.notes.store',$ticket) }}">@csrf<h3>Internal note</h3><p class="case-label">Admin-only. Never returned by the customer API or customer email.</p><textarea name="message" rows="4" required maxlength="10000"></textarea><button class="case-btn">Save internal note</button></form>@endif
 </main><aside>
 <section class="case-card"><h3>Customer</h3><div class="case-grid"><div><div class="case-label">Name</div><div class="case-value">{{ $ticket->user->name }}</div></div><div><div class="case-label">Account</div><div class="case-value">{{ $ticket->user->account_type }}</div></div><div><div class="case-label">Verified email</div><div class="case-value">{{ $ticket->user->email_verified_at ? $ticket->user->email : 'Not verified' }}</div></div><div><div class="case-label">Country</div><div class="case-value">{{ $ticket->user->country_code ?: '—' }}</div></div></div></section>
-<section class="case-card"><h3>Assignment</h3><p>{{ $ticket->assignedAdmin?->name ?? 'Unassigned' }}</p>@if(!$ticket->assigned_admin_id && ($canAssign || $canReply))<form method="POST" action="{{ route('admin.support.claim',$ticket) }}">@csrf<button class="case-btn">Claim ticket</button></form>@endif</section>
+<section class="case-card"><h3>Assignment</h3><p>{{ $ticket->assignedAdmin?->name ?? 'Unassigned' }}</p>@if(!$ticket->assigned_admin_id && $canClaim)<form method="POST" action="{{ route('admin.support.claim',$ticket) }}">@csrf<button class="case-btn">Claim ticket</button></form>@endif</section>
 @if($canManage)<form class="case-card case-form" method="POST" action="{{ route('admin.support.status.update',$ticket) }}">@csrf @method('PATCH')<h3>Lifecycle</h3><select name="status">@foreach(['in_progress','waiting_for_customer','resolved','closed'] as $status)<option value="{{ $status }}">{{ str_replace('_',' ',ucfirst($status)) }}</option>@endforeach</select><button class="case-btn">Update status</button></form>@endif
 <section class="case-card"><h3>SLA</h3><p><span class="case-label">First response:</span><br>{{ $ticket->first_responded_at?->format('Y-m-d H:i') ?? $ticket->first_response_due_at?->format('Y-m-d H:i') ?? 'Not configured' }}</p><p><span class="case-label">Resolution due:</span><br>{{ $ticket->resolution_due_at?->format('Y-m-d H:i') ?? 'Not configured' }}</p></section>
 </aside></div>
@@ -34,4 +34,45 @@
 })();
 </script>
 @endif
+<script>
+(() => {
+    const conversation = document.getElementById('case-conversation');
+    if (!conversation) return;
+    let cursor = Math.max(0, ...Array.from(conversation.querySelectorAll('[data-cursor]')).map((item) => Number(item.dataset.cursor) || 0));
+    const poll = async () => {
+        try {
+            const response = await fetch(@json(route('admin.support.events', $ticket)) + '?after=' + cursor, {headers:{'Accept':'application/json'}});
+            if (!response.ok) return;
+            const payload = await response.json();
+            for (const message of payload.data?.items ?? []) {
+                if (conversation.querySelector(`[data-cursor="${message.cursor}"]`)) continue;
+                const article = document.createElement('article');
+                article.className = 'case-message ' + (message.visibility === 'internal' ? 'internal' : message.sender_type);
+                article.dataset.cursor = message.cursor;
+                const meta = document.createElement('div');
+                meta.className = 'case-meta';
+                const sender = document.createElement('strong');
+                sender.textContent = message.visibility === 'internal' ? 'Internal note' : message.sender_type.charAt(0).toUpperCase() + message.sender_type.slice(1);
+                const time = document.createElement('time');
+                time.textContent = message.created_at ? new Date(message.created_at).toLocaleString() : '';
+                meta.append(sender, time);
+                const body = document.createElement('p');
+                body.style.whiteSpace = 'pre-wrap';
+                body.textContent = message.message;
+                article.append(meta, body);
+                for (const attachment of message.attachments ?? []) {
+                    const link = document.createElement('a');
+                    link.className = 'case-attachment';
+                    link.href = attachment.download_url;
+                    link.textContent = 'Download ' + attachment.name;
+                    article.append(link);
+                }
+                conversation.append(article);
+                cursor = Math.max(cursor, Number(message.cursor) || cursor);
+            }
+        } catch (_) {}
+    };
+    window.setInterval(poll, 3000);
+})();
+</script>
 @endsection

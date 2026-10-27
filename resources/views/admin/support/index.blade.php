@@ -19,8 +19,8 @@
 
 @if(auth('admin')->user()->hasPermission('support.chat.participate'))
 <form method="POST" action="{{ route('admin.support.availability') }}" class="support-toolbar support-panel">@csrf @method('PATCH')
-    <label>Agent availability<select name="availability"><option value="online">Online</option><option value="away">Away</option><option value="offline">Offline</option></select></label>
-    <label>Capacity<input type="number" name="capacity" value="3" min="1" max="20"></label>
+    <label>Agent availability<select name="availability"><option value="online" @selected($agentProfile?->availability === 'online')>Online</option><option value="away" @selected($agentProfile?->availability === 'away')>Away</option><option value="offline" @selected(!$agentProfile || $agentProfile->availability === 'offline')>Offline</option></select></label>
+    <label>Capacity<input type="number" name="capacity" value="{{ $agentProfile?->capacity ?? 3 }}" min="1" max="20"></label>
     <button class="support-btn" type="submit">Update presence</button>
     <span class="support-muted">Presence expires automatically without heartbeat; it is never treated as permanently online.</span>
 </form>
@@ -40,4 +40,13 @@
 </tbody></table></div>
 <div style="margin-top:16px">{{ $tickets->links() }}</div>
 </section>
+@if($agentProfile && in_array($agentProfile->availability, ['online','away'], true))
+<script>
+(() => {
+    const token = document.querySelector('meta[name="csrf-token"]')?.content;
+    const beat = () => fetch(@json(route('admin.support.presence.heartbeat')), {method:'POST',headers:{'X-CSRF-TOKEN':token,'Accept':'application/json'}}).catch(() => {});
+    beat(); window.setInterval(beat, 30000);
+})();
+</script>
+@endif
 @endsection

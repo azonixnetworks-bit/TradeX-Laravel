@@ -10,7 +10,7 @@ class SupportTicketAttachment extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['ticket_id', 'message_id', 'uploader_type', 'uploader_user_id', 'uploader_admin_id', 'disk', 'path', 'original_name', 'mime_type', 'byte_size', 'content_hash', 'metadata'];
+    protected $fillable = ['ticket_id', 'message_id', 'uploader_type', 'uploader_user_id', 'uploader_admin_id', 'disk', 'path', 'original_name', 'mime_type', 'byte_size', 'content_hash', 'client_idempotency_key', 'metadata'];
 
     protected function casts(): array
     {
