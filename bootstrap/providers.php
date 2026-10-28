@@ -19,6 +19,7 @@ use App\Providers\PaymentApiServiceProvider;
 use App\Providers\PayoutApiServiceProvider;
 use App\Providers\ProductServiceProvider;
 use App\Providers\PushNotificationApiServiceProvider;
+use App\Providers\RiskRewardApiServiceProvider;
 use App\Providers\RuntimeTranslationApiServiceProvider;
 use App\Providers\ScreenerServiceProvider;
 use App\Providers\SocialAuthApiServiceProvider;
@@ -50,4 +51,5 @@ return [
     TradingRoutineServiceProvider::class,
     EconomicNewsServiceProvider::class,
     ScreenerServiceProvider::class,
+    RiskRewardApiServiceProvider::class,
 ];
