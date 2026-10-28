@@ -9,11 +9,10 @@ class RiskRewardCalculatorService
     public function __construct(
         private readonly TradingInstrumentCatalog $catalog,
         private readonly ForexUsdConversionService $forexConversion
-    ) {
-    }
+    ) {}
 
     /**
-     * @param array<string, mixed> $input
+     * @param  array<string, mixed>  $input
      * @return array<string, mixed>
      */
     public function calculate(array $input): array
@@ -42,7 +41,7 @@ class RiskRewardCalculatorService
 
         $entry = $this->positiveNumber($input['entry'] ?? null, 'Entry price');
         $stopLoss = $this->positiveNumber($input['stop_loss'] ?? null, 'Stop loss');
-        $takeProfit = $this->positiveNumber($input['take_profit'] ?? null, 'Take profit');
+        $takeProfit = $this->optionalPositiveNumber($input['take_profit'] ?? null, 'Take profit');
         $riskAmount = $this->positiveNumber($input['risk_amount'] ?? null, 'Risk amount');
 
         $this->validatePriceStructure(
@@ -69,10 +68,10 @@ class RiskRewardCalculatorService
         }
 
         $riskDistance = abs($entry - $stopLoss);
-        $rewardDistance = abs($takeProfit - $entry);
+        $rewardDistance = $takeProfit !== null ? abs($takeProfit - $entry) : null;
 
-        if ($riskDistance <= 0 || $rewardDistance <= 0) {
-            throw new DomainException('Stop loss and take profit must be different from entry price.');
+        if ($riskDistance <= 0 || ($rewardDistance !== null && $rewardDistance <= 0)) {
+            throw new DomainException('Stop loss and take profit, when provided, must be different from entry price.');
         }
 
         $baseCurrency = strtoupper((string) ($instrument['base_currency'] ?? ''));
@@ -85,7 +84,9 @@ class RiskRewardCalculatorService
             $profitQuoteToUsd = 1.0;
         } elseif ($baseCurrency === 'USD') {
             $riskQuoteToUsd = $this->usdBaseQuoteToUsdRate($stopLoss);
-            $profitQuoteToUsd = $this->usdBaseQuoteToUsdRate($takeProfit);
+            $profitQuoteToUsd = $takeProfit !== null
+                ? $this->usdBaseQuoteToUsdRate($takeProfit)
+                : $riskQuoteToUsd;
             $conversionSource = 'INSTRUMENT_PRICE';
             $conversionSymbol = $symbol;
         } else {
@@ -101,7 +102,9 @@ class RiskRewardCalculatorService
         }
 
         $riskPerLotUsd = $riskDistance * $contractSize * $riskQuoteToUsd;
-        $profitPerLotUsd = $rewardDistance * $contractSize * $profitQuoteToUsd;
+        $profitPerLotUsd = $rewardDistance !== null
+            ? $rewardDistance * $contractSize * $profitQuoteToUsd
+            : null;
 
         if ($riskPerLotUsd <= 0) {
             throw new DomainException('Unable to calculate risk for the selected instrument.');
@@ -146,7 +149,7 @@ class RiskRewardCalculatorService
             ? $riskPerLotUsd * $recommendedLot
             : null;
 
-        $potentialProfit = $recommendedLot !== null
+        $potentialProfit = $recommendedLot !== null && $profitPerLotUsd !== null
             ? $profitPerLotUsd * $recommendedLot
             : null;
 
@@ -158,9 +161,13 @@ class RiskRewardCalculatorService
             ? ($actualRisk / $riskAmount) * 100
             : null;
 
-        $riskRewardRatio = $rewardDistance / $riskDistance;
+        $riskRewardRatio = $rewardDistance !== null
+            ? $rewardDistance / $riskDistance
+            : null;
         $slDistanceUnits = $riskDistance / $distanceUnit;
-        $tpDistanceUnits = $rewardDistance / $distanceUnit;
+        $tpDistanceUnits = $rewardDistance !== null
+            ? $rewardDistance / $distanceUnit
+            : null;
 
         return [
             'market' => $marketKey,
@@ -230,18 +237,35 @@ class RiskRewardCalculatorService
         return $number;
     }
 
+    private function optionalPositiveNumber(mixed $value, string $label): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return $this->positiveNumber($value, $label);
+    }
+
     private function validatePriceStructure(
         string $side,
         float $entry,
         float $stopLoss,
-        float $takeProfit
+        ?float $takeProfit
     ): void {
-        if ($side === 'BUY' && ! ($stopLoss < $entry && $entry < $takeProfit)) {
-            throw new DomainException('For a BUY trade, Stop Loss must be below Entry and Take Profit must be above Entry.');
+        if ($side === 'BUY' && $stopLoss >= $entry) {
+            throw new DomainException('For a BUY trade, Stop Loss must be below Entry.');
         }
 
-        if ($side === 'SELL' && ! ($takeProfit < $entry && $entry < $stopLoss)) {
-            throw new DomainException('For a SELL trade, Take Profit must be below Entry and Stop Loss must be above Entry.');
+        if ($side === 'SELL' && $stopLoss <= $entry) {
+            throw new DomainException('For a SELL trade, Stop Loss must be above Entry.');
+        }
+
+        if ($takeProfit !== null && $side === 'BUY' && $takeProfit <= $entry) {
+            throw new DomainException('For a BUY trade, Take Profit must be above Entry.');
+        }
+
+        if ($takeProfit !== null && $side === 'SELL' && $takeProfit >= $entry) {
+            throw new DomainException('For a SELL trade, Take Profit must be below Entry.');
         }
     }
 

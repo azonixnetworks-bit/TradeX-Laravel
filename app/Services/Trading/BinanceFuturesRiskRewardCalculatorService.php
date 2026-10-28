@@ -7,8 +7,8 @@ use DomainException;
 class BinanceFuturesRiskRewardCalculatorService
 {
     /**
-     * @param array<string, mixed> $input
-     * @param array<string, mixed> $market
+     * @param  array<string, mixed>  $input
+     * @param  array<string, mixed>  $market
      * @return array<string, mixed>
      */
     public function calculate(array $input, array $market): array
@@ -38,7 +38,7 @@ class BinanceFuturesRiskRewardCalculatorService
 
         $entry = $this->positiveNumber($input['entry'] ?? null, 'Entry price');
         $stopLoss = $this->positiveNumber($input['stop_loss'] ?? null, 'Stop loss');
-        $takeProfit = $this->positiveNumber($input['take_profit'] ?? null, 'Take profit');
+        $takeProfit = $this->optionalPositiveNumber($input['take_profit'] ?? null, 'Take profit');
         $leverage = $this->leverage($input['leverage'] ?? null, $market);
 
         $entryFeeRatePercent = $this->nonNegativeNumber($input['entry_fee_rate_percent'] ?? 0, 'Entry fee rate');
@@ -79,10 +79,10 @@ class BinanceFuturesRiskRewardCalculatorService
         $this->validatePriceStructure($side, $entry, $stopLoss, $takeProfit);
 
         $riskDistance = abs($entry - $stopLoss);
-        $rewardDistance = abs($takeProfit - $entry);
-        $riskRewardRatio = $rewardDistance / $riskDistance;
+        $rewardDistance = $takeProfit !== null ? abs($takeProfit - $entry) : null;
+        $riskRewardRatio = $rewardDistance !== null ? $rewardDistance / $riskDistance : null;
         $stopLossPercent = ($riskDistance / $entry) * 100;
-        $takeProfitPercent = ($rewardDistance / $entry) * 100;
+        $takeProfitPercent = $rewardDistance !== null ? ($rewardDistance / $entry) * 100 : null;
 
         $quantityStep = (float) ($instrument['lot_step'] ?? 0.00000001);
         $minimumQuantity = (float) ($instrument['min_lot'] ?? $quantityStep);
@@ -140,13 +140,19 @@ class BinanceFuturesRiskRewardCalculatorService
         $positionNotional = $quantity !== null ? $quantity * $entry : null;
         $requiredInitialMargin = $positionNotional !== null ? $positionNotional / $leverage : null;
         $actualRisk = $quantity !== null ? $quantity * $riskDistance : null;
-        $potentialProfit = $quantity !== null ? $quantity * $rewardDistance : null;
+        $potentialProfit = $quantity !== null && $rewardDistance !== null
+            ? $quantity * $rewardDistance
+            : null;
 
         $entryFee = $quantity !== null ? ($quantity * $entry) * $entryFeeRate : null;
         $stopExitFee = $quantity !== null ? ($quantity * $stopLoss) * $exitFeeRate : null;
-        $targetExitFee = $quantity !== null ? ($quantity * $takeProfit) * $exitFeeRate : null;
+        $targetExitFee = $quantity !== null && $takeProfit !== null
+            ? ($quantity * $takeProfit) * $exitFeeRate
+            : null;
         $stopSlippageCost = $quantity !== null ? ($quantity * $stopLoss) * $slippageRate : null;
-        $targetSlippageCost = $quantity !== null ? ($quantity * $takeProfit) * $slippageRate : null;
+        $targetSlippageCost = $quantity !== null && $takeProfit !== null
+            ? ($quantity * $takeProfit) * $slippageRate
+            : null;
         $fundingEstimate = $positionNotional !== null
             ? $positionNotional * $fundingRate * $fundingIntervals * $sideSign
             : null;
@@ -156,6 +162,8 @@ class BinanceFuturesRiskRewardCalculatorService
             ? (float) $entryFee + (float) $stopExitFee + (float) $stopSlippageCost + (float) $fundingRiskCost
             : null;
         $estimatedTargetCosts = $quantity !== null
+            && $targetExitFee !== null
+            && $targetSlippageCost !== null
             ? (float) $entryFee + (float) $targetExitFee + (float) $targetSlippageCost + (float) $fundingEstimate
             : null;
 
@@ -290,7 +298,7 @@ class BinanceFuturesRiskRewardCalculatorService
     }
 
     /**
-     * @param array<int, string> $warnings
+     * @param  array<int, string>  $warnings
      * @return array<string, mixed>
      */
     private function liquidationEstimate(
@@ -321,6 +329,7 @@ class BinanceFuturesRiskRewardCalculatorService
 
         if ($marginMode === 'CROSS') {
             $warnings[] = 'Cross-margin liquidation is not estimated from this trade alone because Binance requires cross wallet balance, other-position maintenance margin and unrealized PnL.';
+
             return $base;
         }
 
@@ -330,6 +339,7 @@ class BinanceFuturesRiskRewardCalculatorService
 
         if ($maintenanceMarginRatePercent === null || $maintenanceAmount === null) {
             $warnings[] = 'Isolated liquidation estimate is unavailable until you enter the current Binance Maintenance Margin Rate and Maintenance Amount for this position-notional tier.';
+
             return $base;
         }
 
@@ -342,6 +352,7 @@ class BinanceFuturesRiskRewardCalculatorService
 
         if (abs($denominator) < 1.0E-15) {
             $warnings[] = 'Unable to estimate liquidation because the selected maintenance-margin inputs produce an invalid denominator.';
+
             return $base;
         }
 
@@ -349,6 +360,7 @@ class BinanceFuturesRiskRewardCalculatorService
 
         if (! is_finite($liquidationPrice) || $liquidationPrice <= 0) {
             $warnings[] = 'The supplied maintenance-margin inputs do not produce a valid positive isolated liquidation price. Re-check the live Binance tier values.';
+
             return $base;
         }
 
@@ -477,14 +489,22 @@ class BinanceFuturesRiskRewardCalculatorService
         return $this->nonNegativeNumber($value, $label);
     }
 
-    private function validatePriceStructure(string $side, float $entry, float $stopLoss, float $takeProfit): void
+    private function validatePriceStructure(string $side, float $entry, float $stopLoss, ?float $takeProfit): void
     {
-        if ($side === 'BUY' && ! ($stopLoss < $entry && $entry < $takeProfit)) {
-            throw new DomainException('For a BUY trade, Stop Loss must be below Entry and Take Profit must be above Entry.');
+        if ($side === 'BUY' && $stopLoss >= $entry) {
+            throw new DomainException('For a BUY trade, Stop Loss must be below Entry.');
         }
 
-        if ($side === 'SELL' && ! ($takeProfit < $entry && $entry < $stopLoss)) {
-            throw new DomainException('For a SELL trade, Take Profit must be below Entry and Stop Loss must be above Entry.');
+        if ($side === 'SELL' && $stopLoss <= $entry) {
+            throw new DomainException('For a SELL trade, Stop Loss must be above Entry.');
+        }
+
+        if ($takeProfit !== null && $side === 'BUY' && $takeProfit <= $entry) {
+            throw new DomainException('For a BUY trade, Take Profit must be above Entry.');
+        }
+
+        if ($takeProfit !== null && $side === 'SELL' && $takeProfit >= $entry) {
+            throw new DomainException('For a SELL trade, Take Profit must be below Entry.');
         }
     }
 
