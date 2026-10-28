@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\TradingTools\CustomerFundedAccountController;
 use App\Http\Controllers\Api\TradingTools\FundedAccountAdvisorController;
+use App\Http\Controllers\Api\TradingTools\FundedAdvisorCatalogController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -11,6 +12,18 @@ Route::prefix('v1')
         Route::prefix('funded-account-advisor')
             ->name('funded-advisor.')
             ->group(function (): void {
+                Route::get('/version', [FundedAdvisorCatalogController::class, 'version'])
+                    ->middleware('throttle:api-funded-advisor-read')
+                    ->name('version');
+
+                Route::get('/catalog', [FundedAdvisorCatalogController::class, 'catalog'])
+                    ->middleware('throttle:api-funded-advisor-read')
+                    ->name('catalog');
+
+                Route::get('/partners/{fundedAccountPartner}/logo', [FundedAdvisorCatalogController::class, 'logo'])
+                    ->middleware('throttle:api-funded-advisor-read')
+                    ->name('partners.logo');
+
                 Route::get('/', [FundedAccountAdvisorController::class, 'index'])
                     ->middleware('throttle:api-funded-advisor-read')
                     ->name('index');
