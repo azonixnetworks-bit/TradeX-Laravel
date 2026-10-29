@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Trading\BinanceFuturesRiskRewardCalculatorService;
 use App\Services\Trading\DividendCalculatorService;
 use App\Services\Trading\RiskRewardCalculatorService;
+use App\Services\Trading\RiskRewardLiveQuoteService;
 use App\Services\Trading\StockRiskRewardCalculatorService;
 use App\Services\Trading\TradingInstrumentCatalog;
 use DomainException;
@@ -44,6 +45,31 @@ class RiskRewardController extends Controller
                 'disclaimer' => (string) config('trading_instruments.disclaimer', ''),
                 'generated_at_utc' => now()->utc()->toIso8601String(),
             ],
+        ], 200, $this->noStoreHeaders());
+    }
+
+    public function quote(Request $request, RiskRewardLiveQuoteService $quotes): JsonResponse
+    {
+        $this->user($request);
+        $validated = Validator::make($request->query(), [
+            'market' => ['required', Rule::in(['forex', 'deriv', 'crypto', 'binance_futures'])],
+            'symbol' => ['required', 'string', 'max:40', 'regex:/^[A-Za-z0-9._-]+$/'],
+            'side' => ['nullable', Rule::in(['BUY', 'SELL'])],
+        ])->validate();
+
+        try {
+            $quote = $quotes->quote(
+                (string) $validated['market'],
+                (string) $validated['symbol'],
+                (string) ($validated['side'] ?? 'BUY')
+            );
+        } catch (DomainException $exception) {
+            return $this->unprocessable($exception->getMessage());
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $quote,
         ], 200, $this->noStoreHeaders());
     }
 
