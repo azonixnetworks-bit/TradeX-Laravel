@@ -31,7 +31,6 @@ class UpdateLessonRequest extends FormRequest
             && $admin->hasPermission('education.update');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Input Normalization
@@ -96,7 +95,6 @@ class UpdateLessonRequest extends FormRequest
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Rules
@@ -131,19 +129,17 @@ class UpdateLessonRequest extends FormRequest
 
         if ($moduleId !== null) {
             $uniqueCode->where(
-                fn ($query) =>
-                    $query->where(
-                        'course_module_id',
-                        $moduleId
-                    )
+                fn ($query) => $query->where(
+                    'course_module_id',
+                    $moduleId
+                )
             );
 
             $uniqueSlug->where(
-                fn ($query) =>
-                    $query->where(
-                        'course_module_id',
-                        $moduleId
-                    )
+                fn ($query) => $query->where(
+                    'course_module_id',
+                    $moduleId
+                )
             );
         }
 
@@ -215,6 +211,20 @@ class UpdateLessonRequest extends FormRequest
                 'string',
             ],
 
+            'thumbnail_image' => [
+                'sometimes',
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
+            'remove_thumbnail' => [
+                'sometimes',
+                'boolean',
+            ],
+
             'is_preview' => [
                 'sometimes',
                 'nullable',
@@ -251,7 +261,6 @@ class UpdateLessonRequest extends FormRequest
         ];
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Messages
@@ -261,44 +270,33 @@ class UpdateLessonRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'course_id.prohibited' =>
-                'A lesson cannot be moved to another course through the update request. The parent course is resolved from the protected route.',
+            'course_id.prohibited' => 'A lesson cannot be moved to another course through the update request. The parent course is resolved from the protected route.',
 
-            'course_module_id.prohibited' =>
-                'A lesson cannot be moved to another module through the update request. The parent module is resolved from the protected route.',
+            'course_module_id.prohibited' => 'A lesson cannot be moved to another module through the update request. The parent module is resolved from the protected route.',
 
-            'code.regex' =>
-                'The lesson code may contain only uppercase letters, numbers, dots, underscores and hyphens.',
+            'code.regex' => 'The lesson code may contain only uppercase letters, numbers, dots, underscores and hyphens.',
 
-            'code.unique' =>
-                'This lesson code is already used inside the selected module.',
+            'code.unique' => 'This lesson code is already used inside the selected module.',
 
-            'slug.regex' =>
-                'The lesson slug may contain only lowercase letters, numbers and single hyphens between words.',
+            'slug.regex' => 'The lesson slug may contain only lowercase letters, numbers and single hyphens between words.',
 
-            'slug.unique' =>
-                'This lesson slug is already used inside the selected module.',
+            'slug.unique' => 'This lesson slug is already used inside the selected module.',
 
-            'uuid.prohibited' =>
-                'The lesson UUID cannot be changed.',
+            'uuid.prohibited' => 'The lesson UUID cannot be changed.',
 
-            'status.prohibited' =>
-                'Lesson publication status cannot be changed through the normal update request.',
+            'status.prohibited' => 'Lesson publication status cannot be changed through the normal update request.',
 
-            'published_at.prohibited' =>
-                'The lesson publication time is controlled by the authorized publish workflow.',
+            'published_at.prohibited' => 'The lesson publication time is controlled by the authorized publish workflow.',
 
-            'created_by_admin_id.prohibited' =>
-                'The creating admin cannot be changed through the lesson update request.',
+            'created_by_admin_id.prohibited' => 'The creating admin cannot be changed through the lesson update request.',
 
-            'updated_by_admin_id.prohibited' =>
-                'The updating admin is determined from the authenticated admin session.',
+            'updated_by_admin_id.prohibited' => 'The updating admin is determined from the authenticated admin session.',
 
-            'deleted_at.prohibited' =>
-                'Deletion state cannot be controlled through the lesson update request.',
+            'deleted_at.prohibited' => 'Deletion state cannot be controlled through the lesson update request.',
+
+            'thumbnail_image.image' => 'The lesson picture must be a valid image.',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -325,7 +323,6 @@ class UpdateLessonRequest extends FormRequest
 
         return null;
     }
-
 
     /*
     |--------------------------------------------------------------------------

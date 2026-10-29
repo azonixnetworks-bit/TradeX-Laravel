@@ -13,8 +13,13 @@ use App\Models\CourseModule;
 use App\Models\Lesson;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class LessonController extends Controller
 {
@@ -51,52 +56,45 @@ class LessonController extends Controller
             ->get();
 
         $stats = [
-            'total' =>
-                $lessons->count(),
+            'total' => $lessons->count(),
 
-            'draft' =>
-                $lessons
-                    ->where(
-                        'status',
-                        Lesson::STATUS_DRAFT
-                    )
-                    ->count(),
+            'draft' => $lessons
+                ->where(
+                    'status',
+                    Lesson::STATUS_DRAFT
+                )
+                ->count(),
 
-            'published' =>
-                $lessons
-                    ->where(
-                        'status',
-                        Lesson::STATUS_PUBLISHED
-                    )
-                    ->count(),
+            'published' => $lessons
+                ->where(
+                    'status',
+                    Lesson::STATUS_PUBLISHED
+                )
+                ->count(),
 
-            'archived' =>
-                $lessons
-                    ->where(
-                        'status',
-                        Lesson::STATUS_ARCHIVED
-                    )
-                    ->count(),
+            'archived' => $lessons
+                ->where(
+                    'status',
+                    Lesson::STATUS_ARCHIVED
+                )
+                ->count(),
 
-            'preview' =>
-                $lessons
-                    ->where(
-                        'is_preview',
-                        true
-                    )
-                    ->count(),
+            'preview' => $lessons
+                ->where(
+                    'is_preview',
+                    true
+                )
+                ->count(),
 
-            'videos' =>
-                (int) $lessons
-                    ->sum(
-                        'videos_count'
-                    ),
+            'videos' => (int) $lessons
+                ->sum(
+                    'videos_count'
+                ),
 
-            'assignments' =>
-                (int) $lessons
-                    ->sum(
-                        'assignments_count'
-                    ),
+            'assignments' => (int) $lessons
+                ->sum(
+                    'assignments_count'
+                ),
         ];
 
         $permissions = $this->educationPermissions(
@@ -114,7 +112,6 @@ class LessonController extends Controller
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -147,7 +144,6 @@ class LessonController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Store Lesson
@@ -173,118 +169,119 @@ class LessonController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(
-            function () use (
-                $course,
-                $module,
-                $validated,
-                $request,
-                $admin
-            ): void {
-                /*
-                |--------------------------------------------------------------
-                | Lock Parent Module
-                |--------------------------------------------------------------
-                |
-                | The parent module is re-resolved inside the transaction and
-                | locked while the lesson is created. The course predicate is
-                | retained so a cross-course module cannot be accepted here.
-                |
-                */
+        $lessonUuid = (string) Str::uuid();
+        $thumbnailUpload = $request->file('thumbnail_image');
+        $uploadedThumbnailPath = $thumbnailUpload instanceof UploadedFile
+            ? $this->storeThumbnail($thumbnailUpload, $lessonUuid)
+            : null;
 
-                $lockedModule = CourseModule::query()
-                    ->where(
-                        'course_id',
-                        $course->id
-                    )
-                    ->lockForUpdate()
-                    ->findOrFail(
-                        $module->id
-                    );
+        try {
+            DB::transaction(
+                function () use (
+                    $course,
+                    $module,
+                    $validated,
+                    $request,
+                    $admin,
+                    $lessonUuid,
+                    $uploadedThumbnailPath
+                ): void {
+                    /*
+                    |--------------------------------------------------------------
+                    | Lock Parent Module
+                    |--------------------------------------------------------------
+                    |
+                    | The parent module is re-resolved inside the transaction and
+                    | locked while the lesson is created. The course predicate is
+                    | retained so a cross-course module cannot be accepted here.
+                    |
+                    */
 
-                $lesson = Lesson::query()
-                    ->create([
-                        'course_module_id' =>
-                            $lockedModule->id,
+                    $lockedModule = CourseModule::query()
+                        ->where(
+                            'course_id',
+                            $course->id
+                        )
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $module->id
+                        );
 
-                        'code' =>
-                            $validated['code'],
+                    $lesson = Lesson::query()
+                        ->create([
+                            'uuid' => $lessonUuid,
 
-                        'slug' =>
-                            $validated['slug'],
+                            'course_module_id' => $lockedModule->id,
 
-                        'title' =>
-                            $validated['title'],
+                            'code' => $validated['code'],
 
-                        'heading' =>
-                            $validated['heading']
-                            ?? null,
+                            'slug' => $validated['slug'],
 
-                        'short_description' =>
-                            $validated['short_description']
-                            ?? null,
+                            'title' => $validated['title'],
 
-                        'description' =>
-                            $validated['description']
-                            ?? null,
+                            'heading' => $validated['heading']
+                                ?? null,
 
-                        'is_preview' =>
-                            (bool) (
+                            'short_description' => $validated['short_description']
+                                ?? null,
+
+                            'description' => $validated['description']
+                                ?? null,
+
+                            'thumbnail_path' => $uploadedThumbnailPath,
+
+                            'is_preview' => (bool) (
                                 $validated['is_preview']
                                 ?? false
                             ),
 
-                        'status' =>
-                            Lesson::STATUS_DRAFT,
+                            'status' => Lesson::STATUS_DRAFT,
 
-                        'published_at' =>
-                            null,
+                            'published_at' => null,
 
-                        'sort_order' =>
-                            (int) (
+                            'sort_order' => (int) (
                                 $validated['sort_order']
                                 ?? 0
                             ),
 
-                        'created_by_admin_id' =>
-                            $admin->id,
+                            'created_by_admin_id' => $admin->id,
 
-                        'updated_by_admin_id' =>
-                            $admin->id,
-                    ]);
+                            'updated_by_admin_id' => $admin->id,
+                        ]);
 
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                        actorId: $admin->id,
 
-                    action:
-                        'LESSON_CREATED',
+                        action: 'LESSON_CREATED',
 
-                    module:
-                        'EDUCATION',
+                        module: 'EDUCATION',
 
-                    targetType:
-                        'LESSON',
+                        targetType: 'LESSON',
 
-                    targetId:
-                        $lesson->id,
+                        targetId: $lesson->id,
 
-                    newValues:
-                        $this->auditSnapshot(
+                        newValues: $this->auditSnapshot(
                             $lesson
                         ),
 
-                    ipAddress:
-                        $request->ip(),
+                        ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                        userAgent: $request->userAgent()
+                    );
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedThumbnail(
+                    $uploadedThumbnailPath,
+                    $lessonUuid
                 );
             }
-        );
+
+            throw $exception;
+        }
 
         return redirect()
             ->route(
@@ -299,7 +296,6 @@ class LessonController extends Controller
                 'Lesson created successfully as draft.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -340,7 +336,6 @@ class LessonController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Update Lesson
@@ -368,133 +363,158 @@ class LessonController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(
-            function () use (
-                $module,
-                $lesson,
-                $validated,
-                $request,
-                $admin
-            ): void {
-                $lockedLesson = Lesson::query()
-                    ->where(
-                        'course_module_id',
-                        $module->id
-                    )
-                    ->lockForUpdate()
-                    ->findOrFail(
-                        $lesson->id
+        $thumbnailUpload = $request->file('thumbnail_image');
+        $uploadedThumbnailPath = $thumbnailUpload instanceof UploadedFile
+            ? $this->storeThumbnail($thumbnailUpload, $lesson->uuid)
+            : null;
+        $previousThumbnailPath = null;
+
+        try {
+            DB::transaction(
+                function () use (
+                    $module,
+                    $lesson,
+                    $validated,
+                    $request,
+                    $admin,
+                    $uploadedThumbnailPath,
+                    &$previousThumbnailPath
+                ): void {
+                    $lockedLesson = Lesson::query()
+                        ->where(
+                            'course_module_id',
+                            $module->id
+                        )
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $lesson->id
+                        );
+
+                    $before = $this->auditSnapshot(
+                        $lockedLesson
                     );
 
-                $before = $this->auditSnapshot(
-                    $lockedLesson
-                );
+                    $updates = [];
 
-                $updates = [];
+                    foreach ([
+                        'code',
+                        'slug',
+                        'title',
+                        'heading',
+                        'short_description',
+                        'description',
+                    ] as $field) {
+                        if (
+                            array_key_exists(
+                                $field,
+                                $validated
+                            )
+                        ) {
+                            $updates[$field] =
+                                $validated[$field];
+                        }
+                    }
 
-                foreach ([
-                    'code',
-                    'slug',
-                    'title',
-                    'heading',
-                    'short_description',
-                    'description',
-                ] as $field) {
+                    if ($uploadedThumbnailPath !== null) {
+                        $previousThumbnailPath = $lockedLesson->thumbnail_path;
+                        $updates['thumbnail_path'] = $uploadedThumbnailPath;
+                    } elseif ($request->boolean('remove_thumbnail')) {
+                        $previousThumbnailPath = $lockedLesson->thumbnail_path;
+                        $updates['thumbnail_path'] = null;
+                    }
+
                     if (
                         array_key_exists(
-                            $field,
+                            'is_preview',
                             $validated
                         )
                     ) {
-                        $updates[$field] =
-                            $validated[$field];
+                        $updates['is_preview'] =
+                            (bool) (
+                                $validated['is_preview']
+                                ?? false
+                            );
                     }
-                }
 
-                if (
-                    array_key_exists(
-                        'is_preview',
-                        $validated
-                    )
-                ) {
-                    $updates['is_preview'] =
-                        (bool) (
-                            $validated['is_preview']
-                            ?? false
-                        );
-                }
+                    if (
+                        array_key_exists(
+                            'sort_order',
+                            $validated
+                        )
+                    ) {
+                        $updates['sort_order'] =
+                            (int) (
+                                $validated['sort_order']
+                                ?? 0
+                            );
+                    }
 
-                if (
-                    array_key_exists(
-                        'sort_order',
-                        $validated
-                    )
-                ) {
-                    $updates['sort_order'] =
-                        (int) (
-                            $validated['sort_order']
-                            ?? 0
-                        );
-                }
+                    $updates['updated_by_admin_id'] =
+                        $admin->id;
 
-                $updates['updated_by_admin_id'] =
-                    $admin->id;
+                    $lockedLesson->fill(
+                        $updates
+                    );
 
-                $lockedLesson->fill(
-                    $updates
-                );
+                    if (! $lockedLesson->isDirty()) {
+                        return;
+                    }
 
-                if (! $lockedLesson->isDirty()) {
-                    return;
-                }
+                    $lockedLesson->save();
 
-                $lockedLesson->save();
+                    $after = $this->auditSnapshot(
+                        $lockedLesson->fresh()
+                    );
 
-                $after = $this->auditSnapshot(
-                    $lockedLesson->fresh()
-                );
-
-                [
-                    $oldValues,
-                    $newValues,
-                ] = $this->auditChanges(
-                    $before,
-                    $after
-                );
-
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
-
-                    actorId:
-                        $admin->id,
-
-                    action:
-                        'LESSON_UPDATED',
-
-                    module:
-                        'EDUCATION',
-
-                    targetType:
-                        'LESSON',
-
-                    targetId:
-                        $lockedLesson->id,
-
-                    oldValues:
+                    [
                         $oldValues,
-
-                    newValues:
                         $newValues,
+                    ] = $this->auditChanges(
+                        $before,
+                        $after
+                    );
 
-                    ipAddress:
-                        $request->ip(),
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    userAgent:
-                        $request->userAgent()
+                        actorId: $admin->id,
+
+                        action: 'LESSON_UPDATED',
+
+                        module: 'EDUCATION',
+
+                        targetType: 'LESSON',
+
+                        targetId: $lockedLesson->id,
+
+                        oldValues: $oldValues,
+
+                        newValues: $newValues,
+
+                        ipAddress: $request->ip(),
+
+                        userAgent: $request->userAgent()
+                    );
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedThumbnail(
+                    $uploadedThumbnailPath,
+                    $lesson->uuid
                 );
             }
-        );
+
+            throw $exception;
+        }
+
+        if ($previousThumbnailPath !== null
+            && $previousThumbnailPath !== $uploadedThumbnailPath) {
+            $this->deleteManagedThumbnail(
+                $previousThumbnailPath,
+                $lesson->uuid
+            );
+        }
 
         return redirect()
             ->route(
@@ -509,7 +529,6 @@ class LessonController extends Controller
                 'Lesson updated successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -631,35 +650,25 @@ class LessonController extends Controller
                 }
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        $auditAction,
+                    action: $auditAction,
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'LESSON',
+                    targetType: 'LESSON',
 
-                    targetId:
-                        $lockedLesson->id,
+                    targetId: $lockedLesson->id,
 
-                    oldValues:
-                        $oldValues,
+                    oldValues: $oldValues,
 
-                    newValues:
-                        $newValues,
+                    newValues: $newValues,
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
 
                 return $message;
@@ -679,7 +688,6 @@ class LessonController extends Controller
                 $message
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -767,39 +775,29 @@ class LessonController extends Controller
                 $lockedLesson->delete();
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        'LESSON_DELETED',
+                    action: 'LESSON_DELETED',
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'LESSON',
+                    targetType: 'LESSON',
 
-                    targetId:
-                        $lockedLesson->id,
+                    targetId: $lockedLesson->id,
 
-                    oldValues:
-                        $before,
+                    oldValues: $before,
 
                     newValues: [
-                        'deleted_at' =>
-                            $lockedLesson
-                                ->deleted_at
-                                ?->toISOString(),
+                        'deleted_at' => $lockedLesson
+                            ->deleted_at
+                            ?->toISOString(),
                     ],
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
             }
         );
@@ -817,7 +815,6 @@ class LessonController extends Controller
                 'Lesson deleted successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -848,7 +845,6 @@ class LessonController extends Controller
         );
     }
 
-
     private function requireModuleOwnership(
         Course $course,
         CourseModule $module
@@ -859,7 +855,6 @@ class LessonController extends Controller
             404
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -879,7 +874,6 @@ class LessonController extends Controller
         return $admin;
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ADMIN-03 — Permission Boundary
@@ -898,7 +892,6 @@ class LessonController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Education Permission Map
@@ -909,33 +902,27 @@ class LessonController extends Controller
         AdminUser $admin
     ): array {
         return [
-            'view' =>
-                $admin->hasPermission(
-                    'education.view'
-                ),
+            'view' => $admin->hasPermission(
+                'education.view'
+            ),
 
-            'create' =>
-                $admin->hasPermission(
-                    'education.create'
-                ),
+            'create' => $admin->hasPermission(
+                'education.create'
+            ),
 
-            'update' =>
-                $admin->hasPermission(
-                    'education.update'
-                ),
+            'update' => $admin->hasPermission(
+                'education.update'
+            ),
 
-            'delete' =>
-                $admin->hasPermission(
-                    'education.delete'
-                ),
+            'delete' => $admin->hasPermission(
+                'education.delete'
+            ),
 
-            'publish' =>
-                $admin->hasPermission(
-                    'education.publish'
-                ),
+            'publish' => $admin->hasPermission(
+                'education.publish'
+            ),
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -955,64 +942,80 @@ class LessonController extends Controller
             $lesson->description;
 
         return [
-            'uuid' =>
-                $lesson->uuid,
+            'uuid' => $lesson->uuid,
 
-            'course_module_id' =>
-                $lesson->course_module_id,
+            'course_module_id' => $lesson->course_module_id,
 
-            'code' =>
-                $lesson->code,
+            'code' => $lesson->code,
 
-            'slug' =>
-                $lesson->slug,
+            'slug' => $lesson->slug,
 
-            'title' =>
-                $lesson->title,
+            'title' => $lesson->title,
 
-            'heading' =>
-                $lesson->heading,
+            'heading' => $lesson->heading,
 
-            'short_description' =>
-                $lesson->short_description,
+            'short_description' => $lesson->short_description,
 
-            'description_sha256' =>
-                $description !== null
+            'thumbnail_path' => $lesson->thumbnail_path,
+
+            'description_sha256' => $description !== null
                     ? hash(
                         'sha256',
                         $description
                     )
                     : null,
 
-            'description_length' =>
-                $description !== null
+            'description_length' => $description !== null
                     ? mb_strlen(
                         $description
                     )
                     : 0,
 
-            'is_preview' =>
-                (bool) $lesson->is_preview,
+            'is_preview' => (bool) $lesson->is_preview,
 
-            'status' =>
-                $lesson->status,
+            'status' => $lesson->status,
 
-            'published_at' =>
-                $lesson
-                    ->published_at
-                    ?->toISOString(),
+            'published_at' => $lesson
+                ->published_at
+                ?->toISOString(),
 
-            'sort_order' =>
-                $lesson->sort_order,
+            'sort_order' => $lesson->sort_order,
 
-            'created_by_admin_id' =>
-                $lesson->created_by_admin_id,
+            'created_by_admin_id' => $lesson->created_by_admin_id,
 
-            'updated_by_admin_id' =>
-                $lesson->updated_by_admin_id,
+            'updated_by_admin_id' => $lesson->updated_by_admin_id,
         ];
     }
 
+    private function storeThumbnail(
+        UploadedFile $image,
+        string $lessonUuid
+    ): string {
+        $filename = 'thumbnail-'.Str::uuid().'.'.strtolower($image->extension());
+        $path = $image->storeAs(
+            'education/lessons/'.$lessonUuid,
+            $filename,
+            'public'
+        );
+
+        if (! is_string($path) || trim($path) === '') {
+            throw new RuntimeException('Unable to store the lesson picture.');
+        }
+
+        return $path;
+    }
+
+    private function deleteManagedThumbnail(
+        string $path,
+        string $lessonUuid
+    ): void {
+        $normalized = ltrim(str_replace('\\', '/', trim($path)), '/');
+        $prefix = 'education/lessons/'.$lessonUuid.'/';
+
+        if (str_starts_with($normalized, $prefix)) {
+            Storage::disk('public')->delete($normalized);
+        }
+    }
 
     /*
     |--------------------------------------------------------------------------

@@ -11,12 +11,38 @@ use App\Models\CourseModule;
 use App\Models\Lesson;
 use App\Models\LessonVideo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class LessonManagementCrudTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_authorized_admin_can_upload_lesson_picture(): void
+    {
+        Storage::fake('public');
+        $admin = $this->createAdminWithPermissions(['education.create']);
+        [$course, $module] = $this->createHierarchy();
+
+        $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.lessons.store', compact('course', 'module')),
+            [
+                'code' => 'IMAGE-L01',
+                'slug' => 'image-lesson',
+                'title' => 'Image Lesson',
+                'thumbnail_image' => UploadedFile::fake()->createWithContent(
+                    'lesson.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true)
+                ),
+            ]
+        )->assertRedirect();
+
+        $lesson = Lesson::query()->where('code', 'IMAGE-L01')->firstOrFail();
+        $this->assertNotNull($lesson->thumbnail_path);
+        Storage::disk('public')->assertExists($lesson->thumbnail_path);
+    }
 
     public function test_authorized_admin_can_create_lesson_as_draft_with_audit_log(): void
     {

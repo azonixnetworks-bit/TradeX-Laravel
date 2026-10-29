@@ -84,7 +84,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.education.courses.modules.lessons.update', ['course' => $course, 'module' => $module, 'lesson' => $lesson]) }}">
+    <form method="POST" enctype="multipart/form-data" action="{{ route('admin.education.courses.modules.lessons.update', ['course' => $course, 'module' => $module, 'lesson' => $lesson]) }}">
         @csrf
         @method('PATCH')
 
@@ -127,6 +127,20 @@
                 <div class="education-field full">
                     <label for="description">Description</label>
                     <textarea id="description" name="description" class="description">{{ old('description', $lesson->description) }}</textarea>
+                </div>
+
+                <div class="education-field full">
+                    <label for="thumbnail_image">Lesson Picture</label>
+                    @if($lesson->thumbnailUrl())
+                        <img src="{{ $lesson->thumbnailUrl() }}" alt="{{ $lesson->title }}" style="display:block;width:180px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:12px;border:1px solid rgba(218,178,88,.35);">
+                    @endif
+                    <input id="thumbnail_image" name="thumbnail_image" type="file" accept="image/jpeg,image/png,image/webp">
+                    <span class="education-help">JPG, PNG or WebP. Maximum 5 MB.</span>
+                    @if($lesson->thumbnail_path)
+                        <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;">
+                            <input type="checkbox" name="remove_thumbnail" value="1" style="width:auto;"> Remove current picture
+                        </label>
+                    @endif
                 </div>
 
                 <div class="education-field">
