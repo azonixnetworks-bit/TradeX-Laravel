@@ -22,6 +22,7 @@ class RiskRewardRouteSecurityTest extends TestCase
     {
         foreach ([
             'api.v1.risk-reward.catalog',
+            'api.v1.risk-reward.quote',
             'api.v1.risk-reward.calculate',
             'api.v1.risk-reward.dividends.calculate',
             'api.v1.risk-reward.saved.index',
@@ -38,6 +39,25 @@ class RiskRewardRouteSecurityTest extends TestCase
     public function test_customer_catalog_rejects_an_unauthenticated_request(): void
     {
         $this->getJson(route('api.v1.risk-reward.catalog'))->assertUnauthorized();
+    }
+
+    public function test_live_quote_rejects_unauthenticated_and_unknown_symbols(): void
+    {
+        $this->getJson(route('api.v1.risk-reward.quote', [
+            'market' => 'forex',
+            'symbol' => 'EURUSD',
+        ]))->assertUnauthorized();
+
+        $user = $this->createApiUser(['email' => 'risk-quote@tradex.test']);
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson(route('api.v1.risk-reward.quote', [
+                'market' => 'forex',
+                'symbol' => 'NOT_A_REAL_SYMBOL',
+            ]))
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Select a supported symbol from the suggestions.');
     }
 
     public function test_saved_calculation_is_recalculated_and_scoped_to_its_customer(): void
