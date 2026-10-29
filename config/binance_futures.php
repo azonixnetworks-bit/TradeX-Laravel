@@ -82,6 +82,13 @@ return [
         'max' => 125,
         'default' => 10,
         'tier_dependent' => true,
+        'auto_calculation' => [
+            // Used only for planning when the client does not submit leverage.
+            // The extra allowance keeps the estimated liquidation point beyond
+            // the planned stop even before the live Binance tier is confirmed.
+            'default_maintenance_margin_percent' => 0.5,
+            'liquidation_buffer_percent' => 0.5,
+        ],
     ],
     'cost_assumptions' => [
         // Binance's current fee FAQ uses these regular-user rates as examples and explicitly

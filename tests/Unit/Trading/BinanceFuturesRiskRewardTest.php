@@ -9,6 +9,24 @@ use Tests\TestCase;
 
 class BinanceFuturesRiskRewardTest extends TestCase
 {
+    public function test_leverage_is_calculated_from_stop_distance_when_client_omits_it(): void
+    {
+        $result = app(BinanceFuturesRiskRewardCalculatorService::class)->calculate([
+            'symbol' => 'BTCUSDT',
+            'side' => 'BUY',
+            'entry' => 100000,
+            'stop_loss' => 99000,
+            'take_profit' => 105000,
+            'calculation_mode' => 'RISK_BASED',
+            'risk_amount' => 100,
+        ], app(TradingInstrumentCatalog::class)->markets()['binance_futures']);
+
+        $this->assertSame(50, $result['futures']['leverage']);
+        $this->assertTrue($result['futures']['leverage_auto_calculated']);
+        $this->assertSame('AUTO_STOP_DISTANCE', $result['futures']['leverage_source']);
+        $this->assertEqualsWithDelta(1.0, $result['futures']['leverage_calculation']['stop_loss_distance_percent'], 0.000001);
+    }
+
     public function test_risk_based_mode_keeps_stop_risk_fixed_while_leverage_changes_margin(): void
     {
         $calculator = app(BinanceFuturesRiskRewardCalculatorService::class);

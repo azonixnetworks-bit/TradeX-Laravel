@@ -218,7 +218,10 @@ class RiskRewardController extends Controller
             'margin_amount' => [Rule::requiredIf($isFutures && $mode === 'MARGIN_BASED'), 'nullable', 'numeric', 'gt:0', 'max:1000000000'],
             'calculation_mode' => [Rule::requiredIf($isFutures), 'nullable', Rule::in(['RISK_BASED', 'MARGIN_BASED'])],
             'margin_mode' => ['nullable', Rule::in(['ISOLATED', 'CROSS'])],
-            'leverage' => [Rule::requiredIf($isFutures), 'nullable', 'integer', 'min:1', 'max:125'],
+            // Mobile Binance Futures calculations omit leverage so the server can
+            // derive a conservative value from the Entry -> Stop Loss distance.
+            // Keep accepting an explicit value for existing/admin clients.
+            'leverage' => ['nullable', 'integer', 'min:1', 'max:125'],
             'quote_to_usd_rate' => ['nullable', 'numeric', 'gt:0'],
             'entry_fee_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'exit_fee_rate_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],

@@ -39,7 +39,6 @@ class BinanceFuturesRiskRewardCalculatorService
         $entry = $this->positiveNumber($input['entry'] ?? null, 'Entry price');
         $stopLoss = $this->positiveNumber($input['stop_loss'] ?? null, 'Stop loss');
         $takeProfit = $this->optionalPositiveNumber($input['take_profit'] ?? null, 'Take profit');
-        $leverage = $this->leverage($input['leverage'] ?? null, $market);
 
         $entryFeeRatePercent = $this->nonNegativeNumber($input['entry_fee_rate_percent'] ?? 0, 'Entry fee rate');
         $exitFeeRatePercent = $this->nonNegativeNumber($input['exit_fee_rate_percent'] ?? 0, 'Exit fee rate');
@@ -79,6 +78,14 @@ class BinanceFuturesRiskRewardCalculatorService
         $this->validatePriceStructure($side, $entry, $stopLoss, $takeProfit);
 
         $riskDistance = abs($entry - $stopLoss);
+        $leveragePlan = $this->resolveLeverage(
+            $input['leverage'] ?? null,
+            $market,
+            $entry,
+            $riskDistance,
+            $maintenanceMarginRatePercent
+        );
+        $leverage = $leveragePlan['value'];
         $rewardDistance = $takeProfit !== null ? abs($takeProfit - $entry) : null;
         $riskRewardRatio = $rewardDistance !== null ? $rewardDistance / $riskDistance : null;
         $stopLossPercent = ($riskDistance / $entry) * 100;
@@ -125,6 +132,16 @@ class BinanceFuturesRiskRewardCalculatorService
             'Fee rates, funding rates and funding intervals can vary by account, symbol and time. Replace TradeX reference assumptions with the live Binance values before trading.',
             'USDT-denominated values are trading-risk estimates; verify current USDT/USD value if you need strict USD accounting.',
         ];
+
+        if ($leveragePlan['auto_calculated']) {
+            $warnings[] = sprintf(
+                'TradeX calculated %dx leverage from the %.4f%% Stop Loss distance with a %.2f%% maintenance-margin assumption and %.2f%% liquidation buffer. Confirm the live Binance leverage tier before placing the trade.',
+                $leverage,
+                ($riskDistance / $entry) * 100,
+                $leveragePlan['maintenance_margin_percent'],
+                $leveragePlan['liquidation_buffer_percent']
+            );
+        }
 
         $tradableWithinRisk = true;
         $quantity = $this->roundDownToStep(min($rawQuantity, $maximumQuantity), $quantityStep);
@@ -246,6 +263,15 @@ class BinanceFuturesRiskRewardCalculatorService
                 'calculation_mode' => $mode,
                 'margin_mode' => $marginMode,
                 'leverage' => $leverage,
+                'leverage_source' => $leveragePlan['auto_calculated'] ? 'AUTO_STOP_DISTANCE' : 'CLIENT_PROVIDED',
+                'leverage_auto_calculated' => $leveragePlan['auto_calculated'],
+                'leverage_calculation' => [
+                    'stop_loss_distance_percent' => ($riskDistance / $entry) * 100,
+                    'maintenance_margin_percent' => $leveragePlan['maintenance_margin_percent'],
+                    'liquidation_buffer_percent' => $leveragePlan['liquidation_buffer_percent'],
+                    'minimum' => $leveragePlan['minimum'],
+                    'maximum' => $leveragePlan['maximum'],
+                ],
                 'position_quantity' => $quantity,
                 'position_notional' => $positionNotional,
                 'required_initial_margin' => $requiredInitialMargin,
@@ -408,6 +434,53 @@ class BinanceFuturesRiskRewardCalculatorService
         }
 
         return $leverage;
+    }
+
+    /**
+     * @param  array<string, mixed>  $market
+     * @return array{value:int,auto_calculated:bool,maintenance_margin_percent:float,liquidation_buffer_percent:float,minimum:int,maximum:int}
+     */
+    private function resolveLeverage(
+        mixed $value,
+        array $market,
+        float $entry,
+        float $riskDistance,
+        ?float $maintenanceMarginRatePercent
+    ): array {
+        $settings = (array) ($market['leverage'] ?? []);
+        $minimum = max(1, (int) ($settings['min'] ?? 1));
+        $maximum = max($minimum, (int) ($settings['max'] ?? 125));
+        $auto = (array) ($settings['auto_calculation'] ?? []);
+        $maintenancePercent = $maintenanceMarginRatePercent
+            ?? max(0.0, (float) ($auto['default_maintenance_margin_percent'] ?? 0.5));
+        $bufferPercent = max(0.0, (float) ($auto['liquidation_buffer_percent'] ?? 0.5));
+
+        if ($value !== null && $value !== '') {
+            return [
+                'value' => $this->leverage($value, $market),
+                'auto_calculated' => false,
+                'maintenance_margin_percent' => $maintenancePercent,
+                'liquidation_buffer_percent' => $bufferPercent,
+                'minimum' => $minimum,
+                'maximum' => $maximum,
+            ];
+        }
+
+        $protectedDistance = ($riskDistance / $entry)
+            + ($maintenancePercent / 100)
+            + ($bufferPercent / 100);
+        $calculated = $protectedDistance > 0
+            ? (int) floor(1 / $protectedDistance)
+            : $minimum;
+
+        return [
+            'value' => max($minimum, min($maximum, $calculated)),
+            'auto_calculated' => true,
+            'maintenance_margin_percent' => $maintenancePercent,
+            'liquidation_buffer_percent' => $bufferPercent,
+            'minimum' => $minimum,
+            'maximum' => $maximum,
+        ];
     }
 
     private function positiveNumber(mixed $value, string $label): float
