@@ -2,6 +2,7 @@
 
 namespace App\Services\Trading;
 
+use App\Contracts\Screener\DerivWebSocketTransport;
 use App\Exceptions\ScreenerProviderException;
 use App\Services\Screener\Providers\BinanceCryptoProvider;
 use App\Services\Screener\Providers\BinanceFuturesCryptoProvider;
@@ -17,7 +18,8 @@ class RiskRewardLiveQuoteService
         private readonly TwelveDataForexProvider $forexProvider,
         private readonly DerivMarketDataProvider $derivProvider,
         private readonly BinanceCryptoProvider $cryptoProvider,
-        private readonly BinanceFuturesCryptoProvider $futuresProvider
+        private readonly BinanceFuturesCryptoProvider $futuresProvider,
+        private readonly DerivWebSocketTransport $derivTransport
     ) {}
 
     /** @return array<string, mixed> */
@@ -63,7 +65,10 @@ class RiskRewardLiveQuoteService
                 $side
             ): array {
                 if ($market === 'deriv') {
-                    $live = $this->derivProvider->livePrice($providerSymbol, $side);
+                    $usesCTrader = $this->derivProvider->configured();
+                    $live = $usesCTrader
+                        ? $this->derivProvider->livePrice($providerSymbol, $side)
+                        : $this->publicDerivTick($symbol);
                     $price = (float) $live['price'];
                     $precision = (int) $live['digits'];
 
@@ -74,7 +79,29 @@ class RiskRewardLiveQuoteService
                         'display_price' => number_format($price, $precision, '.', ''),
                         'precision' => $precision,
                         'observed_at_utc' => $live['observed_at_utc'] ?? now()->utc()->toIso8601String(),
-                        'provider' => $this->derivProvider->name(),
+                        'provider' => $usesCTrader
+                            ? $this->derivProvider->name()
+                            : 'DERIV_PUBLIC',
+                    ];
+                }
+
+                if ($market === 'forex' && ! $this->forexProvider->configured()) {
+                    $live = $this->publicDerivTick(
+                        'frx'.str_replace('/', '', $providerSymbol)
+                    );
+                    $price = (float) $live['price'];
+                    $precision = $this->precision(
+                        (float) ($instrument['tick_size'] ?? 0.00001)
+                    );
+
+                    return [
+                        'market' => $market,
+                        'symbol' => $symbol,
+                        'price' => $price,
+                        'display_price' => number_format($price, $precision, '.', ''),
+                        'precision' => $precision,
+                        'observed_at_utc' => $live['observed_at_utc'],
+                        'provider' => 'DERIV_PUBLIC_FOREX',
                     ];
                 }
 
@@ -161,5 +188,36 @@ class RiskRewardLiveQuoteService
         ];
 
         return ($aliases[$asset] ?? $asset).'USDT';
+    }
+
+    /** @return array{price: float, digits: int, observed_at_utc: string} */
+    private function publicDerivTick(string $symbol): array
+    {
+        $responses = $this->derivTransport->requestMany([[
+            'ticks' => trim($symbol),
+            'subscribe' => 1,
+            'req_id' => 1,
+        ]]);
+
+        $payload = is_array($responses[0] ?? null) ? $responses[0] : [];
+        $tick = is_array($payload['tick'] ?? null) ? $payload['tick'] : [];
+        $price = (float) ($tick['quote'] ?? 0);
+
+        if (! is_finite($price) || $price <= 0) {
+            throw new ScreenerProviderException(
+                'SCREENER_PROVIDER_NO_DATA',
+                'Live market price is temporarily unavailable for this symbol.'
+            );
+        }
+
+        $epoch = (int) ($tick['epoch'] ?? 0);
+
+        return [
+            'price' => $price,
+            'digits' => max(0, min(8, (int) ($tick['pip_size'] ?? 3))),
+            'observed_at_utc' => $epoch > 0
+                ? gmdate('c', $epoch)
+                : now()->utc()->toIso8601String(),
+        ];
     }
 }
