@@ -159,6 +159,8 @@ class EducationPresenter
             'slug' => $module->slug,
             'title' => $fields['title'],
             'short_description' => $fields['short_description'],
+            'thumbnail_path' => $module->thumbnail_path,
+            'thumbnail_url' => $module->thumbnailUrl(),
             'sort_order' => $module->sort_order,
             'lesson_count' => $module->relationLoaded('lessons')
                     ? $module->lessons->count()
@@ -195,6 +197,8 @@ class EducationPresenter
             'title' => $fields['title'],
             'heading' => $fields['heading'],
             'short_description' => $fields['short_description'],
+            'thumbnail_path' => $lesson->thumbnail_path,
+            'thumbnail_url' => $lesson->thumbnailUrl(),
             'is_preview' => (bool) $lesson->is_preview,
             'can_access' => $canAccess,
             'is_locked' => ! $canAccess,

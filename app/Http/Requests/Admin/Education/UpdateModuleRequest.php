@@ -31,7 +31,6 @@ class UpdateModuleRequest extends FormRequest
             && $admin->hasPermission('education.update');
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Input Normalization
@@ -87,7 +86,6 @@ class UpdateModuleRequest extends FormRequest
         }
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Rules
@@ -121,19 +119,17 @@ class UpdateModuleRequest extends FormRequest
 
         if ($courseId !== null) {
             $uniqueCode->where(
-                fn ($query) =>
-                    $query->where(
-                        'course_id',
-                        $courseId
-                    )
+                fn ($query) => $query->where(
+                    'course_id',
+                    $courseId
+                )
             );
 
             $uniqueSlug->where(
-                fn ($query) =>
-                    $query->where(
-                        'course_id',
-                        $courseId
-                    )
+                fn ($query) => $query->where(
+                    'course_id',
+                    $courseId
+                )
             );
         }
 
@@ -194,6 +190,20 @@ class UpdateModuleRequest extends FormRequest
                 'string',
             ],
 
+            'thumbnail_image' => [
+                'sometimes',
+                'nullable',
+                'file',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
+            'remove_thumbnail' => [
+                'sometimes',
+                'boolean',
+            ],
+
             'sort_order' => [
                 'sometimes',
                 'nullable',
@@ -224,7 +234,6 @@ class UpdateModuleRequest extends FormRequest
         ];
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Validation Messages
@@ -234,41 +243,31 @@ class UpdateModuleRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'course_id.prohibited' =>
-                'A module cannot be moved to another course through the update request. The parent course is resolved from the protected route.',
+            'course_id.prohibited' => 'A module cannot be moved to another course through the update request. The parent course is resolved from the protected route.',
 
-            'code.regex' =>
-                'The module code may contain only uppercase letters, numbers, dots, underscores and hyphens.',
+            'code.regex' => 'The module code may contain only uppercase letters, numbers, dots, underscores and hyphens.',
 
-            'code.unique' =>
-                'This module code is already used inside the selected course.',
+            'code.unique' => 'This module code is already used inside the selected course.',
 
-            'slug.regex' =>
-                'The module slug may contain only lowercase letters, numbers and single hyphens between words.',
+            'slug.regex' => 'The module slug may contain only lowercase letters, numbers and single hyphens between words.',
 
-            'slug.unique' =>
-                'This module slug is already used inside the selected course.',
+            'slug.unique' => 'This module slug is already used inside the selected course.',
 
-            'uuid.prohibited' =>
-                'The module UUID cannot be changed.',
+            'uuid.prohibited' => 'The module UUID cannot be changed.',
 
-            'status.prohibited' =>
-                'Module publication status cannot be changed through the normal update request.',
+            'status.prohibited' => 'Module publication status cannot be changed through the normal update request.',
 
-            'published_at.prohibited' =>
-                'The module publication time is controlled by the authorized publish workflow.',
+            'published_at.prohibited' => 'The module publication time is controlled by the authorized publish workflow.',
 
-            'created_by_admin_id.prohibited' =>
-                'The creating admin cannot be changed through the module update request.',
+            'created_by_admin_id.prohibited' => 'The creating admin cannot be changed through the module update request.',
 
-            'updated_by_admin_id.prohibited' =>
-                'The updating admin is determined from the authenticated admin session.',
+            'updated_by_admin_id.prohibited' => 'The updating admin is determined from the authenticated admin session.',
 
-            'deleted_at.prohibited' =>
-                'Deletion state cannot be controlled through the module update request.',
+            'deleted_at.prohibited' => 'Deletion state cannot be controlled through the module update request.',
+
+            'thumbnail_image.image' => 'The module picture must be a valid image.',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -297,7 +296,6 @@ class UpdateModuleRequest extends FormRequest
 
         return null;
     }
-
 
     /*
     |--------------------------------------------------------------------------

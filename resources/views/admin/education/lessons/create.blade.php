@@ -94,7 +94,7 @@
         </div>
     @endif
 
-    <form method="POST" action="{{ route('admin.education.courses.modules.lessons.store', ['course' => $course, 'module' => $module]) }}">
+    <form method="POST" enctype="multipart/form-data" action="{{ route('admin.education.courses.modules.lessons.store', ['course' => $course, 'module' => $module]) }}">
         @csrf
 
         <section class="panel education-form-panel">
@@ -136,6 +136,12 @@
                 <div class="education-field full">
                     <label for="description">Description</label>
                     <textarea id="description" name="description" class="description" placeholder="Detailed lesson description...">{{ old('description') }}</textarea>
+                </div>
+
+                <div class="education-field full">
+                    <label for="thumbnail_image">Lesson Picture</label>
+                    <input id="thumbnail_image" name="thumbnail_image" type="file" accept="image/jpeg,image/png,image/webp">
+                    <span class="education-help">JPG, PNG or WebP. Maximum 5 MB.</span>
                 </div>
 
                 <div class="education-field">

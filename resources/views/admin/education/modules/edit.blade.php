@@ -321,6 +321,7 @@
 
 <form
     method="POST"
+    enctype="multipart/form-data"
     action="{{ route(
         'admin.education.courses.modules.update',
         [
@@ -526,6 +527,26 @@
                             </span>
                         @enderror
 
+                    </div>
+
+                    <div class="module-edit-field full">
+                        <label for="module-thumbnail">
+                            Module Picture
+                            <small>Optional · JPG, PNG or WebP · max 5 MB</small>
+                        </label>
+                        @if($module->thumbnailUrl())
+                            <img src="{{ $module->thumbnailUrl() }}" alt="{{ $module->title }}" style="display:block;width:180px;max-width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;margin-bottom:12px;border:1px solid rgba(218,178,88,.35);">
+                        @endif
+                        <input id="module-thumbnail" name="thumbnail_image" type="file" accept="image/jpeg,image/png,image/webp">
+                        @if($module->thumbnail_path)
+                            <label style="display:flex;align-items:center;gap:8px;margin-top:10px;text-transform:none;">
+                                <input type="checkbox" name="remove_thumbnail" value="1" style="width:auto;">
+                                Remove current picture
+                            </label>
+                        @endif
+                        @error('thumbnail_image')
+                            <span class="module-edit-error">{{ $message }}</span>
+                        @enderror
                     </div>
 
                 </div>

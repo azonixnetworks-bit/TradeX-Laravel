@@ -9,12 +9,38 @@ use App\Models\Course;
 use App\Models\CourseModule;
 use App\Models\Lesson;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ModuleManagementCrudTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_authorized_admin_can_upload_module_picture(): void
+    {
+        Storage::fake('public');
+        $admin = $this->createAdminWithPermissions(['education.create']);
+        $course = $this->createCourse();
+
+        $this->actingAs($admin, 'admin')->post(
+            route('admin.education.courses.modules.store', $course),
+            [
+                'code' => 'IMAGE-M01',
+                'slug' => 'image-module',
+                'title' => 'Image Module',
+                'thumbnail_image' => UploadedFile::fake()->createWithContent(
+                    'module.png',
+                    base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', true)
+                ),
+            ]
+        )->assertRedirect();
+
+        $module = CourseModule::query()->where('code', 'IMAGE-M01')->firstOrFail();
+        $this->assertNotNull($module->thumbnail_path);
+        Storage::disk('public')->assertExists($module->thumbnail_path);
+    }
 
     public function test_authorized_admin_can_create_module_as_draft_with_audit_log(): void
     {
@@ -38,23 +64,17 @@ class ModuleManagementCrudTest extends TestCase
                         $course
                     ),
                     [
-                        'code' =>
-                            'SMC-M01',
+                        'code' => 'SMC-M01',
 
-                        'slug' =>
-                            'market-structure-foundations',
+                        'slug' => 'market-structure-foundations',
 
-                        'title' =>
-                            'Market Structure Foundations',
+                        'title' => 'Market Structure Foundations',
 
-                        'short_description' =>
-                            'Foundation module for market structure.',
+                        'short_description' => 'Foundation module for market structure.',
 
-                        'description' =>
-                            'Complete module curriculum description.',
+                        'description' => 'Complete module curriculum description.',
 
-                        'sort_order' =>
-                            1,
+                        'sort_order' => 1,
                     ]
                 );
 
@@ -104,27 +124,20 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'actor_type' =>
-                    'ADMIN',
+                'actor_type' => 'ADMIN',
 
-                'actor_id' =>
-                    $admin->id,
+                'actor_id' => $admin->id,
 
-                'action' =>
-                    'MODULE_CREATED',
+                'action' => 'MODULE_CREATED',
 
-                'module' =>
-                    'EDUCATION',
+                'module' => 'EDUCATION',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
     }
-
 
     public function test_module_code_and_slug_must_be_unique_inside_same_course(): void
     {
@@ -140,11 +153,9 @@ class ModuleManagementCrudTest extends TestCase
             $this->createModule(
                 $course,
                 [
-                    'code' =>
-                        'DUP-M01',
+                    'code' => 'DUP-M01',
 
-                    'slug' =>
-                        'duplicate-module',
+                    'slug' => 'duplicate-module',
                 ]
             );
 
@@ -166,17 +177,13 @@ class ModuleManagementCrudTest extends TestCase
                         $course
                     ),
                     [
-                        'code' =>
-                            $existing->code,
+                        'code' => $existing->code,
 
-                        'slug' =>
-                            $existing->slug,
+                        'slug' => $existing->slug,
 
-                        'title' =>
-                            'Duplicate Attempt',
+                        'title' => 'Duplicate Attempt',
 
-                        'sort_order' =>
-                            2,
+                        'sort_order' => 2,
                     ]
                 );
 
@@ -203,7 +210,6 @@ class ModuleManagementCrudTest extends TestCase
         );
     }
 
-
     public function test_same_module_code_and_slug_can_be_used_in_different_courses(): void
     {
         $admin =
@@ -220,11 +226,9 @@ class ModuleManagementCrudTest extends TestCase
         $this->createModule(
             $courseA,
             [
-                'code' =>
-                    'REUSE-M01',
+                'code' => 'REUSE-M01',
 
-                'slug' =>
-                    'reusable-module',
+                'slug' => 'reusable-module',
             ]
         );
 
@@ -240,17 +244,13 @@ class ModuleManagementCrudTest extends TestCase
                         $courseB
                     ),
                     [
-                        'code' =>
-                            'REUSE-M01',
+                        'code' => 'REUSE-M01',
 
-                        'slug' =>
-                            'reusable-module',
+                        'slug' => 'reusable-module',
 
-                        'title' =>
-                            'Same Identifier Different Course',
+                        'title' => 'Same Identifier Different Course',
 
-                        'sort_order' =>
-                            1,
+                        'sort_order' => 1,
                     ]
                 );
 
@@ -264,18 +264,14 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'course_modules',
             [
-                'course_id' =>
-                    $courseB->id,
+                'course_id' => $courseB->id,
 
-                'code' =>
-                    'REUSE-M01',
+                'code' => 'REUSE-M01',
 
-                'slug' =>
-                    'reusable-module',
+                'slug' => 'reusable-module',
             ]
         );
     }
-
 
     public function test_authorized_admin_can_update_module_metadata_with_audit_log(): void
     {
@@ -302,28 +298,21 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.update',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     ),
                     [
-                        'code' =>
-                            $module->code,
+                        'code' => $module->code,
 
-                        'slug' =>
-                            $module->slug,
+                        'slug' => $module->slug,
 
-                        'title' =>
-                            'Updated Module Title',
+                        'title' => 'Updated Module Title',
 
-                        'short_description' =>
-                            'Updated module summary.',
+                        'short_description' => 'Updated module summary.',
 
-                        'sort_order' =>
-                            7,
+                        'sort_order' => 7,
                     ]
                 );
 
@@ -365,21 +354,16 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'MODULE_UPDATED',
+                'action' => 'MODULE_UPDATED',
 
-                'module' =>
-                    'EDUCATION',
+                'module' => 'EDUCATION',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
     }
-
 
     public function test_authorized_admin_can_publish_and_unpublish_module(): void
     {
@@ -406,19 +390,15 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.publication',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     ),
                     [
-                        'action' =>
-                            'PUBLISH',
+                        'action' => 'PUBLISH',
 
-                        'reason' =>
-                            'Module curriculum approved.',
+                        'reason' => 'Module curriculum approved.',
                     ]
                 );
 
@@ -449,14 +429,11 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'MODULE_PUBLISHED',
+                'action' => 'MODULE_PUBLISHED',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
 
@@ -470,19 +447,15 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.publication',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     ),
                     [
-                        'action' =>
-                            'UNPUBLISH',
+                        'action' => 'UNPUBLISH',
 
-                        'reason' =>
-                            'Module returned to draft for revision.',
+                        'reason' => 'Module returned to draft for revision.',
                     ]
                 );
 
@@ -508,18 +481,14 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'action' =>
-                    'MODULE_UNPUBLISHED',
+                'action' => 'MODULE_UNPUBLISHED',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
     }
-
 
     public function test_invalid_module_publication_state_transition_is_rejected(): void
     {
@@ -535,11 +504,9 @@ class ModuleManagementCrudTest extends TestCase
             $this->createModule(
                 $course,
                 [
-                    'status' =>
-                        CourseModule::STATUS_PUBLISHED,
+                    'status' => CourseModule::STATUS_PUBLISHED,
 
-                    'published_at' =>
-                        now(),
+                    'published_at' => now(),
                 ]
             );
 
@@ -553,16 +520,13 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.publication',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     ),
                     [
-                        'action' =>
-                            'PUBLISH',
+                        'action' => 'PUBLISH',
                     ]
                 );
 
@@ -580,18 +544,14 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseMissing(
             'audit_logs',
             [
-                'action' =>
-                    'MODULE_PUBLISHED',
+                'action' => 'MODULE_PUBLISHED',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
     }
-
 
     public function test_published_module_cannot_be_deleted_until_unpublished(): void
     {
@@ -607,11 +567,9 @@ class ModuleManagementCrudTest extends TestCase
             $this->createModule(
                 $course,
                 [
-                    'status' =>
-                        CourseModule::STATUS_PUBLISHED,
+                    'status' => CourseModule::STATUS_PUBLISHED,
 
-                    'published_at' =>
-                        now(),
+                    'published_at' => now(),
                 ]
             );
 
@@ -625,11 +583,9 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.destroy',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     )
                 );
@@ -641,18 +597,14 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'course_modules',
             [
-                'id' =>
-                    $module->id,
+                'id' => $module->id,
 
-                'status' =>
-                    CourseModule::STATUS_PUBLISHED,
+                'status' => CourseModule::STATUS_PUBLISHED,
 
-                'deleted_at' =>
-                    null,
+                'deleted_at' => null,
             ]
         );
     }
-
 
     public function test_module_with_lessons_cannot_be_deleted(): void
     {
@@ -684,11 +636,9 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.destroy',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     )
                 );
@@ -700,29 +650,23 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertDatabaseHas(
             'course_modules',
             [
-                'id' =>
-                    $module->id,
+                'id' => $module->id,
 
-                'deleted_at' =>
-                    null,
+                'deleted_at' => null,
             ]
         );
 
         $this->assertDatabaseHas(
             'lessons',
             [
-                'id' =>
-                    $lesson->id,
+                'id' => $lesson->id,
 
-                'course_module_id' =>
-                    $module->id,
+                'course_module_id' => $module->id,
 
-                'deleted_at' =>
-                    null,
+                'deleted_at' => null,
             ]
         );
     }
-
 
     public function test_authorized_admin_can_soft_delete_empty_draft_module_with_audit_log(): void
     {
@@ -749,11 +693,9 @@ class ModuleManagementCrudTest extends TestCase
                     route(
                         'admin.education.courses.modules.destroy',
                         [
-                            'course' =>
-                                $course,
+                            'course' => $course,
 
-                            'module' =>
-                                $module,
+                            'module' => $module,
                         ]
                     )
                 );
@@ -768,32 +710,25 @@ class ModuleManagementCrudTest extends TestCase
         $this->assertSoftDeleted(
             'course_modules',
             [
-                'id' =>
-                    $module->id,
+                'id' => $module->id,
             ]
         );
 
         $this->assertDatabaseHas(
             'audit_logs',
             [
-                'actor_id' =>
-                    $admin->id,
+                'actor_id' => $admin->id,
 
-                'action' =>
-                    'MODULE_DELETED',
+                'action' => 'MODULE_DELETED',
 
-                'module' =>
-                    'EDUCATION',
+                'module' => 'EDUCATION',
 
-                'target_type' =>
-                    'COURSE_MODULE',
+                'target_type' => 'COURSE_MODULE',
 
-                'target_id' =>
-                    $module->id,
+                'target_id' => $module->id,
             ]
         );
     }
-
 
     private function createAdminWithPermissions(
         array $permissions
@@ -801,56 +736,43 @@ class ModuleManagementCrudTest extends TestCase
         $admin =
             AdminUser::query()
                 ->create([
-                    'uuid' =>
-                        Str::uuid()
-                            ->toString(),
+                    'uuid' => Str::uuid()
+                        ->toString(),
 
-                    'name' =>
-                        'Module CRUD Admin',
+                    'name' => 'Module CRUD Admin',
 
-                    'email' =>
-                        'module-crud-'
+                    'email' => 'module-crud-'
                         .Str::lower(
                             Str::random(12)
                         )
                         .'@tradex.test',
 
-                    'email_verified_at' =>
-                        now(),
+                    'email_verified_at' => now(),
 
-                    'password' =>
-                        'TestingPassword123!',
+                    'password' => 'TestingPassword123!',
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
 
-                    'failed_login_attempts' =>
-                        0,
+                    'failed_login_attempts' => 0,
 
-                    'locked_until' =>
-                        null,
+                    'locked_until' => null,
                 ]);
 
         $role =
             AdminRole::query()
                 ->create([
-                    'code' =>
-                        'MOD_CRUD_'
+                    'code' => 'MOD_CRUD_'
                         .strtoupper(
                             Str::random(10)
                         ),
 
-                    'name' =>
-                        'Module CRUD Test Role',
+                    'name' => 'Module CRUD Test Role',
 
-                    'description' =>
-                        'ADMIN-03 module CRUD test role.',
+                    'description' => 'ADMIN-03 module CRUD test role.',
 
-                    'is_system' =>
-                        false,
+                    'is_system' => false,
 
-                    'is_active' =>
-                        true,
+                    'is_active' => true,
                 ]);
 
         $admin
@@ -860,23 +782,18 @@ class ModuleManagementCrudTest extends TestCase
             );
 
         foreach (
-            $permissions
-            as $permissionCode
+            $permissions as $permissionCode
         ) {
             $permission =
                 AdminPermission::query()
                     ->create([
-                        'code' =>
-                            $permissionCode,
+                        'code' => $permissionCode,
 
-                        'name' =>
-                            $permissionCode,
+                        'name' => $permissionCode,
 
-                        'module' =>
-                            'EDUCATION',
+                        'module' => 'EDUCATION',
 
-                        'description' =>
-                            'ADMIN-03 module CRUD test permission.',
+                        'description' => 'ADMIN-03 module CRUD test permission.',
                     ]);
 
             $role
@@ -889,55 +806,41 @@ class ModuleManagementCrudTest extends TestCase
         return $admin->fresh();
     }
 
-
     private function createCourse(): Course
     {
         return Course::query()
             ->create([
-                'code' =>
-                    'CRUD-COURSE-'
+                'code' => 'CRUD-COURSE-'
                     .strtoupper(
                         Str::random(6)
                     ),
 
-                'slug' =>
-                    'crud-course-'
+                'slug' => 'crud-course-'
                     .Str::lower(
                         Str::random(8)
                     ),
 
-                'title' =>
-                    'Module CRUD Parent Course',
+                'title' => 'Module CRUD Parent Course',
 
-                'short_description' =>
-                    'Parent course for module CRUD tests.',
+                'short_description' => 'Parent course for module CRUD tests.',
 
-                'description' =>
-                    'Module CRUD parent course description.',
+                'description' => 'Module CRUD parent course description.',
 
-                'thumbnail_path' =>
-                    null,
+                'thumbnail_path' => null,
 
-                'language_code' =>
-                    'en',
+                'language_code' => 'en',
 
-                'access_level' =>
-                    Course::ACCESS_PREMIUM,
+                'access_level' => Course::ACCESS_PREMIUM,
 
-                'status' =>
-                    Course::STATUS_DRAFT,
+                'status' => Course::STATUS_DRAFT,
 
-                'published_at' =>
-                    null,
+                'published_at' => null,
 
-                'sort_order' =>
-                    1,
+                'sort_order' => 1,
 
-                'is_featured' =>
-                    false,
+                'is_featured' => false,
             ]);
     }
-
 
     private function createModule(
         Course $course,
@@ -947,88 +850,67 @@ class ModuleManagementCrudTest extends TestCase
             ->create(
                 array_merge(
                     [
-                        'course_id' =>
-                            $course->id,
+                        'course_id' => $course->id,
 
-                        'code' =>
-                            'CRUD-MOD-'
+                        'code' => 'CRUD-MOD-'
                             .strtoupper(
                                 Str::random(6)
                             ),
 
-                        'slug' =>
-                            'crud-module-'
+                        'slug' => 'crud-module-'
                             .Str::lower(
                                 Str::random(8)
                             ),
 
-                        'title' =>
-                            'Module CRUD Test',
+                        'title' => 'Module CRUD Test',
 
-                        'short_description' =>
-                            'Module fixture for CRUD tests.',
+                        'short_description' => 'Module fixture for CRUD tests.',
 
-                        'description' =>
-                            'Module CRUD fixture description.',
+                        'description' => 'Module CRUD fixture description.',
 
-                        'status' =>
-                            CourseModule::STATUS_DRAFT,
+                        'status' => CourseModule::STATUS_DRAFT,
 
-                        'published_at' =>
-                            null,
+                        'published_at' => null,
 
-                        'sort_order' =>
-                            1,
+                        'sort_order' => 1,
                     ],
                     $overrides
                 )
             );
     }
 
-
     private function createLesson(
         CourseModule $module
     ): Lesson {
         return Lesson::query()
             ->create([
-                'course_module_id' =>
-                    $module->id,
+                'course_module_id' => $module->id,
 
-                'code' =>
-                    'LESSON-'
+                'code' => 'LESSON-'
                     .strtoupper(
                         Str::random(6)
                     ),
 
-                'slug' =>
-                    'lesson-'
+                'slug' => 'lesson-'
                     .Str::lower(
                         Str::random(8)
                     ),
 
-                'title' =>
-                    'Deletion Guard Lesson',
+                'title' => 'Deletion Guard Lesson',
 
-                'heading' =>
-                    'Lesson prevents parent deletion',
+                'heading' => 'Lesson prevents parent deletion',
 
-                'short_description' =>
-                    'Lesson fixture for module delete guard.',
+                'short_description' => 'Lesson fixture for module delete guard.',
 
-                'description' =>
-                    'Lesson fixture description.',
+                'description' => 'Lesson fixture description.',
 
-                'is_preview' =>
-                    false,
+                'is_preview' => false,
 
-                'status' =>
-                    Lesson::STATUS_DRAFT,
+                'status' => Lesson::STATUS_DRAFT,
 
-                'published_at' =>
-                    null,
+                'published_at' => null,
 
-                'sort_order' =>
-                    1,
+                'sort_order' => 1,
             ]);
     }
 }

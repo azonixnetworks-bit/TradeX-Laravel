@@ -27,6 +27,12 @@ class EducationCatalogTest extends TestCase
         $course->forceFill([
             'thumbnail_path' => 'education/courses/market-structure/thumbnail.webp',
         ])->save();
+        $module->forceFill([
+            'thumbnail_path' => 'education/modules/market-structure/module.webp',
+        ])->save();
+        $lesson->forceFill([
+            'thumbnail_path' => 'education/lessons/market-structure/lesson.webp',
+        ])->save();
 
         $user =
             $this->createApiUser();
@@ -71,6 +77,10 @@ class EducationCatalogTest extends TestCase
                 $module->uuid
             )
             ->assertJsonPath(
+                'data.modules.0.thumbnail_path',
+                'education/modules/market-structure/module.webp'
+            )
+            ->assertJsonPath(
                 'data.course.thumbnail_path',
                 'education/courses/market-structure/thumbnail.webp'
             );
@@ -84,6 +94,10 @@ class EducationCatalogTest extends TestCase
                 .$lesson->uuid
             )
             ->assertOk()
+            ->assertJsonPath(
+                'data.lesson.thumbnail_path',
+                'education/lessons/market-structure/lesson.webp'
+            )
             ->assertJsonMissing(
                 [
                     'hls_master_path',

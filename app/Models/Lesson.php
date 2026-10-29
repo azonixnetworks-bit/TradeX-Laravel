@@ -25,7 +25,6 @@ class Lesson extends Model
 
     public const STATUS_ARCHIVED = 'ARCHIVED';
 
-
     /*
     |--------------------------------------------------------------------------
     | Mass Assignment
@@ -41,6 +40,7 @@ class Lesson extends Model
         'heading',
         'short_description',
         'description',
+        'thumbnail_path',
         'is_preview',
         'status',
         'published_at',
@@ -48,7 +48,6 @@ class Lesson extends Model
         'created_by_admin_id',
         'updated_by_admin_id',
     ];
-
 
     /*
     |--------------------------------------------------------------------------
@@ -64,7 +63,6 @@ class Lesson extends Model
             'sort_order' => 'integer',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -89,7 +87,6 @@ class Lesson extends Model
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -104,7 +101,6 @@ class Lesson extends Model
         );
     }
 
-
     public function videos(): HasMany
     {
         return $this->hasMany(
@@ -113,7 +109,6 @@ class Lesson extends Model
         )->orderBy('sort_order')
             ->orderBy('id');
     }
-
 
     public function assignments(): HasMany
     {
@@ -124,7 +119,6 @@ class Lesson extends Model
             ->orderBy('id');
     }
 
-
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -133,7 +127,6 @@ class Lesson extends Model
         );
     }
 
-
     public function updatedByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -141,7 +134,6 @@ class Lesson extends Model
             'updated_by_admin_id'
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -163,7 +155,6 @@ class Lesson extends Model
         );
     }
 
-
     public function scopePublished(
         Builder $query
     ): Builder {
@@ -182,7 +173,6 @@ class Lesson extends Model
             );
     }
 
-
     public function scopeDraft(
         Builder $query
     ): Builder {
@@ -191,7 +181,6 @@ class Lesson extends Model
             self::STATUS_DRAFT
         );
     }
-
 
     public function scopeArchived(
         Builder $query
@@ -202,7 +191,6 @@ class Lesson extends Model
         );
     }
 
-
     public function scopePreview(
         Builder $query
     ): Builder {
@@ -211,7 +199,6 @@ class Lesson extends Model
             true
         );
     }
-
 
     public function scopeOrdered(
         Builder $query
@@ -225,7 +212,6 @@ class Lesson extends Model
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | State Helpers
@@ -237,7 +223,6 @@ class Lesson extends Model
         return $this->status === self::STATUS_DRAFT;
     }
 
-
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED
@@ -245,15 +230,38 @@ class Lesson extends Model
             && $this->published_at->lte(now());
     }
 
-
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
     }
 
-
     public function isPreview(): bool
     {
         return $this->is_preview === true;
+    }
+
+    public function thumbnailUrl(): ?string
+    {
+        $thumbnail = trim((string) $this->thumbnail_path);
+
+        if ($thumbnail === '') {
+            return null;
+        }
+
+        if (str_starts_with($thumbnail, 'https://')
+            || str_starts_with($thumbnail, 'http://')) {
+            return $thumbnail;
+        }
+
+        $normalized = ltrim(
+            str_replace('\\', '/', $thumbnail),
+            '/'
+        );
+
+        return url(
+            str_starts_with($normalized, 'storage/')
+                ? $normalized
+                : 'storage/'.$normalized
+        );
     }
 }

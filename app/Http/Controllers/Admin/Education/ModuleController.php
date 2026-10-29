@@ -12,8 +12,13 @@ use App\Models\Course;
 use App\Models\CourseModule;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
+use RuntimeException;
+use Throwable;
 
 class ModuleController extends Controller
 {
@@ -41,38 +46,33 @@ class ModuleController extends Controller
             ->get();
 
         $stats = [
-            'total' =>
-                $modules->count(),
+            'total' => $modules->count(),
 
-            'draft' =>
-                $modules
-                    ->where(
-                        'status',
-                        CourseModule::STATUS_DRAFT
-                    )
-                    ->count(),
+            'draft' => $modules
+                ->where(
+                    'status',
+                    CourseModule::STATUS_DRAFT
+                )
+                ->count(),
 
-            'published' =>
-                $modules
-                    ->where(
-                        'status',
-                        CourseModule::STATUS_PUBLISHED
-                    )
-                    ->count(),
+            'published' => $modules
+                ->where(
+                    'status',
+                    CourseModule::STATUS_PUBLISHED
+                )
+                ->count(),
 
-            'archived' =>
-                $modules
-                    ->where(
-                        'status',
-                        CourseModule::STATUS_ARCHIVED
-                    )
-                    ->count(),
+            'archived' => $modules
+                ->where(
+                    'status',
+                    CourseModule::STATUS_ARCHIVED
+                )
+                ->count(),
 
-            'lessons' =>
-                (int) $modules
-                    ->sum(
-                        'lessons_count'
-                    ),
+            'lessons' => (int) $modules
+                ->sum(
+                    'lessons_count'
+                ),
         ];
 
         $permissions = $this->educationPermissions(
@@ -89,7 +89,6 @@ class ModuleController extends Controller
             )
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -115,7 +114,6 @@ class ModuleController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Store Module
@@ -135,105 +133,108 @@ class ModuleController extends Controller
 
         $validated = $request->validated();
 
-        $module = DB::transaction(
-            function () use (
-                $course,
-                $validated,
-                $request,
-                $admin
-            ): CourseModule {
-                /*
-                |--------------------------------------------------------------
-                | Lock Parent Course
-                |--------------------------------------------------------------
-                |
-                | Prevents a concurrent destructive parent mutation from racing
-                | the module creation transaction.
-                |
-                */
+        $moduleUuid = (string) Str::uuid();
+        $thumbnailUpload = $request->file('thumbnail_image');
+        $uploadedThumbnailPath = $thumbnailUpload instanceof UploadedFile
+            ? $this->storeThumbnail($thumbnailUpload, $moduleUuid)
+            : null;
 
-                Course::query()
-                    ->whereKey(
-                        $course->id
-                    )
-                    ->lockForUpdate()
-                    ->firstOrFail();
+        try {
+            $module = DB::transaction(
+                function () use (
+                    $course,
+                    $validated,
+                    $request,
+                    $admin,
+                    $moduleUuid,
+                    $uploadedThumbnailPath
+                ): CourseModule {
+                    /*
+                    |--------------------------------------------------------------
+                    | Lock Parent Course
+                    |--------------------------------------------------------------
+                    |
+                    | Prevents a concurrent destructive parent mutation from racing
+                    | the module creation transaction.
+                    |
+                    */
 
-                $module = CourseModule::query()
-                    ->create([
-                        'course_id' =>
-                            $course->id,
+                    Course::query()
+                        ->whereKey(
+                            $course->id
+                        )
+                        ->lockForUpdate()
+                        ->firstOrFail();
 
-                        'code' =>
-                            $validated['code'],
+                    $module = CourseModule::query()
+                        ->create([
+                            'uuid' => $moduleUuid,
 
-                        'slug' =>
-                            $validated['slug'],
+                            'course_id' => $course->id,
 
-                        'title' =>
-                            $validated['title'],
+                            'code' => $validated['code'],
 
-                        'short_description' =>
-                            $validated['short_description']
-                            ?? null,
+                            'slug' => $validated['slug'],
 
-                        'description' =>
-                            $validated['description']
-                            ?? null,
+                            'title' => $validated['title'],
 
-                        'status' =>
-                            CourseModule::STATUS_DRAFT,
+                            'short_description' => $validated['short_description']
+                                ?? null,
 
-                        'published_at' =>
-                            null,
+                            'description' => $validated['description']
+                                ?? null,
 
-                        'sort_order' =>
-                            (int) (
+                            'thumbnail_path' => $uploadedThumbnailPath,
+
+                            'status' => CourseModule::STATUS_DRAFT,
+
+                            'published_at' => null,
+
+                            'sort_order' => (int) (
                                 $validated['sort_order']
                                 ?? 0
                             ),
 
-                        'created_by_admin_id' =>
-                            $admin->id,
+                            'created_by_admin_id' => $admin->id,
 
-                        'updated_by_admin_id' =>
-                            $admin->id,
-                    ]);
+                            'updated_by_admin_id' => $admin->id,
+                        ]);
 
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                        actorId: $admin->id,
 
-                    action:
-                        'MODULE_CREATED',
+                        action: 'MODULE_CREATED',
 
-                    module:
-                        'EDUCATION',
+                        module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE_MODULE',
+                        targetType: 'COURSE_MODULE',
 
-                    targetId:
-                        $module->id,
+                        targetId: $module->id,
 
-                    newValues:
-                        $this->auditSnapshot(
+                        newValues: $this->auditSnapshot(
                             $module
                         ),
 
-                    ipAddress:
-                        $request->ip(),
+                        ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                        userAgent: $request->userAgent()
+                    );
+
+                    return $module;
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedThumbnail(
+                    $uploadedThumbnailPath,
+                    $moduleUuid
                 );
-
-                return $module;
             }
-        );
+
+            throw $exception;
+        }
 
         return redirect()
             ->route(
@@ -245,7 +246,6 @@ class ModuleController extends Controller
                 'Module created successfully as draft.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -282,7 +282,6 @@ class ModuleController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Update Module
@@ -308,119 +307,144 @@ class ModuleController extends Controller
 
         $validated = $request->validated();
 
-        DB::transaction(
-            function () use (
-                $course,
-                $module,
-                $validated,
-                $request,
-                $admin
-            ): void {
-                $lockedModule = CourseModule::query()
-                    ->where(
-                        'course_id',
-                        $course->id
-                    )
-                    ->lockForUpdate()
-                    ->findOrFail(
-                        $module->id
+        $thumbnailUpload = $request->file('thumbnail_image');
+        $uploadedThumbnailPath = $thumbnailUpload instanceof UploadedFile
+            ? $this->storeThumbnail($thumbnailUpload, $module->uuid)
+            : null;
+        $previousThumbnailPath = null;
+
+        try {
+            DB::transaction(
+                function () use (
+                    $course,
+                    $module,
+                    $validated,
+                    $request,
+                    $admin,
+                    $uploadedThumbnailPath,
+                    &$previousThumbnailPath
+                ): void {
+                    $lockedModule = CourseModule::query()
+                        ->where(
+                            'course_id',
+                            $course->id
+                        )
+                        ->lockForUpdate()
+                        ->findOrFail(
+                            $module->id
+                        );
+
+                    $before = $this->auditSnapshot(
+                        $lockedModule
                     );
 
-                $before = $this->auditSnapshot(
-                    $lockedModule
-                );
+                    $updates = [];
 
-                $updates = [];
+                    foreach ([
+                        'code',
+                        'slug',
+                        'title',
+                        'short_description',
+                        'description',
+                    ] as $field) {
+                        if (
+                            array_key_exists(
+                                $field,
+                                $validated
+                            )
+                        ) {
+                            $updates[$field] =
+                                $validated[$field];
+                        }
+                    }
 
-                foreach ([
-                    'code',
-                    'slug',
-                    'title',
-                    'short_description',
-                    'description',
-                ] as $field) {
+                    if ($uploadedThumbnailPath !== null) {
+                        $previousThumbnailPath = $lockedModule->thumbnail_path;
+                        $updates['thumbnail_path'] = $uploadedThumbnailPath;
+                    } elseif ($request->boolean('remove_thumbnail')) {
+                        $previousThumbnailPath = $lockedModule->thumbnail_path;
+                        $updates['thumbnail_path'] = null;
+                    }
+
                     if (
                         array_key_exists(
-                            $field,
+                            'sort_order',
                             $validated
                         )
                     ) {
-                        $updates[$field] =
-                            $validated[$field];
+                        $updates['sort_order'] =
+                            (int) (
+                                $validated['sort_order']
+                                ?? 0
+                            );
                     }
-                }
 
-                if (
-                    array_key_exists(
-                        'sort_order',
-                        $validated
-                    )
-                ) {
-                    $updates['sort_order'] =
-                        (int) (
-                            $validated['sort_order']
-                            ?? 0
-                        );
-                }
+                    $updates['updated_by_admin_id'] =
+                        $admin->id;
 
-                $updates['updated_by_admin_id'] =
-                    $admin->id;
+                    $lockedModule->fill(
+                        $updates
+                    );
 
-                $lockedModule->fill(
-                    $updates
-                );
+                    if (! $lockedModule->isDirty()) {
+                        return;
+                    }
 
-                if (! $lockedModule->isDirty()) {
-                    return;
-                }
+                    $lockedModule->save();
 
-                $lockedModule->save();
+                    $after = $this->auditSnapshot(
+                        $lockedModule->fresh()
+                    );
 
-                $after = $this->auditSnapshot(
-                    $lockedModule->fresh()
-                );
-
-                [
-                    $oldValues,
-                    $newValues,
-                ] = $this->auditChanges(
-                    $before,
-                    $after
-                );
-
-                AuditLog::record(
-                    actorType:
-                        'ADMIN',
-
-                    actorId:
-                        $admin->id,
-
-                    action:
-                        'MODULE_UPDATED',
-
-                    module:
-                        'EDUCATION',
-
-                    targetType:
-                        'COURSE_MODULE',
-
-                    targetId:
-                        $lockedModule->id,
-
-                    oldValues:
+                    [
                         $oldValues,
-
-                    newValues:
                         $newValues,
+                    ] = $this->auditChanges(
+                        $before,
+                        $after
+                    );
 
-                    ipAddress:
-                        $request->ip(),
+                    AuditLog::record(
+                        actorType: 'ADMIN',
 
-                    userAgent:
-                        $request->userAgent()
+                        actorId: $admin->id,
+
+                        action: 'MODULE_UPDATED',
+
+                        module: 'EDUCATION',
+
+                        targetType: 'COURSE_MODULE',
+
+                        targetId: $lockedModule->id,
+
+                        oldValues: $oldValues,
+
+                        newValues: $newValues,
+
+                        ipAddress: $request->ip(),
+
+                        userAgent: $request->userAgent()
+                    );
+                }
+            );
+        } catch (Throwable $exception) {
+            if ($uploadedThumbnailPath !== null) {
+                $this->deleteManagedThumbnail(
+                    $uploadedThumbnailPath,
+                    $module->uuid
                 );
             }
-        );
+
+            throw $exception;
+        }
+
+        if ($previousThumbnailPath !== null
+            && $previousThumbnailPath !== $uploadedThumbnailPath) {
+            $this->deleteManagedThumbnail(
+                $previousThumbnailPath,
+                $module->uuid
+            );
+        }
 
         return redirect()
             ->route(
@@ -432,7 +456,6 @@ class ModuleController extends Controller
                 'Module updated successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -552,35 +575,25 @@ class ModuleController extends Controller
                 }
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        $auditAction,
+                    action: $auditAction,
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE_MODULE',
+                    targetType: 'COURSE_MODULE',
 
-                    targetId:
-                        $lockedModule->id,
+                    targetId: $lockedModule->id,
 
-                    oldValues:
-                        $oldValues,
+                    oldValues: $oldValues,
 
-                    newValues:
-                        $newValues,
+                    newValues: $newValues,
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
 
                 return $message;
@@ -597,7 +610,6 @@ class ModuleController extends Controller
                 $message
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -675,39 +687,29 @@ class ModuleController extends Controller
                 $lockedModule->delete();
 
                 AuditLog::record(
-                    actorType:
-                        'ADMIN',
+                    actorType: 'ADMIN',
 
-                    actorId:
-                        $admin->id,
+                    actorId: $admin->id,
 
-                    action:
-                        'MODULE_DELETED',
+                    action: 'MODULE_DELETED',
 
-                    module:
-                        'EDUCATION',
+                    module: 'EDUCATION',
 
-                    targetType:
-                        'COURSE_MODULE',
+                    targetType: 'COURSE_MODULE',
 
-                    targetId:
-                        $lockedModule->id,
+                    targetId: $lockedModule->id,
 
-                    oldValues:
-                        $before,
+                    oldValues: $before,
 
                     newValues: [
-                        'deleted_at' =>
-                            $lockedModule
-                                ->deleted_at
-                                ?->toISOString(),
+                        'deleted_at' => $lockedModule
+                            ->deleted_at
+                            ?->toISOString(),
                     ],
 
-                    ipAddress:
-                        $request->ip(),
+                    ipAddress: $request->ip(),
 
-                    userAgent:
-                        $request->userAgent()
+                    userAgent: $request->userAgent()
                 );
             }
         );
@@ -722,7 +724,6 @@ class ModuleController extends Controller
                 'Module deleted successfully.'
             );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -746,7 +747,6 @@ class ModuleController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | ADMIN-03 — Authenticated Admin Resolver
@@ -764,7 +764,6 @@ class ModuleController extends Controller
 
         return $admin;
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -784,7 +783,6 @@ class ModuleController extends Controller
         );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Education Permission Map
@@ -795,33 +793,27 @@ class ModuleController extends Controller
         AdminUser $admin
     ): array {
         return [
-            'view' =>
-                $admin->hasPermission(
-                    'education.view'
-                ),
+            'view' => $admin->hasPermission(
+                'education.view'
+            ),
 
-            'create' =>
-                $admin->hasPermission(
-                    'education.create'
-                ),
+            'create' => $admin->hasPermission(
+                'education.create'
+            ),
 
-            'update' =>
-                $admin->hasPermission(
-                    'education.update'
-                ),
+            'update' => $admin->hasPermission(
+                'education.update'
+            ),
 
-            'delete' =>
-                $admin->hasPermission(
-                    'education.delete'
-                ),
+            'delete' => $admin->hasPermission(
+                'education.delete'
+            ),
 
-            'publish' =>
-                $admin->hasPermission(
-                    'education.publish'
-                ),
+            'publish' => $admin->hasPermission(
+                'education.publish'
+            ),
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -836,58 +828,76 @@ class ModuleController extends Controller
             $module->description;
 
         return [
-            'uuid' =>
-                $module->uuid,
+            'uuid' => $module->uuid,
 
-            'course_id' =>
-                $module->course_id,
+            'course_id' => $module->course_id,
 
-            'code' =>
-                $module->code,
+            'code' => $module->code,
 
-            'slug' =>
-                $module->slug,
+            'slug' => $module->slug,
 
-            'title' =>
-                $module->title,
+            'title' => $module->title,
 
-            'short_description' =>
-                $module->short_description,
+            'short_description' => $module->short_description,
 
-            'description_sha256' =>
-                $description !== null
+            'thumbnail_path' => $module->thumbnail_path,
+
+            'description_sha256' => $description !== null
                     ? hash(
                         'sha256',
                         $description
                     )
                     : null,
 
-            'description_length' =>
-                $description !== null
+            'description_length' => $description !== null
                     ? mb_strlen(
                         $description
                     )
                     : 0,
 
-            'status' =>
-                $module->status,
+            'status' => $module->status,
 
-            'published_at' =>
-                $module
-                    ->published_at
-                    ?->toISOString(),
+            'published_at' => $module
+                ->published_at
+                ?->toISOString(),
 
-            'sort_order' =>
-                $module->sort_order,
+            'sort_order' => $module->sort_order,
 
-            'created_by_admin_id' =>
-                $module->created_by_admin_id,
+            'created_by_admin_id' => $module->created_by_admin_id,
 
-            'updated_by_admin_id' =>
-                $module->updated_by_admin_id,
+            'updated_by_admin_id' => $module->updated_by_admin_id,
         ];
     }
 
+    private function storeThumbnail(
+        UploadedFile $image,
+        string $moduleUuid
+    ): string {
+        $filename = 'thumbnail-'.Str::uuid().'.'.strtolower($image->extension());
+        $path = $image->storeAs(
+            'education/modules/'.$moduleUuid,
+            $filename,
+            'public'
+        );
+
+        if (! is_string($path) || trim($path) === '') {
+            throw new RuntimeException('Unable to store the module picture.');
+        }
+
+        return $path;
+    }
+
+    private function deleteManagedThumbnail(
+        string $path,
+        string $moduleUuid
+    ): void {
+        $normalized = ltrim(str_replace('\\', '/', trim($path)), '/');
+        $prefix = 'education/modules/'.$moduleUuid.'/';
+
+        if (str_starts_with($normalized, $prefix)) {
+            Storage::disk('public')->delete($normalized);
+        }
+    }
 
     /*
     |--------------------------------------------------------------------------
