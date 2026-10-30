@@ -6,6 +6,7 @@ use App\Contracts\Screener\DerivWebSocketTransport;
 use App\Services\Screener\IndicatorEngine;
 use App\Services\Screener\Providers\BinanceCryptoProvider;
 use App\Services\Screener\Providers\BinanceFuturesCryptoProvider;
+use App\Services\Screener\Providers\CTraderCommodityMarketDataProvider;
 use App\Services\Screener\Providers\CTraderForexMarketDataProvider;
 use App\Services\Screener\Providers\DerivMarketDataProvider;
 use App\Services\Screener\Providers\TwelveDataForexProvider;
@@ -33,6 +34,7 @@ class ScreenerServiceProvider extends ServiceProvider
                 BinanceCryptoProvider::class,
                 BinanceFuturesCryptoProvider::class,
                 DerivMarketDataProvider::class,
+                CTraderCommodityMarketDataProvider::class,
                 TwelveDataStocksProvider::class,
             ],
             'tradex.screener.providers'

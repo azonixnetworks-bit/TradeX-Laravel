@@ -6,8 +6,9 @@ use App\Exceptions\ScreenerProviderException;
 use App\Http\Controllers\Controller;
 use App\Models\AdminScreenerWatchlist;
 use App\Models\AdminUser;
-use App\Services\Screener\BinanceSpotCatalogService;
 use App\Services\Screener\BinanceFuturesCatalogService;
+use App\Services\Screener\BinanceSpotCatalogService;
+use App\Services\Screener\CTraderCommodityCatalogService;
 use App\Services\Screener\CTraderDerivCatalogService;
 use App\Services\Screener\CTraderForexCatalogService;
 use App\Services\Screener\MarketBubbleService;
@@ -16,8 +17,8 @@ use App\Services\Screener\ScreenerHealthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class ScreenerMonitorController extends Controller
@@ -57,7 +58,8 @@ class ScreenerMonitorController extends Controller
         ScreenerEngine $engine,
         BinanceSpotCatalogService $binanceCatalog,
         BinanceFuturesCatalogService $binanceFuturesCatalog,
-        CTraderDerivCatalogService $derivCatalog
+        CTraderDerivCatalogService $derivCatalog,
+        CTraderCommodityCatalogService $commodityCatalog
     ): Response {
         $this->viewer();
 
@@ -144,16 +146,15 @@ class ScreenerMonitorController extends Controller
                             $symbols,
                             static fn (
                                 array $symbol
-                            ): bool =>
-                                str_contains(
-                                    strtoupper(
-                                        (string) (
-                                            $symbol['symbol']
-                                            ?? ''
-                                        )
-                                    ),
-                                    $needle
-                                )
+                            ): bool => str_contains(
+                                strtoupper(
+                                    (string) (
+                                        $symbol['symbol']
+                                        ?? ''
+                                    )
+                                ),
+                                $needle
+                            )
                                 ||
                                 str_contains(
                                     strtoupper(
@@ -193,15 +194,13 @@ class ScreenerMonitorController extends Controller
                         $perPage,
                         $page,
                         [
-                            'path' =>
-                                route(
-                                    'admin.screener.markets'
-                                ),
+                            'path' => route(
+                                'admin.screener.markets'
+                            ),
 
-                            'query' =>
-                                $request->except(
-                                    'page'
-                                ),
+                            'query' => $request->except(
+                                'page'
+                            ),
                         ]
                     );
 
@@ -223,11 +222,13 @@ class ScreenerMonitorController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | DERIV / cTrader
+            | DERIV + COMMODITY / TradeX MarketData
             |--------------------------------------------------------------------------
             */
-            elseif ($market === 'DERIV') {
-                $catalog = $derivCatalog->catalog();
+            elseif (in_array($market, ['DERIV', 'COMMODITY'], true)) {
+                $catalog = $market === 'DERIV'
+                    ? $derivCatalog->catalog()
+                    : $commodityCatalog->catalog();
 
                 $symbols = (array) (
                     $catalog['symbols'] ?? []
@@ -241,16 +242,15 @@ class ScreenerMonitorController extends Controller
                             $symbols,
                             static fn (
                                 array $symbol
-                            ): bool =>
-                                str_contains(
-                                    strtoupper(
-                                        (string) (
-                                            $symbol['symbol']
-                                            ?? ''
-                                        )
-                                    ),
-                                    $needle
-                                )
+                            ): bool => str_contains(
+                                strtoupper(
+                                    (string) (
+                                        $symbol['symbol']
+                                        ?? ''
+                                    )
+                                ),
+                                $needle
+                            )
                                 ||
                                 str_contains(
                                     strtoupper(
@@ -298,22 +298,20 @@ class ScreenerMonitorController extends Controller
                         $perPage,
                         $page,
                         [
-                            'path' =>
-                                route(
-                                    'admin.screener.markets'
-                                ),
+                            'path' => route(
+                                'admin.screener.markets'
+                            ),
 
-                            'query' =>
-                                $request->except(
-                                    'page'
-                                ),
+                            'query' => $request->except(
+                                'page'
+                            ),
                         ]
                     );
 
                 /*
                  * Important:
                  * Only current page symbols are analysed.
-                 * This avoids requesting all 59 Deriv instruments
+                 * This avoids requesting the full provider catalog
                  * on every page load.
                  */
                 $results =
@@ -344,16 +342,15 @@ class ScreenerMonitorController extends Controller
                             $symbols,
                             static fn (
                                 array $symbol
-                            ): bool =>
-                                str_contains(
-                                    strtoupper(
-                                        (string) (
-                                            $symbol['symbol']
-                                            ?? ''
-                                        )
-                                    ),
-                                    $needle
-                                )
+                            ): bool => str_contains(
+                                strtoupper(
+                                    (string) (
+                                        $symbol['symbol']
+                                        ?? ''
+                                    )
+                                ),
+                                $needle
+                            )
                                 ||
                                 str_contains(
                                     strtoupper(
@@ -401,15 +398,13 @@ class ScreenerMonitorController extends Controller
                         $perPage,
                         $page,
                         [
-                            'path' =>
-                                route(
-                                    'admin.screener.markets'
-                                ),
+                            'path' => route(
+                                'admin.screener.markets'
+                            ),
 
-                            'query' =>
-                                $request->except(
-                                    'page'
-                                ),
+                            'query' => $request->except(
+                                'page'
+                            ),
                         ]
                     );
 
@@ -434,20 +429,16 @@ class ScreenerMonitorController extends Controller
 
         } catch (ScreenerProviderException $exception) {
             $error = [
-                'code' =>
-                    $exception->providerCode,
+                'code' => $exception->providerCode,
 
-                'message' =>
-                    $exception->getMessage(),
+                'message' => $exception->getMessage(),
             ];
 
         } catch (InvalidArgumentException $exception) {
             $error = [
-                'code' =>
-                    'SCREENER_UNAVAILABLE',
+                'code' => 'SCREENER_UNAVAILABLE',
 
-                'message' =>
-                    $exception->getMessage(),
+                'message' => $exception->getMessage(),
             ];
         }
 
@@ -538,8 +529,7 @@ class ScreenerMonitorController extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'message' =>
-                        'Invalid Binance symbol.',
+                    'message' => 'Invalid Binance symbol.',
                 ],
                 422,
                 $this->noStoreHeaders()
@@ -555,8 +545,7 @@ class ScreenerMonitorController extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'message' =>
-                        'Unsupported timeframe.',
+                    'message' => 'Unsupported timeframe.',
                 ],
                 422,
                 $this->noStoreHeaders()
@@ -570,13 +559,12 @@ class ScreenerMonitorController extends Controller
         )['symbols'] ?? [])->first(
             static fn (
                 array $item
-            ): bool =>
-                strtoupper(
-                    (string) (
-                        $item['symbol']
-                        ?? ''
-                    )
+            ): bool => strtoupper(
+                (string) (
+                    $item['symbol']
+                    ?? ''
                 )
+            )
                 ===
                 $symbol
         );
@@ -585,8 +573,7 @@ class ScreenerMonitorController extends Controller
             return response()->json(
                 [
                     'success' => false,
-                    'message' =>
-                        'Binance symbol is unavailable.',
+                    'message' => 'Binance symbol is unavailable.',
                 ],
                 404,
                 $this->noStoreHeaders()
@@ -612,12 +599,10 @@ class ScreenerMonitorController extends Controller
                 [
                     'success' => true,
 
-                    'data' =>
-                        $result['results'][0]
+                    'data' => $result['results'][0]
                         ?? null,
 
-                    'generated_at_utc' =>
-                        $result[
+                    'generated_at_utc' => $result[
                             'generated_at_utc'
                         ]
                         ?? null,
@@ -631,11 +616,9 @@ class ScreenerMonitorController extends Controller
                 [
                     'success' => false,
 
-                    'code' =>
-                        $exception->providerCode,
+                    'code' => $exception->providerCode,
 
-                    'message' =>
-                        $exception->getMessage(),
+                    'message' => $exception->getMessage(),
                 ],
                 503,
                 $this->noStoreHeaders()
@@ -646,11 +629,9 @@ class ScreenerMonitorController extends Controller
                 [
                     'success' => false,
 
-                    'code' =>
-                        'SCREENER_UNAVAILABLE',
+                    'code' => 'SCREENER_UNAVAILABLE',
 
-                    'message' =>
-                        $exception->getMessage(),
+                    'message' => $exception->getMessage(),
                 ],
                 422,
                 $this->noStoreHeaders()
@@ -708,13 +689,12 @@ class ScreenerMonitorController extends Controller
         )['symbols'] ?? [])->first(
             static fn (
                 array $item
-            ): bool =>
-                strtoupper(
-                    (string) (
-                        $item['symbol']
-                        ?? ''
-                    )
+            ): bool => strtoupper(
+                (string) (
+                    $item['symbol']
+                    ?? ''
                 )
+            )
                 ===
                 $symbol
         );
@@ -827,8 +807,7 @@ class ScreenerMonitorController extends Controller
             $binanceCatalog,
             $binanceFuturesCatalog
         )['symbols'] ?? [])
-            ->first(static fn (array $item): bool =>
-                strtoupper((string) ($item['symbol'] ?? '')) === $symbol
+            ->first(static fn (array $item): bool => strtoupper((string) ($item['symbol'] ?? '')) === $symbol
             );
 
         if (! is_array($catalogSymbol)) {
@@ -911,23 +890,17 @@ class ScreenerMonitorController extends Controller
     private function noStoreHeaders(): array
     {
         return [
-            'Cache-Control' =>
-                'private, no-store, no-cache, max-age=0, must-revalidate',
+            'Cache-Control' => 'private, no-store, no-cache, max-age=0, must-revalidate',
 
-            'Pragma' =>
-                'no-cache',
+            'Pragma' => 'no-cache',
 
-            'X-Content-Type-Options' =>
-                'nosniff',
+            'X-Content-Type-Options' => 'nosniff',
 
-            'Referrer-Policy' =>
-                'no-referrer',
+            'Referrer-Policy' => 'no-referrer',
 
-            'X-Frame-Options' =>
-                'DENY',
+            'X-Frame-Options' => 'DENY',
 
-            'X-Robots-Tag' =>
-                'noindex, nofollow, noarchive',
+            'X-Robots-Tag' => 'noindex, nofollow, noarchive',
         ];
     }
 }

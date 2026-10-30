@@ -66,9 +66,19 @@ class CTraderDerivCatalogService
                 $symbols[] = [
                     'symbol' => $name,
                     'provider_symbol' => $name,
-                    'name' => $name,
+                    'name' => trim((string) (
+                        $item['display_name']
+                        ?? $item['name']
+                        ?? $name
+                    )),
                     'category' => (string) (
                         $item['category'] ?? ''
+                    ),
+                    'asset_class' => (string) (
+                        $item['asset_class'] ?? 'DERIV'
+                    ),
+                    'source' => (string) (
+                        $item['source'] ?? 'CTRADER'
                     ),
                     'base_currency' => '',
                     'quote_currency' => '',
@@ -86,18 +96,16 @@ class CTraderDerivCatalogService
 
             usort(
                 $symbols,
-                static fn (array $a, array $b): int =>
-                    strcasecmp(
-                        (string) $a['symbol'],
-                        (string) $b['symbol']
-                    )
+                static fn (array $a, array $b): int => strcasecmp(
+                    (string) $a['symbol'],
+                    (string) $b['symbol']
+                )
             );
 
             $catalog = [
                 'provider' => 'DERIV',
-                'source' => 'CTRADER_FASTAPI',
-                'fetched_at_utc' =>
-                    now('UTC')->toIso8601String(),
+                'source' => 'TRADEX_MARKET_DATA_FASTAPI',
+                'fetched_at_utc' => now('UTC')->toIso8601String(),
                 'count' => count($symbols),
                 'symbols' => $symbols,
             ];
@@ -112,7 +120,6 @@ class CTraderDerivCatalogService
 
         } catch (ScreenerProviderException $exception) {
             throw $exception;
-
         } catch (Throwable $exception) {
             report($exception);
 

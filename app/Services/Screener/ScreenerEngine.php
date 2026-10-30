@@ -70,8 +70,7 @@ class ScreenerEngine
                 'tradex_screener.'.$configKey.'.symbols',
                 []
             ),
-            static fn (mixed $symbol): bool =>
-                is_array($symbol)
+            static fn (mixed $symbol): bool => is_array($symbol)
                 && (bool) ($symbol['enabled'] ?? false)
         ));
     }
@@ -156,12 +155,10 @@ class ScreenerEngine
             'timeframe' => $timeframe,
             'provider' => $provider->name(),
             'provider_health' => [
-                'status' =>
-                    $health['status']
+                'status' => $health['status']
                     ?? 'UNKNOWN',
             ],
-            'generated_at_utc' =>
-                $dataset['generated_at_utc'],
+            'generated_at_utc' => $dataset['generated_at_utc'],
             'cache' => [
                 'hit' => $dataset['cache_hit'],
                 'stale' => $dataset['stale'],
@@ -252,8 +249,7 @@ class ScreenerEngine
 
         try {
             $providerSymbols = array_values(array_map(
-                static fn (array $symbol): string =>
-                    (string) $symbol['provider_symbol'],
+                static fn (array $symbol): string => (string) $symbol['provider_symbol'],
                 $symbolConfigs
             ));
 
@@ -284,18 +280,12 @@ class ScreenerEngine
                     ->analyse($candles);
 
                 $rows[] = [
-                    'symbol' =>
-                        (string) $symbolConfig['symbol'],
-                    'provider_symbol' =>
-                        $providerSymbol,
-                    'name' =>
-                        (string) ($symbolConfig['name'] ?? $symbolConfig['symbol']),
-                    'base_currency' =>
-                        (string) ($symbolConfig['base_currency'] ?? ''),
-                    'quote_currency' =>
-                        (string) ($symbolConfig['quote_currency'] ?? ''),
-                    'logo_url' =>
-                        (string) ($symbolConfig['logo_url'] ?? ''),
+                    'symbol' => (string) $symbolConfig['symbol'],
+                    'provider_symbol' => $providerSymbol,
+                    'name' => (string) ($symbolConfig['name'] ?? $symbolConfig['symbol']),
+                    'base_currency' => (string) ($symbolConfig['base_currency'] ?? ''),
+                    'quote_currency' => (string) ($symbolConfig['quote_currency'] ?? ''),
+                    'logo_url' => (string) ($symbolConfig['logo_url'] ?? ''),
                     ...$analysis,
                     'volatility' => $this->volatilityLabel(
                         $analysis['atr_percent'] ?? null
@@ -311,8 +301,7 @@ class ScreenerEngine
             }
 
             $dataset = [
-                'generated_at_utc' =>
-                    now('UTC')->toIso8601String(),
+                'generated_at_utc' => now('UTC')->toIso8601String(),
                 'rows' => $rows,
             ];
 
@@ -368,12 +357,9 @@ class ScreenerEngine
         array $timeframeConfig
     ): string {
         $interval = match ($provider->name()) {
-            'BINANCE', 'BINANCE_FUTURES' =>
-                $timeframeConfig['binance_interval'] ?? null,
-            'DERIV' =>
-                $timeframeConfig['deriv_granularity'] ?? null,
-            default =>
-                $timeframeConfig['provider_interval'] ?? null,
+            'BINANCE', 'BINANCE_FUTURES' => $timeframeConfig['binance_interval'] ?? null,
+            'DERIV' => $timeframeConfig['deriv_granularity'] ?? null,
+            default => $timeframeConfig['provider_interval'] ?? null,
         };
 
         $interval = trim((string) $interval);
@@ -416,6 +402,19 @@ class ScreenerEngine
             );
         }
 
+        if ($provider->name() === 'CTRADER_COMMODITY') {
+            return max(
+                2,
+                min(
+                    500,
+                    (int) config(
+                        'tradex_screener.providers.commodity_ctrader.output_size',
+                        260
+                    )
+                )
+            );
+        }
+
         if ($provider->name() === 'TWELVE_DATA_STOCKS') {
             return max(
                 2,
@@ -452,12 +451,10 @@ class ScreenerEngine
     ): array {
         $symbols = array_values(array_filter(
             array_map(
-                static fn (mixed $symbol): string =>
-                    strtoupper(trim((string) $symbol)),
+                static fn (mixed $symbol): string => strtoupper(trim((string) $symbol)),
                 (array) ($filters['symbols'] ?? [])
             ),
-            static fn (string $symbol): bool =>
-                $symbol !== ''
+            static fn (string $symbol): bool => $symbol !== ''
         ));
 
         $trend = strtoupper(

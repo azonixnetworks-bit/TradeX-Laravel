@@ -8,9 +8,10 @@ return [
     |
     | SCREENER-01 introduced the provider-independent core and Forex adapter.
     | SCREENER-02 activated Crypto through Binance public Spot market data.
-    | SCREENER-03 activates Deriv synthetic-index market data through Deriv's
-    | public WebSocket API. Stocks remain COMING_SOON until their dedicated
-    | regional adapters are implemented and tested.
+    | SCREENER-03 activates Deriv and international-index data through the
+    | TradeX MarketData service. Commodities use its authenticated cTrader
+    | feed. Stocks remain COMING_SOON until their dedicated regional adapters
+    | are implemented and tested.
     |
     | Provider timestamps remain canonical UTC. User interfaces may localise
     | UTC timestamps through the existing IANA-timezone architecture.
@@ -35,6 +36,11 @@ return [
         ],
         'DERIV' => [
             'label' => 'Deriv',
+            'enabled' => true,
+            'status' => 'ACTIVE',
+        ],
+        'COMMODITY' => [
+            'label' => 'Commodities',
             'enabled' => true,
             'status' => 'ACTIVE',
         ],
@@ -443,6 +449,33 @@ return [
 
             'output_size' => env(
                 'TRADEX_CTRADER_FOREX_OUTPUT_SIZE',
+                260
+            ),
+        ],
+
+        'commodity_ctrader' => [
+            'enabled' => env(
+                'TRADEX_CTRADER_COMMODITY_ENABLED',
+                true
+            ),
+
+            'base_url' => env(
+                'TRADEX_CTRADER_COMMODITY_BASE_URL',
+                'http://127.0.0.1:8001'
+            ),
+
+            'timeout_seconds' => env(
+                'TRADEX_CTRADER_COMMODITY_TIMEOUT_SECONDS',
+                20
+            ),
+
+            'connect_timeout_seconds' => env(
+                'TRADEX_CTRADER_COMMODITY_CONNECT_TIMEOUT_SECONDS',
+                5
+            ),
+
+            'output_size' => env(
+                'TRADEX_CTRADER_COMMODITY_OUTPUT_SIZE',
                 260
             ),
         ],

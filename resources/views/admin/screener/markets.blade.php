@@ -116,7 +116,7 @@
             @if(
                 in_array(
                     $market,
-                    ['CRYPTO', 'DERIV'],
+                    ['CRYPTO', 'DERIV', 'COMMODITY'],
                     true
                 )
                 && $search !== ''
@@ -168,7 +168,7 @@
     @if(
         in_array(
             $market,
-            ['CRYPTO', 'DERIV'],
+            ['CRYPTO', 'DERIV', 'COMMODITY'],
             true
         )
     )
@@ -198,9 +198,11 @@
                 >
 
                 <label for="screener-symbol-search">
-                    {{ $market === 'DERIV'
-                        ? 'Search Deriv instruments'
-                        : 'Search Binance symbols' }}
+                    {{ match ($market) {
+                        'DERIV' => 'Search Deriv instruments',
+                        'COMMODITY' => 'Search commodity instruments',
+                        default => 'Search Binance symbols',
+                    } }}
                 </label>
 
                 <div>
@@ -209,9 +211,11 @@
                         type="search"
                         name="q"
                         value="{{ $search }}"
-                        placeholder="{{ $market === 'DERIV'
-                            ? 'Search Volatility, Crash, Boom, Step, Jump...'
-                            : 'Search BTC, ETH, SOL...' }}"
+                        placeholder="{{ match ($market) {
+                            'DERIV' => 'Search Volatility, Crash, Boom, Step, Jump, US 500...',
+                            'COMMODITY' => 'Search Gold, Silver, Oil, Natural Gas...',
+                            default => 'Search BTC, ETH, SOL...',
+                        } }}"
                         autocomplete="off"
                     >
 
@@ -250,7 +254,12 @@
                         {{ number_format(
                             $symbolPaginator->total()
                         ) }}
-                        Deriv cTrader instruments
+                        Deriv and international index instruments
+                    @elseif($market === 'COMMODITY')
+                        {{ number_format(
+                            $symbolPaginator->total()
+                        ) }}
+                        cTrader commodity instruments
                     @else
                         {{ number_format(
                             $symbolPaginator->total()
