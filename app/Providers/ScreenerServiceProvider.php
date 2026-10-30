@@ -28,13 +28,8 @@ class ScreenerServiceProvider extends ServiceProvider
             NativeDerivWebSocketTransport::class
         );
 
-        $forexProvider = (bool) config('tradex_screener.providers.forex_ctrader.enabled', false)
-            ? CTraderForexMarketDataProvider::class
-            : TwelveDataForexProvider::class;
-
         $this->app->tag(
             [
-                $forexProvider,
                 BinanceCryptoProvider::class,
                 BinanceFuturesCryptoProvider::class,
                 DerivMarketDataProvider::class,
@@ -45,12 +40,27 @@ class ScreenerServiceProvider extends ServiceProvider
 
         $this->app->singleton(
             ScreenerEngine::class,
-            fn ($app): ScreenerEngine => new StocksScreenerEngine(
-                $app->tagged(
-                    'tradex.screener.providers'
-                ),
-                $app->make(IndicatorEngine::class)
-            )
+            function ($app): ScreenerEngine {
+                $forexProvider = (bool) config(
+                    'tradex_screener.providers.forex_ctrader.enabled',
+                    false
+                )
+                    ? CTraderForexMarketDataProvider::class
+                    : TwelveDataForexProvider::class;
+
+                $providers = [
+                    $app->make($forexProvider),
+                ];
+
+                foreach ($app->tagged('tradex.screener.providers') as $provider) {
+                    $providers[] = $provider;
+                }
+
+                return new StocksScreenerEngine(
+                    $providers,
+                    $app->make(IndicatorEngine::class)
+                );
+            }
         );
     }
 
@@ -58,19 +68,18 @@ class ScreenerServiceProvider extends ServiceProvider
     {
         RateLimiter::for(
             'api-screener-read',
-            fn (Request $request): Limit =>
-                Limit::perMinute(
-                    (int) config(
-                        'tradex_screener.rate_limits.read_per_minute',
-                        60
-                    )
-                )->by(
-                    (string) (
-                        $request->user()
-                            ?->getAuthIdentifier()
-                        ?? $request->ip()
-                    )
+            fn (Request $request): Limit => Limit::perMinute(
+                (int) config(
+                    'tradex_screener.rate_limits.read_per_minute',
+                    60
                 )
+            )->by(
+                (string) (
+                    $request->user()
+                        ?->getAuthIdentifier()
+                    ?? $request->ip()
+                )
+            )
         );
 
         Route::middleware('api')

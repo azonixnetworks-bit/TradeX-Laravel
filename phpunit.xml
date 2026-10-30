@@ -36,6 +36,12 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
 
         <!--
+            Keep legacy Twelve Data screener contract tests deterministic.
+            cTrader provider behavior is covered by its dedicated provider tests.
+        -->
+        <env name="TRADEX_CTRADER_FOREX_ENABLED" value="false" force="true"/>
+
+        <!--
             Keep the automated test baseline independent from a developer's
             real local payment sandbox/live .env configuration. Individual
             Stripe/NOWPayments tests opt in explicitly with config()->set().

@@ -4,6 +4,7 @@ namespace App\Services\Screener\Providers;
 
 use App\Contracts\Screener\MarketDataProvider;
 use App\Exceptions\ScreenerProviderException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -73,6 +74,7 @@ class CTraderForexMarketDataProvider implements MarketDataProvider
         $startedAt = microtime(true);
         $result = [];
         $failed = 0;
+        $lastFailure = null;
 
         foreach ($symbols as $symbol) {
             try {
@@ -90,10 +92,26 @@ class CTraderForexMarketDataProvider implements MarketDataProvider
 
                 if (! $response->successful()) {
                     $failed++;
+                    $lastFailure = new ScreenerProviderException(
+                        'SCREENER_PROVIDER_HTTP_ERROR',
+                        'cTrader Forex market data is temporarily unavailable.'
+                    );
+
                     continue;
                 }
 
                 $payload = $response->json();
+
+                if (! is_array($payload)) {
+                    $failed++;
+                    $lastFailure = new ScreenerProviderException(
+                        'SCREENER_PROVIDER_INVALID_RESPONSE',
+                        'cTrader Forex service returned an invalid response.'
+                    );
+
+                    continue;
+                }
+
                 $candles = is_array($payload) ? ($payload['data'] ?? []) : [];
                 $normalised = $this->normaliseCandles($candles);
 
@@ -101,19 +119,36 @@ class CTraderForexMarketDataProvider implements MarketDataProvider
                     $result[$symbol] = $normalised;
                 } else {
                     $failed++;
+                    $lastFailure = new ScreenerProviderException(
+                        'SCREENER_PROVIDER_NO_DATA',
+                        'cTrader Forex service returned no usable screener data.'
+                    );
                 }
+            } catch (ConnectionException) {
+                $failed++;
+                $lastFailure = new ScreenerProviderException(
+                    'SCREENER_PROVIDER_UNAVAILABLE',
+                    'cTrader Forex market data is temporarily unavailable.'
+                );
             } catch (Throwable $exception) {
                 report($exception);
                 $failed++;
+                $lastFailure = new ScreenerProviderException(
+                    'SCREENER_PROVIDER_UNAVAILABLE',
+                    'cTrader Forex market data is temporarily unavailable.'
+                );
             }
         }
 
         if ($result === []) {
-            $this->markFailure('SCREENER_PROVIDER_NO_DATA');
-            throw new ScreenerProviderException(
+            $failure = $lastFailure ?? new ScreenerProviderException(
                 'SCREENER_PROVIDER_NO_DATA',
                 'cTrader Forex service returned no usable screener data.'
             );
+
+            $this->markFailure($failure->providerCode);
+
+            throw $failure;
         }
 
         $this->markSuccess(
