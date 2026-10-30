@@ -60,12 +60,10 @@ class DerivMarketDataProvider implements MarketDataProvider
             array_unique(
                 array_filter(
                     array_map(
-                        static fn (mixed $symbol): string =>
-                            trim((string) $symbol),
+                        static fn (mixed $symbol): string => trim((string) $symbol),
                         $symbols
                     ),
-                    static fn (string $symbol): bool =>
-                        $symbol !== ''
+                    static fn (string $symbol): bool => $symbol !== ''
                 )
             )
         );
@@ -165,6 +163,68 @@ class DerivMarketDataProvider implements MarketDataProvider
         return $result;
     }
 
+    /** @return array{price: float, digits: int, observed_at_utc: string|null} */
+    public function livePrice(string $symbol, string $side = 'BUY'): array
+    {
+        if (! $this->configured()) {
+            throw new ScreenerProviderException(
+                'SCREENER_PROVIDER_NOT_CONFIGURED',
+                'cTrader Deriv market-data service is not configured.'
+            );
+        }
+
+        $startedAt = microtime(true);
+
+        try {
+            $response = Http::connectTimeout($this->connectTimeout())
+                ->timeout($this->timeout())
+                ->acceptJson()
+                ->get($this->baseUrl().'/api/deriv/price/'.rawurlencode(trim($symbol)));
+
+            $payload = $response->successful() ? $response->json() : null;
+            if (! is_array($payload)) {
+                throw new ScreenerProviderException(
+                    'SCREENER_PROVIDER_NO_DATA',
+                    'Live Deriv price is temporarily unavailable for this symbol.'
+                );
+            }
+
+            $side = strtoupper(trim($side));
+            $primary = $side === 'SELL' ? ($payload['bid'] ?? null) : ($payload['ask'] ?? null);
+            $fallback = $side === 'SELL' ? ($payload['ask'] ?? null) : ($payload['bid'] ?? null);
+            $price = (float) ($primary ?? $fallback ?? 0);
+
+            if (! is_finite($price) || $price <= 0) {
+                throw new ScreenerProviderException(
+                    'SCREENER_PROVIDER_NO_DATA',
+                    'Live Deriv price is temporarily unavailable for this symbol.'
+                );
+            }
+
+            $this->markSuccess((int) round((microtime(true) - $startedAt) * 1000), null);
+
+            return [
+                'price' => $price,
+                'digits' => max(0, min(8, (int) ($payload['digits'] ?? 3))),
+                'observed_at_utc' => isset($payload['updated_at'])
+                    ? (string) $payload['updated_at']
+                    : null,
+            ];
+        } catch (ScreenerProviderException $exception) {
+            $this->markFailure($exception->providerCode);
+
+            throw $exception;
+        } catch (Throwable $exception) {
+            report($exception);
+            $this->markFailure('SCREENER_PROVIDER_UNAVAILABLE');
+
+            throw new ScreenerProviderException(
+                'SCREENER_PROVIDER_UNAVAILABLE',
+                'Live Deriv price is temporarily unavailable.'
+            );
+        }
+    }
+
     public function health(): array
     {
         $cached = Cache::get(
@@ -192,30 +252,24 @@ class DerivMarketDataProvider implements MarketDataProvider
                 )
                 : 'UNCONFIGURED',
 
-            'last_success_at_utc' =>
-                $cached['last_success_at_utc']
+            'last_success_at_utc' => $cached['last_success_at_utc']
                 ?? null,
 
-            'last_failure_at_utc' =>
-                $cached['last_failure_at_utc']
+            'last_failure_at_utc' => $cached['last_failure_at_utc']
                 ?? null,
 
-            'last_error_code' =>
-                $cached['last_error_code']
+            'last_error_code' => $cached['last_error_code']
                 ?? null,
 
-            'last_latency_ms' =>
-                $cached['last_latency_ms']
+            'last_latency_ms' => $cached['last_latency_ms']
                 ?? null,
 
-            'base_host' =>
-                parse_url(
-                    $this->baseUrl(),
-                    PHP_URL_HOST
-                ),
+            'base_host' => parse_url(
+                $this->baseUrl(),
+                PHP_URL_HOST
+            ),
 
-            'authentication_required' =>
-                false,
+            'authentication_required' => false,
         ];
     }
 
@@ -233,11 +287,10 @@ class DerivMarketDataProvider implements MarketDataProvider
             '14400', '4h' => 'H4',
             '86400', '1d', '1day' => 'D1',
 
-            default =>
-                throw new ScreenerProviderException(
-                    'SCREENER_PROVIDER_INVALID_REQUEST',
-                    'Unsupported cTrader Deriv timeframe.'
-                ),
+            default => throw new ScreenerProviderException(
+                'SCREENER_PROVIDER_INVALID_REQUEST',
+                'Unsupported cTrader Deriv timeframe.'
+            ),
         };
     }
 
@@ -265,23 +318,17 @@ class DerivMarketDataProvider implements MarketDataProvider
             }
 
             $candles[] = [
-                'datetime_utc' =>
-                    (string) $value['datetime_utc'],
+                'datetime_utc' => (string) $value['datetime_utc'],
 
-                'open' =>
-                    (float) $value['open'],
+                'open' => (float) $value['open'],
 
-                'high' =>
-                    (float) $value['high'],
+                'high' => (float) $value['high'],
 
-                'low' =>
-                    (float) $value['low'],
+                'low' => (float) $value['low'],
 
-                'close' =>
-                    (float) $value['close'],
+                'close' => (float) $value['close'],
 
-                'volume' =>
-                    isset($value['volume'])
+                'volume' => isset($value['volume'])
                         ? (float) $value['volume']
                         : null,
             ];
@@ -292,15 +339,14 @@ class DerivMarketDataProvider implements MarketDataProvider
             static fn (
                 array $left,
                 array $right
-            ): int =>
-                strcmp(
-                    (string) $left[
-                        'datetime_utc'
-                    ],
-                    (string) $right[
-                        'datetime_utc'
-                    ]
-                )
+            ): int => strcmp(
+                (string) $left[
+                    'datetime_utc'
+                ],
+                (string) $right[
+                    'datetime_utc'
+                ]
+            )
         );
 
         return $candles;
@@ -352,20 +398,16 @@ class DerivMarketDataProvider implements MarketDataProvider
         Cache::put(
             self::HEALTH_CACHE_KEY,
             [
-                'status' =>
-                    $warningCode === null
+                'status' => $warningCode === null
                         ? 'HEALTHY'
                         : 'DEGRADED',
 
-                'last_success_at_utc' =>
-                    now('UTC')
-                        ->toIso8601String(),
+                'last_success_at_utc' => now('UTC')
+                    ->toIso8601String(),
 
-                'last_error_code' =>
-                    $warningCode,
+                'last_error_code' => $warningCode,
 
-                'last_latency_ms' =>
-                    $latencyMs,
+                'last_latency_ms' => $latencyMs,
             ],
             now()->addDay()
         );
@@ -379,12 +421,10 @@ class DerivMarketDataProvider implements MarketDataProvider
             [
                 'status' => 'DEGRADED',
 
-                'last_failure_at_utc' =>
-                    now('UTC')
-                        ->toIso8601String(),
+                'last_failure_at_utc' => now('UTC')
+                    ->toIso8601String(),
 
-                'last_error_code' =>
-                    $errorCode,
+                'last_error_code' => $errorCode,
             ],
             now()->addDay()
         );

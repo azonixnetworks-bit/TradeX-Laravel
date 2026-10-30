@@ -347,6 +347,7 @@
 
 <form
     method="POST"
+    enctype="multipart/form-data"
     action="{{ route(
         'admin.education.courses.modules.store',
         $course
@@ -535,6 +536,17 @@
                             </span>
                         @enderror
 
+                    </div>
+
+                    <div class="module-field full">
+                        <label for="module-thumbnail">
+                            Module Picture
+                            <small>Optional · JPG, PNG or WebP · max 5 MB</small>
+                        </label>
+                        <input id="module-thumbnail" name="thumbnail_image" type="file" accept="image/jpeg,image/png,image/webp">
+                        @error('thumbnail_image')
+                            <span class="module-error">{{ $message }}</span>
+                        @enderror
                     </div>
 
                 </div>

@@ -25,7 +25,6 @@ class CourseModule extends Model
 
     public const STATUS_ARCHIVED = 'ARCHIVED';
 
-
     /*
     |--------------------------------------------------------------------------
     | Mass Assignment
@@ -40,13 +39,13 @@ class CourseModule extends Model
         'title',
         'short_description',
         'description',
+        'thumbnail_path',
         'status',
         'published_at',
         'sort_order',
         'created_by_admin_id',
         'updated_by_admin_id',
     ];
-
 
     /*
     |--------------------------------------------------------------------------
@@ -61,7 +60,6 @@ class CourseModule extends Model
             'sort_order' => 'integer',
         ];
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -88,7 +86,6 @@ class CourseModule extends Model
         });
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | Relationships
@@ -103,7 +100,6 @@ class CourseModule extends Model
         );
     }
 
-
     public function lessons(): HasMany
     {
         return $this->hasMany(
@@ -113,7 +109,6 @@ class CourseModule extends Model
             ->orderBy('id');
     }
 
-
     public function createdByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -122,7 +117,6 @@ class CourseModule extends Model
         );
     }
 
-
     public function updatedByAdmin(): BelongsTo
     {
         return $this->belongsTo(
@@ -130,7 +124,6 @@ class CourseModule extends Model
             'updated_by_admin_id'
         );
     }
-
 
     /*
     |--------------------------------------------------------------------------
@@ -152,7 +145,6 @@ class CourseModule extends Model
         );
     }
 
-
     public function scopePublished(
         Builder $query
     ): Builder {
@@ -171,7 +163,6 @@ class CourseModule extends Model
             );
     }
 
-
     public function scopeDraft(
         Builder $query
     ): Builder {
@@ -181,7 +172,6 @@ class CourseModule extends Model
         );
     }
 
-
     public function scopeArchived(
         Builder $query
     ): Builder {
@@ -190,7 +180,6 @@ class CourseModule extends Model
             self::STATUS_ARCHIVED
         );
     }
-
 
     public function scopeOrdered(
         Builder $query
@@ -204,7 +193,6 @@ class CourseModule extends Model
             );
     }
 
-
     /*
     |--------------------------------------------------------------------------
     | State Helpers
@@ -216,7 +204,6 @@ class CourseModule extends Model
         return $this->status === self::STATUS_DRAFT;
     }
 
-
     public function isPublished(): bool
     {
         return $this->status === self::STATUS_PUBLISHED
@@ -224,9 +211,33 @@ class CourseModule extends Model
             && $this->published_at->lte(now());
     }
 
-
     public function isArchived(): bool
     {
         return $this->status === self::STATUS_ARCHIVED;
+    }
+
+    public function thumbnailUrl(): ?string
+    {
+        $thumbnail = trim((string) $this->thumbnail_path);
+
+        if ($thumbnail === '') {
+            return null;
+        }
+
+        if (str_starts_with($thumbnail, 'https://')
+            || str_starts_with($thumbnail, 'http://')) {
+            return $thumbnail;
+        }
+
+        $normalized = ltrim(
+            str_replace('\\', '/', $thumbnail),
+            '/'
+        );
+
+        return url(
+            str_starts_with($normalized, 'storage/')
+                ? $normalized
+                : 'storage/'.$normalized
+        );
     }
 }
