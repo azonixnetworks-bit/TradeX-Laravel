@@ -394,31 +394,58 @@ return [
             'output_size' => env('TRADEX_BINANCE_FUTURES_MARKET_DATA_OUTPUT_SIZE', 260),
         ],
         'deriv' => [
-    'enabled' => env(
-        'TRADEX_CTRADER_DERIV_ENABLED',
-        false
-    ),
+            'enabled' => env(
+                'TRADEX_CTRADER_DERIV_ENABLED',
+                false
+            ),
 
-    'base_url' => env(
-        'TRADEX_CTRADER_DERIV_BASE_URL',
-        'http://127.0.0.1:8001'
-    ),
+            'base_url' => env(
+                'TRADEX_CTRADER_DERIV_BASE_URL',
+                'http://127.0.0.1:8001'
+            ),
 
-    'timeout_seconds' => env(
-        'TRADEX_CTRADER_DERIV_TIMEOUT_SECONDS',
-        20
-    ),
+            'timeout_seconds' => env(
+                'TRADEX_CTRADER_DERIV_TIMEOUT_SECONDS',
+                20
+            ),
 
-    'connect_timeout_seconds' => env(
-        'TRADEX_CTRADER_DERIV_CONNECT_TIMEOUT_SECONDS',
-        5
-    ),
+            'connect_timeout_seconds' => env(
+                'TRADEX_CTRADER_DERIV_CONNECT_TIMEOUT_SECONDS',
+                5
+            ),
 
-    'output_size' => env(
-        'TRADEX_CTRADER_DERIV_OUTPUT_SIZE',
-        260
-    ),
-],
+            'output_size' => env(
+                'TRADEX_CTRADER_DERIV_OUTPUT_SIZE',
+                260
+            ),
+        ],
+
+        'forex_ctrader' => [
+            'enabled' => env(
+                'TRADEX_CTRADER_FOREX_ENABLED',
+                true
+            ),
+
+            'base_url' => env(
+                'TRADEX_CTRADER_FOREX_BASE_URL',
+                'http://127.0.0.1:8001'
+            ),
+
+            'timeout_seconds' => env(
+                'TRADEX_CTRADER_FOREX_TIMEOUT_SECONDS',
+                20
+            ),
+
+            'connect_timeout_seconds' => env(
+                'TRADEX_CTRADER_FOREX_CONNECT_TIMEOUT_SECONDS',
+                5
+            ),
+
+            'output_size' => env(
+                'TRADEX_CTRADER_FOREX_OUTPUT_SIZE',
+                260
+            ),
+        ],
     ],
 
     'cache' => [

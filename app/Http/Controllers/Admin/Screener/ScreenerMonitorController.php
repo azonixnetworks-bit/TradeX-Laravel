@@ -9,6 +9,7 @@ use App\Models\AdminUser;
 use App\Services\Screener\BinanceSpotCatalogService;
 use App\Services\Screener\BinanceFuturesCatalogService;
 use App\Services\Screener\CTraderDerivCatalogService;
+use App\Services\Screener\CTraderForexCatalogService;
 use App\Services\Screener\MarketBubbleService;
 use App\Services\Screener\ScreenerEngine;
 use App\Services\Screener\ScreenerHealthService;
@@ -315,6 +316,103 @@ class ScreenerMonitorController extends Controller
                  * This avoids requesting all 59 Deriv instruments
                  * on every page load.
                  */
+                $results =
+                    $engine->screenWithSymbols(
+                        $filters,
+                        $pageSymbols
+                    );
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | FOREX / cTrader
+            |--------------------------------------------------------------------------
+            */
+            elseif ($market === 'FOREX') {
+                $forexCatalog = app(CTraderForexCatalogService::class);
+                $catalog = $forexCatalog->catalog();
+
+                $symbols = (array) (
+                    $catalog['symbols'] ?? []
+                );
+
+                if ($search !== '') {
+                    $needle = strtoupper($search);
+
+                    $symbols = array_values(
+                        array_filter(
+                            $symbols,
+                            static fn (
+                                array $symbol
+                            ): bool =>
+                                str_contains(
+                                    strtoupper(
+                                        (string) (
+                                            $symbol['symbol']
+                                            ?? ''
+                                        )
+                                    ),
+                                    $needle
+                                )
+                                ||
+                                str_contains(
+                                    strtoupper(
+                                        (string) (
+                                            $symbol['name']
+                                            ?? ''
+                                        )
+                                    ),
+                                    $needle
+                                )
+                                ||
+                                str_contains(
+                                    strtoupper(
+                                        (string) (
+                                            $symbol['category']
+                                            ?? ''
+                                        )
+                                    ),
+                                    $needle
+                                )
+                        )
+                    );
+                }
+
+                $perPage = 20;
+
+                $page = max(
+                    1,
+                    (int) $request->query(
+                        'page',
+                        1
+                    )
+                );
+
+                $pageSymbols = array_slice(
+                    $symbols,
+                    ($page - 1) * $perPage,
+                    $perPage
+                );
+
+                $symbolPaginator =
+                    new LengthAwarePaginator(
+                        $pageSymbols,
+                        count($symbols),
+                        $perPage,
+                        $page,
+                        [
+                            'path' =>
+                                route(
+                                    'admin.screener.markets'
+                                ),
+
+                            'query' =>
+                                $request->except(
+                                    'page'
+                                ),
+                        ]
+                    );
+
                 $results =
                     $engine->screenWithSymbols(
                         $filters,

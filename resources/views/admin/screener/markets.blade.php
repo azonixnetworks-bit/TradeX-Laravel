@@ -15,6 +15,12 @@
     src="{{ asset('admin/js/screener-crypto-live.js').'?v='.filemtime(public_path('admin/js/screener-crypto-live.js')) }}"
     defer
 ></script>
+@if($market === 'FOREX')
+<script
+    src="{{ asset('admin/js/screener-forex-live.js').'?v='.filemtime(public_path('admin/js/screener-forex-live.js')) }}"
+    defer
+></script>
+@endif
 @endpush
 
 @section('content')
@@ -398,6 +404,12 @@
                             )
                         }}"
                     @endif
+
+                    @if($market === 'FOREX')
+                        data-forex-live-table
+                        data-live-stream-url="ws://127.0.0.1:8001/ws/forex"
+                        data-live-poll-url="http://127.0.0.1:8001/api/forex/prices"
+                    @endif
                 >
 
                     <thead>
@@ -423,6 +435,10 @@
                             <tr
                                 @if($market === 'CRYPTO')
                                     data-binance-symbol="{{
+                                        $row['symbol']
+                                    }}"
+                                @elseif($market === 'FOREX')
+                                    data-forex-symbol="{{
                                         $row['symbol']
                                     }}"
                                 @endif
