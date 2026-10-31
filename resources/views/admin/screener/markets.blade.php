@@ -98,6 +98,28 @@
             </nav>
         @endif
 
+        @if($market === 'STOCKS')
+            <nav class="screener-crypto-segments" aria-label="Select stocks region">
+                @foreach($stockRegions as $regionKey => $regionConfig)
+                    <a
+                        href="{{ route('admin.screener.markets', ['market' => 'STOCKS', 'region' => $regionKey, 'timeframe' => $timeframe]) }}"
+                        class="{{ $stockRegion === $regionKey ? 'active' : '' }} {{ ($regionConfig['enabled'] ?? false) ? '' : 'disabled' }}"
+                        @if(!($regionConfig['enabled'] ?? false)) aria-disabled="true" @endif
+                    >
+                        {{ $regionKey === 'SRI_LANKA'
+                            ? 'CSE Sri Lanka'
+                            : ($regionConfig['label'] ?? $regionKey) }}
+
+                        @if(!($regionConfig['enabled'] ?? false))
+                            <small>Provider required</small>
+                        @elseif(($regionConfig['data_mode'] ?? '') === 'EOD')
+                            <small>EOD</small>
+                        @endif
+                    </a>
+                @endforeach
+            </nav>
+        @endif
+
         <form
             method="GET"
             action="{{ route('admin.screener.markets') }}"
@@ -111,6 +133,10 @@
 
             @if($market === 'CRYPTO')
                 <input type="hidden" name="segment" value="{{ $cryptoSegment }}">
+            @endif
+
+            @if($market === 'STOCKS')
+                <input type="hidden" name="region" value="{{ $stockRegion }}">
             @endif
 
             @if(
@@ -294,7 +320,8 @@
                     'admin.screener.markets',
                     [
                         'market' => $market,
-                        'timeframe' => $timeframe
+                        'timeframe' => $timeframe,
+                        'region' => $market === 'STOCKS' ? $stockRegion : null,
                     ]
                 ) }}"
             >
