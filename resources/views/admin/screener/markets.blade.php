@@ -58,70 +58,71 @@
     </div>
 
     <section class="panel screener-market-controls">
-
-        <div
-            class="screener-market-buttons"
-            aria-label="Select market"
-        >
-            @foreach($markets as $marketKey => $marketConfig)
-                <a
-                    href="{{ route('admin.screener.markets', [
-                        'market' => $marketKey,
-                        'timeframe' => $timeframe
-                    ]) }}"
-                    class="
-                        {{ $market === $marketKey ? 'active' : '' }}
-                        {{ ($marketConfig['enabled'] ?? false) ? '' : 'disabled' }}
-                    "
-                    @if(!($marketConfig['enabled'] ?? false))
-                        aria-disabled="true"
-                    @endif
-                >
-                    {{ $marketConfig['label'] ?? $marketKey }}
-
-                    @if(!($marketConfig['enabled'] ?? false))
-                        <small>
-                            Coming soon
-                        </small>
-                    @endif
-                </a>
-            @endforeach
-        </div>
-
-        @if($market === 'CRYPTO')
-            <nav class="screener-crypto-segments screener-context-segments" aria-label="Select Binance market type">
-                @foreach(['SPOT' => 'Spot', 'FUTURES' => 'Futures'] as $segmentKey => $segmentLabel)
-                    <a href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $segmentKey, 'timeframe' => $timeframe]) }}" class="{{ $cryptoSegment === $segmentKey ? 'active' : '' }}">
-                        {{ $segmentLabel }}
-                    </a>
-                @endforeach
-            </nav>
-        @endif
-
-        @if($market === 'STOCKS')
-            <nav class="screener-crypto-segments screener-context-segments screener-stock-regions" aria-label="Select stocks region">
-                @foreach($stockRegions as $regionKey => $regionConfig)
+        <div class="screener-market-primary-row">
+            <div
+                class="screener-market-buttons"
+                aria-label="Select market"
+            >
+                @foreach($markets as $marketKey => $marketConfig)
                     <a
-                        href="{{ route('admin.screener.markets', ['market' => 'STOCKS', 'region' => $regionKey, 'timeframe' => $timeframe]) }}"
-                        class="{{ $stockRegion === $regionKey ? 'active' : '' }} {{ ($regionConfig['enabled'] ?? false) ? '' : 'disabled' }}"
-                        title="{{ !($regionConfig['enabled'] ?? false)
-                            ? 'Provider required'
-                            : (($regionConfig['data_mode'] ?? '') === 'EOD' ? 'End-of-day data' : 'Live data') }}"
-                        @if(!($regionConfig['enabled'] ?? false)) aria-disabled="true" @endif
+                        href="{{ route('admin.screener.markets', [
+                            'market' => $marketKey,
+                            'timeframe' => $timeframe
+                        ]) }}"
+                        class="
+                            {{ $market === $marketKey ? 'active' : '' }}
+                            {{ ($marketConfig['enabled'] ?? false) ? '' : 'disabled' }}
+                        "
+                        @if(!($marketConfig['enabled'] ?? false))
+                            aria-disabled="true"
+                        @endif
                     >
-                        {{ $regionKey === 'SRI_LANKA'
-                            ? 'CSE Sri Lanka'
-                            : ($regionConfig['label'] ?? $regionKey) }}
+                        {{ $marketConfig['label'] ?? $marketKey }}
+
+                        @if(!($marketConfig['enabled'] ?? false))
+                            <small>
+                                Coming soon
+                            </small>
+                        @endif
                     </a>
                 @endforeach
-            </nav>
-        @endif
+            </div>
 
-        <form
-            method="GET"
-            action="{{ route('admin.screener.markets') }}"
-            class="screener-timeframe-form"
-        >
+            <div class="screener-market-secondary-controls">
+                @if($market === 'CRYPTO')
+                    <nav class="screener-crypto-segments screener-context-segments" aria-label="Select Binance market type">
+                        @foreach(['SPOT' => 'Spot', 'FUTURES' => 'Futures'] as $segmentKey => $segmentLabel)
+                            <a href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $segmentKey, 'timeframe' => $timeframe]) }}" class="{{ $cryptoSegment === $segmentKey ? 'active' : '' }}">
+                                {{ $segmentLabel }}
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
+                @if($market === 'STOCKS')
+                    <nav class="screener-crypto-segments screener-context-segments screener-stock-regions" aria-label="Select stocks region">
+                        @foreach($stockRegions as $regionKey => $regionConfig)
+                            <a
+                                href="{{ route('admin.screener.markets', ['market' => 'STOCKS', 'region' => $regionKey, 'timeframe' => $timeframe]) }}"
+                                class="{{ $stockRegion === $regionKey ? 'active' : '' }} {{ ($regionConfig['enabled'] ?? false) ? '' : 'disabled' }}"
+                                title="{{ !($regionConfig['enabled'] ?? false)
+                                    ? 'Provider required'
+                                    : (($regionConfig['data_mode'] ?? '') === 'EOD' ? 'End-of-day data' : 'Live data') }}"
+                                @if(!($regionConfig['enabled'] ?? false)) aria-disabled="true" @endif
+                            >
+                                {{ $regionKey === 'SRI_LANKA'
+                                    ? 'CSE Sri Lanka'
+                                    : ($regionConfig['label'] ?? $regionKey) }}
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
+                <form
+                    method="GET"
+                    action="{{ route('admin.screener.markets') }}"
+                    class="screener-timeframe-form"
+                >
             <input
                 type="hidden"
                 name="market"
@@ -184,7 +185,9 @@
                     View
                 </button>
             </noscript>
-        </form>
+                </form>
+            </div>
+        </div>
 
     </section>
 

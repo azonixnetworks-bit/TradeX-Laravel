@@ -113,6 +113,14 @@ class ScreenerMonitorContractTest extends TestCase
             $marketView
         );
         $this->assertStringContainsString(
+            'screener-market-primary-row',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-market-secondary-controls',
+            $marketView
+        );
+        $this->assertStringContainsString(
             "'SRI_LANKA'",
             $controller
         );
