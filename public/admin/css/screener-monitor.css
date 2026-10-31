@@ -39,15 +39,37 @@
 }
 
 .screener-market-controls {
-    align-items: flex-end;
+    display: block;
+}
+
+.screener-market-primary-row {
+    align-items: center;
     display: flex;
     gap: 18px;
     justify-content: space-between;
+    width: 100%;
+}
+
+.screener-market-buttons {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    min-width: max-content;
+}
+
+.screener-market-secondary-controls {
+    align-items: center;
+    display: flex;
+    flex: 1 1 auto;
+    gap: 12px;
+    justify-content: flex-end;
+    min-width: 0;
 }
 
 .screener-timeframe-form {
     align-items: center;
     display: flex;
+    flex: 0 0 auto;
     gap: 10px;
 }
 
@@ -418,6 +440,18 @@ body.screener-chart-open {
     margin-top: 14px;
 }
 
+.screener-context-segments {
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    margin-top: 0;
+    min-width: 0;
+}
+
+.screener-context-segments a {
+    text-align: center;
+    white-space: nowrap;
+}
+
 .screener-crypto-segments a {
     border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 999px;
@@ -594,9 +628,41 @@ body.screener-chart-open {
         grid-template-columns: 1fr;
     }
 
-    .screener-market-controls {
+    .screener-market-primary-row {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .screener-market-buttons {
+        justify-content: flex-start;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+    }
+
+    .screener-market-secondary-controls {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        width: 100%;
+    }
+
+    .screener-context-segments {
+        justify-content: flex-start;
+        max-width: 100%;
+        overflow-x: auto;
+        padding-bottom: 4px;
+        scrollbar-width: thin;
+    }
+
+    .screener-market-buttons a,
+    .screener-context-segments a {
+        flex: 0 0 auto;
+    }
+
+    .screener-timeframe-form {
+        align-self: flex-end;
     }
 
     .screener-symbol-search-panel,

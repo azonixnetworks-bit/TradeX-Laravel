@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api\Screener;
 
+use App\Services\Screener\ScreenerEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -28,6 +29,20 @@ class ScreenerApiTest extends TestCase
             'tradex_screener.providers.twelve_data.api_key',
             'test-twelve-data-key'
         );
+
+        config()->set(
+            'tradex_screener.providers.twelve_data.base_url',
+            'https://api.twelvedata.com'
+        );
+
+        config()->set(
+            'tradex_screener.providers.forex_ctrader.enabled',
+            false
+        );
+
+        // The application may resolve the singleton during boot. Rebuild it
+        // after this test explicitly switches the Forex provider.
+        $this->app->forgetInstance(ScreenerEngine::class);
 
         config()->set(
             'tradex_screener.forex.symbols',
@@ -108,11 +123,10 @@ class ScreenerApiTest extends TestCase
     public function test_forex_results_are_calculated_internally_and_cached(): void
     {
         Http::fake([
-            'https://api.twelvedata.com/*' =>
-                Http::response(
-                    $this->timeSeriesPayload(),
-                    200
-                ),
+            'https://api.twelvedata.com/*' => Http::response(
+                $this->timeSeriesPayload(),
+                200
+            ),
         ]);
 
         $user = $this->createApiUser();
@@ -167,8 +181,7 @@ class ScreenerApiTest extends TestCase
         Http::assertSentCount(1);
 
         Http::assertSent(
-            static fn ($request): bool =>
-                $request['timezone'] === 'UTC'
+            static fn ($request): bool => $request['timezone'] === 'UTC'
                 && $request['interval'] === '1h'
                 && $request['symbol'] === 'EUR/USD'
         );
@@ -196,7 +209,7 @@ class ScreenerApiTest extends TestCase
             ->assertOk();
 
         Cache::forget(
-            'tradex:screener:fresh:v1:FOREX:H1'
+            'tradex:screener:fresh:v1:FOREX:TWELVE_DATA:H1'
         );
 
         $this->withToken($token)
@@ -272,14 +285,13 @@ class ScreenerApiTest extends TestCase
             $close = 1.0500 + ($index * 0.0002);
 
             $values[] = [
-                'datetime' =>
-                    now('UTC')
-                        ->subHours(
-                            259 - $index
-                        )
-                        ->format(
-                            'Y-m-d H:i:s'
-                        ),
+                'datetime' => now('UTC')
+                    ->subHours(
+                        259 - $index
+                    )
+                    ->format(
+                        'Y-m-d H:i:s'
+                    ),
                 'open' => number_format(
                     $close - 0.00005,
                     5,

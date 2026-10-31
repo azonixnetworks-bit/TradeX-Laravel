@@ -52,7 +52,7 @@ class DerivMarketDataProvider implements MarketDataProvider
         if (! $this->configured()) {
             throw new ScreenerProviderException(
                 'SCREENER_PROVIDER_NOT_CONFIGURED',
-                'cTrader Deriv market-data service is not configured.'
+                'TradeX Deriv market-data service is not configured.'
             );
         }
 
@@ -146,7 +146,7 @@ class DerivMarketDataProvider implements MarketDataProvider
 
             throw new ScreenerProviderException(
                 'SCREENER_PROVIDER_NO_DATA',
-                'cTrader Deriv service returned no usable screener data.'
+                'TradeX Deriv service returned no usable screener data.'
             );
         }
 
@@ -169,7 +169,7 @@ class DerivMarketDataProvider implements MarketDataProvider
         if (! $this->configured()) {
             throw new ScreenerProviderException(
                 'SCREENER_PROVIDER_NOT_CONFIGURED',
-                'cTrader Deriv market-data service is not configured.'
+                'TradeX Deriv market-data service is not configured.'
             );
         }
 
@@ -289,7 +289,7 @@ class DerivMarketDataProvider implements MarketDataProvider
 
             default => throw new ScreenerProviderException(
                 'SCREENER_PROVIDER_INVALID_REQUEST',
-                'Unsupported cTrader Deriv timeframe.'
+                'Unsupported TradeX Deriv timeframe.'
             ),
         };
     }

@@ -20,7 +20,7 @@
             <div class="page-eyebrow">MARKET DATA OPERATIONS</div>
             <h1>Screener <span>Monitor</span></h1>
             <p>
-                Read-only health, cache and provider readiness for Forex, Crypto, Deriv and Stocks.
+                Read-only health, cache and provider readiness for Forex, Crypto, Deriv, Commodities and Stocks.
             </p>
         </div>
 

@@ -15,6 +15,12 @@
     src="{{ asset('admin/js/screener-crypto-live.js').'?v='.filemtime(public_path('admin/js/screener-crypto-live.js')) }}"
     defer
 ></script>
+@if($market === 'FOREX')
+<script
+    src="{{ asset('admin/js/screener-forex-live.js').'?v='.filemtime(public_path('admin/js/screener-forex-live.js')) }}"
+    defer
+></script>
+@endif
 @endpush
 
 @section('content')
@@ -52,51 +58,71 @@
     </div>
 
     <section class="panel screener-market-controls">
+        <div class="screener-market-primary-row">
+            <div
+                class="screener-market-buttons"
+                aria-label="Select market"
+            >
+                @foreach($markets as $marketKey => $marketConfig)
+                    <a
+                        href="{{ route('admin.screener.markets', [
+                            'market' => $marketKey,
+                            'timeframe' => $timeframe
+                        ]) }}"
+                        class="
+                            {{ $market === $marketKey ? 'active' : '' }}
+                            {{ ($marketConfig['enabled'] ?? false) ? '' : 'disabled' }}
+                        "
+                        @if(!($marketConfig['enabled'] ?? false))
+                            aria-disabled="true"
+                        @endif
+                    >
+                        {{ $marketConfig['label'] ?? $marketKey }}
 
-        <div
-            class="screener-market-buttons"
-            aria-label="Select market"
-        >
-            @foreach($markets as $marketKey => $marketConfig)
-                <a
-                    href="{{ route('admin.screener.markets', [
-                        'market' => $marketKey,
-                        'timeframe' => $timeframe
-                    ]) }}"
-                    class="
-                        {{ $market === $marketKey ? 'active' : '' }}
-                        {{ ($marketConfig['enabled'] ?? false) ? '' : 'disabled' }}
-                    "
-                    @if(!($marketConfig['enabled'] ?? false))
-                        aria-disabled="true"
-                    @endif
-                >
-                    {{ $marketConfig['label'] ?? $marketKey }}
-
-                    @if(!($marketConfig['enabled'] ?? false))
-                        <small>
-                            Coming soon
-                        </small>
-                    @endif
-                </a>
-            @endforeach
-        </div>
-
-        @if($market === 'CRYPTO')
-            <nav class="screener-crypto-segments" aria-label="Select Binance market type">
-                @foreach(['SPOT' => 'Spot', 'FUTURES' => 'Futures'] as $segmentKey => $segmentLabel)
-                    <a href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $segmentKey, 'timeframe' => $timeframe]) }}" class="{{ $cryptoSegment === $segmentKey ? 'active' : '' }}">
-                        {{ $segmentLabel }}
+                        @if(!($marketConfig['enabled'] ?? false))
+                            <small>
+                                Coming soon
+                            </small>
+                        @endif
                     </a>
                 @endforeach
-            </nav>
-        @endif
+            </div>
 
-        <form
-            method="GET"
-            action="{{ route('admin.screener.markets') }}"
-            class="screener-timeframe-form"
-        >
+            <div class="screener-market-secondary-controls">
+                @if($market === 'CRYPTO')
+                    <nav class="screener-crypto-segments screener-context-segments" aria-label="Select Binance market type">
+                        @foreach(['SPOT' => 'Spot', 'FUTURES' => 'Futures'] as $segmentKey => $segmentLabel)
+                            <a href="{{ route('admin.screener.markets', ['market' => 'CRYPTO', 'segment' => $segmentKey, 'timeframe' => $timeframe]) }}" class="{{ $cryptoSegment === $segmentKey ? 'active' : '' }}">
+                                {{ $segmentLabel }}
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
+                @if($market === 'STOCKS')
+                    <nav class="screener-crypto-segments screener-context-segments screener-stock-regions" aria-label="Select stocks region">
+                        @foreach($stockRegions as $regionKey => $regionConfig)
+                            <a
+                                href="{{ route('admin.screener.markets', ['market' => 'STOCKS', 'region' => $regionKey, 'timeframe' => $timeframe]) }}"
+                                class="{{ $stockRegion === $regionKey ? 'active' : '' }} {{ ($regionConfig['enabled'] ?? false) ? '' : 'disabled' }}"
+                                title="{{ !($regionConfig['enabled'] ?? false)
+                                    ? 'Provider required'
+                                    : (($regionConfig['data_mode'] ?? '') === 'EOD' ? 'End-of-day data' : 'Live data') }}"
+                                @if(!($regionConfig['enabled'] ?? false)) aria-disabled="true" @endif
+                            >
+                                {{ $regionKey === 'SRI_LANKA'
+                                    ? 'CSE Sri Lanka'
+                                    : ($regionConfig['label'] ?? $regionKey) }}
+                            </a>
+                        @endforeach
+                    </nav>
+                @endif
+
+                <form
+                    method="GET"
+                    action="{{ route('admin.screener.markets') }}"
+                    class="screener-timeframe-form"
+                >
             <input
                 type="hidden"
                 name="market"
@@ -107,10 +133,14 @@
                 <input type="hidden" name="segment" value="{{ $cryptoSegment }}">
             @endif
 
+            @if($market === 'STOCKS')
+                <input type="hidden" name="region" value="{{ $stockRegion }}">
+            @endif
+
             @if(
                 in_array(
                     $market,
-                    ['CRYPTO', 'DERIV'],
+                    ['CRYPTO', 'DERIV', 'COMMODITY'],
                     true
                 )
                 && $search !== ''
@@ -155,14 +185,16 @@
                     View
                 </button>
             </noscript>
-        </form>
+                </form>
+            </div>
+        </div>
 
     </section>
 
     @if(
         in_array(
             $market,
-            ['CRYPTO', 'DERIV'],
+            ['CRYPTO', 'DERIV', 'COMMODITY'],
             true
         )
     )
@@ -192,9 +224,11 @@
                 >
 
                 <label for="screener-symbol-search">
-                    {{ $market === 'DERIV'
-                        ? 'Search Deriv instruments'
-                        : 'Search Binance symbols' }}
+                    {{ match ($market) {
+                        'DERIV' => 'Search Deriv instruments',
+                        'COMMODITY' => 'Search commodity instruments',
+                        default => 'Search Binance symbols',
+                    } }}
                 </label>
 
                 <div>
@@ -203,9 +237,11 @@
                         type="search"
                         name="q"
                         value="{{ $search }}"
-                        placeholder="{{ $market === 'DERIV'
-                            ? 'Search Volatility, Crash, Boom, Step, Jump...'
-                            : 'Search BTC, ETH, SOL...' }}"
+                        placeholder="{{ match ($market) {
+                            'DERIV' => 'Search Volatility, Crash, Boom, Step, Jump, US 500...',
+                            'COMMODITY' => 'Search Gold, Silver, Oil, Natural Gas...',
+                            default => 'Search BTC, ETH, SOL...',
+                        } }}"
                         autocomplete="off"
                     >
 
@@ -244,7 +280,12 @@
                         {{ number_format(
                             $symbolPaginator->total()
                         ) }}
-                        Deriv cTrader instruments
+                        Deriv and international index instruments
+                    @elseif($market === 'COMMODITY')
+                        {{ number_format(
+                            $symbolPaginator->total()
+                        ) }}
+                        cTrader commodity instruments
                     @else
                         {{ number_format(
                             $symbolPaginator->total()
@@ -279,7 +320,8 @@
                     'admin.screener.markets',
                     [
                         'market' => $market,
-                        'timeframe' => $timeframe
+                        'timeframe' => $timeframe,
+                        'region' => $market === 'STOCKS' ? $stockRegion : null,
                     ]
                 ) }}"
             >
@@ -398,6 +440,12 @@
                             )
                         }}"
                     @endif
+
+                    @if($market === 'FOREX')
+                        data-forex-live-table
+                        data-live-stream-url="ws://127.0.0.1:8001/ws/forex"
+                        data-live-poll-url="http://127.0.0.1:8001/api/forex/prices"
+                    @endif
                 >
 
                     <thead>
@@ -423,6 +471,10 @@
                             <tr
                                 @if($market === 'CRYPTO')
                                     data-binance-symbol="{{
+                                        $row['symbol']
+                                    }}"
+                                @elseif($market === 'FOREX')
+                                    data-forex-symbol="{{
                                         $row['symbol']
                                     }}"
                                 @endif

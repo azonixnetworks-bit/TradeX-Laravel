@@ -39,8 +39,7 @@ class ScreenerMonitorContractTest extends TestCase
         ));
 
         foreach (
-            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $chartView, $css, $nav, $monitor, $cryptoLive]
-            as $file
+            [$webRoutes, $routes, $controller, $layout, $view, $marketView, $chartView, $css, $nav, $monitor, $cryptoLive] as $file
         ) {
             $this->assertIsString($file);
         }
@@ -100,6 +99,34 @@ class ScreenerMonitorContractTest extends TestCase
         $this->assertStringContainsString(
             'screener-market-buttons',
             $marketView
+        );
+        $this->assertStringContainsString(
+            'Select stocks region',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'CSE Sri Lanka',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-stock-regions',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-market-primary-row',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            'screener-market-secondary-controls',
+            $marketView
+        );
+        $this->assertStringContainsString(
+            "'SRI_LANKA'",
+            $controller
+        );
+        $this->assertStringContainsString(
+            "\$filters['region'] = \$stockRegion",
+            $controller
         );
         $this->assertStringContainsString(
             'Search Binance symbols',
