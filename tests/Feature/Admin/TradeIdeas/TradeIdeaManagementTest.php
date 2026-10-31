@@ -48,6 +48,23 @@ class TradeIdeaManagementTest extends TestCase
         )->assertForbidden();
     }
 
+    public function test_create_form_has_category_aware_symbol_suggestions(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.create',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.trade_ideas.create'))
+            ->assertOk()
+            ->assertSee('trade-idea-symbol-suggestions', false)
+            ->assertSee('trade-idea-symbol-autocomplete.js', false)
+            ->assertSee('EURUSD')
+            ->assertSee('BTCUSDT')
+            ->assertSee('BOOM1000')
+            ->assertSee('AAPL');
+    }
+
     public function test_rev3_schema_removes_language_and_validity_fields(): void
     {
         $this->assertFalse(

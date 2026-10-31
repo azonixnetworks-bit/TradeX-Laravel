@@ -1,5 +1,6 @@
 @php
     $editing = isset($dailyTradeIdea);
+    $symbolCatalog ??= app(\App\Services\TradeIdeas\TradeIdeaSymbolCatalog::class)->grouped();
 
     $targetValues = old('targets');
 
@@ -77,14 +78,29 @@
 
         <div class="ti-field">
             <label for="symbol">SYMBOL</label>
-            <input
-                id="symbol"
-                name="symbol"
-                maxlength="40"
-                value="{{ old('symbol', $editing ? $dailyTradeIdea->symbol : '') }}"
-                placeholder="EURUSD / BTCUSD / XAUUSD"
-                required
-            >
+            <div class="ti-symbol-autocomplete">
+                <input
+                    id="symbol"
+                    name="symbol"
+                    maxlength="40"
+                    value="{{ old('symbol', $editing ? $dailyTradeIdea->symbol : '') }}"
+                    placeholder="Type EURUSD, XAUUSD…"
+                    autocomplete="off"
+                    aria-autocomplete="list"
+                    aria-controls="trade-idea-symbol-suggestions"
+                    aria-expanded="false"
+                    required
+                >
+                <div
+                    id="trade-idea-symbol-suggestions"
+                    class="ti-symbol-suggestions"
+                    role="listbox"
+                    hidden
+                ></div>
+            </div>
+            <div class="ti-symbol-search-hint">
+                Type a symbol or instrument name. Suggestions follow the selected category and stock region.
+            </div>
             @error('symbol')<div class="ti-error">{{ $message }}</div>@enderror
         </div>
 
@@ -125,6 +141,8 @@
         </div>
     </div>
 </div>
+
+<script id="trade-idea-symbol-catalog" type="application/json">@json($symbolCatalog)</script>
 
 <div class="ti-section">
     <h2>Chart & TradingView · Optional</h2>

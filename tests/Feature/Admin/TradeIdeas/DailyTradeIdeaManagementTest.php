@@ -30,6 +30,23 @@ class DailyTradeIdeaManagementTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_daily_create_form_has_category_aware_symbol_suggestions(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'trade_ideas.create',
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.daily_trade_ideas.create'))
+            ->assertOk()
+            ->assertSee('trade-idea-symbol-suggestions', false)
+            ->assertSee('trade-idea-symbol-autocomplete.js', false)
+            ->assertSee('EURUSD')
+            ->assertSee('BTCUSDT')
+            ->assertSee('BOOM1000')
+            ->assertSee('AAPL');
+    }
+
     public function test_admin_can_create_daily_trade_idea_without_touching_long_term_table(): void
     {
         $admin = $this->adminWithPermissions([

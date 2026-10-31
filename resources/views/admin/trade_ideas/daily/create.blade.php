@@ -4,6 +4,7 @@
 @section('page-title', 'Daily Trade Ideas')
 
 @push('styles')
+<link rel="stylesheet" href="{{ asset('admin/css/trade-idea-symbol-autocomplete.css') }}">
 <style>
     .ti-form{max-width:1100px}.ti-section{padding:22px;border-bottom:1px solid rgba(255,255,255,.06)}
     .ti-section:last-child{border-bottom:0}.ti-section h2{margin:0 0 6px;font-size:16px}.ti-section>p{margin:0 0 18px;font-size:11px;opacity:.55;line-height:1.6}
@@ -44,3 +45,7 @@
     </form>
 </section>
 @endsection
+
+@push('scripts')
+<script src="{{ asset('admin/js/trade-idea-symbol-autocomplete.js') }}" defer></script>
+@endpush

@@ -1,0 +1,62 @@
+.ti-symbol-autocomplete {
+    position: relative;
+}
+
+.ti-symbol-suggestions {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 6px);
+    right: 0;
+    left: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 6px;
+    border: 1px solid rgba(218, 178, 88, .28);
+    border-radius: 12px;
+    background: #071624;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, .42);
+}
+
+.ti-symbol-suggestions[hidden] {
+    display: none;
+}
+
+.ti-symbol-suggestion {
+    display: grid;
+    grid-template-columns: minmax(80px, auto) minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    padding: 10px 11px;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.ti-symbol-suggestion:hover,
+.ti-symbol-suggestion.is-active {
+    background: linear-gradient(135deg, rgba(218, 178, 88, .18), rgba(218, 178, 88, .06));
+}
+
+.ti-symbol-suggestion strong {
+    color: #e6c873;
+    font-size: 12px;
+}
+
+.ti-symbol-suggestion span {
+    min-width: 0;
+    overflow: hidden;
+    color: rgba(255, 255, 255, .7);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ti-symbol-search-hint {
+    margin-top: 6px;
+    color: rgba(255, 255, 255, .48);
+    font-size: 9px;
+    line-height: 1.5;
+}
