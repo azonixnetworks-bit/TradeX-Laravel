@@ -110,10 +110,18 @@ class ScreenerApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.markets.3.key',
-                'STOCKS'
+                'COMMODITY'
             )
             ->assertJsonPath(
                 'data.markets.3.status',
+                'ACTIVE'
+            )
+            ->assertJsonPath(
+                'data.markets.4.key',
+                'STOCKS'
+            )
+            ->assertJsonPath(
+                'data.markets.4.status',
                 'ACTIVE'
             );
 
