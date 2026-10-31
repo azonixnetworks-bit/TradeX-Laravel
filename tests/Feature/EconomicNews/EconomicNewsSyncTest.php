@@ -50,7 +50,7 @@ class EconomicNewsSyncTest extends TestCase
             ], 200),
         ]);
 
-        $events = (new TradingEconomicsCalendarProvider())->fetch(
+        $events = (new TradingEconomicsCalendarProvider)->fetch(
             CarbonImmutable::parse('2026-09-16', 'UTC')->startOfDay(),
             CarbonImmutable::parse('2026-09-17', 'UTC')->endOfDay()
         );
@@ -151,6 +151,43 @@ class EconomicNewsSyncTest extends TestCase
         ]);
     }
 
+    public function test_auto_publish_publishes_new_and_existing_provider_events(): void
+    {
+        config()->set('economic_news.sync.enabled', true);
+        config()->set('economic_news.sync.auto_publish', false);
+
+        $scheduledAt = CarbonImmutable::parse('2026-09-16T12:30:00Z');
+        $from = CarbonImmutable::parse('2026-09-16', 'UTC')->startOfDay();
+        $to = CarbonImmutable::parse('2026-09-17', 'UTC')->endOfDay();
+
+        $service = new EconomicNewsSyncService($this->fakeProvider([
+            $this->normalizedRow($scheduledAt, null),
+        ]));
+        $service->sync($from, $to);
+
+        $event = EconomicEvent::query()->where('provider_event_id', 'evt-1001')->firstOrFail();
+        $this->assertFalse((bool) $event->is_published);
+        $this->assertNull($event->published_at);
+
+        config()->set('economic_news.sync.auto_publish', true);
+        $service->sync($from, $to);
+
+        $event->refresh();
+        $this->assertTrue((bool) $event->is_published);
+        $this->assertNotNull($event->published_at);
+
+        EconomicEvent::query()->whereKey($event->getKey())->update([
+            'is_published' => false,
+            'published_at' => null,
+        ]);
+
+        $service->sync($from, $to);
+
+        $event->refresh();
+        $this->assertTrue((bool) $event->is_published);
+        $this->assertNotNull($event->published_at);
+    }
+
     /** @return array<string, mixed> */
     private function normalizedRow(CarbonImmutable $scheduledAt, ?string $actual): array
     {
@@ -184,9 +221,7 @@ class EconomicNewsSyncTest extends TestCase
         return new class($rows) implements EconomicCalendarProvider
         {
             /** @param array<int, array<string, mixed>> $rows */
-            public function __construct(private readonly array $rows)
-            {
-            }
+            public function __construct(private readonly array $rows) {}
 
             public function code(): string
             {
