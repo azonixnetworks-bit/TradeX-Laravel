@@ -100,6 +100,11 @@ Schedule::command('tradex:trade-journal:prune')
     ->timezone('UTC')
     ->withoutOverlapping(60);
 
+Schedule::command('tradex:user-activity:prune')
+    ->dailyAt('00:45')
+    ->timezone('UTC')
+    ->withoutOverlapping(60);
+
 Schedule::command('tradex:support:sweep')
     ->everyFiveMinutes()
     ->withoutOverlapping(10)

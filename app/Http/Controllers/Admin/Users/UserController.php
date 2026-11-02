@@ -480,6 +480,37 @@ class UserController extends Controller
 
         /*
         |--------------------------------------------------------------------------
+        | Super Admin User Activity
+        |--------------------------------------------------------------------------
+        |
+        | Always query through the selected user's relationship so events from
+        | another customer cannot appear on this user-detail page.
+        |
+        */
+
+        $activityEvents = null;
+
+        if ($admin->isSuperAdmin()) {
+            $activityEvents =
+                $user
+                    ->activityEvents()
+                    ->where(
+                        'occurred_at',
+                        '>=',
+                        now()->subDays(45)
+                    )
+                    ->orderByDesc('occurred_at')
+                    ->orderByDesc('id')
+                    ->paginate(
+                        20,
+                        ['*'],
+                        'activity_page'
+                    )
+                    ->withQueryString();
+        }
+
+        /*
+        |--------------------------------------------------------------------------
         | Device Security
         |--------------------------------------------------------------------------
         */
@@ -568,7 +599,8 @@ class UserController extends Controller
                 'canViewDevices',
                 'referralCustomers',
                 'tradeJournalEntries',
-                'tradeJournalStats'
+                'tradeJournalStats',
+                'activityEvents'
             )
         );
     }

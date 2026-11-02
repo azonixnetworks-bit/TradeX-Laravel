@@ -283,6 +283,13 @@ class User extends Authenticatable
         );
     }
 
+    public function activityEvents(): HasMany
+    {
+        return $this->hasMany(
+            UserActivityEvent::class
+        );
+    }
+
     public function tradeJournalReviews(): HasMany
     {
         return $this->hasMany(
