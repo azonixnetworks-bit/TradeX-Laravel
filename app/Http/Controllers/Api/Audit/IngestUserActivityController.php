@@ -14,7 +14,7 @@ class IngestUserActivityController extends Controller
     {
         $allowed = [
             'screen_viewed', 'lesson_viewed', 'lesson_completed',
-            'signal_viewed', 'journal_opened', 'calculator_used',
+            'signal_viewed', 'journal_opened', 'journal_saved', 'calculator_used',
             'news_viewed', 'feature_opened', 'session_started',
             'session_resumed', 'session_paused', 'session_ended',
         ];
