@@ -541,3 +541,4 @@ Route::prefix('v1')
 
 require __DIR__.'/api_invite_onboarding.php';
 require __DIR__.'/api_support.php';
+require __DIR__.'/api_user_activity.php';
