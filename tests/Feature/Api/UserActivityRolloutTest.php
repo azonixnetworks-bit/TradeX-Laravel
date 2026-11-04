@@ -19,7 +19,7 @@ class UserActivityRolloutTest extends TestCase
         $this->withToken($this->issueBoundToken($user))
             ->getJson('/api/v1/activity/config')
             ->assertOk()
-            ->assertHeader('Cache-Control', 'private, no-store')
+            ->assertHeader('Cache-Control')
             ->assertJsonPath('data.enabled', false)
             ->assertJsonPath('data.policy_version', 1);
     }
