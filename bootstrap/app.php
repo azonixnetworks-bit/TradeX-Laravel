@@ -1,9 +1,11 @@
 <?php
 
+use App\Console\Commands\ActivityReadinessCheckCommand;
 use App\Console\Commands\AdminReleaseCheckCommand;
 use App\Console\Commands\MobileApiReleaseCheckCommand;
 use App\Console\Commands\NowPaymentsCheckCommand;
 use App\Console\Commands\PruneTradeJournalCommand;
+use App\Console\Commands\PruneUserActivityCommand;
 use App\Console\Commands\StripeCheckCommand;
 use App\Console\Commands\SupportDailySummaryCommand;
 use App\Console\Commands\SupportSlaSweepCommand;
@@ -36,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withCommands([
+        ActivityReadinessCheckCommand::class,
+        PruneUserActivityCommand::class,
         AdminReleaseCheckCommand::class,
         MobileApiReleaseCheckCommand::class,
         NowPaymentsCheckCommand::class,
