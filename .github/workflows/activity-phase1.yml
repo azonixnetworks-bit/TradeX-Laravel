@@ -5,6 +5,12 @@ on:
     paths:
       - 'app/Console/Commands/*Activity*'
       - 'app/Services/Audit/**'
+      - 'app/Services/Admin/Activity/**'
+      - 'app/Http/Controllers/Admin/Activity/**'
+      - 'database/migrations/*activity*'
+      - 'routes/admin_user_activity.php'
+      - 'resources/views/admin/activity/**'
+      - 'resources/views/admin/layouts/sidebar.blade.php'
       - 'app/Http/Controllers/Api/Audit/**'
       - 'routes/api_user_activity.php'
       - 'tests/Feature/Api/UserActivity*'
@@ -45,6 +51,7 @@ jobs:
       - name: Check routes and disabled rollout prerequisites
         run: |
           php artisan route:list --path=api/v1/activity
+          php artisan route:list --path=admin/analytics/user-activity
           php artisan schedule:list
           php artisan tradex:user-activity:check --allow-disabled
       - name: Run isolated activity regression tests
