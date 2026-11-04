@@ -312,6 +312,7 @@ require __DIR__.'/admin_security.php';
 */
 
 require __DIR__.'/admin_audit.php';
+require __DIR__.'/admin_user_activity.php';
 
 /*
 |--------------------------------------------------------------------------

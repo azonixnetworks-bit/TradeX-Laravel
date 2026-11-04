@@ -9,8 +9,14 @@
                 </p>
             </div>
 
-            <div class="panel-count">
-                {{ number_format($activityEvents->total()) }} events
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <div class="panel-count">
+                    {{ number_format($activityEvents->total()) }} events
+                </div>
+                <a class="secondary-btn"
+                   href="{{ route('admin.activity.index', ['user_id' => $user->getKey()]) }}">
+                    Open Activity Analytics
+                </a>
             </div>
         </div>
 
