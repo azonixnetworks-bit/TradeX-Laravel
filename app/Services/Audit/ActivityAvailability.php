@@ -8,7 +8,16 @@ class ActivityAvailability
 {
     public function schemaReady(): bool
     {
-        return Schema::hasTable('user_activity_events');
+        return Schema::hasTable('user_activity_events')
+            && Schema::hasColumns('user_activity_events', [
+                'user_id',
+                'event_id',
+                'module',
+                'event_name',
+                'session_id',
+                'subject_id',
+                'occurred_at',
+            ]);
     }
 
     public function isReady(): bool
