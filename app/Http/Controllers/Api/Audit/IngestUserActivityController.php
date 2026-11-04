@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Audit;
 
 use App\Http\Controllers\Controller;
+use App\Services\Audit\ActivityAvailability;
 use App\Services\Audit\UserActivityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -10,8 +11,19 @@ use Illuminate\Validation\Rule;
 
 class IngestUserActivityController extends Controller
 {
-    public function __invoke(Request $request, UserActivityService $service): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        UserActivityService $service,
+        ActivityAvailability $availability
+    ): JsonResponse {
+        if (! $availability->isReady()) {
+            return response()->json([
+                'success' => false,
+                'code' => 'ACTIVITY_DISABLED',
+                'message' => 'User activity ingestion is unavailable.',
+            ], 503)->header('Cache-Control', 'private, no-store');
+        }
+
         $allowed = [
             'screen_viewed', 'lesson_viewed', 'lesson_completed',
             'signal_viewed', 'journal_opened', 'journal_saved', 'calculator_used',
