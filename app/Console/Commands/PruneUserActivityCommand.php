@@ -20,8 +20,10 @@ class PruneUserActivityCommand extends Command
             return self::SUCCESS;
         }
 
+        $retentionDays = max(1, (int) config('tradex_activity.retention_days', 45));
+
         $deleted = UserActivityEvent::query()
-            ->where('occurred_at', '<', now()->subDays(45))
+            ->where('occurred_at', '<', now()->subDays($retentionDays))
             ->delete();
 
         $this->info("Pruned {$deleted} user activity event(s).");
