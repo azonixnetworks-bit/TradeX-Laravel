@@ -1,0 +1,51 @@
+name: User Activity Phase 1 - Laravel
+
+on:
+  pull_request:
+    paths:
+      - 'app/Console/Commands/*Activity*'
+      - 'app/Services/Audit/**'
+      - 'app/Http/Controllers/Api/Audit/**'
+      - 'routes/api_user_activity.php'
+      - 'tests/Feature/Api/UserActivity*'
+      - 'tests/Feature/Admin/UserActivity*'
+      - '.github/workflows/activity-phase1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  activity-api:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ${{ github.workspace }}/database/database.sqlite
+      CACHE_STORE: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      TRADEX_ACTIVITY_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, sqlite3, pdo_sqlite, xml, xmlwriter
+          coverage: none
+          tools: composer:v2
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Configure SQLite test environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate
+          php artisan migrate --force
+      - name: Check routes and disabled rollout prerequisites
+        run: |
+          php artisan route:list --path=api/v1/activity
+          php artisan schedule:list
+          php artisan tradex:user-activity:check --allow-disabled
+      - name: Run isolated activity regression tests
+        run: php artisan test --filter=UserActivity
