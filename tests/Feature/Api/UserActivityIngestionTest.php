@@ -11,6 +11,12 @@ class UserActivityIngestionTest extends TestCase
     use CreatesTradeXMobileSession;
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config()->set('tradex_activity.enabled', true);
+    }
+
     public function test_guest_cannot_ingest_events(): void
     {
         $this->postJson('/api/v1/activity/events', ['events' => []])
