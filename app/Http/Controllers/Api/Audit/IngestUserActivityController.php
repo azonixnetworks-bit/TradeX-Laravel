@@ -20,6 +20,10 @@ class IngestUserActivityController extends Controller
             return response()->json([
                 'success' => false,
                 'code' => 'ACTIVITY_DISABLED',
+                'error' => [
+                    'code' => 'ACTIVITY_DISABLED',
+                    'message' => 'User activity ingestion is unavailable.',
+                ],
                 'message' => 'User activity ingestion is unavailable.',
             ], 503)->header('Cache-Control', 'private, no-store');
         }
