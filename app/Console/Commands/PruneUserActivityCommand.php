@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\UserActivityEvent;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 class PruneUserActivityCommand extends Command
 {
@@ -13,6 +14,12 @@ class PruneUserActivityCommand extends Command
 
     public function handle(): int
     {
+        // A release may register scheduled jobs before its migrations run.
+        if (! Schema::hasTable('user_activity_events')) {
+            $this->warn('Activity table not yet migrated; skipping cleanup.');
+            return self::SUCCESS;
+        }
+
         $deleted = UserActivityEvent::query()
             ->where('occurred_at', '<', now()->subDays(45))
             ->delete();
