@@ -118,6 +118,14 @@
                 </a>
             @endif
 
+            @if($admin->isSuperAdmin())
+                <a href="{{ route('admin.activity.index') }}"
+                   class="nav-link {{ request()->routeIs('admin.activity.*') ? 'active' : '' }}">
+                    <span class="nav-icon">◷</span>
+                    <span>User Activity Analytics</span>
+                </a>
+            @endif
+
             @if($admin->hasPermission('users.invite'))
                 <a
                     href="{{ route('admin.customers.create') }}"
