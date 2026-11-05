@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShareActionController;
 use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShowController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
+use App\Http\Controllers\Api\Replay\IssueReplayAccessTokenController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')
@@ -184,6 +185,14 @@ Route::prefix('v1')
             'auth:sanctum',
             'tradex.mobile',
         ])->group(function (): void {
+            // Use existing device-bound Sanctum authentication to mint a
+            // 120-second RS256 token for the independent Python Replay API.
+            Route::post(
+                '/replay/access-token',
+                IssueReplayAccessTokenController::class
+            )
+                ->middleware('throttle:10,1')
+                ->name('replay.access-token');
             Route::prefix('auth')
                 ->name('auth.')
                 ->group(function (): void {
