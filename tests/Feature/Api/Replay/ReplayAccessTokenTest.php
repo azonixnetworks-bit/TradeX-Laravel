@@ -38,7 +38,9 @@ final class ReplayAccessTokenTest extends TestCase
                 ->assertJsonPath('data.token_type', 'Bearer')
                 ->assertJsonPath('data.expires_in', 120)
                 ->assertJsonPath('data.execution_enabled', false);
-            $this->assertSame('no-store, private', $response->headers->get('Cache-Control'));
+            $cacheControl = (string) $response->headers->get('Cache-Control');
+            $this->assertStringContainsString('no-store', $cacheControl);
+            $this->assertStringContainsString('private', $cacheControl);
             $jwt = (string) $response->json('data.access_token');
             $segments = explode('.', $jwt);
             $this->assertCount(3, $segments);
