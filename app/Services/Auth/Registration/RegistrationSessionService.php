@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
 class RegistrationSessionService
 {
     public function __construct(
-        private readonly RegistrationOtpService $otpService
+        private readonly RegistrationOtpService $otpService,
+        private readonly RegistrationReferralValidator $referrals
     ) {}
 
     public function start(
@@ -27,61 +28,11 @@ class RegistrationSessionService
             $data['whatsapp_number']
         );
 
-        $referrer = null;
-
-        if (
-            filled(
-                $data['referral_code']
-                ?? null
-            )
-        ) {
-            $referrer = User::query()
-                ->where(
-                    'referral_code',
-                    $data['referral_code']
-                )
-                ->where(
-                    'status',
-                    'ACTIVE'
-                )
-                ->first();
-
-            /*
-             * A referral code is actionable only while the referrer has the
-             * authoritative active EDUCATION_PREMIUM entitlement. This prevents
-             * pre-payment, revoked, or otherwise non-premium accounts from using
-             * a manually reconstructed affiliate URL.
-             */
-            $systemReferralCodes = array_map(
-                static fn (mixed $code): string => strtoupper(
-                    trim((string) $code)
-                ),
-                config(
-                    'tradex_registration.system_referral_codes',
-                    []
-                )
-            );
-
-            $isSystemReferralCode = in_array(
-                $data['referral_code'],
-                $systemReferralCodes,
-                true
-            );
-
-            if (
-                ! $referrer
-                || (
-                    ! $isSystemReferralCode
-                    && ! $referrer->canAccessPremium()
-                )
-            ) {
-                throw new AuthApiException(
-                    422,
-                    'INVALID_REFERRAL_CODE',
-                    'The referral code is invalid or unavailable.'
-                );
-            }
-        }
+        // Authoritative check at registration time; never trust the
+        // preceding live-validation response as a security decision.
+        $referrer = $this->referrals->resolveOrFail(
+            (string) ($data['referral_code'] ?? '')
+        );
 
         $plainToken =
             bin2hex(

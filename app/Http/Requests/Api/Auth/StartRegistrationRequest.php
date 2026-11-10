@@ -48,7 +48,7 @@ class StartRegistrationRequest extends FormRequest
             ],
 
             'referral_code' => [
-                'nullable',
+                'required',
                 'string',
                 'max:30',
             ],
