@@ -31,6 +31,17 @@ class PasswordRecoveryFlowService
             $recoveryToken
         );
 
+        if (
+            $session->start_channel === PasswordRecoveryOtpChallenge::CHANNEL_WHATSAPP
+            && $session->whatsapp_verified_at === null
+        ) {
+            throw new AuthApiException(
+                409,
+                'PASSWORD_RECOVERY_WHATSAPP_REQUIRED',
+                'WhatsApp verification must be completed first.'
+            );
+        }
+
         if ($session->email_verified_at === null) {
             $this->otp->verify(
                 $session,
@@ -62,7 +73,9 @@ class PasswordRecoveryFlowService
 
         return [
             'email_verified' => true,
-            'next_action' => 'VERIFY_WHATSAPP_OTP',
+            'next_action' => $session->whatsapp_verified_at === null
+                ? 'VERIFY_WHATSAPP_OTP'
+                : 'VERIFY_TOTP',
         ];
     }
 
@@ -75,10 +88,23 @@ class PasswordRecoveryFlowService
             $recoveryToken
         );
 
+        if (
+            $session->start_channel === PasswordRecoveryOtpChallenge::CHANNEL_WHATSAPP
+            && $session->whatsapp_verified_at === null
+        ) {
+            throw new AuthApiException(
+                409,
+                'PASSWORD_RECOVERY_WHATSAPP_REQUIRED',
+                'WhatsApp verification must be completed first.'
+            );
+        }
+
         if ($session->email_verified_at !== null) {
             return [
                 'sent' => false,
-                'next_action' => 'VERIFY_WHATSAPP_OTP',
+                'next_action' => $session->whatsapp_verified_at === null
+                    ? 'VERIFY_WHATSAPP_OTP'
+                    : 'VERIFY_TOTP',
             ];
         }
 
@@ -105,7 +131,10 @@ class PasswordRecoveryFlowService
             $recoveryToken
         );
 
-        if ($session->email_verified_at === null) {
+        if (
+            $session->start_channel !== PasswordRecoveryOtpChallenge::CHANNEL_WHATSAPP
+            && $session->email_verified_at === null
+        ) {
             throw new AuthApiException(
                 409,
                 'PASSWORD_RECOVERY_EMAIL_REQUIRED',
@@ -125,6 +154,16 @@ class PasswordRecoveryFlowService
             );
         }
 
+        $session->refresh();
+
+        if ($session->email_verified_at === null) {
+            $this->otp->issue(
+                $session->fresh('user'),
+                PasswordRecoveryOtpChallenge::CHANNEL_EMAIL,
+                false
+            );
+        }
+
         $this->audit(
             $session->user,
             'PASSWORD_RECOVERY_WHATSAPP_VERIFIED',
@@ -134,7 +173,9 @@ class PasswordRecoveryFlowService
 
         return [
             'whatsapp_verified' => true,
-            'next_action' => 'VERIFY_TOTP',
+            'next_action' => $session->email_verified_at === null
+                ? 'VERIFY_EMAIL_OTP'
+                : 'VERIFY_TOTP',
         ];
     }
 
@@ -147,7 +188,10 @@ class PasswordRecoveryFlowService
             $recoveryToken
         );
 
-        if ($session->email_verified_at === null) {
+        if (
+            $session->start_channel !== PasswordRecoveryOtpChallenge::CHANNEL_WHATSAPP
+            && $session->email_verified_at === null
+        ) {
             throw new AuthApiException(
                 409,
                 'PASSWORD_RECOVERY_EMAIL_REQUIRED',
@@ -158,7 +202,9 @@ class PasswordRecoveryFlowService
         if ($session->whatsapp_verified_at !== null) {
             return [
                 'sent' => false,
-                'next_action' => 'VERIFY_TOTP',
+                'next_action' => $session->email_verified_at === null
+                    ? 'VERIFY_EMAIL_OTP'
+                    : 'VERIFY_TOTP',
             ];
         }
 
