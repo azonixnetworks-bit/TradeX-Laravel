@@ -12,6 +12,7 @@ class PasswordRecoverySession extends Model
     protected $fillable = [
         'uuid',
         'user_id',
+        'start_channel',
         'access_token_hash',
         'email_hmac',
         'whatsapp_hmac',

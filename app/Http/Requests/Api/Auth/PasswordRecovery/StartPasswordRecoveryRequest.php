@@ -15,13 +15,15 @@ class StartPasswordRecoveryRequest extends FormRequest
     {
         return [
             'email' => [
-                'required',
+                'nullable',
+                'required_without:whatsapp_number',
                 'string',
                 'email:rfc',
                 'max:255',
             ],
             'whatsapp_number' => [
-                'required',
+                'nullable',
+                'required_without:email',
                 'string',
                 'regex:/^\+[1-9]\d{7,14}$/',
                 'max:30',

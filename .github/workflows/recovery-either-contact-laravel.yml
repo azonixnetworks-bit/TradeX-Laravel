@@ -1,0 +1,45 @@
+name: Password Recovery Either Contact Laravel
+
+on:
+  push:
+    branches:
+      - fix/password-recovery-either-contact-20261110
+  pull_request:
+    paths:
+      - 'app/Services/Auth/PasswordRecovery/**'
+      - 'app/Http/Controllers/Api/Auth/PasswordRecovery/**'
+      - 'app/Http/Requests/Api/Auth/PasswordRecovery/**'
+      - 'app/Models/PasswordRecoverySession.php'
+      - 'database/migrations/*password_recovery*'
+      - 'tests/Feature/Api/Auth/PasswordRecovery*'
+      - '.github/workflows/recovery-either-contact-laravel.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  laravel-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: openssl, mbstring, sqlite3, pdo_sqlite, xml, xmlwriter
+          coverage: none
+          tools: composer:v2
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Prepare testing environment
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate
+      - name: Lint changed PHP
+        run: |
+          php -l app/Services/Auth/PasswordRecovery/PasswordRecoverySessionService.php
+          php -l app/Services/Auth/PasswordRecovery/PasswordRecoveryFlowService.php
+          php -l app/Http/Requests/Api/Auth/PasswordRecovery/StartPasswordRecoveryRequest.php
+          php -l app/Http/Controllers/Api/Auth/PasswordRecovery/StartPasswordRecoveryController.php
+          php -l database/migrations/2026_11_10_220000_add_start_channel_to_password_recovery_sessions.php
+      - name: Test one-contact recovery and existing security
+        run: php artisan test tests/Feature/Api/Auth/PasswordRecoveryEitherContactTest.php tests/Feature/Api/Auth/PasswordRecoveryFlowTest.php tests/Feature/Api/Auth/PasswordRecoverySecurityTest.php tests/Feature/Api/Auth/PasswordRecoveryEnumerationTest.php
