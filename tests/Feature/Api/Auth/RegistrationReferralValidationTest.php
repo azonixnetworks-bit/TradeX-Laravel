@@ -56,6 +56,48 @@ class RegistrationReferralValidationTest extends TestCase
         ])->assertOk()->assertJsonPath('data.valid', false);
     }
 
+    public function test_pending_registration_does_not_grant_dashboard_or_login_access(): void
+    {
+        $referrer = User::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Verified Referrer',
+            'email' => 'verified-referrer@example.test',
+            'whatsapp_number' => '+94770000665',
+            'password' => 'Strong-Pass123!',
+            'referral_code' => 'SECUREREF2026',
+            'country_code' => 'LK',
+            'language_code' => 'en',
+            'account_type' => 'PREMIUM',
+            'status' => 'ACTIVE',
+        ]);
+
+        UserEntitlement::query()->create([
+            'user_id' => $referrer->getKey(),
+            'product_code' => Product::CODE_EDUCATION_PREMIUM,
+            'status' => UserEntitlement::STATUS_ACTIVE,
+            'activated_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/register/start', [
+            'name' => 'Pending Trader',
+            'email' => 'pending-onboarding@example.test',
+            'whatsapp_number' => '+94770000666',
+            'password' => 'Strong-Pass123!',
+            'password_confirmation' => 'Strong-Pass123!',
+            'country_code' => 'LK',
+            'language_code' => 'en',
+            'referral_code' => 'SECUREREF2026',
+        ])->assertCreated()->assertJsonPath('data.next_action', 'VERIFY_EMAIL_OTP');
+
+        $this->assertNull($response->json('data.access_token'));
+        $this->assertDatabaseMissing('users', [
+            'email' => 'pending-onboarding@example.test',
+        ]);
+
+        // Pending registration is not a Sanctum user/device session.
+        $this->getJson('/api/v1/dashboard')->assertUnauthorized();
+    }
+
     public function test_referral_code_is_mandatory_on_new_registration(): void
     {
         $this->postJson('/api/v1/auth/register/start', [
