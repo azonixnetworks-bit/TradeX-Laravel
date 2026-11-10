@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\Auth\SetupRegistrationTotpController;
 use App\Http\Controllers\Api\Auth\StartRegistrationController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationEmailController;
 use App\Http\Controllers\Api\Auth\VerifyRegistrationWhatsAppController;
+use App\Http\Controllers\Api\Auth\ValidateRegistrationReferralController;
 use App\Http\Controllers\Api\Education\AskTradeXAiController;
 use App\Http\Controllers\Api\Education\AssignmentIndexController;
 use App\Http\Controllers\Api\Education\AssignmentMaterialController;
@@ -79,6 +80,13 @@ Route::prefix('v1')
                 Route::prefix('register')
                     ->name('register.')
                     ->group(function (): void {
+                        Route::post(
+                            '/referral/validate',
+                            ValidateRegistrationReferralController::class
+                        )
+                            ->middleware('throttle:api-register-verify')
+                            ->name('referral.validate');
+
                         Route::post(
                             '/start',
                             StartRegistrationController::class
