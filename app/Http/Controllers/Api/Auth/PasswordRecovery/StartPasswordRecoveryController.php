@@ -18,8 +18,8 @@ class StartPasswordRecoveryController extends Controller
         return response()->json([
             'success' => true,
             'data' => $service->start(
-                (string) $data['email'],
-                (string) $data['whatsapp_number'],
+                (string) ($data['email'] ?? ''),
+                (string) ($data['whatsapp_number'] ?? ''),
                 $request
             ),
         ], 202);

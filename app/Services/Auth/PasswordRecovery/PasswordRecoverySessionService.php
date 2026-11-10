@@ -33,13 +33,31 @@ class PasswordRecoverySessionService
             $whatsappNumber
         ) ?? '';
 
-        $user = User::query()
-            ->where('email', $normalizedEmail)
-            ->where(
-                'whatsapp_number',
-                $normalizedWhatsapp
-            )
-            ->first();
+        // Either contact can identify the account. When both are entered,
+        // both values must match the same account (original policy).
+        $firstChannel = $normalizedEmail !== ''
+            ? PasswordRecoveryOtpChallenge::CHANNEL_EMAIL
+            : PasswordRecoveryOtpChallenge::CHANNEL_WHATSAPP;
+
+        if ($normalizedEmail === '' && $normalizedWhatsapp === '') {
+            throw new AuthApiException(
+                422,
+                'PASSWORD_RECOVERY_CONTACT_REQUIRED',
+                'Enter your registered email or WhatsApp number.'
+            );
+        }
+
+        $query = User::query();
+
+        if ($normalizedEmail !== '') {
+            $query->where('email', $normalizedEmail);
+        }
+
+        if ($normalizedWhatsapp !== '') {
+            $query->where('whatsapp_number', $normalizedWhatsapp);
+        }
+
+        $user = $query->first();
 
         if (
             $user !== null
@@ -60,7 +78,8 @@ class PasswordRecoverySessionService
                 $user,
                 $normalizedEmail,
                 $normalizedWhatsapp,
-                $accessToken
+                $accessToken,
+                $firstChannel
             ): PasswordRecoverySession {
                 if ($user !== null) {
                     PasswordRecoverySession::query()
@@ -76,6 +95,7 @@ class PasswordRecoverySessionService
                 return PasswordRecoverySession::query()
                     ->create([
                         'user_id' => $user?->getKey(),
+                        'start_channel' => $firstChannel,
                         'access_token_hash' =>
                             $this->security->accessTokenHash(
                                 $accessToken
@@ -109,7 +129,7 @@ class PasswordRecoverySessionService
         try {
             $this->otp->issue(
                 $session->fresh('user'),
-                PasswordRecoveryOtpChallenge::CHANNEL_EMAIL,
+                $firstChannel,
                 false
             );
         } catch (AuthApiException) {
@@ -140,7 +160,9 @@ class PasswordRecoverySessionService
         return [
             'recovery_id' => $session->uuid,
             'recovery_token' => $accessToken,
-            'next_action' => 'VERIFY_EMAIL_OTP',
+            'next_action' => $firstChannel === PasswordRecoveryOtpChallenge::CHANNEL_EMAIL
+                ? 'VERIFY_EMAIL_OTP'
+                : 'VERIFY_WHATSAPP_OTP',
             'message' =>
                 'If the supplied account details are eligible, a verification code has been sent.',
         ];
