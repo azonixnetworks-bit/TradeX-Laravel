@@ -28,11 +28,15 @@ class RegistrationSessionService
             $data['whatsapp_number']
         );
 
-        // Authoritative check at registration time; never trust the
-        // preceding live-validation response as a security decision.
-        $referrer = $this->referrals->resolveOrFail(
-            (string) ($data['referral_code'] ?? '')
-        );
+        // Referral is optional. If supplied, revalidate eligibility on
+        // the server; an invalid or inactive code must never be accepted.
+        $referrer = null;
+
+        if (filled($data['referral_code'] ?? null)) {
+            $referrer = $this->referrals->resolveOrFail(
+                (string) $data['referral_code']
+            );
+        }
 
         $plainToken =
             bin2hex(

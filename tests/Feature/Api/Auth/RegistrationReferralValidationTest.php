@@ -98,7 +98,7 @@ class RegistrationReferralValidationTest extends TestCase
         $this->getJson('/api/v1/dashboard')->assertUnauthorized();
     }
 
-    public function test_referral_code_is_mandatory_on_new_registration(): void
+    public function test_new_registration_allows_no_referral_code(): void
     {
         $this->postJson('/api/v1/auth/register/start', [
             'name' => 'New Trader',
@@ -108,6 +108,27 @@ class RegistrationReferralValidationTest extends TestCase
             'password_confirmation' => 'Strong-Pass123!',
             'country_code' => 'LK',
             'language_code' => 'en',
-        ])->assertUnprocessable()->assertJsonValidationErrors('referral_code');
+        ])->assertCreated()
+            ->assertJsonPath('data.next_action', 'VERIFY_EMAIL_OTP');
+
+        $this->assertDatabaseHas('user_registration_sessions', [
+            'email' => 'new-trader-eligibility@example.test',
+            'referred_by_user_id' => null,
+        ]);
+    }
+
+    public function test_new_registration_rejects_invalid_supplied_referral_code(): void
+    {
+        $this->postJson('/api/v1/auth/register/start', [
+            'name' => 'New Trader',
+            'email' => 'invalid-referral@example.test',
+            'whatsapp_number' => '+94770000336',
+            'password' => 'Strong-Pass123!',
+            'password_confirmation' => 'Strong-Pass123!',
+            'country_code' => 'LK',
+            'language_code' => 'en',
+            'referral_code' => 'INVALID-REFERRAL',
+        ])->assertUnprocessable()
+            ->assertJsonPath('error.code', 'INVALID_REFERRAL_CODE');
     }
 }
