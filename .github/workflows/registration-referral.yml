@@ -1,0 +1,50 @@
+name: TradeX Registration Referral Validation
+
+on:
+  push:
+    branches:
+      - feature/referral-validation-pending-onboarding
+    paths:
+      - 'app/Services/Auth/Registration/**'
+      - 'app/Http/Controllers/Api/Auth/**'
+      - 'app/Http/Requests/Api/Auth/**'
+      - 'routes/api.php'
+      - 'tests/Feature/Api/Auth/Registration*'
+      - '.github/workflows/registration-referral.yml'
+  pull_request:
+    paths:
+      - 'app/Services/Auth/Registration/**'
+      - 'app/Http/Controllers/Api/Auth/**'
+      - 'app/Http/Requests/Api/Auth/**'
+      - 'routes/api.php'
+      - 'tests/Feature/Api/Auth/Registration*'
+      - '.github/workflows/registration-referral.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  referral-registration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: openssl, mbstring, sqlite3, pdo_sqlite, xml, xmlwriter
+          coverage: none
+          tools: composer:v2
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Configure testing Laravel app
+        run: |
+          cp .env.example .env
+          touch database/database.sqlite
+          php artisan key:generate
+      - name: Lint referral PHP files
+        run: |
+          php -l app/Services/Auth/Registration/RegistrationReferralValidator.php
+          php -l app/Http/Controllers/Api/Auth/ValidateRegistrationReferralController.php
+          php -l app/Services/Auth/Registration/RegistrationSessionService.php
+          php -l app/Http/Requests/Api/Auth/StartRegistrationRequest.php
+      - name: Test referral API and existing registration
+        run: php artisan test tests/Feature/Api/Auth/RegistrationReferralValidationTest.php tests/Feature/Api/Auth/RegistrationFlowTest.php
