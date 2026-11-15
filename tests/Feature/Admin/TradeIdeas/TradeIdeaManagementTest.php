@@ -62,7 +62,40 @@ class TradeIdeaManagementTest extends TestCase
             ->assertSee('EURUSD')
             ->assertSee('BTCUSDT')
             ->assertSee('BOOM1000')
-            ->assertSee('AAPL');
+            ->assertSee('AAPL')
+            ->assertSee('XAUUSD')
+            ->assertSee('Gold / US Dollar')
+            ->assertSee('Commodities');
+    }
+
+    public function test_commodity_catalog_uses_correct_names_and_is_not_forex(): void
+    {
+        $catalog = app(\App\Services\TradeIdeas\TradeIdeaSymbolCatalog::class)->grouped();
+        $commodities = collect($catalog[TradeIdea::CATEGORY_COMMODITY])->keyBy('symbol');
+        $this->assertSame('Gold / US Dollar', $commodities->get('XAUUSD')['name']);
+        $this->assertSame('Silver / US Dollar', $commodities->get('XAGUSD')['name']);
+        $this->assertTrue($commodities->has('WTI'));
+        $this->assertNotContains('XAUUSD', array_column($catalog[TradeIdea::CATEGORY_FOREX], 'symbol'));
+    }
+
+    public function test_commodity_long_term_create_and_market_filter(): void
+    {
+        $admin = $this->adminWithPermissions(['trade_ideas.create', 'trade_ideas.view']);
+        $payload = $this->minimalPayload();
+        $payload['title'] = 'Gold Commodity Long Term Idea';
+        $payload['category'] = TradeIdea::CATEGORY_COMMODITY;
+        $payload['symbol'] = 'xauusd';
+        $payload['instrument_name'] = 'Gold / US Dollar';
+        $this->actingAs($admin, 'admin')->post(route('admin.trade_ideas.store'), $payload)->assertRedirect();
+        $this->assertDatabaseHas('trade_ideas', [
+            'category' => TradeIdea::CATEGORY_COMMODITY,
+            'market_region' => null,
+            'symbol' => 'XAUUSD',
+            'instrument_name' => 'Gold / US Dollar',
+        ]);
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.trade_ideas.index', ['market_filter' => 'COMMODITY']))
+            ->assertOk()->assertSee('Gold Commodity Long Term Idea');
     }
 
     public function test_rev3_schema_removes_language_and_validity_fields(): void
