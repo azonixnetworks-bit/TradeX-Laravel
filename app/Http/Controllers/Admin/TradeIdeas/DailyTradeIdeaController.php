@@ -43,7 +43,7 @@ class DailyTradeIdeaController extends Controller
 
         if ($marketFilter !== '') {
             $this->applyMarketFilter($query, $marketFilter);
-        } elseif (in_array($category, ['FOREX', 'CRYPTO', 'DERIV', 'STOCKS'], true)) {
+        } elseif (in_array($category, ['FOREX', 'CRYPTO', 'DERIV', 'COMMODITY', 'STOCKS'], true)) {
             // Backward compatibility for existing category query links.
             $query->where('category', $category);
         }
@@ -89,6 +89,7 @@ class DailyTradeIdeaController extends Controller
             'FOREX' => $query->where('category', 'FOREX'),
             'CRYPTO' => $query->where('category', 'CRYPTO'),
             'DERIV' => $query->where('category', 'DERIV'),
+            'COMMODITY' => $query->where('category', 'COMMODITY'),
             'STOCKS_CSE' => $query
                 ->where('category', 'STOCKS')
                 ->where('market_region', 'SRI_LANKA'),
