@@ -5,6 +5,7 @@
         'FOREX' => 'Forex',
         'CRYPTO' => 'Crypto',
         'DERIV' => 'Deriv',
+        'COMMODITY' => 'Commodities',
         'STOCKS_CSE' => 'Stocks · CSE',
         'STOCKS_INDIA' => 'Stocks · India',
         'STOCKS_INTERNATIONAL' => 'Stocks · International',
