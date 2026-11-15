@@ -11,6 +11,8 @@
     let catalog = {};
     let matches = [];
     let activeIndex = -1;
+    let previousCategory = category.value;
+    let autoName = null;
 
     try {
         catalog = JSON.parse(catalogNode.textContent || '{}');
@@ -34,6 +36,7 @@
 
         if (instrumentName) {
             instrumentName.value = item.name || item.symbol;
+            autoName = instrumentName.value;
         }
 
         if (category.value === 'STOCKS' && marketRegion && item.region) {
@@ -83,7 +86,13 @@
         activeIndex = -1;
 
         if (! matches.length) {
-            hide();
+            const message = document.createElement('div');
+            message.className = 'ti-symbol-empty';
+            message.setAttribute('role', 'status');
+            message.textContent = 'No catalog match. Verify the broker symbol or enter it manually.';
+            suggestions.append(message);
+            suggestions.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
             return;
         }
 
@@ -125,6 +134,16 @@
 
     input.addEventListener('input', () => {
         input.value = input.value.toUpperCase();
+        if (instrumentName && autoName && instrumentName.value === autoName) instrumentName.value = '';
+        autoName = null;
+        const exact = (catalog[category.value] || []).find(item =>
+            item.symbol.toUpperCase() === input.value.trim()
+            && (category.value !== 'STOCKS' || !marketRegion?.value || !item.region || item.region === marketRegion.value)
+        );
+        if (exact && instrumentName && !instrumentName.value.trim()) {
+            instrumentName.value = exact.name || exact.symbol;
+            autoName = instrumentName.value;
+        }
         render();
     });
     input.addEventListener('focus', render);
@@ -137,20 +156,27 @@
         } else if (event.key === 'ArrowUp') {
             event.preventDefault();
             activate(activeIndex - 1);
-        } else if (event.key === 'Enter' && activeIndex >= 0) {
+        } else if (event.key === 'Enter' && matches.length) {
             event.preventDefault();
-            select(matches[activeIndex]);
+            select(matches[activeIndex >= 0 ? activeIndex : 0]);
         } else if (event.key === 'Escape') {
             hide();
         }
     });
 
     category.addEventListener('change', () => {
+        if (category.value !== previousCategory) {
+            input.value = '';
+            if (instrumentName) instrumentName.value = '';
+            autoName = null;
+            previousCategory = category.value;
+        }
         hide();
         input.placeholder = {
-            FOREX: 'Type EURUSD, XAUUSD…',
+            FOREX: 'Type EURUSD, GBPUSD…',
             CRYPTO: 'Type BTCUSD, BTCUSDT…',
             DERIV: 'Type Volatility, Boom, Crash…',
+            COMMODITY: 'Type XAUUSD, XAGUSD, WTI…',
             STOCKS: 'Type AAPL, RELIANCE, JKH…',
         }[category.value] || 'Type a symbol';
     });
