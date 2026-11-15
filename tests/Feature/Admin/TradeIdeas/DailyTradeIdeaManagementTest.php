@@ -44,7 +44,31 @@ class DailyTradeIdeaManagementTest extends TestCase
             ->assertSee('EURUSD')
             ->assertSee('BTCUSDT')
             ->assertSee('BOOM1000')
-            ->assertSee('AAPL');
+            ->assertSee('AAPL')
+            ->assertSee('XAUUSD')
+            ->assertSee('Gold / US Dollar')
+            ->assertSee('Commodities');
+    }
+
+    public function test_daily_commodity_create_and_market_filter(): void
+    {
+        $admin = $this->adminWithPermissions(['trade_ideas.create', 'trade_ideas.view']);
+        $payload = $this->minimalPayload();
+        $payload['title'] = 'Gold Commodity Daily Idea';
+        $payload['category'] = TradeIdea::CATEGORY_COMMODITY;
+        $payload['symbol'] = 'xauusd';
+        $payload['instrument_name'] = 'Gold / US Dollar';
+        $this->actingAs($admin, 'admin')->post(route('admin.daily_trade_ideas.store'), $payload)->assertRedirect();
+        $this->assertDatabaseHas('daily_trade_ideas', [
+            'category' => TradeIdea::CATEGORY_COMMODITY,
+            'market_region' => null,
+            'symbol' => 'XAUUSD',
+            'instrument_name' => 'Gold / US Dollar',
+        ]);
+        $this->assertDatabaseCount('trade_ideas', 0);
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.daily_trade_ideas.index', ['market_filter' => 'COMMODITY']))
+            ->assertOk()->assertSee('Gold Commodity Daily Idea');
     }
 
     public function test_admin_can_create_daily_trade_idea_without_touching_long_term_table(): void
