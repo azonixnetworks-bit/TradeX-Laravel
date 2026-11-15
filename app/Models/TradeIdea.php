@@ -17,6 +17,7 @@ class TradeIdea extends Model
     public const CATEGORY_CRYPTO = 'CRYPTO';
     public const CATEGORY_DERIV = 'DERIV';
     public const CATEGORY_STOCKS = 'STOCKS';
+    public const CATEGORY_COMMODITY = 'COMMODITY';
 
     public const REGION_SRI_LANKA = 'SRI_LANKA';
     public const REGION_INDIA = 'INDIA';

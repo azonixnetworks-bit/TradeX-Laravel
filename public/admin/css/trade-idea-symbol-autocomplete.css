@@ -60,3 +60,10 @@
     font-size: 9px;
     line-height: 1.5;
 }
+
+.ti-symbol-empty {
+    padding: 10px 11px;
+    color: rgba(255, 255, 255, .7);
+    font-size: 11px;
+    line-height: 1.5;
+}

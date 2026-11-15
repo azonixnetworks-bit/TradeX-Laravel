@@ -100,6 +100,7 @@ class TradeIdeaController extends Controller
                     TradeIdea::CATEGORY_FOREX,
                     TradeIdea::CATEGORY_CRYPTO,
                     TradeIdea::CATEGORY_DERIV,
+                    TradeIdea::CATEGORY_COMMODITY,
                     TradeIdea::CATEGORY_STOCKS,
                 ],
                 true
@@ -179,6 +180,7 @@ class TradeIdeaController extends Controller
                 'category',
                 TradeIdea::CATEGORY_DERIV
             ),
+            'COMMODITY' => $query->where('category', TradeIdea::CATEGORY_COMMODITY),
 
             'STOCKS_CSE' => $query
                 ->where(

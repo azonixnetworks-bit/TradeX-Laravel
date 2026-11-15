@@ -55,6 +55,7 @@
                     'FOREX' => 'Forex',
                     'CRYPTO' => 'Crypto',
                     'DERIV' => 'Deriv',
+                    'COMMODITY' => 'Commodities',
                     'STOCKS' => 'Stocks',
                 ] as $value => $label)
                     <option

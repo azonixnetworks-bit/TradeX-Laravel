@@ -18,12 +18,15 @@ class TradeIdeaSymbolCatalog
             'FOREX' => [],
             'CRYPTO' => [],
             'DERIV' => [],
+            'COMMODITY' => [],
             'STOCKS' => [],
         ];
 
         $this->mergeList($catalog['FOREX'], (array) config('tradex_screener.forex.symbols', []));
         $this->mergeMap($catalog['FOREX'], (array) config('ic_markets_forex.instruments', []));
-        $this->mergeMap($catalog['FOREX'], (array) config('trading_instruments.markets.commodity.instruments', []));
+        // Keep metal and energy CFDs in their own market category.
+        $this->mergeMap($catalog['COMMODITY'], (array) config('trading_instruments.markets.commodity.instruments', []));
+        $this->mergeMap($catalog['COMMODITY'], (array) config('ic_markets_commodities.instruments', []));
 
         $this->mergeList($catalog['CRYPTO'], (array) config('tradex_screener.crypto.symbols', []));
         $this->mergeMap($catalog['CRYPTO'], (array) config('ic_markets_crypto.instruments', []));
@@ -78,9 +81,14 @@ class TradeIdeaSymbolCatalog
                         return;
                     }
 
+                    $symbol = strtoupper(trim((string) $idea->getAttribute('symbol')));
+                    if ($symbol === '' || isset($catalog[$category][$symbol])) {
+                        return;
+                    }
+
                     $this->add(
                         $catalog[$category],
-                        (string) $idea->getAttribute('symbol'),
+                        $symbol,
                         [
                             'name' => (string) ($idea->getAttribute('instrument_name') ?: $idea->getAttribute('symbol')),
                             'region' => (string) $idea->getAttribute('market_region'),
