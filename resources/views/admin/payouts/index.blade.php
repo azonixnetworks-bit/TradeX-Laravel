@@ -112,7 +112,7 @@
                     </td>
                     <td>{{ $payout->method }}</td>
                     <td>{{ $amount['currency'] }} {{ $amount['amount'] }}</td>
-                    <td><strong>{{ $payout->status }}</strong></td>
+                    <td><strong>{{ str_replace('_', ' ', $payout->displayStatus()) }}</strong></td>
                     <td>{{ $payout->requested_at?->format('Y-m-d H:i') }}</td>
                     <td><a class="secondary-btn" href="{{ route('admin.payouts.show', $payout) }}">Review</a></td>
                 </tr>

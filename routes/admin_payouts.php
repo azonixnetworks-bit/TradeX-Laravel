@@ -24,6 +24,11 @@ Route::prefix('admin/payouts')
             ->middleware('throttle:20,1')
             ->name('approve');
 
+        Route::patch('/{payoutRequest}/queue', [PayoutController::class, 'queue'])
+            ->whereNumber('payoutRequest')
+            ->middleware('throttle:20,1')
+            ->name('queue');
+
         Route::patch('/{payoutRequest}/reject', [PayoutController::class, 'reject'])
             ->whereNumber('payoutRequest')
             ->middleware('throttle:20,1')

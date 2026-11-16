@@ -9,6 +9,11 @@
     $available = $money->present((int) $balance['available_cents']);
     $locked = $money->present((int) $balance['locked_cents']);
     $paid = $money->present((int) $balance['paid_cents']);
+    $netEarned = $money->present((int) $balance['net_earned_cents']);
+    $totalRequested = $money->present((int) $userPayoutStats['requested_cents']);
+    $totalWithdrawn = $money->present((int) $userPayoutStats['withdrawn_cents']);
+    $activeRequested = $money->present((int) $userPayoutStats['active_cents']);
+    $displayStatus = str_replace('_', ' ', $payout->displayStatus());
 @endphp
 
 <div class="page-header">
@@ -31,11 +36,15 @@
 @endif
 
 <div class="user-stat-grid">
-    <div class="user-stat-card"><span>Status</span><strong>{{ $payout->status }}</strong></div>
+    <div class="user-stat-card"><span>Status</span><strong>{{ $displayStatus }}</strong></div>
     <div class="user-stat-card"><span>Requested</span><strong>{{ $payout->requested_at?->format('Y-m-d H:i') }}</strong></div>
+    <div class="user-stat-card"><span>Total Earned Balance</span><strong>USD {{ $netEarned['amount'] }}</strong></div>
     <div class="user-stat-card"><span>Available Balance</span><strong>USD {{ $available['amount'] }}</strong></div>
     <div class="user-stat-card"><span>Locked Balance</span><strong>USD {{ $locked['amount'] }}</strong></div>
-    <div class="user-stat-card"><span>Paid Balance</span><strong>USD {{ $paid['amount'] }}</strong></div>
+    <div class="user-stat-card"><span>Total Withdrawn</span><strong>USD {{ $totalWithdrawn['amount'] }}</strong></div>
+    <div class="user-stat-card"><span>Total Requested</span><strong>USD {{ $totalRequested['amount'] }}</strong></div>
+    <div class="user-stat-card"><span>Active Requests</span><strong>USD {{ $activeRequested['amount'] }}</strong></div>
+    <div class="user-stat-card"><span>Request Count</span><strong>{{ number_format($userPayoutStats['request_count']) }}</strong></div>
 </div>
 
 <section class="panel" style="padding:22px;margin-bottom:18px;">
@@ -49,6 +58,20 @@
     <p><strong>Email:</strong> {{ $payout->user?->email ?? '—' }}</p>
     <p><strong>Referral Code:</strong> {{ $payout->user?->referral_code ?? '—' }}</p>
     <p><strong>Country:</strong> {{ $payout->user?->country_code ?? '—' }}</p>
+    <p><strong>User ID:</strong> {{ $payout->user?->id ?? '—' }}</p>
+    <p><strong>Account type:</strong> {{ $payout->user?->account_type ?? '—' }}</p>
+</section>
+
+<section class="panel" style="padding:22px;margin-bottom:18px;">
+    <div class="panel-eyebrow">USER STATUS TIMELINE</div>
+    <h2>Requested → Processing → On Queue → Completed</h2>
+    <p>Normal completion window: <strong>3 to 5 business days</strong>.</p>
+    <p>
+        Requested: {{ $payout->requested_at?->format('Y-m-d H:i') ?? '—' }} ·
+        Processing: {{ $payout->approved_at?->format('Y-m-d H:i') ?? '—' }} ·
+        On Queue: {{ $payout->processing_at?->format('Y-m-d H:i') ?? '—' }} ·
+        Completed: {{ $payout->paid_at?->format('Y-m-d H:i') ?? '—' }}
+    </p>
 </section>
 
 <section class="panel" style="padding:22px;margin-bottom:18px;">
@@ -135,7 +158,7 @@
         @if($permissions['approve'])
             <section class="panel" style="padding:22px;">
                 <div class="panel-eyebrow">APPROVE</div>
-                <h2>Approve Payout</h2>
+                <h2>Start Processing</h2>
                 <form method="POST" action="{{ route('admin.payouts.approve', $payout) }}">
                     @csrf
                     @method('PATCH')
@@ -143,7 +166,7 @@
                     <textarea name="reason" rows="4" required minlength="10" maxlength="500">{{ old('reason') }}</textarea>
                     <label>Internal note (optional)</label>
                     <textarea name="internal_note" rows="3" maxlength="1000">{{ old('internal_note') }}</textarea>
-                    <button class="primary-btn" type="submit">Approve Payout</button>
+                    <button class="primary-btn" type="submit">Start Processing</button>
                 </form>
             </section>
         @endif
@@ -168,11 +191,30 @@
 
 @if(
     $payout->status === \App\Models\PayoutRequest::STATUS_APPROVED
+    && $permissions['approve']
+)
+    <section class="panel" style="padding:22px;margin-top:18px;">
+        <div class="panel-eyebrow">PAYMENT QUEUE</div>
+        <h2>Move to On Queue</h2>
+        <p>Use this after review is complete and the payout is ready for settlement.</p>
+        <form method="POST" action="{{ route('admin.payouts.queue', $payout) }}">
+            @csrf
+            @method('PATCH')
+            <button class="primary-btn" type="submit">Move to On Queue</button>
+        </form>
+    </section>
+@endif
+
+@if(
+    in_array($payout->status, [
+        \App\Models\PayoutRequest::STATUS_APPROVED,
+        \App\Models\PayoutRequest::STATUS_PROCESSING,
+    ], true)
     && $permissions['mark_paid']
 )
     <section class="panel" style="padding:22px;margin-top:18px;">
         <div class="panel-eyebrow">SETTLEMENT CONFIRMATION</div>
-        <h2>Mark Paid</h2>
+        <h2>Mark Completed</h2>
         <p>Only use this after the external PayPal/Binance/USDT/bank transfer is actually completed.</p>
 
         <form method="POST" action="{{ route('admin.payouts.mark-paid', $payout) }}">
@@ -182,8 +224,34 @@
             <input type="text" name="provider_reference" value="{{ old('provider_reference') }}" required minlength="4" maxlength="190">
             <label>Internal note (optional)</label>
             <textarea name="internal_note" rows="3" maxlength="1000">{{ old('internal_note') }}</textarea>
-            <button class="primary-btn" type="submit">Confirm Paid</button>
+            <button class="primary-btn" type="submit">Confirm Completed</button>
         </form>
     </section>
 @endif
+
+<section class="panel users-panel" style="margin-top:18px;">
+    <div class="panel-header">
+        <div><div class="panel-eyebrow">USER PAYOUT HISTORY</div><h2>Latest 50 Requests</h2></div>
+    </div>
+    <div class="users-table-wrap">
+        <table class="users-table">
+            <thead><tr><th>UUID</th><th>Method</th><th>Amount</th><th>Status</th><th>Requested</th><th>Completed</th></tr></thead>
+            <tbody>
+            @forelse($userPayoutHistory as $historyItem)
+                @php($historyAmount = $money->present((int) $historyItem->amount_cents, (string) $historyItem->currency))
+                <tr>
+                    <td><a href="{{ route('admin.payouts.show', $historyItem) }}">{{ $historyItem->uuid }}</a></td>
+                    <td>{{ $historyItem->method }}</td>
+                    <td>{{ $historyAmount['currency'] }} {{ $historyAmount['amount'] }}</td>
+                    <td>{{ str_replace('_', ' ', $historyItem->displayStatus()) }}</td>
+                    <td>{{ $historyItem->requested_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                    <td>{{ $historyItem->paid_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="6">No withdrawal history is available.</td></tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+</section>
 @endsection

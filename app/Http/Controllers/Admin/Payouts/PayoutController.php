@@ -97,13 +97,34 @@ class PayoutController extends Controller
 
             return redirect()
                 ->route('admin.payouts.show', $payoutRequest)
-                ->with('success', 'Payout approved. The locked affiliate balance remains reserved until payment is completed.');
+                ->with('success', 'Payout processing started. The locked affiliate balance remains reserved until payment is completed.');
         } catch (DomainException $exception) {
             return redirect()
                 ->route('admin.payouts.show', $payoutRequest)
                 ->withErrors([
                     'payout_review' => $exception->getMessage(),
                 ]);
+        }
+    }
+
+    public function queue(
+        PayoutRequest $payoutRequest,
+        Request $request,
+        AdminPayoutService $service
+    ): RedirectResponse {
+        $admin = $this->admin();
+        $this->requirePermission($admin, 'payouts.approve');
+
+        try {
+            $service->queue($payoutRequest, $admin, $request);
+
+            return redirect()
+                ->route('admin.payouts.show', $payoutRequest)
+                ->with('success', 'Payout moved to the payment queue.');
+        } catch (DomainException $exception) {
+            return redirect()
+                ->route('admin.payouts.show', $payoutRequest)
+                ->withErrors(['payout_review' => $exception->getMessage()]);
         }
     }
 
@@ -165,8 +186,7 @@ class PayoutController extends Controller
             'approve' => $admin->hasPermission('payouts.approve'),
             'reject' => $admin->hasPermission('payouts.reject'),
             'mark_paid' => $admin->hasPermission('payouts.mark_paid'),
-            'sensitive_destination' =>
-                $admin->hasPermission('payouts.approve')
+            'sensitive_destination' => $admin->hasPermission('payouts.approve')
                 || $admin->hasPermission('payouts.mark_paid'),
         ];
     }

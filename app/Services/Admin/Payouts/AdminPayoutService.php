@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Payouts\PayoutBalanceService;
 use App\Services\Payouts\PayoutDestinationService;
 use App\Services\Payouts\PayoutMoney;
+use App\Services\Payouts\PayoutStatusNotificationService;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -23,9 +24,9 @@ class AdminPayoutService
     public function __construct(
         private readonly PayoutBalanceService $balances,
         private readonly PayoutDestinationService $destinations,
-        private readonly PayoutMoney $money
-    ) {
-    }
+        private readonly PayoutMoney $money,
+        private readonly PayoutStatusNotificationService $notifications
+    ) {}
 
     public function dashboard(array $filters): array
     {
@@ -102,6 +103,9 @@ class AdminPayoutService
             );
         }
 
+        $userPayouts = PayoutRequest::query()
+            ->where('user_id', $payout->user_id);
+
         return [
             'payout' => $payout,
             'balance' => $this->balances
@@ -109,6 +113,20 @@ class AdminPayoutService
             'destination' => $this->destinations
                 ->masked((array) $payout->destination_snapshot),
             'money' => $this->money,
+            'userPayoutStats' => [
+                'requested_cents' => (int) (clone $userPayouts)->sum('amount_cents'),
+                'withdrawn_cents' => (int) (clone $userPayouts)
+                    ->where('status', PayoutRequest::STATUS_PAID)
+                    ->sum('amount_cents'),
+                'active_cents' => (int) (clone $userPayouts)
+                    ->whereIn('status', PayoutRequest::ACTIVE_STATUSES)
+                    ->sum('amount_cents'),
+                'request_count' => (clone $userPayouts)->count(),
+            ],
+            'userPayoutHistory' => (clone $userPayouts)
+                ->latest('requested_at')
+                ->limit(50)
+                ->get(),
         ];
     }
 
@@ -221,13 +239,60 @@ class AdminPayoutService
                     userAgent: $request->userAgent()
                 );
 
-                return $locked->fresh([
+                $updated = $locked->fresh([
                     'user',
                     'allocations',
                 ]);
+
+                DB::afterCommit(fn () => $this->notifications->send($updated, 'PROCESSING'));
+
+                return $updated;
             },
             3
         );
+    }
+
+    public function queue(
+        PayoutRequest $payout,
+        AdminUser $admin,
+        Request $request
+    ): PayoutRequest {
+        return DB::transaction(function () use ($payout, $admin, $request): PayoutRequest {
+            $locked = $this->lockPayoutAndUser($payout);
+
+            if ($locked->status !== PayoutRequest::STATUS_APPROVED) {
+                throw new DomainException('Only a processing payout can be moved to the payment queue.');
+            }
+
+            $this->assertDestinationIntegrity($locked, (array) $locked->destination_snapshot);
+            $this->assertAllocationIntegrity($locked);
+            $oldStatus = $locked->status;
+            $locked->forceFill([
+                'status' => PayoutRequest::STATUS_PROCESSING,
+                'processing_at' => now(),
+                'reviewed_by_admin_id' => $admin->getKey(),
+                'internal_notes' => $this->appendNote(
+                    $locked->internal_notes,
+                    'QUEUE',
+                    'Payout moved to the external payment queue.',
+                    null
+                ),
+            ])->save();
+
+            AuditLog::record(
+                actorType: 'ADMIN', actorId: $admin->getKey(),
+                action: 'PAYOUT_QUEUED', module: 'PAYOUTS',
+                targetType: 'PAYOUT_REQUEST', targetId: $locked->getKey(),
+                oldValues: ['status' => $oldStatus],
+                newValues: ['status' => PayoutRequest::STATUS_PROCESSING, 'payout_uuid' => $locked->uuid],
+                ipAddress: $request->ip(), userAgent: $request->userAgent()
+            );
+
+            $updated = $locked->fresh(['user', 'allocations']);
+            DB::afterCommit(fn () => $this->notifications->send($updated, 'ON_QUEUE'));
+
+            return $updated;
+        }, 3);
     }
 
     public function reject(
@@ -325,8 +390,10 @@ class AdminPayoutService
                 );
 
                 if (
-                    $locked->status
-                    !== PayoutRequest::STATUS_APPROVED
+                    ! in_array($locked->status, [
+                        PayoutRequest::STATUS_APPROVED,
+                        PayoutRequest::STATUS_PROCESSING,
+                    ], true)
                 ) {
                     throw new DomainException(
                         'Only an approved payout can be marked as paid.'
@@ -386,10 +453,14 @@ class AdminPayoutService
                     userAgent: $request->userAgent()
                 );
 
-                return $locked->fresh([
+                $updated = $locked->fresh([
                     'user',
                     'allocations',
                 ]);
+
+                DB::afterCommit(fn () => $this->notifications->send($updated, 'COMPLETED'));
+
+                return $updated;
             },
             3
         );

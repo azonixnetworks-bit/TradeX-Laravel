@@ -7,6 +7,7 @@ use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Models\PayoutAllocation;
 use App\Models\PayoutRequest;
+use App\Services\Admin\Payouts\AdminPayoutService;
 use App\Services\Payouts\PayoutBalanceService;
 use App\Services\Payouts\PayoutDestinationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -124,6 +125,36 @@ class PayoutManagementTest extends TestCase
             PayoutRequest::STATUS_APPROVED,
             $payout->fresh()->status
         );
+    }
+
+    public function test_processing_payout_can_move_to_queue_before_completion(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'payouts.view',
+            'payouts.approve',
+            'payouts.mark_paid',
+        ]);
+        [$payout] = $this->pendingPayout();
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.payouts.approve', $payout),
+            ['reason' => 'Affiliate payout ledger and destination were verified.']
+        )->assertRedirect(route('admin.payouts.show', $payout));
+
+        $this->actingAs($admin, 'admin')->patch(
+            route('admin.payouts.queue', $payout)
+        )->assertRedirect(route('admin.payouts.show', $payout));
+
+        $payout->refresh();
+        $this->assertSame(PayoutRequest::STATUS_PROCESSING, $payout->status);
+        $this->assertNotNull($payout->processing_at);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'PAYOUT_QUEUED',
+            'target_id' => $payout->id,
+        ]);
+        $this->assertDatabaseHas('user_notification_receipts', [
+            'user_id' => $payout->user_id,
+        ]);
     }
 
     public function test_rejection_releases_locked_balance(): void
@@ -355,7 +386,7 @@ class PayoutManagementTest extends TestCase
 
         $this->expectException(\DomainException::class);
 
-        app(\App\Services\Admin\Payouts\AdminPayoutService::class)
+        app(AdminPayoutService::class)
             ->sensitiveDestination(
                 $payout->fresh(),
                 $admin,

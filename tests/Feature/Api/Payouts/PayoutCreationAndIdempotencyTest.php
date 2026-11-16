@@ -48,6 +48,18 @@ class PayoutCreationAndIdempotencyTest extends TestCase
             ->assertJsonPath(
                 'data.payout.amount.amount_cents',
                 1500
+            )
+            ->assertJsonPath(
+                'data.payout.display_status',
+                'REQUESTED'
+            )
+            ->assertJsonPath(
+                'data.payout.timeline.0.state',
+                'CURRENT'
+            )
+            ->assertJsonPath(
+                'data.payout.timeline.3.label',
+                'Completed'
             );
 
         $payout = PayoutRequest::query()
@@ -78,6 +90,10 @@ class PayoutCreationAndIdempotencyTest extends TestCase
             'payout@example.test',
             $rawDestination
         );
+
+        $this->assertDatabaseHas('user_notification_receipts', [
+            'user_id' => $user->getKey(),
+        ]);
 
         $this->assertStringNotContainsString(
             'payout@example.test',
