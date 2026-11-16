@@ -12,10 +12,13 @@ use App\Models\Lesson;
 use App\Models\LessonVideo;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use JsonException;
 
 class EducationContentLocalizationService
 {
+    private ?bool $localizationStorageAvailable = null;
+
     public function __construct(
         private readonly Request $request
     ) {
@@ -104,6 +107,19 @@ class EducationContentLocalizationService
                 false,
                 'SOURCE',
                 null
+            );
+        }
+
+        if (! $this->hasLocalizationStorage()) {
+            return $this->result(
+                $sourceFields,
+                $requestedLanguage,
+                $sourceLanguage,
+                $sourceLanguage,
+                true,
+                false,
+                'FALLBACK_SOURCE',
+                'LOCALIZATION_STORAGE_UNAVAILABLE'
             );
         }
 
@@ -401,6 +417,13 @@ class EducationContentLocalizationService
             $languageCode,
             (array) config('tradex_languages.languages', [])
         );
+    }
+
+    private function hasLocalizationStorage(): bool
+    {
+        return $this->localizationStorageAvailable ??=
+            Schema::hasTable('language_profiles')
+            && Schema::hasTable('education_content_localizations');
     }
 
     private function normalizeLanguageCode(string $languageCode): string

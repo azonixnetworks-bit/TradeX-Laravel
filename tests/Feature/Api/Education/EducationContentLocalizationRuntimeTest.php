@@ -11,6 +11,7 @@ use App\Models\Lesson;
 use App\Models\LessonVideo;
 use App\Services\Education\EducationContentLocalizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\CreatesAssignmentContent;
 use Tests\Concerns\CreatesEducationContent;
 use Tests\Concerns\CreatesTradeXMobileSession;
@@ -148,6 +149,37 @@ class EducationContentLocalizationRuntimeTest extends TestCase
             ->assertJsonPath(
                 'data.lesson.localization.fallback_applied',
                 false
+            );
+    }
+
+    public function test_catalog_and_lesson_fall_back_to_source_when_localization_storage_is_unavailable(): void
+    {
+        [$course, , $lesson] =
+            $this->createEducationTree(Course::ACCESS_FREE);
+
+        $user = $this->createApiUser([
+            'language_code' => 'ta',
+        ]);
+        $token = $this->issueBoundToken($user);
+
+        Schema::drop('education_content_localizations');
+
+        $this->withToken($token)
+            ->getJson('/api/v1/education/courses')
+            ->assertOk()
+            ->assertJsonPath('data.items.0.uuid', $course->uuid)
+            ->assertJsonPath(
+                'data.items.0.localization.fallback_reason',
+                'LOCALIZATION_STORAGE_UNAVAILABLE'
+            );
+
+        $this->withToken($token)
+            ->getJson('/api/v1/education/lessons/'.$lesson->uuid)
+            ->assertOk()
+            ->assertJsonPath('data.lesson.uuid', $lesson->uuid)
+            ->assertJsonPath(
+                'data.lesson.localization.fallback_reason',
+                'LOCALIZATION_STORAGE_UNAVAILABLE'
             );
     }
 
