@@ -64,7 +64,9 @@ class TradeIdeaIndexRequest extends FormRequest
                 Rule::in([
                     TradeIdea::CATEGORY_FOREX,
                     TradeIdea::CATEGORY_CRYPTO,
+                    TradeIdea::CATEGORY_INDICES,
                     TradeIdea::CATEGORY_DERIV,
+                    TradeIdea::CATEGORY_COMMODITY,
                     TradeIdea::CATEGORY_STOCKS,
                 ]),
             ],

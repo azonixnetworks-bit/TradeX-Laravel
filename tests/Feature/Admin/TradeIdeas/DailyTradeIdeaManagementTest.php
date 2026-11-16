@@ -46,7 +46,7 @@ class DailyTradeIdeaManagementTest extends TestCase
             ->assertSee('BOOM1000')
             ->assertSee('AAPL')
             ->assertSee('XAUUSD')
-            ->assertSee('Gold / US Dollar')
+            ->assertSee('Gold \\/ US Dollar', false)
             ->assertSee('Commodities');
     }
 

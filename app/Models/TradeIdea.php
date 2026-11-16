@@ -14,26 +14,41 @@ class TradeIdea extends Model
     use SoftDeletes;
 
     public const CATEGORY_FOREX = 'FOREX';
+
     public const CATEGORY_CRYPTO = 'CRYPTO';
+
+    public const CATEGORY_INDICES = 'INDICES';
+
     public const CATEGORY_DERIV = 'DERIV';
-    public const CATEGORY_STOCKS = 'STOCKS';
+
     public const CATEGORY_COMMODITY = 'COMMODITY';
 
+    public const CATEGORY_STOCKS = 'STOCKS';
+
     public const REGION_SRI_LANKA = 'SRI_LANKA';
+
     public const REGION_INDIA = 'INDIA';
+
     public const REGION_INTERNATIONAL = 'INTERNATIONAL';
 
     public const DIRECTION_BUY = 'BUY';
+
     public const DIRECTION_SELL = 'SELL';
 
     public const STATUS_DRAFT = 'DRAFT';
+
     public const STATUS_PUBLISHED = 'PUBLISHED';
+
     public const STATUS_CLOSED = 'CLOSED';
 
     public const OUTCOME_WIN = 'WIN';
+
     public const OUTCOME_LOSS = 'LOSS';
+
     public const OUTCOME_BREAKEVEN = 'BREAKEVEN';
+
     public const OUTCOME_CANCELLED = 'CANCELLED';
+
     public const OUTCOME_EXPIRED = 'EXPIRED';
 
     public const TIMEFRAMES = [

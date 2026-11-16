@@ -42,6 +42,7 @@
                 @foreach([
                     'FOREX' => 'Forex',
                     'CRYPTO' => 'Crypto',
+                    'INDICES' => 'Indices',
                     'DERIV' => 'Deriv',
                     'COMMODITY' => 'Commodities',
                     'STOCKS' => 'Stocks',
@@ -62,7 +63,7 @@
             <select id="market_region" name="market_region">
                 <option value="">Select region</option>
                 @foreach([
-                    'SRI_LANKA' => 'Sri Lanka',
+                    'SRI_LANKA' => 'Sri Lanka (CSE)',
                     'INDIA' => 'India',
                     'INTERNATIONAL' => 'International',
                 ] as $value => $label)

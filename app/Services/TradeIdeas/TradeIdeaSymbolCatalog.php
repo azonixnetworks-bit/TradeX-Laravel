@@ -17,6 +17,7 @@ class TradeIdeaSymbolCatalog
         $catalog = [
             'FOREX' => [],
             'CRYPTO' => [],
+            'INDICES' => [],
             'DERIV' => [],
             'COMMODITY' => [],
             'STOCKS' => [],

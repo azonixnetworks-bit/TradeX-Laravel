@@ -4,6 +4,7 @@
         'TODAY' => 'Today',
         'FOREX' => 'Forex',
         'CRYPTO' => 'Crypto',
+        'INDICES' => 'Indices',
         'DERIV' => 'Deriv',
         'COMMODITY' => 'Commodities',
         'STOCKS_CSE' => 'Stocks · CSE',

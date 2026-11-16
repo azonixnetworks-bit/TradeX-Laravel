@@ -11,9 +11,9 @@ use Tests\TestCase;
 
 class TradeIdeaApiTest extends TestCase
 {
-    use RefreshDatabase;
-    use CreatesTradeXMobileSession;
     use CreatesTradeIdeaApiContent;
+    use CreatesTradeXMobileSession;
+    use RefreshDatabase;
 
     public function test_premium_user_receives_only_available_trade_ideas(): void
     {
@@ -24,11 +24,9 @@ class TradeIdeaApiTest extends TestCase
             $this->createTradeIdeaApiContent(
                 TradeIdea::STATUS_CLOSED,
                 [
-                    'symbol' =>
-                        'BTCUSD',
+                    'symbol' => 'BTCUSD',
 
-                    'category' =>
-                        TradeIdea::CATEGORY_CRYPTO,
+                    'category' => TradeIdea::CATEGORY_CRYPTO,
                 ]
             );
 
@@ -36,14 +34,12 @@ class TradeIdeaApiTest extends TestCase
             $this->createTradeIdeaApiContent(
                 TradeIdea::STATUS_DRAFT,
                 [
-                    'symbol' =>
-                        'XAUUSD',
+                    'symbol' => 'XAUUSD',
                 ]
             );
 
         $user = $this->createApiUser([
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
         ]);
 
         $token = $this->issueBoundToken(
@@ -98,26 +94,20 @@ class TradeIdeaApiTest extends TestCase
             $this->createTradeIdeaApiContent(
                 TradeIdea::STATUS_PUBLISHED,
                 [
-                    'symbol' =>
-                        'JKH',
+                    'symbol' => 'JKH',
 
-                    'category' =>
-                        TradeIdea::CATEGORY_STOCKS,
+                    'category' => TradeIdea::CATEGORY_STOCKS,
 
-                    'market_region' =>
-                        TradeIdea::REGION_SRI_LANKA,
+                    'market_region' => TradeIdea::REGION_SRI_LANKA,
 
-                    'direction' =>
-                        TradeIdea::DIRECTION_SELL,
+                    'direction' => TradeIdea::DIRECTION_SELL,
 
-                    'timeframe' =>
-                        'D1',
+                    'timeframe' => 'D1',
                 ]
             );
 
         $user = $this->createApiUser([
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
         ]);
 
         $token = $this->issueBoundToken(
@@ -142,6 +132,40 @@ class TradeIdeaApiTest extends TestCase
             );
     }
 
+    public function test_commodity_and_indices_categories_are_filterable(): void
+    {
+        $commodity = $this->createTradeIdeaApiContent(
+            TradeIdea::STATUS_PUBLISHED,
+            [
+                'symbol' => 'XAUUSD',
+                'category' => TradeIdea::CATEGORY_COMMODITY,
+            ]
+        );
+
+        $index = $this->createTradeIdeaApiContent(
+            TradeIdea::STATUS_PUBLISHED,
+            [
+                'symbol' => 'US30',
+                'category' => TradeIdea::CATEGORY_INDICES,
+            ]
+        );
+
+        $user = $this->createApiUser(['account_type' => 'PREMIUM']);
+        $token = $this->issueBoundToken($user);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/trade-ideas?category=commodity')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.trade_ideas.0.uuid', $commodity->uuid);
+
+        $this->withToken($token)
+            ->getJson('/api/v1/trade-ideas?category=indices')
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.trade_ideas.0.uuid', $index->uuid);
+    }
+
     public function test_detail_returns_targets_timeline_and_never_leaks_private_storage_fields(): void
     {
         $tradeIdea =
@@ -152,8 +176,7 @@ class TradeIdeaApiTest extends TestCase
             );
 
         $user = $this->createApiUser([
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
         ]);
 
         $token = $this->issueBoundToken(
@@ -219,8 +242,7 @@ class TradeIdeaApiTest extends TestCase
             );
 
         $user = $this->createApiUser([
-            'account_type' =>
-                'PREMIUM',
+            'account_type' => 'PREMIUM',
         ]);
 
         $token = $this->issueBoundToken(

@@ -9,8 +9,10 @@ use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\DailyTradeIdea;
 use App\Models\DailyTradeIdeaTarget;
+use App\Models\TradeIdea;
 use App\Support\TradingViewUrl;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -43,7 +45,14 @@ class DailyTradeIdeaController extends Controller
 
         if ($marketFilter !== '') {
             $this->applyMarketFilter($query, $marketFilter);
-        } elseif (in_array($category, ['FOREX', 'CRYPTO', 'DERIV', 'COMMODITY', 'STOCKS'], true)) {
+        } elseif (in_array($category, [
+            TradeIdea::CATEGORY_FOREX,
+            TradeIdea::CATEGORY_CRYPTO,
+            TradeIdea::CATEGORY_INDICES,
+            TradeIdea::CATEGORY_DERIV,
+            TradeIdea::CATEGORY_COMMODITY,
+            TradeIdea::CATEGORY_STOCKS,
+        ], true)) {
             // Backward compatibility for existing category query links.
             $query->where('category', $category);
         }
@@ -81,13 +90,14 @@ class DailyTradeIdeaController extends Controller
     }
 
     private function applyMarketFilter(
-        \Illuminate\Database\Eloquent\Builder $query,
+        Builder $query,
         string $marketFilter
     ): void {
         match ($marketFilter) {
             'TODAY' => $this->applyTodayFilter($query),
             'FOREX' => $query->where('category', 'FOREX'),
             'CRYPTO' => $query->where('category', 'CRYPTO'),
+            'INDICES' => $query->where('category', 'INDICES'),
             'DERIV' => $query->where('category', 'DERIV'),
             'COMMODITY' => $query->where('category', 'COMMODITY'),
             'STOCKS_CSE' => $query
@@ -104,7 +114,7 @@ class DailyTradeIdeaController extends Controller
     }
 
     private function applyTodayFilter(
-        \Illuminate\Database\Eloquent\Builder $query
+        Builder $query
     ): void {
         $timezone = trim(
             (string) config(

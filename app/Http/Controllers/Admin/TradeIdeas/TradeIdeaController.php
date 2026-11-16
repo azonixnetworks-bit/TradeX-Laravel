@@ -19,8 +19,10 @@ use App\Services\TradeIdeas\TradeIdeaShareCardService;
 use App\Services\TradeIdeas\TradeIdeaStructureValidator;
 use App\Support\TradingViewUrl;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -99,6 +101,7 @@ class TradeIdeaController extends Controller
                 [
                     TradeIdea::CATEGORY_FOREX,
                     TradeIdea::CATEGORY_CRYPTO,
+                    TradeIdea::CATEGORY_INDICES,
                     TradeIdea::CATEGORY_DERIV,
                     TradeIdea::CATEGORY_COMMODITY,
                     TradeIdea::CATEGORY_STOCKS,
@@ -160,7 +163,7 @@ class TradeIdeaController extends Controller
     }
 
     private function applyMarketFilter(
-        \Illuminate\Database\Eloquent\Builder $query,
+        Builder $query,
         string $marketFilter
     ): void {
         match ($marketFilter) {
@@ -174,6 +177,11 @@ class TradeIdeaController extends Controller
             'CRYPTO' => $query->where(
                 'category',
                 TradeIdea::CATEGORY_CRYPTO
+            ),
+
+            'INDICES' => $query->where(
+                'category',
+                TradeIdea::CATEGORY_INDICES
             ),
 
             'DERIV' => $query->where(
@@ -217,7 +225,7 @@ class TradeIdeaController extends Controller
     }
 
     private function applyTodayFilter(
-        \Illuminate\Database\Eloquent\Builder $query
+        Builder $query
     ): void {
         $timezone = trim(
             (string) config(
@@ -501,7 +509,7 @@ class TradeIdeaController extends Controller
 
     public function shareCard(
         TradeIdea $tradeIdea
-    ): \Illuminate\Http\Response {
+    ): Response {
         $admin = $this->authenticatedAdmin();
 
         $this->requirePermission(
@@ -519,23 +527,17 @@ class TradeIdeaController extends Controller
             $svg,
             200,
             [
-                'Content-Type' =>
-                    'image/svg+xml; charset=UTF-8',
+                'Content-Type' => 'image/svg+xml; charset=UTF-8',
 
-                'Cache-Control' =>
-                    'private, no-store, no-cache, must-revalidate, max-age=0',
+                'Cache-Control' => 'private, no-store, no-cache, must-revalidate, max-age=0',
 
-                'Pragma' =>
-                    'no-cache',
+                'Pragma' => 'no-cache',
 
-                'Expires' =>
-                    '0',
+                'Expires' => '0',
 
-                'X-Content-Type-Options' =>
-                    'nosniff',
+                'X-Content-Type-Options' => 'nosniff',
 
-                'Content-Disposition' =>
-                    'inline; filename="tradex-trade-idea.svg"',
+                'Content-Disposition' => 'inline; filename="tradex-trade-idea.svg"',
             ]
         );
     }
@@ -575,14 +577,11 @@ class TradeIdeaController extends Controller
             targetType: 'TRADE_IDEA',
             targetId: $tradeIdea->id,
             newValues: [
-                'created' =>
-                    $summary['created'],
+                'created' => $summary['created'],
 
-                'existing' =>
-                    $summary['existing'],
+                'existing' => $summary['existing'],
 
-                'configured_destinations' =>
-                    $summary['configured_destinations'],
+                'configured_destinations' => $summary['configured_destinations'],
             ],
             ipAddress: $request->ip(),
             userAgent: $request->userAgent()
@@ -596,8 +595,7 @@ class TradeIdeaController extends Controller
                 ->route(
                     'admin.trade_ideas.show',
                     [
-                        'tradeIdea' =>
-                            $tradeIdea,
+                        'tradeIdea' => $tradeIdea,
                     ]
                 )
                 ->with(
@@ -610,8 +608,7 @@ class TradeIdeaController extends Controller
             ->route(
                 'admin.trade_ideas.show',
                 [
-                    'tradeIdea' =>
-                        $tradeIdea,
+                    'tradeIdea' => $tradeIdea,
                 ]
             )
             ->with(
@@ -655,14 +652,11 @@ class TradeIdeaController extends Controller
                 targetType: 'TRADE_IDEA_DISTRIBUTION',
                 targetId: $distribution->id,
                 newValues: [
-                    'trade_idea_id' =>
-                        $tradeIdea->id,
+                    'trade_idea_id' => $tradeIdea->id,
 
-                    'channel' =>
-                        $distribution->channel,
+                    'channel' => $distribution->channel,
 
-                    'status' =>
-                        TradeIdeaDistribution::STATUS_PENDING,
+                    'status' => TradeIdeaDistribution::STATUS_PENDING,
                 ],
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
@@ -673,8 +667,7 @@ class TradeIdeaController extends Controller
             ->route(
                 'admin.trade_ideas.show',
                 [
-                    'tradeIdea' =>
-                        $tradeIdea,
+                    'tradeIdea' => $tradeIdea,
                 ]
             )
             ->with(
@@ -1391,7 +1384,7 @@ class TradeIdeaController extends Controller
     }
 
     /**
-     * @param array<int, array{price:mixed}> $targets
+     * @param  array<int, array{price:mixed}>  $targets
      */
     private function replaceTargets(
         TradeIdea $tradeIdea,
@@ -1403,8 +1396,7 @@ class TradeIdeaController extends Controller
         foreach (
             array_values(
                 $targets
-            )
-            as $index => $target
+            ) as $index => $target
         ) {
             TradeIdeaTarget::query()->create([
                 'trade_idea_id' => $tradeIdea->id,
@@ -1433,20 +1425,16 @@ class TradeIdeaController extends Controller
         }
 
         return match ($type) {
-            TradeIdeaUpdate::TYPE_ENTRY_TRIGGERED =>
-                'Entry triggered at '.$price.'.',
+            TradeIdeaUpdate::TYPE_ENTRY_TRIGGERED => 'Entry triggered at '.$price.'.',
 
-            TradeIdeaUpdate::TYPE_STOP_MOVED =>
-                'Stop Loss moved to '.$price.'.',
+            TradeIdeaUpdate::TYPE_STOP_MOVED => 'Stop Loss moved to '.$price.'.',
 
-            TradeIdeaUpdate::TYPE_TARGET_HIT =>
-                ($target?->label ?? 'Target')
+            TradeIdeaUpdate::TYPE_TARGET_HIT => ($target?->label ?? 'Target')
                 .' hit at '
                 .$price
                 .'.',
 
-            default =>
-                'Trade Idea updated.',
+            default => 'Trade Idea updated.',
         };
     }
 
@@ -1560,31 +1548,27 @@ class TradeIdeaController extends Controller
             );
 
             match ($eventType) {
-                TradeIdeaDistribution::EVENT_INITIAL =>
-                    $manager->queueInitial(
-                        $tradeIdea,
-                        $admin
-                    ),
+                TradeIdeaDistribution::EVENT_INITIAL => $manager->queueInitial(
+                    $tradeIdea,
+                    $admin
+                ),
 
-                TradeIdeaDistribution::EVENT_UPDATE =>
-                    $manager->queueUpdate(
-                        $tradeIdea,
-                        $update
-                            ?? throw new \LogicException(
-                                'Timeline update is required.'
-                            ),
-                        $admin
-                    ),
+                TradeIdeaDistribution::EVENT_UPDATE => $manager->queueUpdate(
+                    $tradeIdea,
+                    $update
+                        ?? throw new \LogicException(
+                            'Timeline update is required.'
+                        ),
+                    $admin
+                ),
 
-                TradeIdeaDistribution::EVENT_CLOSED =>
-                    $manager->queueClosed(
-                        $tradeIdea,
-                        $update,
-                        $admin
-                    ),
+                TradeIdeaDistribution::EVENT_CLOSED => $manager->queueClosed(
+                    $tradeIdea,
+                    $update,
+                    $admin
+                ),
 
-                default =>
-                    null,
+                default => null,
             };
         } catch (\Throwable $exception) {
             /*
@@ -1603,11 +1587,9 @@ class TradeIdeaController extends Controller
                 targetType: 'TRADE_IDEA',
                 targetId: $tradeIdea->id,
                 newValues: [
-                    'event_type' =>
-                        $eventType,
+                    'event_type' => $eventType,
 
-                    'error_code' =>
-                        'QUEUE_PREPARATION_FAILED',
+                    'error_code' => 'QUEUE_PREPARATION_FAILED',
                 ],
                 ipAddress: $request->ip(),
                 userAgent: $request->userAgent()
@@ -1778,8 +1760,7 @@ class TradeIdeaController extends Controller
                         $after
                     )
                 )
-            )
-            as $key
+            ) as $key
         ) {
             $old = $before[$key] ?? null;
             $new = $after[$key] ?? null;

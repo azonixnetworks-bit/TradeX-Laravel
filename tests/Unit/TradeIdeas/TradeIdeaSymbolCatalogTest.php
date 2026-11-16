@@ -11,11 +11,15 @@ class TradeIdeaSymbolCatalogTest extends TestCase
     {
         $catalog = app(TradeIdeaSymbolCatalog::class)->grouped();
 
-        $this->assertSame(['FOREX', 'CRYPTO', 'DERIV', 'STOCKS'], array_keys($catalog));
+        $this->assertSame(
+            ['FOREX', 'CRYPTO', 'INDICES', 'DERIV', 'COMMODITY', 'STOCKS'],
+            array_keys($catalog)
+        );
         $this->assertContains('EURUSD', array_column($catalog['FOREX'], 'symbol'));
-        $this->assertContains('XAUUSD', array_column($catalog['FOREX'], 'symbol'));
+        $this->assertNotContains('XAUUSD', array_column($catalog['FOREX'], 'symbol'));
         $this->assertContains('BTCUSD', array_column($catalog['CRYPTO'], 'symbol'));
         $this->assertContains('BTCUSDT', array_column($catalog['CRYPTO'], 'symbol'));
+        $this->assertContains('XAUUSD', array_column($catalog['COMMODITY'], 'symbol'));
         $this->assertContains('BOOM1000', array_column($catalog['DERIV'], 'symbol'));
         $this->assertContains('R_75', array_column($catalog['DERIV'], 'symbol'));
         $this->assertContains('AAPL', array_column($catalog['STOCKS'], 'symbol'));
