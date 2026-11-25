@@ -166,7 +166,7 @@ class ManualDepositApiTest extends TestCase
                         $txHash,
 
                     'amount' =>
-                        '79.000000',
+                        '150.000000',
 
                     'sender_address' =>
                         'TUserSenderAddressAPI12',
@@ -211,7 +211,7 @@ class ManualDepositApiTest extends TestCase
                         $txHash,
 
                     'amount' =>
-                        '79.000000',
+                        '150.000000',
                 ]
             )
             ->assertStatus(
@@ -343,7 +343,7 @@ class ManualDepositApiTest extends TestCase
 
         config()->set(
             'tradex_payments.product.education_premium.usdt_trc20.amount_minor',
-            79000000
+            150000000
         );
     }
 }

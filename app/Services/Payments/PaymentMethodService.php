@@ -478,8 +478,9 @@ class PaymentMethodService
         string $country,
         Product $product
     ): array {
-        $amount =
-            (int) config(
+        $amount = $product->lkr_amount_minor !== null
+            ? (int) $product->lkr_amount_minor
+            : (int) config(
                 'tradex_payments.product.education_premium.local_bank.amount_minor',
                 0
             );
@@ -583,11 +584,7 @@ class PaymentMethodService
         string $country,
         Product $product
     ): array {
-        $amount =
-            (int) config(
-                'tradex_payments.product.education_premium.usdt_trc20.amount_minor',
-                79000000
-            );
+        $amount = (int) $product->amount_minor * 10000;
 
         $currency =
             (string) config(

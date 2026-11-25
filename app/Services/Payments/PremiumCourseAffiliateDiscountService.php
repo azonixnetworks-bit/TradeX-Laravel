@@ -3,6 +3,7 @@
 namespace App\Services\Payments;
 
 use App\Exceptions\AuthApiException;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\Auth\Registration\RegistrationReferralValidator;
 use Illuminate\Support\Facades\DB;
@@ -66,10 +67,9 @@ class PremiumCourseAffiliateDiscountService
             0,
             min(
                 100,
-                (int) config(
-                    'tradex_payments.product.education_premium.affiliate_discount_percent',
-                    15
-                )
+                (int) Product::query()
+                    ->where('code', Product::CODE_EDUCATION_PREMIUM)
+                    ->value('affiliate_discount_percent')
             )
         );
 

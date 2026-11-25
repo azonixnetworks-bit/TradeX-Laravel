@@ -7,6 +7,8 @@ use App\Models\AdminRole;
 use App\Models\AdminUser;
 use App\Models\AuditLog;
 use App\Models\Product;
+use App\Models\PaymentReceivingAccount;
+use App\Services\Payments\PremiumCourseAffiliateDiscountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -98,6 +100,59 @@ class AdminProductCatalogTest extends TestCase
         $this->assertSame($originalCurrency, $audit->new_values['currency']);
     }
 
+    public function test_manage_admin_can_update_and_preview_premium_commercial_pricing(): void
+    {
+        $admin = $this->adminWithPermissions([
+            'products.view',
+            'products.manage',
+        ]);
+        $product = $this->educationProduct();
+        $bank = PaymentReceivingAccount::query()->create([
+            'type' => PaymentReceivingAccount::TYPE_BANK,
+            'display_name' => 'LKR Bank',
+            'country_code' => 'LK',
+            'currency' => 'LKR',
+            'tender_amount_minor' => 5000000,
+            'tender_amount_decimal' => '50000.00',
+            'amount_scale' => 2,
+            'bank_name' => 'TradeX Bank',
+            'account_holder' => 'TradeX',
+            'account_number' => '123456789',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($admin, 'admin')
+            ->get(route('admin.products.edit', $product))
+            ->assertOk()
+            ->assertSee('Regular Course Price (USD)')
+            ->assertSee('Regular Course Price (LKR)')
+            ->assertSee('Valid Affiliate Code Discount (%)')
+            ->assertSee('Customer Pricing Preview');
+
+        $this->actingAs($admin, 'admin')
+            ->patch(route('admin.products.update', $product), [
+                'name' => $product->name,
+                'description' => $product->description,
+                'regular_price_usd' => '200.00',
+                'regular_price_lkr' => '65000.00',
+                'affiliate_discount_percent' => '20',
+                'is_active' => '1',
+            ])
+            ->assertRedirect(route('admin.products.index'));
+
+        $product->refresh();
+
+        $this->assertSame(20000, $product->amount_minor);
+        $this->assertSame(6500000, $product->lkr_amount_minor);
+        $this->assertSame(20, $product->affiliate_discount_percent);
+        $this->assertSame(6500000, $bank->fresh()->tender_amount_minor);
+        $this->assertSame(
+            16000,
+            app(PremiumCourseAffiliateDiscountService::class)
+                ->discountedAmount(20000)
+        );
+    }
+
     public function test_manage_admin_can_deactivate_product_without_deleting_it(): void
     {
         $admin = $this->adminWithPermissions([
@@ -155,7 +210,7 @@ class AdminProductCatalogTest extends TestCase
             ->assertRedirect(route('admin.products.edit', $product))
             ->assertSessionHasErrors('amount_minor');
 
-        $this->assertSame(7900, $product->fresh()->amount_minor);
+        $this->assertSame(15000, $product->fresh()->amount_minor);
     }
 
     private function educationProduct(): Product

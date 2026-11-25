@@ -4,6 +4,7 @@ namespace App\Services\Admin\Products;
 
 use App\Models\AdminUser;
 use App\Models\AuditLog;
+use App\Models\PaymentReceivingAccount;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -119,6 +120,12 @@ class AdminProductService
                     'amount_minor' =>
                         (int) $locked
                             ->amount_minor,
+                    'lkr_amount_minor' =>
+                        $locked->lkr_amount_minor !== null
+                            ? (int) $locked->lkr_amount_minor
+                            : null,
+                    'affiliate_discount_percent' =>
+                        (int) $locked->affiliate_discount_percent,
                     'is_active' =>
                         (bool) $locked
                             ->is_active,
@@ -147,6 +154,14 @@ class AdminProductService
                         (int) $data[
                             'amount_minor'
                         ],
+                    'lkr_amount_minor' =>
+                        array_key_exists('lkr_amount_minor', $data)
+                            ? (int) $data['lkr_amount_minor']
+                            : $locked->lkr_amount_minor,
+                    'affiliate_discount_percent' =>
+                        array_key_exists('affiliate_discount_percent', $data)
+                            ? (int) $data['affiliate_discount_percent']
+                            : $locked->affiliate_discount_percent,
                     'is_active' =>
                         (bool) $data[
                             'is_active'
@@ -154,6 +169,10 @@ class AdminProductService
                     'updated_by_admin_id' =>
                         $admin->getKey(),
                 ])->save();
+
+                if ($locked->isEducationPremium()) {
+                    $this->syncPremiumTenderAmounts($locked);
+                }
 
                 $after = [
                     'name' =>
@@ -163,6 +182,12 @@ class AdminProductService
                     'amount_minor' =>
                         (int) $locked
                             ->amount_minor,
+                    'lkr_amount_minor' =>
+                        $locked->lkr_amount_minor !== null
+                            ? (int) $locked->lkr_amount_minor
+                            : null,
+                    'affiliate_discount_percent' =>
+                        (int) $locked->affiliate_discount_percent,
                     'is_active' =>
                         (bool) $locked
                             ->is_active,
@@ -201,5 +226,35 @@ class AdminProductService
             },
             3
         );
+    }
+
+    private function syncPremiumTenderAmounts(Product $product): void
+    {
+        PaymentReceivingAccount::query()
+            ->where('currency', 'LKR')
+            ->update([
+                'tender_amount_minor' => (int) $product->lkr_amount_minor,
+                'tender_amount_decimal' => number_format(
+                    (int) $product->lkr_amount_minor / 100,
+                    2,
+                    '.',
+                    ''
+                ),
+                'amount_scale' => 2,
+            ]);
+
+        PaymentReceivingAccount::query()
+            ->where('coin_symbol', 'USDT')
+            ->where('network', 'TRC20')
+            ->update([
+                'tender_amount_minor' => (int) $product->amount_minor * 10000,
+                'tender_amount_decimal' => number_format(
+                    (int) $product->amount_minor / 100,
+                    6,
+                    '.',
+                    ''
+                ),
+                'amount_scale' => 6,
+            ]);
     }
 }

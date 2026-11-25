@@ -35,7 +35,7 @@ class PaymentRateLimitTest extends TestCase
 
         config()->set(
             'tradex_payments.product.education_premium.usdt_trc20.amount_minor',
-            79000000
+            150000000
         );
 
         $user = $this->createApiUser([
@@ -63,7 +63,7 @@ class PaymentRateLimitTest extends TestCase
                         ),
 
                     'amount' =>
-                        '79.000000',
+                        '150.000000',
                 ]
             )
             ->assertCreated();
@@ -84,7 +84,7 @@ class PaymentRateLimitTest extends TestCase
                         ),
 
                     'amount' =>
-                        '79.000000',
+                        '150.000000',
                 ]
             )
             ->assertStatus(

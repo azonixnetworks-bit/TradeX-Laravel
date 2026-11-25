@@ -39,6 +39,18 @@ class UpdateProductRequest extends FormRequest
                 'min:1',
                 'max:999999999',
             ],
+            'lkr_amount_minor' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:999999999999',
+            ],
+            'affiliate_discount_percent' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:100',
+            ],
             'is_active' => [
                 'required',
                 'boolean',
@@ -48,6 +60,22 @@ class UpdateProductRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->filled('regular_price_usd')) {
+            $this->merge([
+                'amount_minor' => $this->toMinor(
+                    (string) $this->input('regular_price_usd')
+                ),
+            ]);
+        }
+
+        if ($this->filled('regular_price_lkr')) {
+            $this->merge([
+                'lkr_amount_minor' => $this->toMinor(
+                    (string) $this->input('regular_price_lkr')
+                ),
+            ]);
+        }
+
         if ($this->has('is_active')) {
             $this->merge([
                 'is_active' =>
@@ -58,5 +86,19 @@ class UpdateProductRequest extends FormRequest
                     ),
             ]);
         }
+    }
+
+    private function toMinor(string $value): ?int
+    {
+        $value = trim(str_replace(',', '', $value));
+
+        if (! preg_match('/^\d+(?:\.\d{1,2})?$/', $value)) {
+            return null;
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $value, 2), 2, '');
+
+        return ((int) $whole * 100)
+            + (int) str_pad($fraction, 2, '0');
     }
 }

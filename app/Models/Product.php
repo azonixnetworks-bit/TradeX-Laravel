@@ -21,6 +21,8 @@ class Product extends Model
         'billing_type',
         'currency',
         'amount_minor',
+        'lkr_amount_minor',
+        'affiliate_discount_percent',
         'is_active',
         'created_by_admin_id',
         'updated_by_admin_id',
@@ -30,6 +32,8 @@ class Product extends Model
     {
         return [
             'amount_minor' => 'integer',
+            'lkr_amount_minor' => 'integer',
+            'affiliate_discount_percent' => 'integer',
             'is_active' => 'boolean',
         ];
     }
