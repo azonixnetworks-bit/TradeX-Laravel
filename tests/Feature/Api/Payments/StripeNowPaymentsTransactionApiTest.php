@@ -80,8 +80,50 @@ class StripeNowPaymentsTransactionApiTest extends TestCase
             return $request->url() === 'https://api.stripe.com/v1/checkout/sessions'
                 && $request->hasHeader('Authorization', 'Bearer sk_test_api21')
                 && data_get($request->data(), 'client_reference_id') === $uuid
-                && (int) data_get($request->data(), 'line_items.0.price_data.unit_amount') === 7900;
+                && (int) data_get($request->data(), 'line_items.0.price_data.unit_amount') === 15000;
         });
+    }
+
+    public function test_valid_affiliate_code_links_customer_and_applies_fifteen_percent_course_discount(): void
+    {
+        $this->configureStripe(true);
+        $affiliate = $this->createApiUser([
+            'account_type' => 'PREMIUM',
+            'referral_code' => 'TXCOURSE15',
+        ]);
+        $customer = $this->createApiUser();
+        $token = $this->issueBoundToken($customer);
+
+        Http::fake([
+            'https://api.stripe.com/v1/checkout/sessions' => Http::response([
+                'id' => 'cs_test_affiliate_discount',
+                'url' => 'https://checkout.stripe.test/c/pay/affiliate-discount',
+            ], 200),
+        ]);
+
+        $this->withToken($token)
+            ->withHeader('Idempotency-Key', 'stripe-affiliate-000001')
+            ->postJson('/api/v1/payments/stripe/checkout-sessions', [
+                'affiliate_code' => ' txcourse15 ',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.amount.amount_minor', 12750);
+
+        $this->assertSame(
+            $affiliate->getKey(),
+            $customer->fresh()->referred_by_user_id
+        );
+        $this->assertDatabaseHas('payment_orders', [
+            'user_id' => $customer->getKey(),
+            'provider' => PaymentOrder::PROVIDER_STRIPE,
+            'amount_minor' => 12750,
+        ]);
+        Http::assertSent(fn (HttpRequest $request): bool =>
+            (int) data_get(
+                $request->data(),
+                'line_items.0.price_data.unit_amount'
+            ) === 12750
+        );
     }
 
     public function test_verified_paid_stripe_webhook_clears_order_and_activates_premium(): void
@@ -198,7 +240,7 @@ class StripeNowPaymentsTransactionApiTest extends TestCase
             return $request->url() === 'https://api-sandbox.nowpayments.io/v1/invoice'
                 && $request->hasHeader('x-api-key', 'now-api-api21')
                 && (string) data_get($request->data(), 'order_id') === $uuid
-                && (float) data_get($request->data(), 'price_amount') === 79.0
+                && (float) data_get($request->data(), 'price_amount') === 150.0
                 && data_get($request->data(), 'price_currency') === 'usd';
         });
     }

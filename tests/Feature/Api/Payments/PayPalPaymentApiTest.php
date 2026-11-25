@@ -94,7 +94,7 @@ class PayPalPaymentApiTest extends TestCase
                                             'USD',
 
                                         'value' =>
-                                            '79.00',
+                                            '150.00',
                                     ],
 
                                     'seller_receivable_breakdown' => [
@@ -111,7 +111,7 @@ class PayPalPaymentApiTest extends TestCase
                                                 'USD',
 
                                             'value' =>
-                                                '76.00',
+                                                '147.00',
                                         ],
                                     ],
                                 ],
@@ -144,7 +144,7 @@ class PayPalPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.amount.amount_minor',
-                7900
+                15000
             );
 
         $orderUuid = (string) $created
@@ -193,7 +193,7 @@ class PayPalPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.payment.gross.amount_minor',
-                7900
+                15000
             )
             ->assertJsonPath(
                 'data.payment.processor_fee.amount_minor',
@@ -201,7 +201,7 @@ class PayPalPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.payment.net_eligible_revenue.amount_minor',
-                7600
+                14700
             )
             ->assertJsonPath(
                 'data.payment.affiliate_processing_status',
@@ -256,13 +256,13 @@ class PayPalPaymentApiTest extends TestCase
                 ->firstOrFail();
 
         $this->assertSame(
-            7600,
+            14700,
             (int) $commission
                 ->calculation_base_cents
         );
 
         $this->assertSame(
-            1140,
+            2205,
             (int) $commission
                 ->commission_amount_cents
         );

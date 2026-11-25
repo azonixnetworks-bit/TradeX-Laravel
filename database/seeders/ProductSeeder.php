@@ -9,7 +9,7 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        Product::query()->firstOrCreate(
+        Product::query()->updateOrCreate(
             [
                 'code' =>
                     Product::CODE_EDUCATION_PREMIUM,
@@ -24,7 +24,7 @@ class ProductSeeder extends Seeder
                 'currency' =>
                     'USD',
                 'amount_minor' =>
-                    7900,
+                    15000,
                 'is_active' =>
                     true,
             ]

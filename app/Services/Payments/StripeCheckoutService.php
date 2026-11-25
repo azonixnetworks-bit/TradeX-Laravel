@@ -16,7 +16,8 @@ class StripeCheckoutService
         private readonly PaymentMethodService $methods,
         private readonly PaymentOrderService $orders,
         private readonly PaymentApiPresenter $presenter,
-        private readonly StripeConfigurationSafety $stripeConfiguration
+        private readonly StripeConfigurationSafety $stripeConfiguration,
+        private readonly PremiumCourseAffiliateDiscountService $affiliateDiscount
     ) {}
 
     public function create(User $user, string $idempotencyKey, Request $request): array
@@ -50,7 +51,11 @@ class StripeCheckoutService
             return $this->presenter->order($existing);
         }
 
-        $amount = (int) data_get($method, 'amount.amount_minor', 0);
+        $amount = $this->affiliateDiscount->apply(
+            $user,
+            (int) data_get($method, 'amount.amount_minor', 0),
+            $request->input('affiliate_code')
+        );
         $currency = strtoupper((string) data_get(
             $method,
             'amount.currency',

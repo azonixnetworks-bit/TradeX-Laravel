@@ -5,13 +5,14 @@ return [
         'education_premium' => [
             'code' => 'EDUCATION_PREMIUM',
             'name' => 'TradeX Education Premium',
+            'affiliate_discount_percent' => 15,
 
             'paypal' => [
                 'currency' => 'USD',
                 'amount_minor' =>
                     (int) env(
                         'TRADEX_EDUCATION_PRICE_USD_MINOR',
-                        7900
+                        15000
                     ),
             ],
 
@@ -20,7 +21,7 @@ return [
                 'amount_minor' =>
                     (int) env(
                         'TRADEX_EDUCATION_PRICE_USD_MINOR',
-                        7900
+                        15000
                     ),
             ],
 
@@ -29,7 +30,7 @@ return [
                 'amount_minor' =>
                     (int) env(
                         'TRADEX_EDUCATION_PRICE_USD_MINOR',
-                        7900
+                        15000
                     ),
             ],
 
@@ -38,7 +39,7 @@ return [
                 'amount_minor' =>
                     (int) env(
                         'TRADEX_EDUCATION_PRICE_LKR_MINOR',
-                        0
+                        5000000
                     ),
             ],
 
@@ -47,7 +48,7 @@ return [
                 'amount_minor' =>
                     (int) env(
                         'TRADEX_EDUCATION_PRICE_USDT_MICRO',
-                        79000000
+                        150000000
                     ),
             ],
         ],

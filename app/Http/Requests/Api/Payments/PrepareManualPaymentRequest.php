@@ -15,6 +15,9 @@ class PrepareManualPaymentRequest extends FormRequest
     {
         $this->merge([
             'idempotency_key' => $this->header('Idempotency-Key'),
+            'affiliate_code' => filled($this->input('affiliate_code'))
+                ? strtoupper(trim((string) $this->input('affiliate_code')))
+                : null,
         ]);
     }
 
@@ -29,6 +32,7 @@ class PrepareManualPaymentRequest extends FormRequest
                 'regex:/^[A-Za-z0-9._:-]+$/',
             ],
             'receiving_account_uuid' => ['required', 'uuid'],
+            'affiliate_code' => ['nullable', 'string', 'max:30'],
         ];
     }
 }

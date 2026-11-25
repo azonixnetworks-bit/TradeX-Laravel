@@ -73,7 +73,7 @@ class PayPalPluginPaymentApiTest extends TestCase
                             && data_get(
                                 $payload,
                                 'purchase_units.0.amount.value'
-                            ) === '79.00'
+                            ) === '150.00'
                             && data_get(
                                 $payload,
                                 'purchase_units.0.items.0.name'
@@ -137,7 +137,7 @@ class PayPalPluginPaymentApiTest extends TestCase
                                         'currency_code' =>
                                             'USD',
                                         'value' =>
-                                            '79.00',
+                                            '150.00',
                                     ],
                                     'seller_receivable_breakdown' => [
                                         'paypal_fee' => [
@@ -150,7 +150,7 @@ class PayPalPluginPaymentApiTest extends TestCase
                                             'currency_code' =>
                                                 'USD',
                                             'value' =>
-                                                '76.00',
+                                                '147.00',
                                         ],
                                     ],
                                 ],
@@ -197,7 +197,7 @@ class PayPalPluginPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.amount.amount_minor',
-                7900
+                15000
             );
 
         $orderUuid = (string) $created
@@ -221,7 +221,7 @@ class PayPalPluginPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.payment.gross.amount_minor',
-                7900
+                15000
             )
             ->assertJsonPath(
                 'data.payment.processor_fee.amount_minor',
@@ -229,7 +229,7 @@ class PayPalPluginPaymentApiTest extends TestCase
             )
             ->assertJsonPath(
                 'data.payment.net_eligible_revenue.amount_minor',
-                7600
+                14700
             );
 
         $buyer->refresh();
@@ -305,7 +305,7 @@ class PayPalPluginPaymentApiTest extends TestCase
 
         config()->set(
             'tradex_payments.product.education_premium.paypal.amount_minor',
-            7900
+            15000
         );
 
         config()->set(

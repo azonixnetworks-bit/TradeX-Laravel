@@ -26,7 +26,8 @@ class PreparedManualPaymentService
         private readonly PaymentApiPresenter $presenter,
         private readonly PaymentMoney $money,
         private readonly ScaledDecimal $decimal,
-        private readonly ProductCatalogService $products
+        private readonly ProductCatalogService $products,
+        private readonly PremiumCourseAffiliateDiscountService $affiliateDiscount
     ) {
     }
 
@@ -89,6 +90,24 @@ class PreparedManualPaymentService
 
         $copiedQr = null;
 
+        $regularAmountMinor = $provider === PaymentOrder::PROVIDER_CRYPTO_MANUAL
+            ? (int) $product->amount_minor
+            : (int) $account->tender_amount_minor;
+        $amountMinor = $this->affiliateDiscount->apply(
+            $user,
+            $regularAmountMinor,
+            $data['affiliate_code'] ?? null
+        );
+        $snapshotAmountMinor = filled($data['affiliate_code'] ?? null)
+            ? (
+                $provider === PaymentOrder::PROVIDER_CRYPTO_MANUAL
+                    ? $this->affiliateDiscount->discountedAmount(
+                        (int) $account->tender_amount_minor
+                    )
+                    : $amountMinor
+            )
+            : null;
+
         try {
             $order = DB::transaction(
                 function () use (
@@ -98,6 +117,8 @@ class PreparedManualPaymentService
                     $provider,
                     $idempotencyHash,
                     $request,
+                    $amountMinor,
+                    $snapshotAmountMinor,
                     &$copiedQr
                 ): PaymentOrder {
                     $concurrent = PaymentOrder::query()
@@ -120,7 +141,7 @@ class PreparedManualPaymentService
                     }
 
                     $reference = $this->uniqueReference();
-                    $snapshot = $this->snapshot($account);
+                    $snapshot = $this->snapshot($account, $snapshotAmountMinor);
 
                     $order = PaymentOrder::query()->create([
                         'user_id' => $user->getKey(),
@@ -134,10 +155,7 @@ class PreparedManualPaymentService
                             $provider === PaymentOrder::PROVIDER_CRYPTO_MANUAL
                                 ? strtoupper((string) $product->currency)
                                 : strtoupper((string) $account->currency),
-                        'amount_minor' =>
-                            $provider === PaymentOrder::PROVIDER_CRYPTO_MANUAL
-                                ? (int) $product->amount_minor
-                                : (int) $account->tender_amount_minor,
+                        'amount_minor' => $amountMinor,
                         'status' =>
                             PaymentOrder::STATUS_AWAITING_USER_ACTION,
                         'client_idempotency_key_hash' =>
@@ -956,14 +974,17 @@ class PreparedManualPaymentService
     }
 
     private function snapshot(
-        PaymentReceivingAccount $account
+        PaymentReceivingAccount $account,
+        ?int $amountMinor = null
     ): array {
         $scale =
             (int) $account
                 ->amount_scale;
 
-        $amount =
-            filled(
+        $effectiveAmountMinor = $amountMinor
+            ?? (int) $account->tender_amount_minor;
+
+        $amount = $amountMinor === null && filled(
                 $account
                     ->tender_amount_decimal
             )
@@ -971,8 +992,7 @@ class PreparedManualPaymentService
                     ->tender_amount_decimal
                 : $this->decimal
                     ->formatMinor(
-                        (int) $account
-                            ->tender_amount_minor,
+                        $effectiveAmountMinor,
                         $scale
                     );
 
@@ -991,8 +1011,7 @@ class PreparedManualPaymentService
                 $account
                     ->tender_amount_minor
                     !== null
-                        ? (int) $account
-                            ->tender_amount_minor
+                        ? $effectiveAmountMinor
                         : null,
             'amount_scale' =>
                 $scale,

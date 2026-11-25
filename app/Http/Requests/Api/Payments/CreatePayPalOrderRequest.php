@@ -23,6 +23,9 @@ class CreatePayPalOrderRequest extends FormRequest
             )
                 ? trim((string) $this->input('product_uuid'))
                 : null,
+            'affiliate_code' => filled($this->input('affiliate_code'))
+                ? strtoupper(trim((string) $this->input('affiliate_code')))
+                : null,
         ]);
     }
 
@@ -41,6 +44,7 @@ class CreatePayPalOrderRequest extends FormRequest
                 'uuid',
                 'exists:products,uuid',
             ],
+            'affiliate_code' => ['nullable', 'string', 'max:30'],
         ];
     }
 }

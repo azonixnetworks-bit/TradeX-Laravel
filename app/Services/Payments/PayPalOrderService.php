@@ -21,7 +21,9 @@ class PayPalOrderService
         private readonly PaymentSettlementService
             $settlement,
         private readonly PaymentApiPresenter
-            $presenter
+            $presenter,
+        private readonly PremiumCourseAffiliateDiscountService
+            $affiliateDiscount
     ) {
     }
 
@@ -74,6 +76,20 @@ class PayPalOrderService
         }
 
         $amount = $method['amount'];
+
+        if ((string) $product->code === PaymentOrder::PRODUCT_EDUCATION_PREMIUM) {
+            $amount['amount_minor'] = $this->affiliateDiscount->apply(
+                $user,
+                (int) $amount['amount_minor'],
+                $request->input('affiliate_code')
+            );
+            $amount['amount'] = number_format(
+                (int) $amount['amount_minor'] / 100,
+                2,
+                '.',
+                ''
+            );
+        }
 
         $order = PaymentOrder::query()
             ->create([

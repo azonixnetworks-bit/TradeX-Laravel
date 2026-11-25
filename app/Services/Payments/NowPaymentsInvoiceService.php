@@ -16,6 +16,7 @@ class NowPaymentsInvoiceService
         private readonly PaymentMethodService $methods,
         private readonly PaymentOrderService $orders,
         private readonly PaymentApiPresenter $presenter,
+        private readonly PremiumCourseAffiliateDiscountService $affiliateDiscount,
         private readonly NowPaymentsConfigurationSafety $configuration
     ) {}
 
@@ -37,9 +38,13 @@ class NowPaymentsInvoiceService
             return $this->presenter->order($existing);
         }
 
-        $amountMinor = (int) data_get($method, 'amount.amount_minor', 0);
+        $amountMinor = $this->affiliateDiscount->apply(
+            $user,
+            (int) data_get($method, 'amount.amount_minor', 0),
+            $request->input('affiliate_code')
+        );
         $currency = strtoupper((string) data_get($method, 'amount.currency', 'USD'));
-        $amountDecimal = (string) data_get($method, 'amount.amount', '0.00');
+        $amountDecimal = number_format($amountMinor / 100, 2, '.', '');
 
         $order = PaymentOrder::query()->create([
             'user_id' => $user->getKey(),
