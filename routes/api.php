@@ -52,7 +52,12 @@ use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
 use App\Http\Controllers\Api\Replay\IssueReplayAccessTokenController;
 use App\Http\Controllers\Api\PublicTradeResultController;
+use App\Http\Controllers\Api\PublicMarketClockController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/public/market-clock', PublicMarketClockController::class)
+    ->middleware('throttle:60,1')
+    ->name('api.public.market-clock');
 
 Route::prefix('public/trade-results')
     ->name('api.public.trade-results.')
