@@ -1190,17 +1190,24 @@ class TradeIdeaController extends Controller
 
         $validated = $request->validated();
 
-        $closeTimelineId = DB::transaction(function () use (
-            $validated,
-            $request,
-            $tradeIdea,
-            $admin
-        ): int {
-            $locked = TradeIdea::query()
-                ->lockForUpdate()
-                ->findOrFail(
-                    $tradeIdea->id
-                );
+        $afterImage = $this->storeChartImage(
+            $request->file('after_chart_image'),
+            $tradeIdea->uuid.'/after'
+        );
+
+        try {
+            $closeTimelineId = DB::transaction(function () use (
+                $validated,
+                $request,
+                $tradeIdea,
+                $admin,
+                $afterImage
+            ): int {
+                $locked = TradeIdea::query()
+                    ->lockForUpdate()
+                    ->findOrFail(
+                        $tradeIdea->id
+                    );
 
             abort_unless(
                 $locked->isPublished(),
@@ -1221,6 +1228,15 @@ class TradeIdeaController extends Controller
             $locked->close_outcome = $validated['outcome'];
             $locked->close_price = $validated['close_price'] ?? null;
             $locked->close_note = $validated['note'];
+            $locked->show_on_website = (bool) ($validated['show_on_website'] ?? false);
+
+            if ($afterImage !== null) {
+                $locked->after_chart_image_disk = $afterImage['disk'];
+                $locked->after_chart_image_path = $afterImage['path'];
+                $locked->after_chart_image_mime_type = $afterImage['mime_type'];
+                $locked->after_chart_image_size_bytes = $afterImage['size_bytes'];
+            }
+
             $locked->updated_by_admin_id = $admin->id;
             $locked->save();
 
@@ -1261,8 +1277,15 @@ class TradeIdeaController extends Controller
                 userAgent: $request->userAgent()
             );
 
-            return $closeTimeline->id;
-        });
+                return $closeTimeline->id;
+            });
+        } catch (\Throwable $exception) {
+            if ($afterImage !== null) {
+                $this->deleteChartImage($afterImage['disk'], $afterImage['path']);
+            }
+
+            throw $exception;
+        }
 
         if (
             config(

@@ -51,7 +51,18 @@ use App\Http\Controllers\Api\TradeIdeas\TradeIdeaShowController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaShareCardController;
 use App\Http\Controllers\Api\TradeIdeas\UserTradeIdeaUuidShareCardController;
 use App\Http\Controllers\Api\Replay\IssueReplayAccessTokenController;
+use App\Http\Controllers\Api\PublicTradeResultController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('public/trade-results')
+    ->name('api.public.trade-results.')
+    ->middleware('throttle:60,1')
+    ->group(function (): void {
+        Route::get('/', [PublicTradeResultController::class, 'index'])->name('index');
+        Route::get('/{tradeIdea}/{stage}', [PublicTradeResultController::class, 'image'])
+            ->where('stage', 'before|after')
+            ->name('image');
+    });
 
 Route::prefix('v1')
     ->name('api.v1.')

@@ -204,6 +204,11 @@
                 >
                     {{ $tradeIdea->close_note }}
                 </div>
+
+                <div class="integrity-note" style="margin-top:12px">
+                    Public website:
+                    <strong>{{ $tradeIdea->isPublicWebsiteResult() ? 'VISIBLE' : 'NOT VISIBLE' }}</strong>
+                </div>
             @endif
         </section>
 
@@ -391,6 +396,7 @@
 
                 <form
                     method="POST"
+                    enctype="multipart/form-data"
                     action="{{ route('admin.trade_ideas.close', ['tradeIdea'=>$tradeIdea]) }}"
                     onsubmit="return confirm('Close this Trade Idea?');"
                 >
@@ -421,6 +427,29 @@
                         placeholder="Required close reason / result note"
                         required
                     ></textarea>
+
+                    <label style="display:block;margin:12px 0 6px;font-weight:700">
+                        After chart image
+                    </label>
+
+                    <input
+                        type="file"
+                        name="after_chart_image"
+                        accept="image/jpeg,image/png,image/webp"
+                    >
+
+                    <label style="display:flex;gap:9px;align-items:flex-start;margin:14px 0">
+                        <input
+                            type="checkbox"
+                            name="show_on_website"
+                            value="1"
+                            style="width:auto;margin-top:3px"
+                        >
+                        <span>
+                            <strong>Show completed result on public website</strong><br>
+                            <small>Requires a Before image, After image and WIN / LOSS / BREAKEVEN outcome.</small>
+                        </span>
+                    </label>
 
                     <button
                         class="close"

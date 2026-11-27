@@ -73,6 +73,10 @@ class TradeIdea extends Model
         'chart_image_path',
         'chart_image_mime_type',
         'chart_image_size_bytes',
+        'after_chart_image_disk',
+        'after_chart_image_path',
+        'after_chart_image_mime_type',
+        'after_chart_image_size_bytes',
         'category',
         'market_region',
         'symbol',
@@ -91,6 +95,7 @@ class TradeIdea extends Model
         'close_outcome',
         'close_price',
         'close_note',
+        'show_on_website',
         'created_by_admin_id',
         'updated_by_admin_id',
     ];
@@ -105,6 +110,8 @@ class TradeIdea extends Model
             'entry_price_actual' => 'decimal:10',
             'close_price' => 'decimal:10',
             'chart_image_size_bytes' => 'integer',
+            'after_chart_image_size_bytes' => 'integer',
+            'show_on_website' => 'boolean',
             'entry_triggered_at' => 'datetime',
             'published_at' => 'datetime',
             'closed_at' => 'datetime',
@@ -210,6 +217,25 @@ class TradeIdea extends Model
     {
         return $this->chart_image_disk !== null
             && $this->chart_image_path !== null;
+    }
+
+    public function hasAfterChartImage(): bool
+    {
+        return $this->after_chart_image_disk !== null
+            && $this->after_chart_image_path !== null;
+    }
+
+    public function isPublicWebsiteResult(): bool
+    {
+        return $this->isClosed()
+            && $this->show_on_website
+            && in_array($this->close_outcome, [
+                self::OUTCOME_WIN,
+                self::OUTCOME_LOSS,
+                self::OUTCOME_BREAKEVEN,
+            ], true)
+            && $this->hasChartImage()
+            && $this->hasAfterChartImage();
     }
 
     public function hasTradeStructure(): bool
